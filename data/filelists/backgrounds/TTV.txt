@@ -1,0 +1,4 @@
+Nov18_ntuple/TTWJetsToLNu.root
+Nov18_ntuple/TTWJetsToQQ.root
+Nov18_ntuple/TTZToLLNuNu.root
+Nov18_ntuple/TTZToQQ.root

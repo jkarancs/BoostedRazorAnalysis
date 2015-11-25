@@ -1,0 +1,8 @@
+Nov18_ntuple/QCD_HT1000to1500.root
+Nov18_ntuple/QCD_HT100to200.root
+Nov18_ntuple/QCD_HT1500to2000.root
+Nov18_ntuple/QCD_HT2000toInf.root
+Nov18_ntuple/QCD_HT200to300.root
+Nov18_ntuple/QCD_HT300to500.root
+Nov18_ntuple/QCD_HT500to700.root
+Nov18_ntuple/QCD_HT700to1000.root
