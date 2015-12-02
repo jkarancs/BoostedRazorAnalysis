@@ -17,8 +17,8 @@
 #include <iomanip>
 #include <fstream>
 
-#include "common/treestream.h"
-#include "common/treestream.cc"
+#include "treestream.h"
+#include "treestream.cc"
 
 // -- Root
 
@@ -33,8 +33,7 @@
 //-----------------------------------------------------------------------------
 // -- Declare variables to be read
 //-----------------------------------------------------------------------------
-#include "common/DataStruct.h"
-DataStruct data;
+#include "DataStruct.h"
 
 //-----------------------------------------------------------------------------
 // --- Structs can be filled by calling fillObjects()
@@ -42,19 +41,8 @@ DataStruct data;
 //-----------------------------------------------------------------------------
 // -- Select variables to be read
 //-----------------------------------------------------------------------------
-void selectVariables(itreestream& stream)
-{
-
+void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("gen_size", data.gen.size);
-  stream.select("gen_Pt", &data.gen.Pt, NGEN, 'F', 0);
-  
-  stream.select("vtx_size", data.evt.vtx_size);
-  stream.select("vtx_z", &data.evt.vtx_z, 100, 'F', 0);
-  stream.select("vtx_rho", data.evt.vtx_rho, 100, 'F', 0);
-  //stream.select("vtx_chi", data.evt.vtx_chi, 100, 'F', 0);
-  stream.select("vtx_ndof", data.evt.vtx_ndof, 100, 'I', 0);
-  
-  /*
   //stream.select("gen_Mass", data.gen.Mass);
   stream.select("gen_Pt", data.gen.Pt);
   stream.select("gen_Eta", data.gen.Eta);
@@ -65,7 +53,7 @@ void selectVariables(itreestream& stream)
   stream.select("gen_ID", data.gen.ID);
   stream.select("gen_Status", data.gen.Status);
   stream.select("gen_Mom0ID", data.gen.MomID);
-
+  
   stream.select("el_size", data.ele.size);
   //stream.select("el_Mass", data.ele.Mass);
   stream.select("el_Pt", data.ele.Pt);
@@ -391,7 +379,13 @@ void selectVariables(itreestream& stream)
   stream.select("evt_AK4_MTR", data.evt.AK4_MTR);
   stream.select("evt_AK4_R", data.evt.AK4_R);
   //stream.select("evt_AK4_R2", data.evt.AK4_R2); // Calculate instead
-  stream.select("evt_weight", data.evt.weight);
+  
+  stream.select("evt_XSec",         data.evt.XSec);
+  stream.select("evt_NEvent_Corr",  data.evt.NEvent_Corr);
+  stream.select("evt_Lumi_Weight",  data.evt.Lumi_Weight);
+  stream.select("evt_Gen_Weight",   data.evt.Gen_Weight);
+  stream.select("SUSY_Gluino_Mass", data.evt.SUSY_Gluino_Mass);
+  stream.select("SUSY_LSP_Mass",    data.evt.SUSY_LSP_Mass);
   
   stream.select("evt_RunNumber", data.evt.RunNumber);
   //stream.select("evt_LumiBlock", data.evt.LumiBlock);
@@ -548,7 +542,6 @@ void selectVariables(itreestream& stream)
   stream.select("mu_SubjetV1PtRel", data.mu.SubjetV1PtRel);
   stream.select("mu_SubjetV2PtRel", data.mu.SubjetV2PtRel);
   stream.select("mu_SubjetV3PtRel", data.mu.SubjetV3PtRel);
-  */
 }
 //-----------------------------------------------------------------------------
 // -- Utilities
@@ -721,15 +714,19 @@ decodeCommandLine(int argc, char** argv, commandLine& cl)
 std::vector<std::string>
 getFilenames(std::string filelist)
 {
-  std::ifstream stream(filelist.c_str());
-  if ( !stream.good() ) error("unable to open file: " + filelist);
-  
-  // Get list of ntuple files to be processed
-  
   std::vector<std::string> v;
-  std::string filename;
-  while ( stream >> filename )
-    if ( strip(filename) != "" ) v.push_back(filename);
+  if (filelist.find(".root")!=std::string::npos) {
+    v.push_back(filelist);
+  } else {
+    std::ifstream stream(filelist.c_str());
+    if ( !stream.good() ) error("unable to open file: " + filelist);
+    
+    // Get list of ntuple files to be processed
+    
+    std::string filename;
+    while ( stream >> filename )
+      if ( strip(filename) != "" ) v.push_back(filename);
+  }
   return v;
 }
 

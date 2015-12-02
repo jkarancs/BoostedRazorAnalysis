@@ -1460,13 +1460,6 @@ itreestream::select(vector<string>& namen)
   for(unsigned i=0; i < namen.size(); i++) select(namen[i]);
 }
 
-void
-itreestream::select(string namen, void* address, int maxsize, char srctype,
-		    bool isvector)
-{
-  _select(namen, address, maxsize, srctype, isvector);
-}
-
 vector<double>
 itreestream::vget() 
 { 
@@ -1835,7 +1828,7 @@ itreestream::_update()
       if ( field->iotype == 'v')
         {
           _chain->SetBranchAddress(field->branchname.c_str(), 
-                                   &field->address, 
+                                   field->address, 
                                    &field->branch);
         }
       else if ( field->maxsize < 1 )

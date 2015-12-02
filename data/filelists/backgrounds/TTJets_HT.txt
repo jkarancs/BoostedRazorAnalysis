@@ -1,4 +1,0 @@
-Nov18_ntuple/TTJets_HT-1200to2500.root
-Nov18_ntuple/TTJets_HT-2500toInf.root
-Nov18_ntuple/TTJets_HT-600to800.root
-Nov18_ntuple/TTJets_HT-800to1200.root
