@@ -341,6 +341,7 @@ struct settings {
     // Extra variables
     stream.select("evt_NLep", data.evt.NLep);
     stream.select("evt_NTopHad", data.evt.NTopHad);
+    stream.select("evt_NTopHadPreTag", data.evt.NTopHadPreTag);
     stream.select("evt_NTopLep", data.evt.NTopLep);
     stream.select("evt_NTop", data.evt.NTop);
     stream.select("evt_HtLep", data.evt.HtLep);

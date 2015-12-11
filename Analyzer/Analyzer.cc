@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
   ana.define_selections(data);
 
   // Define bin order for counts histogram
-  ofile->count("NoCuts",   0);
+  ofile->count("NoCuts", 0);
   for (auto cut : ana.baseline_cuts) ofile->count(cut.name, 0);
   for (auto cut : ana.analysis_cuts) ofile->count(cut.name, 0);
   cout << endl;
@@ -151,6 +151,8 @@ int main(int argc, char** argv) {
   cout << endl;  
   cout << "- Analysis specific cuts:\n";
   for (auto cut : ana.analysis_cuts) cout << "  "<<cut.name << endl;
+
+  ofile->count("Signal", 0); // Dont worry, we blind data ;)
 
   //---------------------------------------------------------------------------
   // Loop over events
@@ -175,21 +177,49 @@ int main(int argc, char** argv) {
     bool pass_all = true;
     for (auto cut : ana.baseline_cuts) if (pass_all)
       if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
-    
-    // Apply analysis cuts and fill histograms
-    // These are all defined in [Name]_Analysis.cc (included from settings.h)
-    // You specify there also which cut is applied for each histo
-    // But all common baseline cuts are alreay applied above
-    if (pass_all) ana.fill_histograms(data);
 
-    // Save counts for the analysis cuts
-    for (auto cut : ana.analysis_cuts) if (pass_all)
-      if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
-    
-    // If option (saveSkimmedNtuple) is specified
-    // save all events selected by the analysis to the output file
-    // tree is copied and current weight is saved as "eventWeight"
-    if ( settings.saveSkimmedNtuple ) ofile->addEvent(w);
+    // _______________________________________________________
+    //                  BLINDING DATA
+
+    // Before doing anything serious (eg. filling any histogram)
+    // Define Signal region and blind it!!!!!!!!!!!!!!!!!!!!!!!!
+    bool DATA_BLINDED = ! ( cmdline.isdata && ana.signal_selection(data) );
+
+    /*
+      Some more warning to make sure :)
+     _   _   _   ____    _        _____   _   _   _____    _____   _   _    _____   _   _   _ 
+    | | | | | | |  _ \  | |      |_   _| | \ | | |  __ \  |_   _| | \ | |  / ____| | | | | | |
+    | | | | | | | |_) | | |        | |   |  \| | | |  | |   | |   |  \| | | |  __  | | | | | |
+    | | | | | | |  _ <  | |        | |   | . ` | | |  | |   | |   | . ` | | | |_ | | | | | | |
+    |_| |_| |_| | |_) | | |____   _| |_  | |\  | | |__| |  _| |_  | |\  | | |__| | |_| |_| |_|
+    (_) (_) (_) |____/  |______| |_____| |_| \_| |_____/  |_____| |_| \_|  \_____| (_) (_) (_)
+                                                                                          
+    */
+
+    //________________________________________________________
+    //
+
+    if (DATA_BLINDED) {
+
+      // Apply analysis cuts and fill histograms
+      // These are all defined in [Name]_Analysis.cc (included from settings.h)
+      // You specify there also which cut is applied for each histo
+      // But all common baseline cuts are alreay applied above
+      if ( pass_all ) ana.fill_histograms(data, w);
+
+      // Save counts for the analysis cuts
+      for (auto cut : ana.analysis_cuts) if (pass_all)
+        if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
+
+      // Count Signal events
+      if ( pass_all && ana.signal_selection(data) ) ofile->count("Signal", w);
+
+      // If option (saveSkimmedNtuple) is specified
+      // save all events selected by the analysis to the output file
+      // tree is copied and current weight is saved as "eventWeight"
+      if ( settings.saveSkimmedNtuple ) ofile->addEvent(w);
+
+    } // end Blinding
 
   } // end event loop
 
