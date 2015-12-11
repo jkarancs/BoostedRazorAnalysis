@@ -10,13 +10,26 @@ OBJS          = $(ANALYZERO)
 PROGRAMS      = $(ANALYZER)
 
 #------------------------------------------------------------------------------
+EDMUTILSO      = EdmUtils.$(ObjSuf)
+EDMUTILSS      = EdmUtils.$(SrcSuf)
+EDMUTILS       = EdmUtils$(ExeSuf)
+
+OBJS          += $(EDMUTILSO)
+PROGRAMS      += $(EDMUTILS)
+
+#------------------------------------------------------------------------------
 
 
 .SUFFIXES: .$(SrcSuf) .$(ObjSuf) .$(DllSuf)
 
 all:            $(PROGRAMS)
 
-$(ANALYZER):     $(ANALYZERO)
+$(ANALYZER):    $(ANALYZERO)
+		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
+		$(MT_EXE)
+		@echo "$@ done"
+
+$(EDMUTILS):    $(EDMUTILSO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"

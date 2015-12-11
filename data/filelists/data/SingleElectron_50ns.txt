@@ -1,2 +1,0 @@
-Nov18_ntuple/SingleElectron_50ns_2015B.root
-Nov18_ntuple/SingleElectron_50ns_2015C.root

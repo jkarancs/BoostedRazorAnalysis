@@ -1,4 +1,5 @@
-set dir="Nov18_ntuple"
+set dir=$1
+
 # Merge files - one file for each dataset
 # check if directory is not currently written to (min 5 minutes since modified)
 if ( -e files.txt ) rm files.txt

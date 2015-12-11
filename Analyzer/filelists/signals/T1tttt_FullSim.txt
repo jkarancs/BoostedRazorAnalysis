@@ -1,0 +1,1 @@
+/afs/cern.ch/work/j/jkarancs/public/CMSSW/SusyAnalysis/CMSSW_7_4_15_patch1/src/BoostedRazorAnalysis/Analyzer/ntuple/Latest/T1tttt_FullSim_mGluino-1500_mLSP-100/B2GTTreeNtupleExtra_1.root

@@ -1,1 +1,0 @@
-Nov18_ntuple/WJetsToLNu_HT-400To600.root

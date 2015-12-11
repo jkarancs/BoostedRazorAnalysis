@@ -7,31 +7,26 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <vector>
-//#include "../interface/Samples.h"
-//#include "../interface/SmartHistos.h"
-//#include "../plugins/B2GTreeReader.cc"
-//#include "../plugins/B2GTreeLooper.cc"
 
-//#define __TEST__
-
-#include "common/Analyzer_cmd.h"
+#include "common/utils.h" // Helper functions
+#include "settings.h"     // Define all Analysis specific settings here
 
 using namespace std;
 
-#ifndef __TEST__
 int main(int argc, char** argv) {
   // ------------------------------
   // -- Parse command line stuff --
   // ------------------------------
 
   // Get file list and histogram filename from command line
-  commandLine cmdline;
-  decodeCommandLine(argc, argv, cmdline);
+  utils::commandLine cmdline;
+  utils::decodeCommandLine(argc, argv, cmdline);
 
-  // Get names of ntuple files to be processed and open chain of ntuples
-  vector<string> filenames = getFilenames(cmdline.filelist);
-  itreestream stream(filenames, "B2GTTreeMaker/B2GTree");      
-  if ( !stream.good() ) error("unable to open ntuple file(s)");                         
+  itreestream stream(cmdline.filenames, settings.treeName);      
+  if ( !stream.good() ) utils::error("unable to open ntuple file(s)");                         
+
+  if ( cmdline.isdata ) cout << "Running on Data." << endl;
+  else cout << "Running on MC." << endl;
 
   // Get number of events to be read
   int nevents = stream.size();
@@ -39,7 +34,7 @@ int main(int argc, char** argv) {
 
   // Select variables to be read
   DataStruct data;
-  selectVariables(stream, data);
+  settings.selectVariables(stream, data);
 
   /*
 	 Notes:
@@ -70,86 +65,54 @@ int main(int argc, char** argv) {
 		ofile.count("MET", 0)
   */
 
-  // ---------------------------------------
-  // --- Get Lumi weighting information  ---
-  // ---------------------------------------
-
-  string fsample = "";
-  if ( argc > 6 ) fsample = string(argv[6]);
-
-  double lumi = cmdline.lumi;
-  cout << "lumi: " << lumi << endl;
-  double xsect = cmdline.xsect;
-  if (xsect>0) cout << "xsect: " << xsect << endl;
-  else if (fsample.find("Bkg")==0) {
-    // Get cross section value from the ntuple
-    float evt_XSec=0, prev_XSec=0;
-    for (auto filename : filenames) {
-      TTree* tree = (TTree*)TFile::Open(filename.c_str())->Get("B2GTTreeMaker/B2GTree");
-      tree->GetBranch("evt_XSec")->SetAddress(&evt_XSec);
-      tree->GetEntry(0);
-      if (prev_XSec!=0&&prev_XSec!=evt_XSec) {
-	cout << "!! Error !! Analyzer - Files added with different cross-sections. Add them separately!" << endl;
-	return 0;
-      }
-      prev_XSec = evt_XSec;
-    }
-    xsect = evt_XSec;
-    cout << "xsect (taken from ntuple): " << xsect << endl;
-  }
-  double totweight = cmdline.totweight;
-  if (totweight>0) cout << "totweight: " << totweight << endl;
-  else if (fsample.find("Bkg")==0) {
-    // Get total number of event histo
-    // (counting negative and positive weights)
-    TH1D *h = new TH1D("NEventNoFilter","",2,-1,1); // 1st bin: negative weighted events, 2nd bin: positive
-    float evt_Gen_Weight;
-    for (auto filename : filenames) {
-      TFile *f = TFile::Open(filename.c_str());
-      h->Add((TH1D*)f->Get("EventCounter/NEventNoFilter"));
-      // Also Get GenInfoProduct weight (+- constant)
-      TTree* tree = (TTree*)f->Get("B2GTTreeMaker/B2GTree");
-      tree->GetBranch("evt_Gen_Weight")->SetAddress(&evt_Gen_Weight);
-      tree->GetEntry(0);
-    }
-    // total weight = ( N_pos - N_min ) * | gen_weight |
-    totweight = ( h->GetBinContent(2) - h->GetBinContent(1) ) * fabs(evt_Gen_Weight);
-    delete h;
-    cout << "totweight (taken from ntuple): " << totweight << endl;
-  }
+  // Constuct the Analysis (specified in settings.h)
+  Analysis ana;
 
   // --------------------------------------------------------------
   // -- Calculate the normalization factor for the event weights --
   // -- The original MC weight will be divided by this quantity  --
   // --------------------------------------------------------------
-  double weightnorm = 1.;
-  if (xsect > 0 && totweight > 0 && lumi > 0) { // i.e. is not data
-    weightnorm = (xsect*lumi)/totweight;
-  }
-  cout << "weightnorm: " << weightnorm << endl;
+  
+  cout << endl;
+  double weightnorm = 1 ;
+  if ( !cmdline.isdata ) {
+    cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
+    double xsec = ana.get_xsec_from_ntuple(cmdline.filenames, settings.treeName); // treename given in settings.h
+    if ( xsec==0 ) return 1;
+    cout << "xsec (ntuple): " << xsec << endl;
+
+    double totweight = ana.get_totweight_from_ntuple(cmdline.filenames, settings.totWeightHistoName); // weight histo name given in settings.h
+    cout << "totweight (ntuple): " << totweight << endl;
+
+    weightnorm = (xsec*settings.intLumi)/totweight;
+    cout << "weightnorm (calc): " << weightnorm << endl;
+  }
+  
   // ---------------------------------------
   // --- Pileup Reweighting              ---
   // ---------------------------------------
 
   // TString pileupname = "../data/pileup/pileup_weights.root"; // default
   // TFile* fpileup = TFile::Open(pileupname);
-  // if (!fpileup){
+  // if ( !fpileup ) {
   //   cout << "Could not find pileup weights root file... Where did you put it??" << endl;
   //   return 1;
   // }
   // TH1D* h_pileup = (TH1D*)fpileup->Get("pileup_weight");
 
-  string Pileup = "";
-  if ( argc > 7 ) Pileup = string(argv[7]);
+  if ( !cmdline.isdata && settings.doPileupReweighting ) {
+    cout << "doPileupReweighting (settings): true" << endl;
+  } else cout << "doPileupReweighting (settings): false" << endl;
 
-  //bool doPileupReweighting = false;
-  if (fsample.find("Data")!=0 && Pileup == "Pileup_True"){
-    //doPileupReweighting = true;
-    cout << "Will do pileup reweighting" << endl;
+  utils::outputFile* ofile;
+  if ( settings.saveSkimmedNtuple ) {
+    cout << "saveSkimmedNtuple (settings): true" << endl;
+    ofile = new utils::outputFile(cmdline.outputfilename, stream);
+  } else {
+    ofile = new utils::outputFile(cmdline.outputfilename);
+    cout << "saveSkimmedNtuple (settings): false" << endl;
   }
-
-  outputFile ofile(cmdline.outputfilename, stream);
 
   // ---------------------------------------------------------------------------
   // -- Declare histograms                                                    --
@@ -157,94 +120,81 @@ int main(int argc, char** argv) {
 
   TH1::SetDefaultSumw2();
 
-  // Save the total weight for cross check purposes
-  TH1D* h_totweight = new TH1D("h_totweight", "h_totweight", 1, 1, 2);
+  // This section is moved and defined in the Analysis class
+  // this class specifies what histograms/cuts/methods etc. you want to implement
+  // This is useful if someone wants to do quick study/define other search region etc.
+  // But also, common methods in all anaylsis are defined in common/AnalysisBase.*
 
-  // ------------------------------------------------------
-  // -- Define the order of bins in the counts histogram --
-  // ------------------------------------------------------
+  ana.declare_histograms();
 
-  ofile.count("NoCuts",   0);
-  ofile.count("Ntuple", 0);
-  ofile.count("Cleaning", 0);
-  ofile.count("Jet1Pt", 0);
-  ofile.count("Jet2Pt", 0);
-  ofile.count("Jet1MassSD", 0);
-  ofile.count("Jet2MassSD", 0);
-  ofile.count("Trigger", 0);
+  // ------------------------------------------------------------------------------
+  // -- Define the order of cuts (and corresponding bins in the counts histogram --
+  // ------------------------------------------------------------------------------
+
+  // Define cuts that are common in all analyses
+  // Given in common/AnalysisBase.h
+  ana.define_preselections(data);
+
+  // Define cuts that specific to this analysis
+  // Given in [Name]_Analysis.h specified in setting.h
+  ana.define_selections(data);
+
+  // Define bin order for counts histogram
+  ofile->count("NoCuts",   0);
+  for (auto cut : ana.baseline_cuts) ofile->count(cut.name, 0);
+  for (auto cut : ana.analysis_cuts) ofile->count(cut.name, 0);
+  cout << endl;
+  cout << "Number of events counted after applying" << endl;
+  cout << "- Baseline cuts (common for all analysis):" << endl;
+  for (auto cut : ana.baseline_cuts) cout << "  "<<cut.name << endl;
+
+  cout << endl;  
+  cout << "- Analysis specific cuts:\n";
+  for (auto cut : ana.analysis_cuts) cout << "  "<<cut.name << endl;
 
   //---------------------------------------------------------------------------
   // Loop over events
   //---------------------------------------------------------------------------
 
+  cout << endl;
+  cout << "Start looping on events ..." << endl;
   for(int entry=0; entry < nevents; ++entry) {
     // Read event into memory
     stream.read(entry);
     //data.CalculateAllVariables();
 
-    if (entry%100000==0) cout<<entry<<endl;
+    if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;
 
-    // Count events and get the total weight contibuted by the event
-    h_totweight->Fill(1, data.evt.Gen_Weight);
-
-    // Event weight
+    // Correctly normalized (to luminosity) event weight
     double w = 1.;
-    if (data.evt.Gen_Weight != 0) {
-      w = data.evt.Gen_Weight*weightnorm;
-    }
+    if ( data.evt.Gen_Weight!=0 ) w = data.evt.Gen_Weight*weightnorm;
 
-    ofile.count("NoCuts", w);
+    ofile->count("NoCuts", w);
 
-    if (!(data.jetsAK8.size>=2)) continue;
-    if (!(data.jetsAK8.Pt[0]>350)) continue;
-    if (!(data.jetsAK8.Pt[1]>350)) continue;
-    ofile.count("Ntuple", w);
+    // Apply preselections and save counts
+    bool pass_all = true;
+    for (auto cut : ana.baseline_cuts) if (pass_all)
+      if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
+    
+    // Apply analysis cuts and fill histograms
+    // These are all defined in [Name]_Analysis.cc (included from settings.h)
+    // You specify there also which cut is applied for each histo
+    // But all common baseline cuts are alreay applied above
+    if (pass_all) ana.fill_histograms(data);
 
-    // -------------------------------------------------------------------------
-    // -- Get rid of the noise before start filling ANY histogram             --
-    // -- by applying the filters:                                            --
-    // -------------------------------------------------------------------------
-
-    data.evt.NGoodVtx = 0;
-    for (int iVtx=0; iVtx<data.evt.vtx_size; ++iVtx) {
-      if (data.evt.vtx_ndof[iVtx]<4) continue;
-      if (fabs(data.evt.vtx_z[iVtx])>24) continue;
-      if (fabs(data.evt.vtx_rho[iVtx])>2) continue;
-      ++data.evt.NGoodVtx;
-    }
-
-    if (!(data.evt.NGoodVtx>0)) continue;                          // data.evt.Flag_goodVertices - Doesn't work currently
-    if (!(data.evt.Flag_HBHEIsoNoiseFilterResult)) continue;
-    if (!(data.evt.Flag_HBHENoiseFilterResultRun2Loose)) continue;
-    if (!(data.evt.Flag_CSCTightHaloFilter)) continue;             // Will need to rerun 2015 filter for Dec Jamboree
-    if (!(data.evt.Flag_eeBadScFilter)) continue;
-    ofile.count("Cleaning", w);
-
-    if (!(data.jetsAK8.Pt[0]>400)) continue;
-    ofile.count("Jet1Pt", w);
-
-    if (!(data.jetsAK8.Pt[1]>400)) continue;
-    ofile.count("Jet2Pt", w);
-
-    if (!(data.jetsAK8.softDropMass[0]>110)) continue;
-    if (!(data.jetsAK8.softDropMass[0]<210)) continue;
-    ofile.count("Jet1MassSD", w);
-
-    if (!(data.jetsAK8.softDropMass[1]>110)) continue;
-    if (!(data.jetsAK8.softDropMass[1]<210)) continue;
-    ofile.count("Jet2MassSD", w);
-
-    if (!(data.evt.HLT_AK8PFHT700_TrimR0p1PT0p03Mass50==1))
-    ofile.count("Trigger", w);
-
-    // Skim events into output file
-    ofile.addEvent(w);
+    // Save counts for the analysis cuts
+    for (auto cut : ana.analysis_cuts) if (pass_all)
+      if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
+    
+    // If option (saveSkimmedNtuple) is specified
+    // save all events selected by the analysis to the output file
+    // tree is copied and current weight is saved as "eventWeight"
+    if ( settings.saveSkimmedNtuple ) ofile->addEvent(w);
 
   } // end event loop
 
   //fpileup->Close();
   stream.close();
-  ofile.close();
+  ofile->close();
   return 0;
 }
-#endif
