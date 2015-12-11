@@ -15,23 +15,26 @@ scram b -j 20
 ## Analyzer example
 
 ```Shell
-cd BoostedRazorAnalysis
-eosmount data/eos_mount
-cd Analyzer
-make Analyzer
-./Analyzer ../data/filelists/backgrounds/TTJets_madgraph.txt 0 0 2500 Bkg_TTJets_madgraph.root Bkg_TTJets_madgraph Pileup_True
+cd BoostedRazorAnalysis/Analyzer
+source scripts/setup.csh
+make
+./Analyzer Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
 ```
-
-Use this script to print command to run on all samples
+scripts/setup.csh is used only the first time to mount eos on lxplus, create softlinks, update filelists
 
 ```Shell
 source scripts/run_all.csh
 ```
 
+scripts/run_all.csh shows commands to run on everything
+
 Remarks:
-    - The cross-sections and total weight is taken straight from ntuple files (set 2nd and 3rd argument to 0)
-    - The Analyzer program is used to count events that pass the Analysis selection
-    - Additionally it also saves a skimmed TTree with same content for the selected events
+    - The Analyzer program is basically an event looper, histograms/methods/cuts etc. are defined in [Name]_Analysis.h
+    - All settings (printed also while running) are defined in settings.h it also includes the Analysis code you want
+    - common methods (for all analyses/studies) are defined in common/AnalysisBase.h
+    - The cross-sections and total weight is taken straight from ntuple files
+    - Additionally there's an option to save a skimmed TTree with same content for the selected events
+    - counts are saved for all common and specific analysis cuts in the order they are defined
 
 ## Contact Information
 
