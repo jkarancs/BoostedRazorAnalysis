@@ -1,5 +1,3 @@
-set IntLumi=2500 # pb^-1
-
 set DATE=`date | sed "s; ;_;g;s;:;h;1;s;:;m;1"`
 
 mkdir -p results/log

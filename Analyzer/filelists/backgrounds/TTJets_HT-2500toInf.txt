@@ -1,2 +1,0 @@
-/afs/cern.ch/work/j/jkarancs/public/CMSSW/SusyAnalysis/CMSSW_7_4_15_patch1/src/BoostedRazorAnalysis/Analyzer/ntuple/Latest/TTJets_HT-2500toInf/B2GTTreeNtupleExtra_2.root
-/afs/cern.ch/work/j/jkarancs/public/CMSSW/SusyAnalysis/CMSSW_7_4_15_patch1/src/BoostedRazorAnalysis/Analyzer/ntuple/Latest/TTJets_HT-2500toInf/B2GTTreeNtupleExtra_1.root
