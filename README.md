@@ -25,13 +25,13 @@ make
 Before running check/set the options for the Analyzer in settings.h
 
 More info about Analyzer:
-    - The Analyzer program is basically an event looper, histograms/methods/cuts etc. are defined in [Name]_Analysis.h
-    - All settings (printed also while running) are defined in settings.h it also includes the Analysis code you want
-    - common methods (for all analyses/studies) are defined in common/AnalysisBase.h
-    - The cross-sections and total weight is taken straight from ntuple files
-    - Reweighting and systematics weight methods are also given in AnalysisBase
-    - Additionally there's an option (in settings.h) to save a skimmed TTree with same content for the selected events
-    - counts are saved for all common and specific analysis cuts in the order they are defined
+   * The Analyzer program is basically an event looper, histograms/methods/cuts etc. are defined in [Name]_Analysis.h
+   * All settings (printed also while running) are defined in settings.h it also includes the Analysis code you want
+   * common methods (for all analyses/studies) are defined in common/AnalysisBase.h
+   * The cross-sections and total weight is taken straight from ntuple files
+   * Reweighting and systematics weight methods are also given in AnalysisBase
+   * Additionally there's an option (in settings.h) to save a skimmed TTree with same content for the selected events
+   * counts are saved for all common and specific analysis cuts in the order they are defined
 
 Run your anaylsis code with
 ```Shell
