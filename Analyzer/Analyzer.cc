@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h" // Helper functions
-#include "settings.h"     // Define all Analysis specific settings here
+#include "settings.h"         // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -22,10 +22,10 @@ int main(int argc, char** argv) {
   utils::commandLine cmdline;
   utils::decodeCommandLine(argc, argv, cmdline);
 
-  itreestream stream(cmdline.filenames, settings.treeName);      
+  itreestream stream(cmdline.fileNames, settings.treeName);      
   if ( !stream.good() ) utils::error("unable to open ntuple file(s)");                         
 
-  if ( cmdline.isdata ) cout << "Running on Data." << endl;
+  if ( cmdline.isData ) cout << "Running on Data." << endl;
   else cout << "Running on MC." << endl;
 
   // Get number of events to be read
@@ -68,50 +68,64 @@ int main(int argc, char** argv) {
   // Constuct the Analysis (specified in settings.h)
   Analysis ana;
 
-  // --------------------------------------------------------------
-  // -- Calculate the normalization factor for the event weights --
-  // -- The original MC weight will be divided by this quantity  --
-  // --------------------------------------------------------------
-  
-  cout << endl;
-  double weightnorm = 1 ;
-  if ( !cmdline.isdata ) {
-    cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
-
-    double xsec = ana.get_xsec_from_ntuple(cmdline.filenames, settings.treeName); // treename given in settings.h
-    if ( xsec==0 ) return 1;
-    cout << "xsec (ntuple): " << xsec << endl;
-
-    double totweight = ana.get_totweight_from_ntuple(cmdline.filenames, settings.totWeightHistoName); // weight histo name given in settings.h
-    cout << "totweight (ntuple): " << totweight << endl;
-
-    weightnorm = (xsec*settings.intLumi)/totweight;
-    cout << "weightnorm (calc): " << weightnorm << endl;
-  }
-  
-  // ---------------------------------------
-  // --- Pileup Reweighting              ---
-  // ---------------------------------------
-
-  // TString pileupname = "../data/pileup/pileup_weights.root"; // default
-  // TFile* fpileup = TFile::Open(pileupname);
-  // if ( !fpileup ) {
-  //   cout << "Could not find pileup weights root file... Where did you put it??" << endl;
-  //   return 1;
-  // }
-  // TH1D* h_pileup = (TH1D*)fpileup->Get("pileup_weight");
-
-  if ( !cmdline.isdata && settings.doPileupReweighting ) {
-    cout << "doPileupReweighting (settings): true" << endl;
-  } else cout << "doPileupReweighting (settings): false" << endl;
+  // ---------------------------------------------------------------------------
+  // -- output file                                                           --
+  // ---------------------------------------------------------------------------
 
   utils::outputFile* ofile;
   if ( settings.saveSkimmedNtuple ) {
     cout << "saveSkimmedNtuple (settings): true" << endl;
-    ofile = new utils::outputFile(cmdline.outputfilename, stream);
+    ofile = new utils::outputFile(cmdline.outputFileName, stream);
   } else {
-    ofile = new utils::outputFile(cmdline.outputfilename);
+    ofile = new utils::outputFile(cmdline.outputFileName);
     cout << "saveSkimmedNtuple (settings): false" << endl;
+  }
+
+  // ---------------------------------------------------------------------------
+  // -- Read systematics file                                                 --
+  // ---------------------------------------------------------------------------
+
+  // Initialize all systemtics (0 - off)
+  struct Systematics {
+    double nSigmaPU = 0;
+    double nSigmaAlphaS = 0;
+    double nSigmaScale  = 0;
+    unsigned int numScale = 0;
+    unsigned int numPdf = 0;
+  } syst;
+
+  if (settings.doSystematics) {
+    cout << "doSystematics (settings): true" << endl;
+
+    if ( cmdline.systematicsFileName == "" ) utils::error("doSystematics true, but command line argument systematicsFileName=<filename> was not given");
+    cout << "systematicsFileName (cmdline): " << cmdline.numSyst << endl;
+    std::ifstream systFile(cmdline.systematicsFileName.c_str());
+    if ( !systFile.good() ) utils::error("unable to open systematics file: " + cmdline.systematicsFileName);
+
+    if ( cmdline.numSyst <= 0 ) utils::error("doSystematics true, but command line argument numSyst=<positive integer> was not given");
+    cout << "numSyst (cmdline): " << cmdline.numSyst << endl;
+
+    // read nth line
+    // error if end of file reached
+    std::string line;
+    for (int i=1; i<=cmdline.numSyst; ++i) if ( ! std::getline(systFile, line) ) 
+      utils::error("systematics file contains less lines than numSyst");
+    std::stringstream nth_line;
+    nth_line<<line;
+
+    // Assign the systematic sigmas:
+    nth_line>>syst.nSigmaPU;
+    nth_line>>syst.nSigmaAlphaS;
+    nth_line>>syst.nSigmaScale;
+    nth_line>>syst.numScale;
+    nth_line>>syst.numPdf;
+    cout << " nSigmaPU     = " << syst.nSigmaPU << endl;
+    cout << " nSigmaAlphaS = " << syst.nSigmaAlphaS << endl;
+    cout << " nSigmaScale  = " << syst.nSigmaScale << endl;
+    cout << " numScale     = " << syst.numScale << endl;
+    cout << " numPdf       = " << syst.numPdf << endl;
+  } else {
+    cout << "doSystematics (settings): false" << endl;
   }
 
   // ---------------------------------------------------------------------------
@@ -125,7 +139,39 @@ int main(int argc, char** argv) {
   // This is useful if someone wants to do quick study/define other search region etc.
   // But also, common methods in all anaylsis are defined in common/AnalysisBase.*
 
-  ana.declare_histograms();
+  ana.declare_common_histos();
+
+  ana.declare_analysis_histos();
+  
+  // --------------------------------------------------------------
+  // -- Calculate the normalization factor for the event weights --
+  // -- The original MC weight will be divided by this quantity  --
+  // --------------------------------------------------------------
+
+  cout << endl;
+  double weightnorm = 1 ;
+  if ( !cmdline.isData ) {
+    cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
+
+    double xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
+    if ( xsec==0 ) return 1;
+    cout << "xsec (ntuple): " << xsec << endl;
+
+    double totweight = ana.get_totweight_from_ntuple(cmdline.fileNames, settings.totWeightHistoName); // weight histo name given in settings.h
+    cout << "totweight (ntuple): " << totweight << endl;
+
+    weightnorm = (xsec*settings.intLumi)/totweight;
+    cout << "weightnorm (calc): " << weightnorm << endl;
+  }
+
+  // ---------------------------------------
+  // --- Pileup Reweighting              ---
+  // ---------------------------------------
+  
+  if ( !cmdline.isData && settings.doPileupReweighting ) {
+    cout << "doPileupReweighting (settings): true" << endl;
+    ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.fileNames);
+  } else cout << "doPileupReweighting (settings): false" << endl;
 
   // ------------------------------------------------------------------------------
   // -- Define the order of cuts (and corresponding bins in the counts histogram --
@@ -141,16 +187,19 @@ int main(int argc, char** argv) {
 
   // Define bin order for counts histogram
   ofile->count("NoCuts", 0);
-  for (auto cut : ana.baseline_cuts) ofile->count(cut.name, 0);
-  for (auto cut : ana.analysis_cuts) ofile->count(cut.name, 0);
   cout << endl;
   cout << "Number of events counted after applying" << endl;
   cout << "- Baseline cuts (common for all analysis):" << endl;
-  for (auto cut : ana.baseline_cuts) cout << "  "<<cut.name << endl;
-
+  for (auto cut : ana.baseline_cuts) {
+    ofile->count(cut.name, 0);
+    cout << "  "<<cut.name << endl;
+  }
   cout << endl;  
   cout << "- Analysis specific cuts:\n";
-  for (auto cut : ana.analysis_cuts) cout << "  "<<cut.name << endl;
+  for (auto cut : ana.analysis_cuts) {
+    ofile->count(cut.name, 0);
+    cout << "  "<<cut.name << endl;
+  }
 
   ofile->count("Signal", 0); // Dont worry, we blind data ;)
 
@@ -161,15 +210,52 @@ int main(int argc, char** argv) {
   cout << endl;
   cout << "Start looping on events ..." << endl;
   for(int entry=0; entry < nevents; ++entry) {
+
     // Read event into memory
     stream.read(entry);
-    //data.CalculateAllVariables();
 
     if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;
 
-    // Correctly normalized (to luminosity) event weight
     double w = 1.;
-    if ( data.evt.Gen_Weight!=0 ) w = data.evt.Gen_Weight*weightnorm;
+
+    if ( !cmdline.isData ) {
+      // Event weight normalized to luminosity
+      w *= data.evt.Gen_Weight*weightnorm;
+
+      // Pileup reweighting
+      h_nvtx->Fill(data.evt.NGoodVtx, w);
+      if ( settings.doPileupReweighting ) {
+	w *= ana.get_pileup_weight(data.evt.pu_NtrueInt, settings.doSystematics, syst.nSigmaPU);
+	h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
+      }
+
+      if ( settings.doSystematics ) {
+	// LHE weight variations
+	// More info about them here:
+	// https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L165-L237
+
+	// Alpha_s variations
+	// A set of two weights
+	// Only stored for NLO, otherwise vector size==0
+	// If vector was not filled (LO samples), not doing any weighting
+	if ( data.evt.alphas_Weights.size() == 2 )
+	  w *= ana.get_alphas_weight(data.evt.alphas_Weights, syst.nSigmaAlphaS, data.evt.LHA_PDF_ID);
+
+	// Scale variations
+	// A set of six weights, unphysical combinations excluded
+	// If numScale=0 is specified, not doing any weighting
+	if ( syst.numScale >= 1 && syst.numScale <= 3 )
+	  w *= ana.get_scale_weight(data.evt.scale_Weights, syst.nSigmaScale, syst.numScale);
+
+	// PDF weights
+	// A set of 100 weights for the nominal PDF
+	// If numPdf=0 is specified, not doing any weighting
+	if ( syst.numPdf >= 1 && syst.numPdf <= data.evt.pdf_Weights.size() )
+	  w *= data.evt.pdf_Weights[syst.numPdf-1];
+	else if ( syst.numPdf > data.evt.pdf_Weights.size() )
+	  utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
+      }
+    }
 
     ofile->count("NoCuts", w);
 
@@ -183,7 +269,7 @@ int main(int argc, char** argv) {
 
     // Before doing anything serious (eg. filling any histogram)
     // Define Signal region and blind it!!!!!!!!!!!!!!!!!!!!!!!!
-    bool DATA_BLINDED = ! ( cmdline.isdata && ana.signal_selection(data) );
+    bool DATA_BLINDED = ! ( cmdline.isData && ana.signal_selection(data) );
 
     /*
       Some more warning to make sure :)
@@ -205,25 +291,26 @@ int main(int argc, char** argv) {
       // These are all defined in [Name]_Analysis.cc (included from settings.h)
       // You specify there also which cut is applied for each histo
       // But all common baseline cuts are alreay applied above
-      if ( pass_all ) ana.fill_histograms(data, w);
+      if ( pass_all ) ana.fill_analysis_histos(data, w);
 
       // Save counts for the analysis cuts
       for (auto cut : ana.analysis_cuts) if (pass_all)
         if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
 
       // Count Signal events
-      if ( pass_all && ana.signal_selection(data) ) ofile->count("Signal", w);
+      if ( pass_all && ana.signal_selection(data) ) {
+	ofile->count("Signal", w);
 
-      // If option (saveSkimmedNtuple) is specified
-      // save all events selected by the analysis to the output file
-      // tree is copied and current weight is saved as "eventWeight"
-      if ( settings.saveSkimmedNtuple ) ofile->addEvent(w);
+	// If option (saveSkimmedNtuple) is specified
+	// save all events selected by the analysis to the output file
+	// tree is copied and current weight is saved as "eventWeight"
+	if ( settings.saveSkimmedNtuple ) ofile->addEvent(w);
+      }
 
     } // end Blinding
 
   } // end event loop
 
-  //fpileup->Close();
   stream.close();
   ofile->close();
   return 0;

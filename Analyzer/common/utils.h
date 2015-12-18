@@ -149,13 +149,15 @@ namespace utils {
   
   struct commandLine
   {
-    std::string progname;
-    std::string outputfilename;
-    std::vector<std::string> filenames;
-    bool isdata;
+    std::string progName;
+    std::string outputFileName;         // first non option argument
+    std::vector<std::string> fileNames; // second and rest non optional arguments
+    bool isData;                        // determined automatically from input file names
+    std::string systematicsFileName;    // needs to be given only if doSystetmatics settings true
+    int numSyst;                        // needs to be given only if doSystetmatics settings true
   };
   
-  // Read ntuple filenames from file list
+  // Read ntuple fileNames from file list
   std::vector<std::string>
   getFilenames(std::string filelist)
   {
@@ -178,35 +180,57 @@ namespace utils {
   void
   decodeCommandLine(int argc, char** argv, commandLine& cl)
   {
-    cl.progname = std::string(argv[0]);
+    cl.progName = std::string(argv[0]);
 
     if ( argc < 3 ) error("<output filename> and <input file list> was not given!");
 
-    // 1st command line argument
-    cl.outputfilename = std::string(argv[1]);
-    std::cout<<"output file is: "<<cl.outputfilename<<std::endl;
-
-    cl.isdata = false;
-
+    // decide whether input is data
+    cl.isData = false;
     int n_data_arg = 0;
-    // if 2nd argument is txt file
-    if (std::string(argv[2]).find(".txt")!=std::string::npos&&argc==3) {
-      cl.filenames = getFilenames(std::string(argv[2]));
-      if (std::string(argv[2]).find("filelists/data")!=std::string::npos) n_data_arg++;
-    }
-    // otherwise add all of the rest arguments to the list
-    else {
-      cl.filenames = std::vector<std::string>();
-      for (int i=2; i<argc; ++i) {
-        if (std::string(argv[i]).find(".root")!=std::string::npos) {
-  	cl.filenames.push_back(std::string(argv[i]));
-  	if (std::string(argv[i]).find("ns_2015")!=std::string::npos) n_data_arg++; // This part is in all data file names
-        }
-        else error(std::string("argument ")+std::string(argv[i])+" is not a root file!");
+    int n_input = 0;
+
+    // specify the nth line of the systematic file you want to consider
+    // if settings.doSystematics is true this number needs to be > 0
+    cl.systematicsFileName = "";
+    cl.numSyst = 0;
+
+    for (int iarg=1; iarg<argc; ++iarg) {
+      std::string arg = argv[iarg];
+      // look for optional arguments (argument has "=" in it)
+      size_t f = arg.find("=");
+      if (f!=std::string::npos) {
+	std::string option=arg.substr(0, f);
+	std::stringstream value;
+	value<<arg.substr(f+1, arg.size()-f-1);
+	// reading option
+	if (option=="numSyst") value>>cl.numSyst;
+	if (option=="systematicsFileName") value>>cl.systematicsFileName;
+      } else {
+	if (cl.outputFileName=="") {
+	  // 1st non-optional (i.e xxx=yyy) command line argument is output ifle
+	  cl.outputFileName = arg;
+	  std::cout<<"output file is: "<<cl.outputFileName<<std::endl;
+	} else {
+	  // 2nd and rest non-optional argument is input file(s)
+	  if (arg.find(".txt")!=std::string::npos) {
+	    // if txt file, read it's contents
+	    std::vector<std::string> list = getFilenames(arg);
+	    cl.fileNames.insert(cl.fileNames.end(), list.begin(), list.end());
+	    if (arg.find("filelists/data")!=std::string::npos) n_data_arg++;
+	  } else {
+	    // Otherwise add all root files to input file list
+	    if (std::string(arg).find(".root")!=std::string::npos) cl.fileNames.push_back(arg);
+	    else error(std::string("argument ")+arg+" is not a root file or a list (.txt file)!");
+	    if (std::string(arg).find("ns_2015")!=std::string::npos) n_data_arg++; // This part is in all data file names
+	  }
+	  ++n_input;
+	}
       }
     }
-    if (n_data_arg != 0 && n_data_arg != argc-2) error(" Data mixed with MC!");
-    else cl.isdata = (n_data_arg == argc-2);
+
+    // check number of input file arguments containing data-like strings
+    if (n_data_arg != 0 && n_data_arg != n_input) error(" Data mixed with MC!");
+    else cl.isData = (n_data_arg == n_input);
   }
 }
 

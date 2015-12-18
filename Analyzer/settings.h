@@ -1,5 +1,6 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
+
 #include "FullHad_Analysis.h" // Specify here the implementations for you Analysis
 
 struct settings {
@@ -7,21 +8,32 @@ struct settings {
   //-----------------------------------------------------------------------------
   // -- Constants
   //-----------------------------------------------------------------------------
-  settings() :
-    intLumi             ( 2200.0 ), // Total integrated luminosity in units of (pb^-1)
+  settings(bool RunOnSkim = false) :
+    runOnSkim           ( RunOnSkim ),
+    saveSkimmedNtuple   ( true ),
     doPileupReweighting ( true ),
-    saveSkimmedNtuple   ( false ),
-    treeName            ( "B2GTTreeMaker/B2GTree" ),
-    totWeightHistoName  ( "EventCounter/totweight" )
+    doSystematics       ( false ),
+    // if above is true, must add command line these options:
+    // systematicsFileName=<filename>
+    // nthSyst=<positive int> - nth line in the systematics file to consider
+    treeName            ( RunOnSkim ? "B2GTree" : "B2GTTreeMaker/B2GTree" ),
+    totWeightHistoName  ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
+    mcPileupHistoName   ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
+    pileupDir           ( "pileup/Nov13_Silver_JSON/" ),
+    intLumi             ( 2521.8 /* brilcalc - Nov13 Silver JSON */ ) // Tot int lumi in (pb^-1)
   {};
   ~settings(){};
-  
-  const double intLumi;
-  const bool doPileupReweighting;
+
+  const bool runOnSkim;
   const bool saveSkimmedNtuple;
+  const bool doPileupReweighting;
+  const bool doSystematics;
   const std::string treeName;
   const std::string totWeightHistoName;
-  
+  const std::string mcPileupHistoName;
+  const std::string pileupDir;
+  const double intLumi;
+
   //-----------------------------------------------------------------------------
   // -- Declare variables to be read by treestream
   //-----------------------------------------------------------------------------
@@ -375,8 +387,13 @@ struct settings {
     stream.select("evt_NEvent_Corr",  data.evt.NEvent_Corr);
     stream.select("evt_Lumi_Weight",  data.evt.Lumi_Weight);
     stream.select("evt_Gen_Weight",   data.evt.Gen_Weight);
+    stream.select("scale_Weights",    data.evt.scale_Weights);
+    stream.select("pdf_Weights",      data.evt.pdf_Weights);
+    stream.select("alphas_Weights",   data.evt.alphas_Weights);
+    stream.select("evt_LHA_PDF_ID",   data.evt.LHA_PDF_ID);
     stream.select("SUSY_Gluino_Mass", data.evt.SUSY_Gluino_Mass);
     stream.select("SUSY_LSP_Mass",    data.evt.SUSY_LSP_Mass);
+
     
     stream.select("evt_RunNumber", data.evt.RunNumber);
     //stream.select("evt_LumiBlock", data.evt.LumiBlock);
@@ -388,6 +405,10 @@ struct settings {
     stream.select("vtx_rho", data.evt.vtx_rho);
     //stream.select("vtx_chi", data.evt.vtx_chi);
     stream.select("vtx_ndof", data.evt.vtx_ndof);
+    
+    stream.select("pu_NtrueInt", data.evt.pu_NtrueInt);
+    //stream.select("pu_NInt",     data.evt.pu_NInt);
+    //stream.select("pu_BX",       data.evt.pu_BX);
     
     stream.select("met_NoHF_Pt", data.met.Pt);
     stream.select("met_NoHF_Phi", data.met.Phi);

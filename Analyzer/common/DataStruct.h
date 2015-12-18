@@ -767,12 +767,19 @@ public:
     float MTR;
     float R;
     float R2;
+
+    // Generator/LHE variables
     float XSec;
     float NEvent_Corr;
     float Lumi_Weight;
     float Gen_Weight;
+    std::vector<float> scale_Weights;
+    std::vector<float> pdf_Weights;
+    std::vector<float> alphas_Weights;
+    int LHA_PDF_ID;
     float SUSY_Gluino_Mass;
     float SUSY_LSP_Mass;
+
     int npv;
     int NGoodVtx; // New Oct 22
     
@@ -896,6 +903,11 @@ public:
     std::vector<float> vtx_chi;
     std::vector<int> vtx_ndof;
     
+    // Pileup
+    int pu_NtrueInt;
+    std::vector<int> pu_NInt;
+    std::vector<int> pu_BX;
+    
     unsigned int RunNumber;
     unsigned int LumiBlock;
     unsigned long long EventNumber;
@@ -928,6 +940,21 @@ public:
       MTR=NOVAL_F;
       R=NOVAL_F;
       R2=NOVAL_F;
+
+      // Generator/LHE variables
+      XSec=NOVAL_F;
+      NEvent_Corr=NOVAL_F;
+      Lumi_Weight=NOVAL_F;
+      Gen_Weight=NOVAL_F;
+      init_vec(scale_Weights);
+      init_vec(pdf_Weights);
+      init_vec(alphas_Weights);
+      LHA_PDF_ID=NOVAL_I;
+      SUSY_Gluino_Mass=NOVAL_F;
+      SUSY_LSP_Mass=NOVAL_F;
+      
+      npv=NOVAL_I;
+      NGoodVtx=NOVAL_I;
       
       // Other Variables
       HT=NOVAL_F;
@@ -1024,6 +1051,10 @@ public:
       init_vec(vtx_rho);
       init_vec(vtx_chi);
       init_vec(vtx_ndof);
+      
+      pu_NtrueInt = NOVAL_I;
+      init_vec(pu_NInt);
+      init_vec(pu_BX);
     }
   } evt;
 };

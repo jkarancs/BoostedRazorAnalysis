@@ -6,13 +6,13 @@ public:
   Analysis();
   ~Analysis();
 
-  void declare_histograms();
-
   void define_selections(const DataStruct&);
 
   virtual bool signal_selection(const DataStruct&);
 
-  void fill_histograms(const DataStruct&, const double&);
+  void declare_analysis_histos();
+
+  void fill_analysis_histos(const DataStruct&, const double&);
 
   std::vector<Cut> analysis_cuts;
 
@@ -105,26 +105,26 @@ Analysis::signal_selection(const DataStruct& data) {
 
 //_______________________________________________________
 //                 List of Histograms
-TH1D* h_nvtx;
+//TH1D* h_nvtx;
 TH2D* h_abcd;
 
 //_______________________________________________________
 //              Define Histograms here
 void
-Analysis::declare_histograms()
+Analysis::declare_analysis_histos()
 {
-  h_nvtx = new TH1D("h_nvtx",";N_{Vertices}", 100,0,100);
+  //h_nvtx = new TH1D("nvtx",";N_{Vertices}", 100,0,100);
   Double_t R_bins[3] = { 0, 0.4, 2 };
   Double_t Ntop_bins[3] = { 0, 2, 3 };
-  h_abcd = new TH2D("h_abcd",";R;N_{top-tag}", 2, R_bins, 2, Ntop_bins );
+  h_abcd = new TH2D("abcd",";R;N_{top-tag}", 2, R_bins, 2, Ntop_bins );
 }
 
 
 //_______________________________________________________
 //               Fill Histograms here
 void
-Analysis::fill_histograms(const DataStruct& data, const double& weight)
+Analysis::fill_analysis_histos(const DataStruct& data, const double& weight)
 {
-  h_nvtx->Fill(data.evt.NGoodVtx);
+  //h_nvtx->Fill(data.evt.NGoodVtx);
   if ( _apply_ncut( analysis_cuts.size() ) ) h_abcd->Fill(data.evt.R, data.evt.NTopHad, weight);
 }
