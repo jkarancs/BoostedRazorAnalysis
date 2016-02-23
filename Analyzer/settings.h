@@ -8,19 +8,19 @@ struct settings {
   //-----------------------------------------------------------------------------
   // -- Constants
   //-----------------------------------------------------------------------------
-  settings(bool RunOnSkim = false) :
+  settings( bool RunOnSkim = false ) :
     runOnSkim           ( RunOnSkim ),
     saveSkimmedNtuple   ( true ),
-    doPileupReweighting ( true ),
+    doPileupReweighting ( false ),
     doSystematics       ( false ),
-    // if above is true, must add command line these options:
+    // if above is true, must add these command line options:
     // systematicsFileName=<filename>
-    // nthSyst=<positive int> - nth line in the systematics file to consider
+    // numSyst=<positive int> - nth line in the systematics file to consider
     treeName            ( RunOnSkim ? "B2GTree" : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName  ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName   ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
-    pileupDir           ( "pileup/Nov13_Silver_JSON/" ),
-    intLumi             ( 2521.8 /* brilcalc - Nov13 Silver JSON */ ) // Tot int lumi in (pb^-1)
+    pileupDir           ( "pileup/Dec13_Silver_JSON/" ),
+    intLumi             ( 2630.2 /* brilcalc - Dec18 Silver JSON */ ) // Tot int lumi in (pb^-1)
   {};
   ~settings(){};
 
@@ -54,7 +54,14 @@ struct settings {
     //stream.select("gen_Charge", data.gen.Charge);
     stream.select("gen_ID", data.gen.ID);
     stream.select("gen_Status", data.gen.Status);
-    stream.select("gen_Mom0ID", data.gen.MomID);
+    stream.select("gen_Mom0ID", data.gen.Mom0ID);
+    stream.select("gen_Mom1ID", data.gen.Mom1ID);
+    stream.select("gen_Dau0ID", data.gen.Dau0ID);
+    stream.select("gen_Dau1ID", data.gen.Dau1ID);
+    stream.select("gen_Mom0Status", data.gen.Mom0Status);
+    stream.select("gen_Mom1Status", data.gen.Mom1Status);
+    stream.select("gen_Dau0Status", data.gen.Dau0Status);
+    stream.select("gen_Dau1Status", data.gen.Dau1Status);
     
     stream.select("el_size", data.ele.size);
     //stream.select("el_Mass", data.ele.Mass);
@@ -198,34 +205,35 @@ struct settings {
     //stream.select("jetAK8_GenJetPt", data.jetsAK8.GenJetPt);
     //stream.select("jetAK8_GenJetE", data.jetsAK8.GenJetE);
     //stream.select("jetAK8_GenJetCharge", data.jetsAK8.GenJetCharge);
-    //stream.select("jetAK8_muonMultiplicity", data.jetsAK8.muonMultiplicity);
-    //stream.select("jetAK8_PhotonEnergy", data.jetsAK8.PhotonEnergy);
-    //stream.select("jetAK8_ElectronEnergy", data.jetsAK8.ElectronEnergy);
-    //stream.select("jetAK8_MuonEnergy", data.jetsAK8.MuonEnergy);
-    //stream.select("jetAK8_HFHadronEnergy", data.jetsAK8.HFHadronEnergy);
-    //stream.select("jetAK8_HFEMEnergy", data.jetsAK8.HFEMEnergy);
-    //stream.select("jetAK8_ChargedHadronMultiplicity", data.jetsAK8.ChargedHadronMultiplicity);
-    //stream.select("jetAK8_numberOfDaughters", data.jetsAK8.numberOfDaughters);
-    //stream.select("jetAK8_chargedMultiplicity", data.jetsAK8.chargedMultiplicity);
-    //stream.select("jetAK8_neutralHadronMultiplicity", data.jetsAK8.neutralHadronMultiplicity);
-    //stream.select("jetAK8_neutralHadronEnergy", data.jetsAK8.neutralHadronEnergy);
-    //stream.select("jetAK8_neutralEmEnergy", data.jetsAK8.neutralEmEnergy);
-    //stream.select("jetAK8_chargedEmEnergy", data.jetsAK8.chargedEmEnergy);
-    //stream.select("jetAK8_chargedHadronEnergy", data.jetsAK8.chargedHadronEnergy);
-    //stream.select("jetAK8_photonMultiplicity", data.jetsAK8.photonMultiplicity);
-    //stream.select("jetAK8_electronMultiplicity", data.jetsAK8.electronMultiplicity);
-    //stream.select("jetAK8_HFHadronMultiplicity", data.jetsAK8.HFHadronMultiplicity);
-    //stream.select("jetAK8_HFEMMultiplicity", data.jetsAK8.HFEMMultiplicity);
-    //stream.select("jetAK8_ChargeMuEnergy", data.jetsAK8.ChargeMuEnergy);
-    //stream.select("jetAK8_neutralMultiplicity", data.jetsAK8.neutralMultiplicity);
+    stream.select("jetAK8_muonMultiplicity", data.jetsAK8.muonMultiplicity);
+    stream.select("jetAK8_PhotonEnergy", data.jetsAK8.PhotonEnergy);
+    stream.select("jetAK8_ElectronEnergy", data.jetsAK8.ElectronEnergy);
+    stream.select("jetAK8_MuonEnergy", data.jetsAK8.MuonEnergy);
+    stream.select("jetAK8_HFHadronEnergy", data.jetsAK8.HFHadronEnergy);
+    stream.select("jetAK8_HFEMEnergy", data.jetsAK8.HFEMEnergy);
+    stream.select("jetAK8_ChargedHadronMultiplicity", data.jetsAK8.ChargedHadronMultiplicity);
+    stream.select("jetAK8_numberOfDaughters", data.jetsAK8.numberOfDaughters);
+    stream.select("jetAK8_neutralHadronMultiplicity", data.jetsAK8.neutralHadronMultiplicity);
+    stream.select("jetAK8_photonMultiplicity", data.jetsAK8.photonMultiplicity);
+    stream.select("jetAK8_electronMultiplicity", data.jetsAK8.electronMultiplicity);
+    stream.select("jetAK8_HFHadronMultiplicity", data.jetsAK8.HFHadronMultiplicity);
+    stream.select("jetAK8_HFEMMultiplicity", data.jetsAK8.HFEMMultiplicity);
+    stream.select("jetAK8_ChargeMuEnergy", data.jetsAK8.ChargeMuEnergy);
+    stream.select("jetAK8_neutralMultiplicity", data.jetsAK8.neutralMultiplicity);
+    stream.select("jetAK8_chargedMultiplicity", data.jetsAK8.chargedMultiplicity);
+    stream.select("jetAK8_neutralHadronEnergy", data.jetsAK8.neutralHadronEnergy);
+    stream.select("jetAK8_neutralEmEnergy", data.jetsAK8.neutralEmEnergy);
+    stream.select("jetAK8_chargedEmEnergy", data.jetsAK8.chargedEmEnergy);
+    stream.select("jetAK8_chargedHadronEnergy", data.jetsAK8.chargedHadronEnergy);
     //stream.select("jetAK8_jecFactor0", data.jetsAK8.jecFactor0);
     //stream.select("jetAK8_jetArea", data.jetsAK8.jetArea);
     //stream.select("jetAK8_SmearedPt", data.jetsAK8.SmearedPt);
     //stream.select("jetAK8_SmearedPEta", data.jetsAK8.SmearedPEta);
     //stream.select("jetAK8_SmearedPhi", data.jetsAK8.SmearedPhi);
     //stream.select("jetAK8_SmearedE", data.jetsAK8.SmearedE);
-    //stream.select("jetAK8_JERup", data.jetsAK8.JERup);
-    //stream.select("jetAK8_JERdown", data.jetsAK8.JERdown);
+    stream.select("jetAK8_JER", data.jetsAK8.JER);
+    stream.select("jetAK8_JERup", data.jetsAK8.JERup);
+    stream.select("jetAK8_JERdown", data.jetsAK8.JERdown);
     stream.select("jetAK8_vSubjetIndex0", data.jetsAK8.vSubjetIndex0);
     stream.select("jetAK8_vSubjetIndex1", data.jetsAK8.vSubjetIndex1);
     stream.select("jetAK8_topSubjetIndex0", data.jetsAK8.topSubjetIndex0);
@@ -396,7 +404,7 @@ struct settings {
 
     
     stream.select("evt_RunNumber", data.evt.RunNumber);
-    //stream.select("evt_LumiBlock", data.evt.LumiBlock);
+    stream.select("evt_LumiBlock", data.evt.LumiBlock);
     //stream.select("evt_EventNumber", data.evt.EventNumber);
     stream.select("evt_npv", data.evt.npv);
     
@@ -410,10 +418,10 @@ struct settings {
     //stream.select("pu_NInt",     data.evt.pu_NInt);
     //stream.select("pu_BX",       data.evt.pu_BX);
     
-    stream.select("met_NoHF_Pt", data.met.Pt);
-    stream.select("met_NoHF_Phi", data.met.Phi);
-    stream.select("met_NoHF_Px", data.met.Px);
-    stream.select("met_NoHF_Py", data.met.Py);
+    stream.select("met_NoHF_Pt", data.evt.met_NoHF_Pt);
+    //stream.select("met_NoHF_Phi", data.evt.met_NoHF_Phi);
+    //stream.select("met_NoHF_Px", data.evt.met_NoHF_Px);
+    //stream.select("met_NoHF_Py", data.evt.met_NoHF_Py);
     
     stream.select("evt_NGoodVtx", data.evt.NGoodVtx);
     stream.select("Flag_goodVertices", data.evt.Flag_goodVertices);
@@ -469,6 +477,7 @@ struct settings {
     stream.select("HLT_Mu40_eta2p1_PFJet200_PFJet50", data.evt.HLT_Mu40_eta2p1_PFJet200_PFJet50);
     stream.select("HLT_Mu45_eta2p1", data.evt.HLT_Mu45_eta2p1);
     stream.select("HLT_Mu50", data.evt.HLT_Mu50);
+    stream.select("HLT_Ele22_eta2p1_WPLoose_Gsf", data.evt.HLT_Ele22_eta2p1_WPLoose_Gsf);
     stream.select("HLT_Ele32_eta2p1_WPLoose_Gsf", data.evt.HLT_Ele32_eta2p1_WPLoose_Gsf);
     stream.select("HLT_Ele32_eta2p1_WPTight_Gsf", data.evt.HLT_Ele32_eta2p1_WPTight_Gsf);
     stream.select("HLT_IsoMu24_eta2p1", data.evt.HLT_IsoMu24_eta2p1);

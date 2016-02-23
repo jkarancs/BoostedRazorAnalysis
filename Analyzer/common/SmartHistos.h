@@ -30,7 +30,7 @@ public:
   typedef struct Postfix { std::function<size_t()> sel; std::vector<std::string> vec; std::vector<std::string> leg; std::string colz; } Postfix;
   
 private:
-  std::map<const char*, Postfix> pf_map_;
+  std::map<std::string, Postfix> pf_map_;
   
   double get_dbl_(std::string& str) {
     std::stringstream ss(str); 
@@ -91,6 +91,10 @@ private:
     for (size_t i=0; i<n_max; ++i) v_str.push_back("");
     for (std::vector<std::string>& part : v_parts) for (size_t i=0; i<n_max; ++i) 
       v_str[i] += part[std::min(i,part.size()-1)];
+    if (format) for (size_t i=0, n=v_str.size(); i<n; ++i) {
+      size_t f = v_str[i].find(".");
+      if (f!=std::string::npos) v_str[i].replace(f,1,"p");
+    }
     return v_str;
   }
   
@@ -106,11 +110,11 @@ private:
   }
   
 public:
-  void AddNew(const char* name, std::function<size_t()> sel, std::string pf, std::string leg, std::string colz) { 
-    pf_map_.insert(std::pair<const char*, Postfix>(name, { .sel=sel, .vec=interpret_string_(pf,1), .leg=interpret_string_(leg), .colz=colz })); 
+  void AddNew(std::string name, std::function<size_t()> sel, std::string pf, std::string leg, std::string colz) { 
+    pf_map_.insert(std::pair<std::string, Postfix>(name, { .sel=sel, .vec=interpret_string_(pf,1), .leg=interpret_string_(leg), .colz=colz })); 
   }
   
-  Postfix GetPostfix(const char* name) { 
+  Postfix GetPostfix(std::string name) { 
     size_t count = pf_map_.count(name);
     if (!count) std::cout<<"!!! ERROR: Postfixes::GetPostfix: Postfix with name = "<<name<<" was not found."<<std::endl;
     return (count) ? pf_map_[name] : Postfix({0,std::vector<std::string>(),std::vector<std::string>(),""});
@@ -136,12 +140,12 @@ public:
   ~Cuts() {}
   
 private:
-  std::map<const char*, Cut*> cut_map_;
+  std::map<std::string, Cut*> cut_map_;
   
 public:
-  void AddNew(const char* name, std::function<bool()> cut) { cut_map_.insert(std::pair<const char*, Cut*>(name, new Cut(cut))); }
+  void AddNew(std::string name, std::function<bool()> cut) { cut_map_.insert(std::pair<std::string, Cut*>(name, new Cut(cut))); }
   
-  Cut* GetCut(const char* name) {
+  Cut* GetCut(std::string name) {
     size_t count = cut_map_.count(name);
     if (!count) std::cout<<"!!! ERROR: Cuts::GetCut: Cut with name = "<<name<<" was not found."<<std::endl;
     return (count) ? cut_map_[name] : new Cut([](){ return 0; });
@@ -155,9 +159,10 @@ class SmartHisto {
   
 public:
   // constructors, destructor
-  SmartHisto(std::string name, std::vector<const char*>& pf_names, std::vector<Postfixes::Postfix> pfs,
+  SmartHisto(std::string name, std::vector<std::string>& pf_names, std::vector<Postfixes::Postfix> pfs,
 	     std::vector<std::function<double()> >& ffs, std::vector<std::function<double()> >& weights, std::vector<Cut*> & cuts, 
-	     std::string draw, std::string opt, std::vector<double> ranges) { 
+	     std::string draw, std::string opt, std::vector<double> ranges,
+	     std::vector<std::vector<std::string> >& spec, std::vector<std::vector<std::string> >& spec2) { 
     name_=name;
     pf_names_=pf_names;
     pfs_ = pfs;
@@ -181,7 +186,8 @@ public:
     norm_  = opt.find("Norm")!=std::string::npos;
     logx_  = opt.find("logX")!=std::string::npos;
     log_  = opt.find("Log")!=std::string::npos;
-    keep_  = opt.find("Keep")!=std::string::npos;
+    keep_color_  = opt.find("KeepColor")!=std::string::npos;
+    keep_order_  = opt.find("KeepOrder")!=std::string::npos;
     stat_  = opt.find("Stat")!=std::string::npos ? 1110 : 0;
     sumw2_ = opt.find("Sumw2")!=std::string::npos;
     stack_  = opt.find("Stack")!=std::string::npos;
@@ -193,13 +199,15 @@ public:
     if (ndim_>3) std::cout<<"!!! ERROR: SmartHisto::constructor: More than 3 dimension, define a maximum of 3!\n";
     if (ncut_>6) std::cout<<"!!! ERROR: SmartHisto::constructor: Fixme! - More than 5 cuts specified, please add new variables to store them!\n";
     if (nweight_>3) std::cout<<"!!! ERROR: SmartHisto::constructor: Fixme! - More than 3 weights specified, please add new variables to store them!\n";
+    spec_ =spec;
+    spec2_=spec2;
     init_();
   }
   ~SmartHisto() {}
   
 private:
   std::string name_;
-  std::vector<const char*> pf_names_;
+  std::vector<std::string> pf_names_;
   std::vector<Postfixes::Postfix> pfs_;
   size_t npf_;
   
@@ -233,7 +241,8 @@ private:
   bool norm_; // Normalize histo
   bool logx_; // X log scale
   bool log_; // Y/Z log scale
-  bool keep_; // Keep colors/markers in order
+  bool keep_color_; // Keep colors/markers in order
+  bool keep_order_; // Keep histos in original order on stacked plots
   Int_t stat_; // Draw Stat boxes
   bool sumw2_;
   bool stack_; // Create Stacked plot
@@ -276,27 +285,6 @@ private:
   std::vector<std::vector<std::string> > spec2_;
   TF1* ring_fit_[3][4];
   void init_() {
-    //                HistoParam name, +1D name, Axis Title, +1D Axis Title
-    spec_.push_back({"HitEfficiency","ValidHit","Hit Efficiency", "Valid Hit"});
-    spec_.push_back({"DColEfficiency","Validhit","DCol Efficiency", "Valid Hit"});
-    spec_.push_back({"MergedTopFraction","IsGenTopMerged","Fraction of Merged Tops", "Gen. b and W Merged in R<0.8 (bool)"});
-    spec_.push_back({"JetFindingEfficiency", "HasJet", "Jet finding Efficiency", "Found AK8 Jet (bool)"});
-    spec_.push_back({"TopFindingEfficiency", "HasHadTopTaggedJet", "Top finding Efficiency", "Has hadronic top-tagged Jet (bool)"});
-    spec_.push_back({"Pt300TopFindingEfficiency", "HasPt300HadTopTaggedJet", "Top finding Efficiency", "Has hadronic top-tagged Jet (bool)"});
-    spec_.push_back({"TopTagEfficiency", "JetIsHadTopTagged", "Top-tagging Efficiency", "Jet is hadronic top-tagged (bool)"});
-    spec_.push_back({"Pt300TopTagEfficiency", "JetIsPt300HadTopTagged", "Top-tagging Efficiency", "Jet is hadronic top-tagged (bool)"});
-    spec_.push_back({"MisTagRate", "JetHasNoGenTop", "Mis-tag Rate", "Jet is mis-matched (bool)"});
-    spec_.push_back({"HLTEfficiencyAK8PFJet360TrimMass30",          "HLTAK8PFJet360TrimMass30",          "HLT_AK8PFJet360_TrimMass30",          "#epsilon_{HLT_AK8PFJet360_TrimMass30}"});
-    spec_.push_back({"HLTEfficiencyAK8PFHT700TrimR0p1PT0p03Mass50", "HLTAK8PFHT700TrimR0p1PT0p03Mass50", "HLT_AK8PFHT700_TrimR0p1PT0p03Mass50", "#epsilon_{HLT_AK8PFHT700_TrimR0p1PT0p03Mass50}"});
-    spec_.push_back({"HLTEfficiencyPFHT750_4Jet",                   "HLTPFHT750_4Jet",                   "HLT_PFHT750_4Jet",                    "#epsilon_{HLT_PFHT750_4Jet}"});
-    spec_.push_back({"HLTEfficiencyPFHT350",                        "HLTPFHT350",                        "HLT_PFHT350",                         "#epsilon_{HLT_PFHT350}"});
-    spec_.push_back({"HLTEfficiencyPFHT800",                        "HLTPFHT800",                        "HLT_PFHT800",                         "#epsilon_{HLT_PFHT800}"});
-    spec_.push_back({"HLTEfficiencyPFHT900",                        "HLTPFHT900",                        "HLT_PFHT900",                         "#epsilon_{HLT_PFHT900}"});
-    
-    //                Name Prefix, Title Prefix
-    spec2_.push_back({"Avg","Avg. "});
-    spec2_.push_back({"MPV","MPV "});
-    
     // Get Hit Eff vs DCol Eff functions (previously measured)
     std::string fname[3] = {"hiteff_vs_dcol_l1", "hiteff_vs_dcol_l2", "hiteff_vs_dcol_l3"};
     std::string ringname[4] = {"_ring1", "_ring2", "_ring3", "_ring4"};
@@ -331,29 +319,44 @@ private:
   }
   
   // Define which functions to use for each special histo
-  void calc_spec_1d_(TH1D* h1d, TH2D* h2d) {
-    //h1d->Rebin(2);
-    //h2d->RebinX(2);
-    if (find_spec2_(name_)==0) calc_eff_1d_(h1d, h2d); // Average (Use Profile)
-    if (find_spec2_(name_)==1) calc_mpv_1d_(h1d, h2d); // MPV
-    else switch ( find_spec_(name_) ) {
-    case 1 : calc_dcol_1d_(h1d, h2d); break;
-    default : calc_eff_1d_(h1d, h2d); // Efficiencies/Fractions/Rates
-    }
+  void calc_spec_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
+    size_t s = find_spec2_(name_);
+    if (s==0) calc_eff_1d_(h1d, h2d, 1, savemother); // Average (Use ProfileX)
+    else if (s==1) calc_mpv_1d_(h1d, h2d, savemother); // Fit landau + gaus, extract maximum
+    else if (name_.find("DColEfficiency")!=std::string::npos) calc_dcol_1d_(h1d, h2d, savemother);
+    else calc_eff_1d_(h1d, h2d, 1, savemother); // Efficiencies/Fractions/Rates
   }
   
-  void calc_spec_2d_(TH2D* h2d, TH3D* h3d) {
-    if (find_spec2_(name_)==0) calc_eff_2d_(h2d, h3d); // Average (Use 3DProfile)
-    //if (find_spec2_(name_)==1) calc_mpv_2d_(h1d, h2d); // MPV (To be implemented if needed)
-    else switch ( find_spec_(name_) ) {
-    case 1 : /* calc_dcol_2d_(h2d, h3d); */ break;
-    default : calc_eff_2d_(h2d, h3d); // Efficiencies/Fractions/Rates
+  void calc_spec_2d_(TH2D* h2d, TH3D* h3d, bool savemother=0) {
+    for (int i=1, ni=h3d->GetNbinsX(); i<=ni; ++i) {
+      TH1D h1d_temp("h1d_temp","", h3d->GetNbinsY(), h3d->GetYaxis()->GetXmin(), h3d->GetYaxis()->GetXmax());
+      TH2D h2d_temp("h2d_temp","", h3d->GetNbinsY(), h3d->GetYaxis()->GetXmin(), h3d->GetYaxis()->GetXmax(), 
+		  h3d->GetNbinsZ(), h3d->GetZaxis()->GetXmin(), h3d->GetZaxis()->GetXmax());
+      double slice_entries = 0;
+      for (int j=1, nj=h3d->GetNbinsY(); j<=nj; ++j) for (int k=1, nk=h3d->GetNbinsZ(); k<=nk; ++k) {
+	slice_entries += h3d->GetBinContent(i, j, k);
+	h2d_temp.SetBinContent(j, k, h3d->GetBinContent(i, j, k));
+	h2d_temp.SetBinError  (j, k, h3d->GetBinError  (i, j, k));
+      }
+      h2d->SetEntries(slice_entries);
+      calc_spec_1d_(&h1d_temp, &h2d_temp, savemother);
+      for (int j=1, nj=h3d->GetNbinsY(); j<=nj; ++j) {
+	h2d->SetBinContent(i, j, h1d_temp.GetBinContent(j));
+	h2d->SetBinError  (i, j, h1d_temp.GetBinError  (j));
+      }
     }
+    h2d->SetEntries(h3d->GetEntries());
+    if (savemother) mother_3d_[h2d]=h3d;
   }
+  //void calc_spec_2d_(TH2D* h2d, TH3D* h3d) {
+  //  if (find_spec2_(name_)==0) calc_eff_2d_(h2d, h3d); // Average (Use 3DProfile)
+  //  else if (name_.find("DColEfficiency")!=std::string::npos) /* calc_dcol_2d_(h2d, h3d) */;
+  //  else calc_eff_2d_(h2d, h3d); // Efficiencies/Fractions/Rates
+  //}
   
   // Define functions below: (eg: Efficiency, MPV etc...)
-  // ********************  HitEfficiency *********************
-  void calc_eff_1d_(TH1D* h1d, TH2D* h2d, int err_type = 1) {
+  // ********************  Efficiencies *********************
+  void calc_eff_1d_(TH1D* h1d, TH2D* h2d, int err_type = 1, bool savemother=1) {
     if (err_type==1) { // Use TProfile - Normal Approximation interval
       TProfile* p = h2d->ProfileX();
       for (int i=1; i<=p->GetNbinsX(); ++i) {
@@ -378,23 +381,23 @@ private:
       }
     }
     h1d->SetEntries(h2d->GetEntries());
-    mother_2d_[h1d]=h2d;
+    if (savemother) mother_2d_[h1d]=h2d;
     if (h2d->GetNbinsY()==2&&h2d->GetYaxis()->GetBinCenter(1)==0&&h2d->GetYaxis()->GetBinCenter(2)==1) plot_asymm_err_=1;
   }
   
-  void calc_eff_2d_(TH2D* h2d, TH3D* h3d) {
-    TProfile2D* p = h3d->Project3DProfile("yx");
-    for (int i=1; i<=p->GetNbinsX(); ++i) for (int j=1; j<=p->GetNbinsY(); ++j) {
-      h2d->SetBinContent(i,j,p->GetBinContent(i,j));
-      h2d->SetBinError(i,j,p->GetBinError(i,j));
-    }
-    delete p;
-    h2d->SetEntries(h3d->GetEntries());
-    mother_3d_[h2d]=h3d;
-  }
+  //void calc_eff_2d_(TH2D* h2d, TH3D* h3d) {
+  //  TProfile2D* p = h3d->Project3DProfile("yx");
+  //  for (int i=1; i<=p->GetNbinsX(); ++i) for (int j=1; j<=p->GetNbinsY(); ++j) {
+  //    h2d->SetBinContent(i,j,p->GetBinContent(i,j));
+  //    h2d->SetBinError(i,j,p->GetBinError(i,j));
+  //  }
+  //  delete p;
+  //  h2d->SetEntries(h3d->GetEntries());
+  //  if (savemother) mother_3d_[h2d]=h3d;
+  //}
   
   // ****************** Most Probable Value ******************
-  void calc_mpv_1d_(TH1D* h1d, TH2D* h2d) {
+  void calc_mpv_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
     if (h2d->GetEntries()) {
       Int_t nbiny = h2d->GetNbinsY();
       double ylow = h2d->GetYaxis()->GetXmin();
@@ -418,7 +421,7 @@ private:
       }
     }
     h1d->SetEntries(h2d->GetEntries());
-    mother_2d_[h1d]=h2d;
+    if (savemother) mother_2d_[h1d]=h2d;
   }
   
   void fit_landau_plus_gaus_(TH1D* h, double &mpv, double &error) {
@@ -472,7 +475,7 @@ private:
   }
   
   // ******************** DColEfficiency *********************
-  void calc_dcol_1d_(TH1D* h1d, TH2D* h2d) {
+  void calc_dcol_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
     std::string name =h1d->GetName();
     // Check which Layer/Ring is plotted (or if it is a module plot)
     bool mod_plot = (std::string(h1d->GetName()).find("Modules")!=std::string::npos);
@@ -487,7 +490,7 @@ private:
       if (name.find(ss.str())!=std::string::npos) Ring = ring;
     }
     // Get HitEfficiency and use hiteff_vs_dcol functions to get DCol Efficiency
-    calc_eff_1d_(h1d, h2d);
+    calc_eff_1d_(h1d, h2d, 1, savemother);
     for (int bin=1; bin<=h1d->GetNbinsX(); ++bin) {
       if (mod_plot) Ring = abs(bin-5)-1;
       if (Lay==0&&Ring==3) Ring = 2;
@@ -740,14 +743,15 @@ private:
   
 public:
   const std::string& GetName() { return name_; }
-  const std::vector<const char*>& GetPFNames() { return pf_names_; }
+  const std::vector<std::string>& GetPFNames() { return pf_names_; }
+  const std::vector<std::vector<std::string> >& GetSpec2() { return spec2_; }
   
   // Add New SmartHisto to the container vector
   // and set Filling properties, Postfixes, titles etc...
   // 2D/3D: If one of the Variable is special, also create
   // -1D object for the result
-  // Eg: 2D: ClusterCharge vs Variable
-  // --> 1D: MPV vs ClusteCharge
+  // Eg: 2D: ClusterCharge vs. Variable
+  // --> 1D: MPV vs. Variable
   //
   // 1D
   void AddNew(std::string name, std::string title,
@@ -831,7 +835,10 @@ public:
     size_t s2 =find_spec2_(name);
     bool spec = (s!=(size_t)-1||s2!=(size_t)-1);
     std::string name_1d = name;
-    std::string name_2d = (s!=(size_t)-1) ? std::string(name).replace(name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]) : (s2!=(size_t)-1) ? std::string(name).erase(name.find(spec2_[s2][0]),spec2_[s2][0].size()) : name;
+    std::string name_2d = name;
+    if (s!=(size_t)-1) name_2d = std::string(name).replace(name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]);
+    //if (s2!=(size_t)-1) name_2d = std::string(name).erase(name.find(spec2_[s2][0]),spec2_[s2][0].size());
+    if (s2!=(size_t)-1) name_2d = std::string(name).insert(name.find(spec2_[s2][0]),"For");
     std::string title_1d = 
       (s!=(size_t)-1) ? title : 
       (s2!=(size_t)-1) ? (s2==0 ? 
@@ -965,7 +972,10 @@ public:
     size_t s2 =find_spec2_(name);
     bool spec = (s!=(size_t)-1||s2!=(size_t)-1);
     std::string name_2d = name;
-    std::string name_3d = (s!=(size_t)-1) ? std::string(name).replace(name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]) : (s2!=(size_t)-1) ? std::string(name).erase(name.find(spec2_[s2][0]),spec2_[s2][0].size()) : name;
+    std::string name_3d = name;
+    if (s!=(size_t)-1) name_3d = std::string(name).replace(name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]);
+    //if (s2!=(size_t)-1) name_3d = std::string(name).erase(name.find(spec2_[s2][0]),spec2_[s2][0].size());
+    if (s2!=(size_t)-1) name_3d = std::string(name).insert(name.find(spec2_[s2][0]),"For");
     std::string title_2d = 
       (s!=(size_t)-1) ? title : 
       (s2!=(size_t)-1) ? 
@@ -1088,8 +1098,25 @@ public:
   }
   
   // Fill Histograms using the std::function<double()>
-  void Fill() {
-    //std::cout<<name_<<std::endl;
+  void Fill(bool debug = 0) {
+    if (debug) {
+      std::cout<<name_;
+      std::cout<<" pass_cuts: "<<pass_cuts_();
+      if (npf_) {
+	std::cout<<" pfs: "<<pfs_[0].sel();
+	if (npf_>1) std::cout<<", "<<pfs_[1].sel();
+	if (npf_>2) std::cout<<", "<<pfs_[2].sel();
+	if (npf_>3) std::cout<<", "<<pfs_[3].sel();
+	if (npf_>4) std::cout<<", "<<pfs_[4].sel();
+      }
+      std::cout<<" fill: "<<fill_1d_();
+      if (ndim_>1) std::cout<<", "<<fill_2d_();
+      if (ndim_>2) std::cout<<", "<<fill_3d_();
+      std::cout<<"\n";
+    }
+    //std::cout<<pfs_[0].sel()<<std::endl;
+    //std::cout<<fill_1d_()<<std::endl;
+    //std::cout<<weight1_()<<std::endl;
     //if (name_=="OnCluChargeNorm"&&npf_==2&&pfs_[1].sel()==0&&pass_cuts_()==1) std::cout<<pfs_[0].sel()<<" "<<pfs_[1].sel()<<" "<<fill_1d_()<<" "<<weight1_()<<std::endl;
     //if (name_=="HitEfficiency_vs_LayersDisks"&&npf_==1&&pass_cuts_()==1) std::cout<<pfs_[0].sel()<<" "<<fill_1d_()<<" "<<weight1_()<<std::endl;
     //if (name_=="JetMatchedGenTopPtCoarse"&&npf_==2&&pass_cuts_()==1) std::cout<<pfs_[0].sel()<<" "<<pfs_[1].sel()<<" "<<fill_1d_()<<" "<<weight1_()<<std::endl;
@@ -1149,16 +1176,6 @@ public:
     }
   }
   
-  typedef struct Special { std::string name; std::string name_plus_1d; std::string axis; std::string axis_plus_1d; } Special;
-  void AddSpecial(Special spec) { 
-    std::vector<std::string> param;
-    param.push_back(spec.name);
-    param.push_back(spec.name_plus_1d);
-    param.push_back(spec.axis);
-    param.push_back(spec.axis_plus_1d);
-    spec_.push_back(param); 
-  }
-  
   void Load(TFile* f) { load_all_(f); calc_specials_(); }
   
   void Add(TFile* f) { load_all_(f, 1); calc_specials_(); }
@@ -1209,7 +1226,7 @@ public:
     }
   }
 
-private:  
+private:
   //______________________________________________________________________
   //                       Multidraw functions
   
@@ -1386,24 +1403,15 @@ private:
     std::vector<int> col = string_to_vector_(colz);
     std::vector<Int_t> marker = { 20, 21, 22, 23, 29 }; //full circle, square, tri-up, tri-down, star
     int nleg = 0;
-    //size_t i_highest = -1;
-    //double highest = 0;
+    // Set styles for histos
     for (size_t i=skip; i<hvec.size(); i++) if (hvec[i]->GetEntries()>0) {
-      // Determine the highest histo
-      // we draw this histo first, so default range is ok for all histo
-      // then redraw all histo in predetedmined order
-      //double max = hvec[i]->GetMaximum() / (norm_ ? hvec[i]->GetSumOfWeights() : 1 );
-      //if (max > highest) {
-      //  highest = max;
-      //  i_highest = i;
-      //}
       if (!stack_) {
 	if (draw_.find("P")!=std::string::npos) {
-	  hvec[i]->SetLineColor((Color_t)col[i-(keep_?skip:0)]); 
-	  hvec[i]->SetMarkerColor((Color_t)col[i-(keep_?skip:0)]); 
-	  hvec[i]->SetMarkerStyle(marker[(i-(keep_?skip:0))%5]); 
+	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]); 
+	  hvec[i]->SetMarkerColor((Color_t)col[i-(keep_color_?skip:0)]); 
+	  hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%5]); 
 	} else {
-	  hvec[i]->SetLineColor((Color_t)col[i-(keep_?skip:0)]);
+	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  hvec[i]->SetLineWidth(2);
 	}
       }
@@ -1420,38 +1428,35 @@ private:
     std::vector<TGraphAsymmErrors*> graphs;
     bool draw_axis=1;
     for (size_t i=skip; i<hvec.size() ; ++i) if (hvec[i]->GetEntries()>0) {
-      // Draw (highest plot first, then redraw all incorrect order)
-      //if (i==skip) {
-      //  if (norm_) hvec[i_highest]->DrawNormalized(draw_.c_str());
-      //  else hvec[i_highest]->Draw(draw_.c_str());	  
-      //}
       std::stringstream colored_text;
-      colored_text<<"#color["<<(Color_t)col[i-(keep_?skip:0)]<<"]{"<<pf[i]<<"}";
+      colored_text<<"#color["<<(Color_t)col[i-(keep_color_?skip:0)]<<"]{"<<pf[i]<<"}";
       if (stack_) {
+	// Set special styles for Stack histos
 	if (i<n_nostack_) {
 	  if (i==0) {
 	    // Data
 	    hvec[i]->SetFillColor(0);
 	    //hvec[i]->SetLineColor(0);
-	    hvec[i]->SetMarkerColor((Color_t)col[i-(keep_?skip:0)]); 
-	    hvec[i]->SetMarkerStyle(marker[(i-(keep_?skip:0))%5]); 
+	    hvec[i]->SetMarkerColor((Color_t)col[i-(keep_color_?skip:0)]); 
+	    hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%5]); 
 	    hvec[i]->Draw("PE1");
 	    leg->AddEntry(hvec[i], colored_text.str().c_str(), "P");
 	  } else {
 	    // Signal
 	    hvec[i]->SetLineStyle(2);
 	    hvec[i]->SetLineWidth(2);
-	    hvec[i]->SetLineColor((Color_t)col[i-(keep_?skip:0)]);
+	    hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	    if (skip!=0&&i==skip) hvec[i]->Draw("HIST");
 	    leg->AddEntry(hvec[i], colored_text.str().c_str(), "L");
 	  }
 	} else {
-	  hvec[i]->SetLineColor((Color_t)col[i-(keep_?skip:0)]);
-	  hvec[i]->SetFillColor((Color_t)col[i-(keep_?skip:0)]);
+	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
+	  hvec[i]->SetFillColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  vh.push_back(hvec[i]);
 	  vlegtext.push_back(colored_text.str());
 	}
       } else {
+	// Draw ordinary histos and legend
 	if (norm_&&hvec[i]->Integral()>0) {
 	  hvec[i]->DrawNormalized((i==skip) ? draw_.c_str() : same.c_str());
 	  leg->AddEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L");
@@ -1482,30 +1487,41 @@ private:
 	  leg->AddEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L");
 	}
       }
-      if (stat_) set_stat_(hvec[i], (Color_t)col[i-(keep_?skip:0)], i-skip);
+      if (stat_) set_stat_(hvec[i], (Color_t)col[i-(keep_color_?skip:0)], i-skip);
     }
     if (stack_) {
+      // Draw stacked histos and legend
       THStack *s = new THStack("s","");
       std::vector<TH1D*> vh_max;
-      while (vh.size()) {
-	double max_int = -1; size_t imax=-1;
-	for (size_t i=0; i<vh.size(); ++i) {
-	  if (vh[i]->Integral()>max_int) {
-	    max_int = vh[i]->Integral();
-	    imax = i;
-	  }
+      // Reorder histos based on integral (smallest drawn on bottom)
+      if (!keep_order_) {
+	while (vh.size()) {
+	  double max_int = -1; size_t imax=-1;
+          for (size_t i=0; i<vh.size(); ++i) {
+            if (vh[i]->Integral()>max_int) {
+              max_int = vh[i]->Integral();
+              imax = i;
+            }
+          }
+          if (imax==(size_t)-1) imax = 0;
+          vh_max.push_back(vh[imax]);
+          leg->AddEntry(vh[imax], vlegtext[imax].c_str(), "F");
+          vh.erase(vh.begin()+imax);
+          vlegtext.erase(vlegtext.begin()+imax);
+        }
+      } else {
+	// or keep original order
+	for (int i=0, n=vh.size(); i<n; ++i) {
+	  vh_max.push_back(vh[i]);
+	  leg->AddEntry(vh[i], vlegtext[i].c_str(), "F");
 	}
-	if (imax==(size_t)-1) imax = 0;
-	vh_max.push_back(vh[imax]);
-	leg->AddEntry(vh[imax], vlegtext[imax].c_str(), "F");
-	vh.erase(vh.begin()+imax);
-	vlegtext.erase(vlegtext.begin()+imax);
       }
       for (int i=(int)vh_max.size()-1; i>=0; --i) s->Add(vh_max[i]);
-      s->Draw("SAMEHIST");
+      s->Draw(n_nostack_ ? "SAMEHIST" : "HIST");
       for (int i=n_nostack_-1; i>=(int)skip; --i)
 	hvec[i]->Draw(i==0 ? "SAMEPE1" : "SAMEHIST");
     } else if (ratio_&&!plot_asymm_err_) {
+      // Additionally draw ratio of first 2 plots
       TH1D* ratio = (TH1D*)hvec[0]->Clone();
       ratio->Divide(hvec[1]);
       ratio->SetMarkerColor(417);
@@ -1538,9 +1554,11 @@ private:
       TLegend* leg = 0;
       // Remove Non-Data non-stack plots (eg. signal)
       std::vector<TH1D*> rest;
+      // indices:
+      // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
       for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
 	std::string prim_name = c->GetListOfPrimitives()->At(i)->GetName();
-	if (prim_name=="TPave") leg = (TLegend*)c->GetListOfPrimitives()->At(5);
+	if (prim_name=="TPave") leg = (TLegend*)c->GetListOfPrimitives()->At(i);
 	else if (!remove&&prim_name!=Data->GetName())
 	  rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
       }
@@ -1599,14 +1617,14 @@ private:
   // __________________________________________________________
   //     Draw Asymmetric errors for Efficiencies/Fractions
   
-  void asym1d_draw_(TH1D *h, const char* opt = "AP", int hor_vert_up_down = 0) { 
+  void asym1d_draw_(TH1D *h, std::string opt = "AP", int hor_vert_up_down = 0) { 
     TGraphAsymmErrors* tgae = asym_(h, mother_2d_[h]->ProjectionX());
-    tgae->Draw(opt);
-    if (std::string(opt) == "AP") asym_labels_(h, tgae, hor_vert_up_down);
+    tgae->Draw(opt.c_str());
+    if (opt == "AP") asym_labels_(h, tgae, hor_vert_up_down);
   }
   
   std::vector<double> bincoordx_;
-  std::vector<const char*> binlabels_;
+  std::vector<std::string> binlabels_;
   
   TGraphAsymmErrors* asym_(TH1D* eff, TH1D* den) {
     bincoordx_.clear();
@@ -1691,7 +1709,7 @@ private:
     double labelsize = orig->GetXaxis()->GetLabelSize();
     double offset = (gPad->GetY2()-gPad->GetY1()) * orig->GetXaxis()->GetLabelOffset();
     for (size_t i=0; i<binlabels_.size(); ++i) {
-      TLatex *lat = new TLatex(bincoordx_[i], orig->GetMinimum()-offset, binlabels_[i]);
+      TLatex *lat = new TLatex(bincoordx_[i], orig->GetMinimum()-offset, binlabels_[i].c_str());
       lat->SetTextAlign(align);
       lat->SetTextAngle(angle);
       lat->SetTextFont(orig->GetXaxis()->GetLabelFont());
@@ -1813,7 +1831,7 @@ private:
 public:  
   void DrawPlots() {
     calc_specials_();
-    gStyle->SetOptStat(stat_);
+    //gStyle->SetOptStat(stat_);
     // 1D plots
     std::vector<DrawParams1D> dps1d = get_dps_1stpf_1d_();
     for (size_t i=0; i<dps1d.size(); ++i) {
@@ -1882,7 +1900,14 @@ class SmartHistos {
   
 public:
   // constructor, destructor
-  SmartHistos() { pf_ = new Postfixes(); cuts_ = new Cuts(); weights_={}; }
+  SmartHistos() { 
+    pf_ = new Postfixes();
+    cuts_ = new Cuts();
+    weights_={}; 
+    //                Name Pre/Suffix, Title Pre/Suffix
+    spec2_.push_back({"Avg",           "Avg. "});
+    spec2_.push_back({"MPV",           "MPV "});
+  }
   ~SmartHistos() {}
   //typedef struct FillParams { int nbin; double low; double high; std::function<double()> fill; std::string axis_title; } FillParams;
   typedef struct FillParams { size_t nbin; std::vector<double> bins; std::function<double()> fill; std::string axis_title; } FillParams;
@@ -1894,35 +1919,30 @@ private:
   // Cut container
   Cuts* cuts_;
   
+  // Histo weights
+  std::vector<std::function<double()> > weights_;
+  
+  // Special calculations
+  std::vector<std::vector<std::string> > spec_;
+  std::vector<std::vector<std::string> > spec2_;
+  
   // SmartHisto containers
   std::map<std::string, std::vector<SmartHisto*> > sh_;
   
   // FillParams container
   std::map<std::string, FillParams> hp_map_;
-  
-  std::vector<std::function<double()> > weights_;
-  
+    
   FillParams get_hp_(std::string name) {
+    // Check if name has a special pre/suffix (Avg/MPV etc)
+    // and remove them
+    for (size_t s=0; s<spec2_.size(); ++s) 
+      if ((s==0)? name.find(spec2_[s][0])==0 : name.find(spec2_[s][0])!=std::string::npos)
+	name.erase(name.find(spec2_[s][0]), spec2_[s][0].size());
     size_t count = hp_map_.count(name);
-    if (count) {
-      return hp_map_[name];
-    } else {
-      // Check if name has a special prefix (Average etc)
-      size_t find = std::string::npos;
-      std::string match = "";
-      for ( auto el : hp_map_) {
-	size_t f = name.find(el.first);
-	if (f<find) {
-	  find = f;
-	  match = el.first;
-	}
-      }
-      if (find!=std::string::npos) {
-	return hp_map_[match];
-      } else {
-	std::cout<<"!!! ERROR: SmartHistos::get_hp_: FillParams with name = "<<name<<" was not found."<<std::endl;
-	return FillParams({.nbin=0,.bins={},.fill={ [](){return -9999.9;} },.axis_title=""});
-      }
+    if (count) return hp_map_[name];
+    else {
+      std::cout<<"!!! ERROR: SmartHistos::get_hp_: FillParams with name = "<<name<<" was not found."<<std::endl;
+      return FillParams({.nbin=0,.bins={},.fill={ [](){return -9999.9;} },.axis_title=""});
     }
   }
   
@@ -1967,21 +1987,32 @@ private:
   }
   
 public:
+  typedef struct Special { std::string name; std::string name_plus_1d; std::string axis; std::string axis_plus_1d; } Special;
+  void AddSpecial(Special spec) { 
+    std::vector<std::string> param;
+    param.push_back(spec.name);
+    param.push_back(spec.name_plus_1d);
+    param.push_back(spec.axis);
+    param.push_back(spec.axis_plus_1d);
+    spec_.push_back(param); 
+  }
+
   void AddNewFillParam(std::string name, FillParams hp) {
     if (hp.nbin>=hp.bins.size()&&hp.bins.size()>2) 
       std::cout<<"SmartHistos::AddNewFillParam() Warning: Smaller number of bins defined, decrease nbin param or add new bins!\n";
     hp_map_.insert(std::pair<std::string, FillParams>(name, hp )); 
   }
   
-  void AddNewPostfix(const char* name, std::function<size_t()> sel, std::string pf, std::string leg, std::string colz) { pf_->AddNew(name, sel, pf, leg, colz); }
+  void AddNewPostfix(std::string name, std::function<size_t()> sel, std::string pf, std::string leg, std::string colz) { pf_->AddNew(name, sel, pf, leg, colz); }
   
-  void AddNewCut(const char* name, std::function<bool()> cut) { cuts_->AddNew(name, cut); }
+  void AddNewCut(std::string name, std::function<bool()> cut) { cuts_->AddNew(name, cut); }
   
   void SetHistoWeights(std::vector<std::function<double()> > weights) { weights_ = weights; }
   
   void AddHistoType(std::string type) { sh_[type] = std::vector<SmartHisto*>(); }
   
-  typedef struct HistoParams { std::string fill; std::vector<const char*> pfs; std::vector<const char*> cuts; std::string draw; std::string opt; std::vector<double> ranges; } HistoParams;
+  typedef struct HistoParams { std::string fill; std::vector<std::string> pfs; std::vector<std::string> cuts; std::string draw; std::string opt; std::vector<double> ranges; } HistoParams;
+  
   void AddHistos(std::string name, HistoParams hp, bool AddCutsToTitle = true) {
     if (sh_.count(name)) {
       std::vector<FillParams> hp_vec = get_hp_vec_(hp.fill);
@@ -2002,7 +2033,7 @@ public:
         }
 	std::vector<Cut*> cuts;
         for (size_t i=0; i<hp.cuts.size(); ++i) cuts.push_back(cuts_->GetCut(hp.cuts[i]));
-        sh_[name].push_back(new SmartHisto(hp.fill.c_str(), hp.pfs, pfs, fillfuncs, weights_, cuts, hp.draw, hp.opt, hp.ranges));
+        sh_[name].push_back(new SmartHisto(hp.fill.c_str(), hp.pfs, pfs, fillfuncs, weights_, cuts, hp.draw, hp.opt, hp.ranges, spec_, spec2_));
         if (hp_vec.size()==1) sh_[name][sh_[name].size()-1]->AddNew(hp.fill, axis_titles, hp_vec[0].nbin, hp_vec[0].bins);
         else if (hp_vec.size()==2) sh_[name][sh_[name].size()-1]->AddNew(hp.fill, axis_titles,
 									 hp_vec[1].nbin, hp_vec[1].bins,
@@ -2032,16 +2063,16 @@ public:
     }
   }
   
-  void Load(const char* filename) {
-    TFile* f = TFile::Open(filename); 
+  void Load(std::string filename) {
+    TFile* f = TFile::Open(filename.c_str()); 
     for(std::map<std::string, std::vector<SmartHisto*> >::iterator it = sh_.begin(); it != sh_.end(); ++it)
       for (size_t i=0; i<it->second.size(); ++i) it->second[i]->Load(f); 
     f->Close();
   }
   
-  void Add(const char* filenames) {
+  void Add(std::string filenames) {
     TChain* fc = new TChain("fc");
-    fc->Add(filenames);
+    fc->Add(filenames.c_str());
     TObjArray* fileElements=fc->GetListOfFiles();
     TIter next(fileElements); TChainElement* chEl=0;
     while (( chEl=(TChainElement*)next() )) {

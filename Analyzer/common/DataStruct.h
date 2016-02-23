@@ -4,67 +4,680 @@
 #define NOVAL_I -9999
 #define NOVAL_F -9999.0
 
-#include <cassert>
-#include <map>
 #include <vector>
 #include <iostream>
-
-#include "TLorentzVector.h"
-
-#define NEW_TOP_DEF 1
-
-/* 
-   Top Tagging working points:
-   https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging#13_TeV_working_points
-   e(B) = 3% SD WP2 	3% 	  	SD(beta=0,z=0.1, R=0.8) [110,210] 	tau32 < 0.75, max SD subjet b-discriminant > 0.39 
-
-   --> Use WP2
-   --> Use SoftDrop with PUPPI
-
-*/
-#define SD_MASS_CUT_LOW 110
-#define SD_MASS_CUT_HIGH 210
-#define TAU32_CUT_NEW 0.75
-#define PT_CUT_NEW 400
-#define R_CUT_NEW 0.4
-#define R_CUT_LOW 0.2
-#define DPHI_CUT_NEW 2.7
-
-#define PRUNED_MASS_CUT_LOW 140
-#define TAU32_CUT_OLD 0.75
-#define PT_CUT_OLD 400
-#define R_CUT_OLD 0.4
-#define DPHI_CUT_OLD 2.8
 
 inline void init_vec(std::vector<bool>& vec) { vec.resize(500); for (int i=0; i<500; ++i) vec[i]=0; }
 inline void init_vec(std::vector<int>& vec) { vec.resize(500); for (int i=0; i<500; ++i) vec[i]=-9999; }
 inline void init_vec(std::vector<float>& vec) { vec.resize(500); for (int i=0; i<500; ++i) vec[i]=-9999; }
 inline void init_vec(std::vector<double>& vec) { vec.resize(500); for (int i=0; i<500; ++i) vec[i]=-9999; }
+inline void init_vec(std::vector<std::vector<int> >& vec) { vec.resize(1); vec[0].resize(500); for (int i=0; i<500; ++i) vec[0][i]=-9999; }
 
 class DataStruct {
 public:
   DataStruct() {};
   ~DataStruct() {};
+
+  class EventData {
+  public:
+    EventData() { init(); };
+    
+    int npv;
+    double vx;
+    double vy;
+    double vz;
+    unsigned int RunNumber;
+    unsigned int LumiBlock;
+    long EventNumber;
+    double rho;
+    int NGoodVtx;
+    int NLep;
+    int NTopHad;
+    int NTopHadPreTag;
+    int NTopLep;
+    int NTop;
+    int LHA_PDF_ID;
+    float HtLep;
+    float HtTop;
+    float Ht;
+    float HtAll;
+    float HtEx;
+    float HtExFr;
+    float HtTopFr;
+    float TTHadDR;
+    float TTHadDPhi;
+    float TTHadDEta;
+    float TTHadMass;
+    float TTHadSumPt;
+    float TTHadPz;
+    float TTHadHz;
+    float TTHadDPz;
+    float TTHadMR;
+    float TTHadMTR;
+    float TTHadR;
+    float TTHadR2;
+    float MR;
+    float MTR;
+    float R;
+    float R2;
+    float AK4_MR;
+    float AK4_MTR;
+    float AK4_R;
+    float AK4_R2;
+    float XSec;
+    float NEvent_Corr;
+    float Lumi_Weight;
+    float Gen_Weight;
+    unsigned int met_NoHF_size;
+    std::vector<float> met_NoHF_Pt;
+    std::vector<float> met_NoHF_Px;
+    std::vector<float> met_NoHF_Py;
+    std::vector<float> met_NoHF_Phi;
+    std::vector<float> met_NoHF_uncorPt;
+    std::vector<float> met_NoHF_uncorPhi;
+    std::vector<float> met_NoHF_uncorSumEt;
+    unsigned int met_size;
+    std::vector<float> met_Pt;
+    std::vector<float> met_Px;
+    std::vector<float> met_Py;
+    std::vector<float> met_Phi;
+    std::vector<float> met_uncorPt;
+    std::vector<float> met_uncorPhi;
+    std::vector<float> met_uncorSumEt;
+    unsigned int vtx_size;
+    std::vector<int> vtx_ndof;
+    std::vector<float> vtx_z;
+    std::vector<float> vtx_rho;
+    std::vector<float> vtx_chi;
+    int pu_NtrueInt;
+    unsigned int pu_size;
+    std::vector<int> pu_BX;
+    std::vector<int> pu_NInt;
+    unsigned int scale_size;
+    std::vector<float> scale_Weights;
+    unsigned int pdf_size;
+    std::vector<float> pdf_Weights;
+    unsigned int alphas_size;
+    std::vector<float> alphas_Weights;
+    float SUSY_Gluino_Mass;
+    float SUSY_LSP_Mass;
+    int Flag_HBHEIsoNoiseFilterResult;
+    int Flag_HBHENoiseFilterResult;
+    int Flag_HBHENoiseFilterResultRun1;
+    int Flag_HBHENoiseFilterResultRun2Loose;
+    int Flag_HBHENoiseFilterResultRun2Tight;
+    int Flag_trackingFailureFilter;
+    int Flag_goodVertices;
+    int Flag_CSCTightHaloFilter;
+    int Flag_trkPOGFilters;
+    int Flag_trkPOG_logErrorTooManyClusters;
+    int Flag_EcalDeadCellTriggerPrimitiveFilter;
+    int Flag_ecalLaserCorrFilter;
+    int Flag_trkPOG_manystripclus53X;
+    int Flag_eeBadScFilter;
+    int Flag_METFilters;
+    int Flag_HBHENoiseFilter;
+    int Flag_trkPOG_toomanystripclus53X;
+    int Flag_hcalLaserEventFilter;
+    int HLT_AK8PFJet360_TrimMass30;
+    int HLT_AK8PFJet360_TrimMass30_prescale;
+    int HLT_PFJet40;
+    int HLT_PFJet40_prescale;
+    int HLT_PFJet60;
+    int HLT_PFJet60_prescale;
+    int HLT_PFJet80;
+    int HLT_PFJet80_prescale;
+    int HLT_PFJet140;
+    int HLT_PFJet140_prescale;
+    int HLT_PFJet200;
+    int HLT_PFJet200_prescale;
+    int HLT_PFJet260;
+    int HLT_PFJet260_prescale;
+    int HLT_PFJet320;
+    int HLT_PFJet320_prescale;
+    int HLT_PFJet400;
+    int HLT_PFJet400_prescale;
+    int HLT_PFJet450;
+    int HLT_PFJet450_prescale;
+    int HLT_PFJet500;
+    int HLT_PFJet500_prescale;
+    int HLT_DiPFJetAve40;
+    int HLT_DiPFJetAve40_prescale;
+    int HLT_DiPFJetAve60;
+    int HLT_DiPFJetAve60_prescale;
+    int HLT_DiPFJetAve80;
+    int HLT_DiPFJetAve80_prescale;
+    int HLT_DiPFJetAve140;
+    int HLT_DiPFJetAve140_prescale;
+    int HLT_DiPFJetAve200;
+    int HLT_DiPFJetAve200_prescale;
+    int HLT_DiPFJetAve260;
+    int HLT_DiPFJetAve260_prescale;
+    int HLT_DiPFJetAve320;
+    int HLT_DiPFJetAve320_prescale;
+    int HLT_DiPFJetAve400;
+    int HLT_DiPFJetAve400_prescale;
+    int HLT_DiPFJetAve500;
+    int HLT_DiPFJetAve500_prescale;
+    int HLT_DiPFJetAve60_HFJEC;
+    int HLT_DiPFJetAve60_HFJEC_prescale;
+    int HLT_DiPFJetAve80_HFJEC;
+    int HLT_DiPFJetAve80_HFJEC_prescale;
+    int HLT_DiPFJetAve100_HFJEC;
+    int HLT_DiPFJetAve100_HFJEC_prescale;
+    int HLT_DiPFJetAve160_HFJEC;
+    int HLT_DiPFJetAve160_HFJEC_prescale;
+    int HLT_DiPFJetAve220_HFJEC;
+    int HLT_DiPFJetAve220_HFJEC_prescale;
+    int HLT_DiPFJetAve300_HFJEC;
+    int HLT_DiPFJetAve300_HFJEC_prescale;
+    int HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV0p45;
+    int HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV0p45_prescale;
+    int HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV0p45;
+    int HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV0p45_prescale;
+    int HLT_AK8PFHT600_TrimR0p1PT0p03Mass50_BTagCSV0p45;
+    int HLT_AK8PFHT600_TrimR0p1PT0p03Mass50_BTagCSV0p45_prescale;
+    int HLT_AK8PFHT650_TrimR0p1PT0p03Mass50;
+    int HLT_AK8PFHT650_TrimR0p1PT0p03Mass50_prescale;
+    int HLT_AK8PFHT700_TrimR0p1PT0p03Mass50;
+    int HLT_AK8PFHT700_TrimR0p1PT0p03Mass50_prescale;
+    int HLT_PFHT550_4Jet;
+    int HLT_PFHT550_4Jet_prescale;
+    int HLT_PFHT650_4Jet;
+    int HLT_PFHT650_4Jet_prescale;
+    int HLT_PFHT750_4Jet;
+    int HLT_PFHT750_4Jet_prescale;
+    int HLT_PFHT750_4JetPt50;
+    int HLT_PFHT750_4JetPt50_prescale;
+    int HLT_ECALHT800;
+    int HLT_ECALHT800_prescale;
+    int HLT_PFHT600;
+    int HLT_PFHT600_prescale;
+    int HLT_PFHT650;
+    int HLT_PFHT650_prescale;
+    int HLT_PFHT800;
+    int HLT_PFHT800_prescale;
+    int HLT_PFHT900;
+    int HLT_PFHT900_prescale;
+    int HLT_PFHT200;
+    int HLT_PFHT200_prescale;
+    int HLT_PFHT250;
+    int HLT_PFHT250_prescale;
+    int HLT_PFHT300;
+    int HLT_PFHT300_prescale;
+    int HLT_PFHT350;
+    int HLT_PFHT350_prescale;
+    int HLT_PFHT400;
+    int HLT_PFHT400_prescale;
+    int HLT_PFHT475;
+    int HLT_PFHT475_prescale;
+    int HLT_Rsq0p25;
+    int HLT_Rsq0p25_prescale;
+    int HLT_Rsq0p30;
+    int HLT_Rsq0p30_prescale;
+    int HLT_RsqMR240_Rsq0p09_MR200_4jet;
+    int HLT_RsqMR240_Rsq0p09_MR200_4jet_prescale;
+    int HLT_RsqMR240_Rsq0p09_MR200;
+    int HLT_RsqMR240_Rsq0p09_MR200_prescale;
+    int HLT_RsqMR270_Rsq0p09_MR200_4jet;
+    int HLT_RsqMR270_Rsq0p09_MR200_4jet_prescale;
+    int HLT_RsqMR270_Rsq0p09_MR200;
+    int HLT_RsqMR270_Rsq0p09_MR200_prescale;
+    int HLT_Mu40_eta2p1_PFJet200_PFJet50;
+    int HLT_Mu40_eta2p1_PFJet200_PFJet50_prescale;
+    int HLT_Ele45_CaloIdVT_GsfTrkIdT_PFJet200_PFJet50;
+    int HLT_Ele45_CaloIdVT_GsfTrkIdT_PFJet200_PFJet50_prescale;
+    int HLT_Ele8_CaloIdM_TrackIdM_PFJet30;
+    int HLT_Ele8_CaloIdM_TrackIdM_PFJet30_prescale;
+    int HLT_Ele12_CaloIdM_TrackIdM_PFJet30;
+    int HLT_Ele12_CaloIdM_TrackIdM_PFJet30_prescale;
+    int HLT_Ele18_CaloIdM_TrackIdM_PFJet30;
+    int HLT_Ele18_CaloIdM_TrackIdM_PFJet30_prescale;
+    int HLT_Ele23_CaloIdM_TrackIdM_PFJet30;
+    int HLT_Ele23_CaloIdM_TrackIdM_PFJet30_prescale;
+    int HLT_Ele33_CaloIdM_TrackIdM_PFJet30;
+    int HLT_Ele33_CaloIdM_TrackIdM_PFJet30_prescale;
+    int HLT_Ele27_eta2p1_WPLoose_Gsf_HT200_v1;
+    int HLT_Ele27_eta2p1_WPLoose_Gsf_HT200_v1_prescale;
+    int HLT_Mu10_CentralPFJet30_BTagCSV0p5PF;
+    int HLT_Mu10_CentralPFJet30_BTagCSV0p5PF_prescale;
+    int HLT_Mu10_CentralPFJet30_BTagCSV0p54PF;
+    int HLT_Mu10_CentralPFJet30_BTagCSV0p54PF_prescale;
+    int HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p5PF;
+    int HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p5PF_prescale;
+    int HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p54PF;
+    int HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p54PF_prescale;
+    int HLT_Ele15_IsoVVVL_BTagtop8CSV07_PFHT400;
+    int HLT_Ele15_IsoVVVL_BTagtop8CSV07_PFHT400_prescale;
+    int HLT_Ele15_IsoVVVL_BTagCSV0p72_PFHT400;
+    int HLT_Ele15_IsoVVVL_BTagCSV0p72_PFHT400_prescale;
+    int HLT_Ele15_IsoVVVL_PFHT600;
+    int HLT_Ele15_IsoVVVL_PFHT600_prescale;
+    int HLT_Ele15_PFHT300;
+    int HLT_Ele15_PFHT300_prescale;
+    int HLT_Mu15_IsoVVVL_BTagCSV07_PFHT400;
+    int HLT_Mu15_IsoVVVL_BTagCSV07_PFHT400_prescale;
+    int HLT_Mu15_IsoVVVL_BTagCSV0p72_PFHT400;
+    int HLT_Mu15_IsoVVVL_BTagCSV0p72_PFHT400_prescale;
+    int HLT_Mu15_IsoVVVL_PFHT600;
+    int HLT_Mu15_IsoVVVL_PFHT600_prescale;
+    int HLT_Mu15_PFHT300;
+    int HLT_Mu15_PFHT300_prescale;
+    int HLT_Mu8;
+    int HLT_Mu8_prescale;
+    int HLT_Mu17;
+    int HLT_Mu17_prescale;
+    int HLT_Mu20;
+    int HLT_Mu20_prescale;
+    int HLT_Mu24;
+    int HLT_Mu24_prescale;
+    int HLT_Mu24_eta2p1;
+    int HLT_Mu24_eta2p1_prescale;
+    int HLT_Mu27;
+    int HLT_Mu27_prescale;
+    int HLT_Mu34;
+    int HLT_Mu34_prescale;
+    int HLT_Mu45_eta2p1;
+    int HLT_Mu45_eta2p1_prescale;
+    int HLT_Mu50;
+    int HLT_Mu50_prescale;
+    int HLT_Mu55;
+    int HLT_Mu55_prescale;
+    int HLT_Mu300;
+    int HLT_Mu300_prescale;
+    int HLT_Mu350;
+    int HLT_Mu350_prescale;
+    int HLT_TkMu20;
+    int HLT_TkMu20_prescale;
+    int HLT_TkMu24_eta2p1;
+    int HLT_TkMu24_eta2p1_prescale;
+    int HLT_TkMu27;
+    int HLT_TkMu27_prescale;
+    int HLT_Ele105_CaloIdVT_GsfTrkIdT;
+    int HLT_Ele105_CaloIdVT_GsfTrkIdT_prescale;
+    int HLT_Ele115_CaloIdVT_GsfTrkIdT;
+    int HLT_Ele115_CaloIdVT_GsfTrkIdT_prescale;
+    int HLT_IsoMu17_eta2p1;
+    int HLT_IsoMu17_eta2p1_prescale;
+    int HLT_IsoMu20;
+    int HLT_IsoMu20_prescale;
+    int HLT_IsoMu20_eta2p1;
+    int HLT_IsoMu20_eta2p1_prescale;
+    int HLT_IsoMu24_eta2p1;
+    int HLT_IsoMu24_eta2p1_prescale;
+    int HLT_IsoMu27;
+    int HLT_IsoMu27_prescale;
+    int HLT_IsoTkMu24_eta2p1;
+    int HLT_IsoTkMu24_eta2p1_prescale;
+    int HLT_IsoTkMu27;
+    int HLT_IsoTkMu27_prescale;
+    int HLT_Mu8_TrkIsoVVL;
+    int HLT_Mu8_TrkIsoVVL_prescale;
+    int HLT_Mu17_TrkIsoVVL;
+    int HLT_Mu17_TrkIsoVVL_prescale;
+    int HLT_Mu24_TrkIsoVVL;
+    int HLT_Mu24_TrkIsoVVL_prescale;
+    int HLT_Mu34_TrkIsoVVL;
+    int HLT_Mu34_TrkIsoVVL_prescale;
+    int HLT_Ele22_eta2p1_WPLoose_Gsf;
+    int HLT_Ele22_eta2p1_WPLoose_Gsf_prescale;
+    int HLT_Ele22_eta2p1_WPTight_Gsf;
+    int HLT_Ele22_eta2p1_WPTight_Gsf_prescale;
+    int HLT_Ele27_eta2p1_WPLoose_Gsf;
+    int HLT_Ele27_eta2p1_WPLoose_Gsf_prescale;
+    int HLT_Ele27_eta2p1_WPTight_Gsf;
+    int HLT_Ele27_eta2p1_WPTight_Gsf_prescale;
+    int HLT_Ele32_eta2p1_WPLoose_Gsf;
+    int HLT_Ele32_eta2p1_WPLoose_Gsf_prescale;
+    int HLT_Ele32_eta2p1_WPTight_Gsf;
+    int HLT_Ele32_eta2p1_WPTight_Gsf_prescale;
+    int HLT_Ele12_CaloIdL_TrackIdL_IsoVL;
+    int HLT_Ele12_CaloIdL_TrackIdL_IsoVL_prescale;
+    int HLT_Ele17_CaloIdL_TrackIdL_IsoVL;
+    int HLT_Ele17_CaloIdL_TrackIdL_IsoVL_prescale;
+    int HLT_Ele23_CaloIdL_TrackIdL_IsoVL;
+    int HLT_Ele23_CaloIdL_TrackIdL_IsoVL_prescale;
+    
+    void init() {
+      npv=NOVAL_I;
+      vx=NOVAL_F;
+      vy=NOVAL_F;
+      vz=NOVAL_F;
+      RunNumber=9999;
+      LumiBlock=9999;
+      EventNumber=9999;
+      rho=NOVAL_F;
+      NGoodVtx=NOVAL_I;
+      NLep=NOVAL_I;
+      NTopHad=NOVAL_I;
+      NTopHadPreTag=NOVAL_I;
+      NTopLep=NOVAL_I;
+      NTop=NOVAL_I;
+      LHA_PDF_ID=NOVAL_I;
+      HtLep=NOVAL_F;
+      HtTop=NOVAL_F;
+      Ht=NOVAL_F;
+      HtAll=NOVAL_F;
+      HtEx=NOVAL_F;
+      HtExFr=NOVAL_F;
+      HtTopFr=NOVAL_F;
+      TTHadDR=NOVAL_F;
+      TTHadDPhi=NOVAL_F;
+      TTHadDEta=NOVAL_F;
+      TTHadMass=NOVAL_F;
+      TTHadSumPt=NOVAL_F;
+      TTHadPz=NOVAL_F;
+      TTHadHz=NOVAL_F;
+      TTHadDPz=NOVAL_F;
+      TTHadMR=NOVAL_F;
+      TTHadMTR=NOVAL_F;
+      TTHadR=NOVAL_F;
+      TTHadR2=NOVAL_F;
+      MR=NOVAL_F;
+      MTR=NOVAL_F;
+      R=NOVAL_F;
+      R2=NOVAL_F;
+      AK4_MR=NOVAL_F;
+      AK4_MTR=NOVAL_F;
+      AK4_R=NOVAL_F;
+      AK4_R2=NOVAL_F;
+      XSec=NOVAL_F;
+      NEvent_Corr=NOVAL_F;
+      Lumi_Weight=NOVAL_F;
+      Gen_Weight=NOVAL_F;
+      met_NoHF_size=9999;
+      init_vec(met_NoHF_Pt);
+      init_vec(met_NoHF_Px);
+      init_vec(met_NoHF_Py);
+      init_vec(met_NoHF_Phi);
+      init_vec(met_NoHF_uncorPt);
+      init_vec(met_NoHF_uncorPhi);
+      init_vec(met_NoHF_uncorSumEt);
+      met_size=9999;
+      init_vec(met_Pt);
+      init_vec(met_Px);
+      init_vec(met_Py);
+      init_vec(met_Phi);
+      init_vec(met_uncorPt);
+      init_vec(met_uncorPhi);
+      init_vec(met_uncorSumEt);
+      vtx_size=9999;
+      init_vec(vtx_ndof);
+      init_vec(vtx_z);
+      init_vec(vtx_rho);
+      init_vec(vtx_chi);
+      pu_NtrueInt=NOVAL_I;
+      pu_size=9999;
+      init_vec(pu_BX);
+      init_vec(pu_NInt);
+      scale_size=9999;
+      init_vec(scale_Weights);
+      pdf_size=9999;
+      init_vec(pdf_Weights);
+      alphas_size=9999;
+      init_vec(alphas_Weights);
+      SUSY_Gluino_Mass=NOVAL_F;
+      SUSY_LSP_Mass=NOVAL_F;
+      Flag_HBHEIsoNoiseFilterResult=NOVAL_I;
+      Flag_HBHENoiseFilterResult=NOVAL_I;
+      Flag_HBHENoiseFilterResultRun1=NOVAL_I;
+      Flag_HBHENoiseFilterResultRun2Loose=NOVAL_I;
+      Flag_HBHENoiseFilterResultRun2Tight=NOVAL_I;
+      Flag_trackingFailureFilter=NOVAL_I;
+      Flag_goodVertices=NOVAL_I;
+      Flag_CSCTightHaloFilter=NOVAL_I;
+      Flag_trkPOGFilters=NOVAL_I;
+      Flag_trkPOG_logErrorTooManyClusters=NOVAL_I;
+      Flag_EcalDeadCellTriggerPrimitiveFilter=NOVAL_I;
+      Flag_ecalLaserCorrFilter=NOVAL_I;
+      Flag_trkPOG_manystripclus53X=NOVAL_I;
+      Flag_eeBadScFilter=NOVAL_I;
+      Flag_METFilters=NOVAL_I;
+      Flag_HBHENoiseFilter=NOVAL_I;
+      Flag_trkPOG_toomanystripclus53X=NOVAL_I;
+      Flag_hcalLaserEventFilter=NOVAL_I;
+      HLT_AK8PFJet360_TrimMass30=NOVAL_I;
+      HLT_AK8PFJet360_TrimMass30_prescale=NOVAL_I;
+      HLT_PFJet40=NOVAL_I;
+      HLT_PFJet40_prescale=NOVAL_I;
+      HLT_PFJet60=NOVAL_I;
+      HLT_PFJet60_prescale=NOVAL_I;
+      HLT_PFJet80=NOVAL_I;
+      HLT_PFJet80_prescale=NOVAL_I;
+      HLT_PFJet140=NOVAL_I;
+      HLT_PFJet140_prescale=NOVAL_I;
+      HLT_PFJet200=NOVAL_I;
+      HLT_PFJet200_prescale=NOVAL_I;
+      HLT_PFJet260=NOVAL_I;
+      HLT_PFJet260_prescale=NOVAL_I;
+      HLT_PFJet320=NOVAL_I;
+      HLT_PFJet320_prescale=NOVAL_I;
+      HLT_PFJet400=NOVAL_I;
+      HLT_PFJet400_prescale=NOVAL_I;
+      HLT_PFJet450=NOVAL_I;
+      HLT_PFJet450_prescale=NOVAL_I;
+      HLT_PFJet500=NOVAL_I;
+      HLT_PFJet500_prescale=NOVAL_I;
+      HLT_DiPFJetAve40=NOVAL_I;
+      HLT_DiPFJetAve40_prescale=NOVAL_I;
+      HLT_DiPFJetAve60=NOVAL_I;
+      HLT_DiPFJetAve60_prescale=NOVAL_I;
+      HLT_DiPFJetAve80=NOVAL_I;
+      HLT_DiPFJetAve80_prescale=NOVAL_I;
+      HLT_DiPFJetAve140=NOVAL_I;
+      HLT_DiPFJetAve140_prescale=NOVAL_I;
+      HLT_DiPFJetAve200=NOVAL_I;
+      HLT_DiPFJetAve200_prescale=NOVAL_I;
+      HLT_DiPFJetAve260=NOVAL_I;
+      HLT_DiPFJetAve260_prescale=NOVAL_I;
+      HLT_DiPFJetAve320=NOVAL_I;
+      HLT_DiPFJetAve320_prescale=NOVAL_I;
+      HLT_DiPFJetAve400=NOVAL_I;
+      HLT_DiPFJetAve400_prescale=NOVAL_I;
+      HLT_DiPFJetAve500=NOVAL_I;
+      HLT_DiPFJetAve500_prescale=NOVAL_I;
+      HLT_DiPFJetAve60_HFJEC=NOVAL_I;
+      HLT_DiPFJetAve60_HFJEC_prescale=NOVAL_I;
+      HLT_DiPFJetAve80_HFJEC=NOVAL_I;
+      HLT_DiPFJetAve80_HFJEC_prescale=NOVAL_I;
+      HLT_DiPFJetAve100_HFJEC=NOVAL_I;
+      HLT_DiPFJetAve100_HFJEC_prescale=NOVAL_I;
+      HLT_DiPFJetAve160_HFJEC=NOVAL_I;
+      HLT_DiPFJetAve160_HFJEC_prescale=NOVAL_I;
+      HLT_DiPFJetAve220_HFJEC=NOVAL_I;
+      HLT_DiPFJetAve220_HFJEC_prescale=NOVAL_I;
+      HLT_DiPFJetAve300_HFJEC=NOVAL_I;
+      HLT_DiPFJetAve300_HFJEC_prescale=NOVAL_I;
+      HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV0p45=NOVAL_I;
+      HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV0p45_prescale=NOVAL_I;
+      HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV0p45=NOVAL_I;
+      HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV0p45_prescale=NOVAL_I;
+      HLT_AK8PFHT600_TrimR0p1PT0p03Mass50_BTagCSV0p45=NOVAL_I;
+      HLT_AK8PFHT600_TrimR0p1PT0p03Mass50_BTagCSV0p45_prescale=NOVAL_I;
+      HLT_AK8PFHT650_TrimR0p1PT0p03Mass50=NOVAL_I;
+      HLT_AK8PFHT650_TrimR0p1PT0p03Mass50_prescale=NOVAL_I;
+      HLT_AK8PFHT700_TrimR0p1PT0p03Mass50=NOVAL_I;
+      HLT_AK8PFHT700_TrimR0p1PT0p03Mass50_prescale=NOVAL_I;
+      HLT_PFHT550_4Jet=NOVAL_I;
+      HLT_PFHT550_4Jet_prescale=NOVAL_I;
+      HLT_PFHT650_4Jet=NOVAL_I;
+      HLT_PFHT650_4Jet_prescale=NOVAL_I;
+      HLT_PFHT750_4Jet=NOVAL_I;
+      HLT_PFHT750_4Jet_prescale=NOVAL_I;
+      HLT_PFHT750_4JetPt50=NOVAL_I;
+      HLT_PFHT750_4JetPt50_prescale=NOVAL_I;
+      HLT_ECALHT800=NOVAL_I;
+      HLT_ECALHT800_prescale=NOVAL_I;
+      HLT_PFHT600=NOVAL_I;
+      HLT_PFHT600_prescale=NOVAL_I;
+      HLT_PFHT650=NOVAL_I;
+      HLT_PFHT650_prescale=NOVAL_I;
+      HLT_PFHT800=NOVAL_I;
+      HLT_PFHT800_prescale=NOVAL_I;
+      HLT_PFHT900=NOVAL_I;
+      HLT_PFHT900_prescale=NOVAL_I;
+      HLT_PFHT200=NOVAL_I;
+      HLT_PFHT200_prescale=NOVAL_I;
+      HLT_PFHT250=NOVAL_I;
+      HLT_PFHT250_prescale=NOVAL_I;
+      HLT_PFHT300=NOVAL_I;
+      HLT_PFHT300_prescale=NOVAL_I;
+      HLT_PFHT350=NOVAL_I;
+      HLT_PFHT350_prescale=NOVAL_I;
+      HLT_PFHT400=NOVAL_I;
+      HLT_PFHT400_prescale=NOVAL_I;
+      HLT_PFHT475=NOVAL_I;
+      HLT_PFHT475_prescale=NOVAL_I;
+      HLT_Rsq0p25=NOVAL_I;
+      HLT_Rsq0p25_prescale=NOVAL_I;
+      HLT_Rsq0p30=NOVAL_I;
+      HLT_Rsq0p30_prescale=NOVAL_I;
+      HLT_RsqMR240_Rsq0p09_MR200_4jet=NOVAL_I;
+      HLT_RsqMR240_Rsq0p09_MR200_4jet_prescale=NOVAL_I;
+      HLT_RsqMR240_Rsq0p09_MR200=NOVAL_I;
+      HLT_RsqMR240_Rsq0p09_MR200_prescale=NOVAL_I;
+      HLT_RsqMR270_Rsq0p09_MR200_4jet=NOVAL_I;
+      HLT_RsqMR270_Rsq0p09_MR200_4jet_prescale=NOVAL_I;
+      HLT_RsqMR270_Rsq0p09_MR200=NOVAL_I;
+      HLT_RsqMR270_Rsq0p09_MR200_prescale=NOVAL_I;
+      HLT_Mu40_eta2p1_PFJet200_PFJet50=NOVAL_I;
+      HLT_Mu40_eta2p1_PFJet200_PFJet50_prescale=NOVAL_I;
+      HLT_Ele45_CaloIdVT_GsfTrkIdT_PFJet200_PFJet50=NOVAL_I;
+      HLT_Ele45_CaloIdVT_GsfTrkIdT_PFJet200_PFJet50_prescale=NOVAL_I;
+      HLT_Ele8_CaloIdM_TrackIdM_PFJet30=NOVAL_I;
+      HLT_Ele8_CaloIdM_TrackIdM_PFJet30_prescale=NOVAL_I;
+      HLT_Ele12_CaloIdM_TrackIdM_PFJet30=NOVAL_I;
+      HLT_Ele12_CaloIdM_TrackIdM_PFJet30_prescale=NOVAL_I;
+      HLT_Ele18_CaloIdM_TrackIdM_PFJet30=NOVAL_I;
+      HLT_Ele18_CaloIdM_TrackIdM_PFJet30_prescale=NOVAL_I;
+      HLT_Ele23_CaloIdM_TrackIdM_PFJet30=NOVAL_I;
+      HLT_Ele23_CaloIdM_TrackIdM_PFJet30_prescale=NOVAL_I;
+      HLT_Ele33_CaloIdM_TrackIdM_PFJet30=NOVAL_I;
+      HLT_Ele33_CaloIdM_TrackIdM_PFJet30_prescale=NOVAL_I;
+      HLT_Ele27_eta2p1_WPLoose_Gsf_HT200_v1=NOVAL_I;
+      HLT_Ele27_eta2p1_WPLoose_Gsf_HT200_v1_prescale=NOVAL_I;
+      HLT_Mu10_CentralPFJet30_BTagCSV0p5PF=NOVAL_I;
+      HLT_Mu10_CentralPFJet30_BTagCSV0p5PF_prescale=NOVAL_I;
+      HLT_Mu10_CentralPFJet30_BTagCSV0p54PF=NOVAL_I;
+      HLT_Mu10_CentralPFJet30_BTagCSV0p54PF_prescale=NOVAL_I;
+      HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p5PF=NOVAL_I;
+      HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p5PF_prescale=NOVAL_I;
+      HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p54PF=NOVAL_I;
+      HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p54PF_prescale=NOVAL_I;
+      HLT_Ele15_IsoVVVL_BTagtop8CSV07_PFHT400=NOVAL_I;
+      HLT_Ele15_IsoVVVL_BTagtop8CSV07_PFHT400_prescale=NOVAL_I;
+      HLT_Ele15_IsoVVVL_BTagCSV0p72_PFHT400=NOVAL_I;
+      HLT_Ele15_IsoVVVL_BTagCSV0p72_PFHT400_prescale=NOVAL_I;
+      HLT_Ele15_IsoVVVL_PFHT600=NOVAL_I;
+      HLT_Ele15_IsoVVVL_PFHT600_prescale=NOVAL_I;
+      HLT_Ele15_PFHT300=NOVAL_I;
+      HLT_Ele15_PFHT300_prescale=NOVAL_I;
+      HLT_Mu15_IsoVVVL_BTagCSV07_PFHT400=NOVAL_I;
+      HLT_Mu15_IsoVVVL_BTagCSV07_PFHT400_prescale=NOVAL_I;
+      HLT_Mu15_IsoVVVL_BTagCSV0p72_PFHT400=NOVAL_I;
+      HLT_Mu15_IsoVVVL_BTagCSV0p72_PFHT400_prescale=NOVAL_I;
+      HLT_Mu15_IsoVVVL_PFHT600=NOVAL_I;
+      HLT_Mu15_IsoVVVL_PFHT600_prescale=NOVAL_I;
+      HLT_Mu15_PFHT300=NOVAL_I;
+      HLT_Mu15_PFHT300_prescale=NOVAL_I;
+      HLT_Mu8=NOVAL_I;
+      HLT_Mu8_prescale=NOVAL_I;
+      HLT_Mu17=NOVAL_I;
+      HLT_Mu17_prescale=NOVAL_I;
+      HLT_Mu20=NOVAL_I;
+      HLT_Mu20_prescale=NOVAL_I;
+      HLT_Mu24=NOVAL_I;
+      HLT_Mu24_prescale=NOVAL_I;
+      HLT_Mu24_eta2p1=NOVAL_I;
+      HLT_Mu24_eta2p1_prescale=NOVAL_I;
+      HLT_Mu27=NOVAL_I;
+      HLT_Mu27_prescale=NOVAL_I;
+      HLT_Mu34=NOVAL_I;
+      HLT_Mu34_prescale=NOVAL_I;
+      HLT_Mu45_eta2p1=NOVAL_I;
+      HLT_Mu45_eta2p1_prescale=NOVAL_I;
+      HLT_Mu50=NOVAL_I;
+      HLT_Mu50_prescale=NOVAL_I;
+      HLT_Mu55=NOVAL_I;
+      HLT_Mu55_prescale=NOVAL_I;
+      HLT_Mu300=NOVAL_I;
+      HLT_Mu300_prescale=NOVAL_I;
+      HLT_Mu350=NOVAL_I;
+      HLT_Mu350_prescale=NOVAL_I;
+      HLT_TkMu20=NOVAL_I;
+      HLT_TkMu20_prescale=NOVAL_I;
+      HLT_TkMu24_eta2p1=NOVAL_I;
+      HLT_TkMu24_eta2p1_prescale=NOVAL_I;
+      HLT_TkMu27=NOVAL_I;
+      HLT_TkMu27_prescale=NOVAL_I;
+      HLT_Ele105_CaloIdVT_GsfTrkIdT=NOVAL_I;
+      HLT_Ele105_CaloIdVT_GsfTrkIdT_prescale=NOVAL_I;
+      HLT_Ele115_CaloIdVT_GsfTrkIdT=NOVAL_I;
+      HLT_Ele115_CaloIdVT_GsfTrkIdT_prescale=NOVAL_I;
+      HLT_IsoMu17_eta2p1=NOVAL_I;
+      HLT_IsoMu17_eta2p1_prescale=NOVAL_I;
+      HLT_IsoMu20=NOVAL_I;
+      HLT_IsoMu20_prescale=NOVAL_I;
+      HLT_IsoMu20_eta2p1=NOVAL_I;
+      HLT_IsoMu20_eta2p1_prescale=NOVAL_I;
+      HLT_IsoMu24_eta2p1=NOVAL_I;
+      HLT_IsoMu24_eta2p1_prescale=NOVAL_I;
+      HLT_IsoMu27=NOVAL_I;
+      HLT_IsoMu27_prescale=NOVAL_I;
+      HLT_IsoTkMu24_eta2p1=NOVAL_I;
+      HLT_IsoTkMu24_eta2p1_prescale=NOVAL_I;
+      HLT_IsoTkMu27=NOVAL_I;
+      HLT_IsoTkMu27_prescale=NOVAL_I;
+      HLT_Mu8_TrkIsoVVL=NOVAL_I;
+      HLT_Mu8_TrkIsoVVL_prescale=NOVAL_I;
+      HLT_Mu17_TrkIsoVVL=NOVAL_I;
+      HLT_Mu17_TrkIsoVVL_prescale=NOVAL_I;
+      HLT_Mu24_TrkIsoVVL=NOVAL_I;
+      HLT_Mu24_TrkIsoVVL_prescale=NOVAL_I;
+      HLT_Mu34_TrkIsoVVL=NOVAL_I;
+      HLT_Mu34_TrkIsoVVL_prescale=NOVAL_I;
+      HLT_Ele22_eta2p1_WPLoose_Gsf=NOVAL_I;
+      HLT_Ele22_eta2p1_WPLoose_Gsf_prescale=NOVAL_I;
+      HLT_Ele22_eta2p1_WPTight_Gsf=NOVAL_I;
+      HLT_Ele22_eta2p1_WPTight_Gsf_prescale=NOVAL_I;
+      HLT_Ele27_eta2p1_WPLoose_Gsf=NOVAL_I;
+      HLT_Ele27_eta2p1_WPLoose_Gsf_prescale=NOVAL_I;
+      HLT_Ele27_eta2p1_WPTight_Gsf=NOVAL_I;
+      HLT_Ele27_eta2p1_WPTight_Gsf_prescale=NOVAL_I;
+      HLT_Ele32_eta2p1_WPLoose_Gsf=NOVAL_I;
+      HLT_Ele32_eta2p1_WPLoose_Gsf_prescale=NOVAL_I;
+      HLT_Ele32_eta2p1_WPTight_Gsf=NOVAL_I;
+      HLT_Ele32_eta2p1_WPTight_Gsf_prescale=NOVAL_I;
+      HLT_Ele12_CaloIdL_TrackIdL_IsoVL=NOVAL_I;
+      HLT_Ele12_CaloIdL_TrackIdL_IsoVL_prescale=NOVAL_I;
+      HLT_Ele17_CaloIdL_TrackIdL_IsoVL=NOVAL_I;
+      HLT_Ele17_CaloIdL_TrackIdL_IsoVL_prescale=NOVAL_I;
+      HLT_Ele23_CaloIdL_TrackIdL_IsoVL=NOVAL_I;
+      HLT_Ele23_CaloIdL_TrackIdL_IsoVL_prescale=NOVAL_I;
+    }
+  } evt;
   
   class GenVars {
   public:
     GenVars() { init(); };
     ~GenVars() {};
     
-    // Basic
-    std::vector<float> Mass;
-    std::vector<float> Pt;
-    std::vector<float> Eta;
-    std::vector<float> Y;
-    std::vector<float> Phi;
-    std::vector<float> E;
-    std::vector<float> Charge;
-    std::vector<float> _ID;
-    std::vector<float> _Status;
-    std::vector<float> _MomID;
     std::vector<int> ID;
     std::vector<int> Status;
-    std::vector<int> MomID;
+    std::vector<int> Mom0ID;
+    std::vector<int> Mom0Status;
+    std::vector<int> Mom1ID;
+    std::vector<int> Mom1Status;
+    std::vector<int> Dau0ID;
+    std::vector<int> Dau0Status;
+    std::vector<int> Dau1ID;
+    std::vector<int> Dau1Status;
+    std::vector<float> Pt;
+    std::vector<float> Eta;
+    std::vector<float> Phi;
+    std::vector<float> E;
+    std::vector<float> Mass;
+    std::vector<float> Charge;
     
     size_t it;
     int size;
@@ -72,19 +685,23 @@ public:
     void init() {
       it = -1;
       size = 0;
-      init_vec(Mass);
-      init_vec(Pt);
-      init_vec(Eta);
-      init_vec(Y);
-      init_vec(Phi);
-      init_vec(E);
-      init_vec(Charge);
-      init_vec(_ID);
-      init_vec(_Status);
-      init_vec(_MomID);
+      size=9999;
       init_vec(ID);
       init_vec(Status);
-      init_vec(MomID);
+      init_vec(Mom0ID);
+      init_vec(Mom0Status);
+      init_vec(Mom1ID);
+      init_vec(Mom1Status);
+      init_vec(Dau0ID);
+      init_vec(Dau0Status);
+      init_vec(Dau1ID);
+      init_vec(Dau1Status);
+      init_vec(Pt);
+      init_vec(Eta);
+      init_vec(Phi);
+      init_vec(E);
+      init_vec(Mass);
+      init_vec(Charge);
     }
     
     bool Loop() {
@@ -104,16 +721,21 @@ public:
     ElectronVars() { init(); }
     ~ElectronVars() {}
     
-    // Basic
-    std::vector<float> Mass;
     std::vector<float> Pt;
     std::vector<float> Eta;
-    std::vector<float> Y;
     std::vector<float> Phi;
     std::vector<float> E;
     std::vector<float> Charge;
-    // ElectronVars
+    std::vector<float> Key;
     std::vector<float> Iso03;
+    std::vector<float> Iso03db;
+    std::vector<float> MiniIso;
+    std::vector<float> rho;
+    std::vector<float> EA;
+    std::vector<float> sumChargedHadronPt;
+    std::vector<float> sumNeutralHadronEt;
+    std::vector<float> sumPhotonEt;
+    std::vector<float> sumPUPt;
     std::vector<float> D0;
     std::vector<float> Dz;
     std::vector<float> dEtaIn;
@@ -128,17 +750,19 @@ public:
     std::vector<float> isLoose;
     std::vector<float> isTight;
     std::vector<float> isMedium;
+    std::vector<float> vidVeto;
+    std::vector<float> vidLoose;
+    std::vector<float> vidTight;
+    std::vector<float> vidMedium;
+    std::vector<float> vidHEEP;
+    std::vector<float> vidHEEPnoiso;
     std::vector<float> scEta;
-    
-    size_t it;
-    int size;
-    
-    std::vector<float> DRNearGenEleFromSLTop;
-    std::vector<float> PtNearGenEleFromSLTop;
-    std::vector<float> PtNearGenTop;
     std::vector<int> IsPartOfNearAK4Jet;
     std::vector<int> IsPartOfNearAK8Jet;
     std::vector<int> IsPartOfNearSubjet;
+    std::vector<float> DRNearGenEleFromSLTop;
+    std::vector<float> PtNearGenEleFromSLTop;
+    std::vector<float> PtNearGenTop;
     std::vector<float> LepAK4JetFrac;
     std::vector<float> LepAK8JetFrac;
     std::vector<float> LepSubjetFrac;
@@ -163,18 +787,29 @@ public:
     std::vector<float> SubjetV1PtRel;
     std::vector<float> SubjetV2PtRel;
     std::vector<float> SubjetV3PtRel;
+
+    size_t it;
+    int size;
     
     void init() {
       it = -1;
       size = 0;
-      init_vec(Mass);
+      size=9999;
       init_vec(Pt);
       init_vec(Eta);
-      init_vec(Y);
       init_vec(Phi);
       init_vec(E);
       init_vec(Charge);
+      init_vec(Key);
       init_vec(Iso03);
+      init_vec(Iso03db);
+      init_vec(MiniIso);
+      init_vec(rho);
+      init_vec(EA);
+      init_vec(sumChargedHadronPt);
+      init_vec(sumNeutralHadronEt);
+      init_vec(sumPhotonEt);
+      init_vec(sumPUPt);
       init_vec(D0);
       init_vec(Dz);
       init_vec(dEtaIn);
@@ -189,13 +824,19 @@ public:
       init_vec(isLoose);
       init_vec(isTight);
       init_vec(isMedium);
+      init_vec(vidVeto);
+      init_vec(vidLoose);
+      init_vec(vidTight);
+      init_vec(vidMedium);
+      init_vec(vidHEEP);
+      init_vec(vidHEEPnoiso);
       init_vec(scEta);
-      init_vec(DRNearGenEleFromSLTop);
-      init_vec(PtNearGenEleFromSLTop);
-      init_vec(PtNearGenTop);
       init_vec(IsPartOfNearAK4Jet);
       init_vec(IsPartOfNearAK8Jet);
       init_vec(IsPartOfNearSubjet);
+      init_vec(DRNearGenEleFromSLTop);
+      init_vec(PtNearGenEleFromSLTop);
+      init_vec(PtNearGenTop);
       init_vec(LepAK4JetFrac);
       init_vec(LepAK8JetFrac);
       init_vec(LepSubjetFrac);
@@ -239,25 +880,25 @@ public:
     MuonVars() { init(); }
     ~MuonVars() {}
     
-    // Basic
-    std::vector<float> Mass;
     std::vector<float> Pt;
     std::vector<float> Eta;
-    std::vector<float> Y;
     std::vector<float> Phi;
     std::vector<float> E;
     std::vector<float> Charge;
-    // MuonVars
+    std::vector<float> Key;
     std::vector<float> Iso04;
+    std::vector<float> MiniIso;
     std::vector<float> D0;
     std::vector<float> D0err;
     std::vector<float> Dxy;
     std::vector<float> Dxyerr;
     std::vector<float> Dz;
     std::vector<float> Dzerr;
-    std::vector<float> IsLooseMuon;
     std::vector<float> IsSoftMuon;
+    std::vector<float> IsLooseMuon;
+    std::vector<float> IsMediumMuon;
     std::vector<float> IsTightMuon;
+    std::vector<float> IsHighPtMuon;
     std::vector<float> IsPFMuon;
     std::vector<float> IsGlobalMuon;
     std::vector<float> IsTrackerMuon;
@@ -279,16 +920,12 @@ public:
     std::vector<float> GenMuonPt;
     std::vector<float> GenMuonE;
     std::vector<float> GenMuonCharge;
-    
-    size_t it;
-    int size;
-  
-    std::vector<float> DRNearGenMuFromSLTop;
-    std::vector<float> PtNearGenMuFromSLTop;
-    std::vector<float> PtNearGenTop;
     std::vector<int> IsPartOfNearAK4Jet;
     std::vector<int> IsPartOfNearAK8Jet;
     std::vector<int> IsPartOfNearSubjet;
+    std::vector<float> DRNearGenMuFromSLTop;
+    std::vector<float> PtNearGenMuFromSLTop;
+    std::vector<float> PtNearGenTop;
     std::vector<float> LepAK4JetFrac;
     std::vector<float> LepAK8JetFrac;
     std::vector<float> LepSubjetFrac;
@@ -314,26 +951,32 @@ public:
     std::vector<float> SubjetV2PtRel;
     std::vector<float> SubjetV3PtRel;
   
+    size_t it;
+    int size;
+
     void init() {
       it = -1;
       size = 0;
-      init_vec(Mass);
+      size=9999;
       init_vec(Pt);
       init_vec(Eta);
-      init_vec(Y);
       init_vec(Phi);
       init_vec(E);
       init_vec(Charge);
+      init_vec(Key);
       init_vec(Iso04);
+      init_vec(MiniIso);
       init_vec(D0);
       init_vec(D0err);
       init_vec(Dxy);
       init_vec(Dxyerr);
       init_vec(Dz);
       init_vec(Dzerr);
-      init_vec(IsLooseMuon);
       init_vec(IsSoftMuon);
+      init_vec(IsLooseMuon);
+      init_vec(IsMediumMuon);
       init_vec(IsTightMuon);
+      init_vec(IsHighPtMuon);
       init_vec(IsPFMuon);
       init_vec(IsGlobalMuon);
       init_vec(IsTrackerMuon);
@@ -355,12 +998,12 @@ public:
       init_vec(GenMuonPt);
       init_vec(GenMuonE);
       init_vec(GenMuonCharge);
-      init_vec(DRNearGenMuFromSLTop);
-      init_vec(PtNearGenMuFromSLTop);
-      init_vec(PtNearGenTop);
       init_vec(IsPartOfNearAK4Jet);
       init_vec(IsPartOfNearAK8Jet);
       init_vec(IsPartOfNearSubjet);
+      init_vec(DRNearGenMuFromSLTop);
+      init_vec(PtNearGenMuFromSLTop);
+      init_vec(PtNearGenTop);
       init_vec(LepAK4JetFrac);
       init_vec(LepAK8JetFrac);
       init_vec(LepSubjetFrac);
@@ -399,20 +1042,18 @@ public:
     
   } mu;
   
-  class JetVars {
+  class AK4JetVars {
   public:
-    // Basic
-    std::vector<float> Mass;
+    AK4JetVars() { init(); }
+    ~AK4JetVars() {}
+    
     std::vector<float> Pt;
     std::vector<float> Eta;
-    std::vector<float> Y;
     std::vector<float> Phi;
     std::vector<float> E;
     std::vector<float> Charge;
-    // B-TAGGING
     std::vector<float> CSV;
     std::vector<float> CSVV1;
-    // GEN PARTON
     std::vector<float> GenPartonY;
     std::vector<float> GenPartonEta;
     std::vector<float> GenPartonPhi;
@@ -421,14 +1062,12 @@ public:
     std::vector<float> GenPartonCharge;
     std::vector<float> PartonFlavour;
     std::vector<float> HadronFlavour;
-    // GEN JET
     std::vector<float> GenJetY;
     std::vector<float> GenJetEta;
     std::vector<float> GenJetPhi;
     std::vector<float> GenJetPt;
     std::vector<float> GenJetE;
     std::vector<float> GenJetCharge;
-    // CONSTITUENTS
     std::vector<float> muonMultiplicity;
     std::vector<float> PhotonEnergy;
     std::vector<float> ElectronEnergy;
@@ -437,7 +1076,6 @@ public:
     std::vector<float> HFEMEnergy;
     std::vector<float> ChargedHadronMultiplicity;
     std::vector<float> numberOfDaughters;
-    std::vector<float> chargedMultiplicity;
     std::vector<float> neutralHadronMultiplicity;
     std::vector<float> neutralHadronEnergy;
     std::vector<float> neutralEmEnergy;
@@ -449,40 +1087,36 @@ public:
     std::vector<float> HFEMMultiplicity;
     std::vector<float> ChargeMuEnergy;
     std::vector<float> neutralMultiplicity;
-    //FOR JEC
+    std::vector<float> neutralHadronEnergyFrac;
+    std::vector<float> neutralEmEnergyFrac;
+    std::vector<float> chargedHadronEnergyFrac;
+    std::vector<float> muonEnergyFrac;
+    std::vector<float> chargedEmEnergyFrac;
+    std::vector<float> chargedMultiplicity;
+    std::vector<float> NumConstituents;
     std::vector<float> jecFactor0;
+    std::vector<float> jecFactorL3Absolute;
     std::vector<float> jetArea;
-    // FOR SYSTEMATICS
     std::vector<float> SmearedPt;
     std::vector<float> SmearedPEta;
     std::vector<float> SmearedPhi;
     std::vector<float> SmearedE;
+    std::vector<float> QGL;
+    std::vector<std::vector<int> > Keys;
+    std::vector<float> jecUncertainty;
+    std::vector<float> JER;
     std::vector<float> JERup;
     std::vector<float> JERdown;
-    
-    std::vector<int> HasNearGenTop;
-    std::vector<int> NearGenTopIsHadronic;
-    std::vector<int> NearGenWIsHadronic;
-    std::vector<int> NearGenWToENu;
-    std::vector<int> NearGenWToMuNu;
-    std::vector<int> NearGenWToTauNu;
-    std::vector<int> PassTopTag;
-    std::vector<float> DRNearGenTop;
-    std::vector<float> DRNearGenWFromTop;
-    std::vector<float> DRNearGenBFromTop;
-    std::vector<float> DRNearGenLepFromSLTop;
-    std::vector<float> DRNearGenNuFromSLTop;
-    std::vector<float> PtNearGenTop;
-    std::vector<float> PtNearGenBFromTop;
-    std::vector<float> PtNearGenWFromTop;
-    std::vector<float> PtNearGenLepFromSLTop;
-    std::vector<float> PtNearGenNuFromSLTop;
-    
+  
+    size_t it;
+    int size;
+
     void init() {
-      init_vec(Mass);
+      it = -1;
+      size = 0;
+      size=9999;
       init_vec(Pt);
       init_vec(Eta);
-      init_vec(Y);
       init_vec(Phi);
       init_vec(E);
       init_vec(Charge);
@@ -510,7 +1144,6 @@ public:
       init_vec(HFEMEnergy);
       init_vec(ChargedHadronMultiplicity);
       init_vec(numberOfDaughters);
-      init_vec(chargedMultiplicity);
       init_vec(neutralHadronMultiplicity);
       init_vec(neutralHadronEnergy);
       init_vec(neutralEmEnergy);
@@ -522,37 +1155,99 @@ public:
       init_vec(HFEMMultiplicity);
       init_vec(ChargeMuEnergy);
       init_vec(neutralMultiplicity);
+      init_vec(neutralHadronEnergyFrac);
+      init_vec(neutralEmEnergyFrac);
+      init_vec(chargedHadronEnergyFrac);
+      init_vec(muonEnergyFrac);
+      init_vec(chargedEmEnergyFrac);
+      init_vec(chargedMultiplicity);
+      init_vec(NumConstituents);
       init_vec(jecFactor0);
+      init_vec(jecFactorL3Absolute);
       init_vec(jetArea);
       init_vec(SmearedPt);
       init_vec(SmearedPEta);
       init_vec(SmearedPhi);
       init_vec(SmearedE);
+      init_vec(QGL);
+      init_vec(Keys);
+      init_vec(jecUncertainty);
+      init_vec(JER);
       init_vec(JERup);
       init_vec(JERdown);
-      init_vec(HasNearGenTop);
-      init_vec(NearGenTopIsHadronic);
-      init_vec(NearGenWIsHadronic);
-      init_vec(NearGenWToENu);
-      init_vec(NearGenWToMuNu);
-      init_vec(NearGenWToTauNu);
-      init_vec(PassTopTag);
-      init_vec(DRNearGenTop);
-      init_vec(DRNearGenWFromTop);
-      init_vec(DRNearGenBFromTop);
-      init_vec(DRNearGenLepFromSLTop);
-      init_vec(DRNearGenNuFromSLTop);
-      init_vec(PtNearGenTop);
-      init_vec(PtNearGenBFromTop);
-      init_vec(PtNearGenWFromTop);
-      init_vec(PtNearGenLepFromSLTop);
-      init_vec(PtNearGenNuFromSLTop);
     }
     
-  } jet;
+    bool Loop() {
+      ++it;
+      if (it<(size_t)size) {
+        return 1;
+      } else {
+        it=-1;
+        return 0;
+      }
+    }
+    
+  } jetsAK4;
   
-  class AK8Vars {
+  class AK8JetVars {
   public:
+    AK8JetVars() { init(); }
+    ~AK8JetVars() {}
+    
+    std::vector<float> Pt;
+    std::vector<float> Eta;
+    std::vector<float> Phi;
+    std::vector<float> E;
+    std::vector<float> Charge;
+    std::vector<float> CSV;
+    std::vector<float> CSVV1;
+    std::vector<float> GenPartonY;
+    std::vector<float> GenPartonEta;
+    std::vector<float> GenPartonPhi;
+    std::vector<float> GenPartonPt;
+    std::vector<float> GenPartonE;
+    std::vector<float> GenPartonCharge;
+    std::vector<float> PartonFlavour;
+    std::vector<float> HadronFlavour;
+    std::vector<float> GenJetY;
+    std::vector<float> GenJetEta;
+    std::vector<float> GenJetPhi;
+    std::vector<float> GenJetPt;
+    std::vector<float> GenJetE;
+    std::vector<float> GenJetCharge;
+    std::vector<float> muonMultiplicity;
+    std::vector<float> PhotonEnergy;
+    std::vector<float> ElectronEnergy;
+    std::vector<float> MuonEnergy;
+    std::vector<float> HFHadronEnergy;
+    std::vector<float> HFEMEnergy;
+    std::vector<float> ChargedHadronMultiplicity;
+    std::vector<float> numberOfDaughters;
+    std::vector<float> neutralHadronMultiplicity;
+    std::vector<float> neutralHadronEnergy;
+    std::vector<float> neutralEmEnergy;
+    std::vector<float> chargedEmEnergy;
+    std::vector<float> chargedHadronEnergy;
+    std::vector<float> photonMultiplicity;
+    std::vector<float> electronMultiplicity;
+    std::vector<float> HFHadronMultiplicity;
+    std::vector<float> HFEMMultiplicity;
+    std::vector<float> ChargeMuEnergy;
+    std::vector<float> neutralMultiplicity;
+    std::vector<float> neutralHadronEnergyFrac;
+    std::vector<float> neutralEmEnergyFrac;
+    std::vector<float> chargedHadronEnergyFrac;
+    std::vector<float> muonEnergyFrac;
+    std::vector<float> chargedEmEnergyFrac;
+    std::vector<float> chargedMultiplicity;
+    std::vector<float> NumConstituents;
+    std::vector<float> jecFactor0;
+    std::vector<float> jecFactorL3Absolute;
+    std::vector<float> jetArea;
+    std::vector<float> SmearedPt;
+    std::vector<float> SmearedPEta;
+    std::vector<float> SmearedPhi;
+    std::vector<float> SmearedE;
     std::vector<float> vSubjetIndex0;
     std::vector<float> vSubjetIndex1;
     std::vector<float> topSubjetIndex0;
@@ -570,8 +1265,90 @@ public:
     std::vector<float> wMass;
     std::vector<float> nSubJets;
     std::vector<float> minmass;
-    
+    std::vector<std::vector<int> > Keys;
+    std::vector<int> HasNearGenTop;
+    std::vector<int> NearGenTopIsHadronic;
+    std::vector<int> NearGenWIsHadronic;
+    std::vector<int> NearGenWToENu;
+    std::vector<int> NearGenWToMuNu;
+    std::vector<int> NearGenWToTauNu;
+    std::vector<int> PassTopTag;
+    std::vector<float> jecUncertainty;
+    std::vector<float> JER;
+    std::vector<float> JERup;
+    std::vector<float> JERdown;
+    std::vector<float> DRNearGenTop;
+    std::vector<float> DRNearGenWFromTop;
+    std::vector<float> DRNearGenBFromTop;
+    std::vector<float> DRNearGenLepFromSLTop;
+    std::vector<float> DRNearGenNuFromSLTop;
+    std::vector<float> PtNearGenTop;
+    std::vector<float> PtNearGenBFromTop;
+    std::vector<float> PtNearGenWFromTop;
+    std::vector<float> PtNearGenLepFromSLTop;
+    std::vector<float> PtNearGenNuFromSLTop;
+  
+    size_t it;
+    int size;
+
     void init() {
+      it = -1;
+      size = 0;
+      size=9999;
+      init_vec(Pt);
+      init_vec(Eta);
+      init_vec(Phi);
+      init_vec(E);
+      init_vec(Charge);
+      init_vec(CSV);
+      init_vec(CSVV1);
+      init_vec(GenPartonY);
+      init_vec(GenPartonEta);
+      init_vec(GenPartonPhi);
+      init_vec(GenPartonPt);
+      init_vec(GenPartonE);
+      init_vec(GenPartonCharge);
+      init_vec(PartonFlavour);
+      init_vec(HadronFlavour);
+      init_vec(GenJetY);
+      init_vec(GenJetEta);
+      init_vec(GenJetPhi);
+      init_vec(GenJetPt);
+      init_vec(GenJetE);
+      init_vec(GenJetCharge);
+      init_vec(muonMultiplicity);
+      init_vec(PhotonEnergy);
+      init_vec(ElectronEnergy);
+      init_vec(MuonEnergy);
+      init_vec(HFHadronEnergy);
+      init_vec(HFEMEnergy);
+      init_vec(ChargedHadronMultiplicity);
+      init_vec(numberOfDaughters);
+      init_vec(neutralHadronMultiplicity);
+      init_vec(neutralHadronEnergy);
+      init_vec(neutralEmEnergy);
+      init_vec(chargedEmEnergy);
+      init_vec(chargedHadronEnergy);
+      init_vec(photonMultiplicity);
+      init_vec(electronMultiplicity);
+      init_vec(HFHadronMultiplicity);
+      init_vec(HFEMMultiplicity);
+      init_vec(ChargeMuEnergy);
+      init_vec(neutralMultiplicity);
+      init_vec(neutralHadronEnergyFrac);
+      init_vec(neutralEmEnergyFrac);
+      init_vec(chargedHadronEnergyFrac);
+      init_vec(muonEnergyFrac);
+      init_vec(chargedEmEnergyFrac);
+      init_vec(chargedMultiplicity);
+      init_vec(NumConstituents);
+      init_vec(jecFactor0);
+      init_vec(jecFactorL3Absolute);
+      init_vec(jetArea);
+      init_vec(SmearedPt);
+      init_vec(SmearedPEta);
+      init_vec(SmearedPhi);
+      init_vec(SmearedE);
       init_vec(vSubjetIndex0);
       init_vec(vSubjetIndex1);
       init_vec(topSubjetIndex0);
@@ -589,34 +1366,28 @@ public:
       init_vec(wMass);
       init_vec(nSubJets);
       init_vec(minmass);
-    }
-    
-  } AK8;
-  
-  class AK4JetVars : public JetVars {
-  public:
-    AK4JetVars() { init(); }
-    ~AK4JetVars() {}
-    
-    size_t it;
-    int size;
-    
-    // Razor variables
-    float MR;
-    float MTR;
-    float R;
-    float R2;
-    
-    void init() {
-      JetVars::init();
-      
-      it = -1;
-      size = 0;
-      
-      MR = NOVAL_F;
-      MTR = NOVAL_F;
-      R = NOVAL_F;
-      R2 = NOVAL_F;
+      init_vec(Keys);
+      init_vec(HasNearGenTop);
+      init_vec(NearGenTopIsHadronic);
+      init_vec(NearGenWIsHadronic);
+      init_vec(NearGenWToENu);
+      init_vec(NearGenWToMuNu);
+      init_vec(NearGenWToTauNu);
+      init_vec(PassTopTag);
+      init_vec(jecUncertainty);
+      init_vec(JER);
+      init_vec(JERup);
+      init_vec(JERdown);
+      init_vec(DRNearGenTop);
+      init_vec(DRNearGenWFromTop);
+      init_vec(DRNearGenBFromTop);
+      init_vec(DRNearGenLepFromSLTop);
+      init_vec(DRNearGenNuFromSLTop);
+      init_vec(PtNearGenTop);
+      init_vec(PtNearGenBFromTop);
+      init_vec(PtNearGenWFromTop);
+      init_vec(PtNearGenLepFromSLTop);
+      init_vec(PtNearGenNuFromSLTop);
     }
     
     bool Loop() {
@@ -628,76 +1399,156 @@ public:
         return 0;
       }
     }
-  } jetsAK4;
-  
-  class AK8JetVars : public JetVars, public AK8Vars {
-  public:
-    AK8JetVars() { init(); }
-    ~AK8JetVars() {}
     
-    size_t it;
-    int size;
-    
-    // Razor variables
-    float MR;
-    float MTR;
-    float R;
-    float R2;
-    
-    void init() {
-      JetVars::init();
-      AK8Vars::init();
-      
-      it = -1;
-      size = 0;
-      
-      MR = NOVAL_F;
-      MTR = NOVAL_F;
-      R = NOVAL_F;
-      R2 = NOVAL_F;
-    }
-    
-    bool Loop() {
-      ++it;
-      if (it<(size_t)size) {
-        return 1;
-      } else {
-        it=-1;
-        return 0;
-      }
-    }
   } jetsAK8;
   
-  class AK8SubJetVars : public JetVars {
+  class AK8SubJetVars {
   public:
     AK8SubJetVars() { init(); }
     ~AK8SubJetVars() {}
     
-    std::vector<float> subjetCSV;
-    
+    std::vector<float> Pt;
+    std::vector<float> Eta;
+    std::vector<float> Phi;
+    std::vector<float> E;
+    std::vector<float> Charge;
+    std::vector<float> CSV;
+    std::vector<float> CSVV1;
+    std::vector<float> GenPartonY;
+    std::vector<float> GenPartonEta;
+    std::vector<float> GenPartonPhi;
+    std::vector<float> GenPartonPt;
+    std::vector<float> GenPartonE;
+    std::vector<float> GenPartonCharge;
+    std::vector<float> PartonFlavour;
+    std::vector<float> HadronFlavour;
+    std::vector<float> GenJetY;
+    std::vector<float> GenJetEta;
+    std::vector<float> GenJetPhi;
+    std::vector<float> GenJetPt;
+    std::vector<float> GenJetE;
+    std::vector<float> GenJetCharge;
+    std::vector<float> muonMultiplicity;
+    std::vector<float> PhotonEnergy;
+    std::vector<float> ElectronEnergy;
+    std::vector<float> MuonEnergy;
+    std::vector<float> HFHadronEnergy;
+    std::vector<float> HFEMEnergy;
+    std::vector<float> ChargedHadronMultiplicity;
+    std::vector<float> numberOfDaughters;
+    std::vector<float> neutralHadronMultiplicity;
+    std::vector<float> neutralHadronEnergy;
+    std::vector<float> neutralEmEnergy;
+    std::vector<float> chargedEmEnergy;
+    std::vector<float> chargedHadronEnergy;
+    std::vector<float> photonMultiplicity;
+    std::vector<float> electronMultiplicity;
+    std::vector<float> HFHadronMultiplicity;
+    std::vector<float> HFEMMultiplicity;
+    std::vector<float> ChargeMuEnergy;
+    std::vector<float> neutralMultiplicity;
+    std::vector<float> neutralHadronEnergyFrac;
+    std::vector<float> neutralEmEnergyFrac;
+    std::vector<float> chargedHadronEnergyFrac;
+    std::vector<float> muonEnergyFrac;
+    std::vector<float> chargedEmEnergyFrac;
+    std::vector<float> chargedMultiplicity;
+    std::vector<float> NumConstituents;
+    std::vector<float> jecFactor0;
+    std::vector<float> jecFactorL3Absolute;
+    std::vector<float> jetArea;
+    std::vector<float> SmearedPt;
+    std::vector<float> SmearedPEta;
+    std::vector<float> SmearedPhi;
+    std::vector<float> SmearedE;
+    std::vector<std::vector<int> > Keys;
+  
     size_t it;
     int size;
-    
+
     void init() {
-      JetVars::init();
-      
       it = -1;
       size = 0;
-      init_vec(subjetCSV);
+      size=9999;
+      init_vec(Pt);
+      init_vec(Eta);
+      init_vec(Phi);
+      init_vec(E);
+      init_vec(Charge);
+      init_vec(CSV);
+      init_vec(CSVV1);
+      init_vec(GenPartonY);
+      init_vec(GenPartonEta);
+      init_vec(GenPartonPhi);
+      init_vec(GenPartonPt);
+      init_vec(GenPartonE);
+      init_vec(GenPartonCharge);
+      init_vec(PartonFlavour);
+      init_vec(HadronFlavour);
+      init_vec(GenJetY);
+      init_vec(GenJetEta);
+      init_vec(GenJetPhi);
+      init_vec(GenJetPt);
+      init_vec(GenJetE);
+      init_vec(GenJetCharge);
+      init_vec(muonMultiplicity);
+      init_vec(PhotonEnergy);
+      init_vec(ElectronEnergy);
+      init_vec(MuonEnergy);
+      init_vec(HFHadronEnergy);
+      init_vec(HFEMEnergy);
+      init_vec(ChargedHadronMultiplicity);
+      init_vec(numberOfDaughters);
+      init_vec(neutralHadronMultiplicity);
+      init_vec(neutralHadronEnergy);
+      init_vec(neutralEmEnergy);
+      init_vec(chargedEmEnergy);
+      init_vec(chargedHadronEnergy);
+      init_vec(photonMultiplicity);
+      init_vec(electronMultiplicity);
+      init_vec(HFHadronMultiplicity);
+      init_vec(HFEMMultiplicity);
+      init_vec(ChargeMuEnergy);
+      init_vec(neutralMultiplicity);
+      init_vec(neutralHadronEnergyFrac);
+      init_vec(neutralEmEnergyFrac);
+      init_vec(chargedHadronEnergyFrac);
+      init_vec(muonEnergyFrac);
+      init_vec(chargedEmEnergyFrac);
+      init_vec(chargedMultiplicity);
+      init_vec(NumConstituents);
+      init_vec(jecFactor0);
+      init_vec(jecFactorL3Absolute);
+      init_vec(jetArea);
+      init_vec(SmearedPt);
+      init_vec(SmearedPEta);
+      init_vec(SmearedPhi);
+      init_vec(SmearedE);
+      init_vec(Keys);
     }
+    
+    bool Loop() {
+      ++it;
+      if (it<(size_t)size) {
+        return 1;
+      } else {
+        it=-1;
+        return 0;
+      }
+    }
+    
   } subjetsAK8;
   
-  class CmsTopTagSubJetVars : public JetVars {
+  class CmsTopTagSubJetVars {
   public:
     CmsTopTagSubJetVars() { init(); }
     ~CmsTopTagSubJetVars() {}
     
+  
     size_t it;
     int size;
-    
+
     void init() {
-      JetVars::init();
-      
       it = -1;
       size = 0;
     }
@@ -711,352 +1562,9 @@ public:
         return 0;
       }
     }
+    
   } subjetsCmsTopTag;
   
-  class MetData {
-  public:
-    MetData() { init(); };
-    
-    std::vector<float> Pt;
-    std::vector<float> Phi;
-    std::vector<float> Px;
-    std::vector<float> Py;
-    
-    void init() {
-      init_vec(Pt);
-      init_vec(Phi);
-      init_vec(Px);
-      init_vec(Py);
-    }
-    
-  } met;
-  
-  class EventData {
-  public:
-    EventData() { init(); };
-    
-    int NLep;
-    int NTopHad;
-    int NTopHadPreTag; // New Oct 16
-    int NTopLep;
-    int NTop;
-    float HtLep;
-    float HtTop;
-    float Ht;
-    float HtAll;
-    float HtEx;
-    float HtExFr;
-    float HtTopFr;
-    float TTHadDR;
-    float TTHadDPhi;
-    float TTHadSumPt; // New Oct 18
-    float TTHadDEta;
-    float TTHadMass;
-    float TTHadPz;
-    float TTHadHz;
-    float TTHadDPz;
-    float TTHadMR;
-    float TTHadMTR;
-    float TTHadR;
-    float TTHadR2;
-    float AK4_MR;
-    float AK4_MTR;
-    float AK4_R;
-    float AK4_R2;
-    float MR;
-    float MTR;
-    float R;
-    float R2;
-
-    // Generator/LHE variables
-    float XSec;
-    float NEvent_Corr;
-    float Lumi_Weight;
-    float Gen_Weight;
-    std::vector<float> scale_Weights;
-    std::vector<float> pdf_Weights;
-    std::vector<float> alphas_Weights;
-    int LHA_PDF_ID;
-    float SUSY_Gluino_Mass;
-    float SUSY_LSP_Mass;
-
-    int npv;
-    int NGoodVtx; // New Oct 22
-    
-    // Other Variables
-    float HT;
-    float HTall;
-    float HTtt;
-    float HTlep;
-    float HTex;
-    float HTttFraction;
-    float HTexFraction;
-    
-    // Development 04 March
-    int nmu;
-    int nele;
-    int neletight;
-    int nmuveto;
-    int neleveto;
-    std::vector<float> DRJetLep;
-    std::vector<float> EleDRJet;
-    std::vector<float> MuDRJet;
-    std::vector<float> RelPtJetLep;
-    std::vector<float> EleRelPtJet;
-    std::vector<float> MuRelPtJet;
-    std::vector<float> EleJetCombMass;
-    std::vector<float> MuJetCombMass;
-  
-    
-    // Development 20 April
-    std::vector<int> JetGenTruth;
-    std::vector<bool>  JetHasMatchedGenTop;
-    std::vector<int> JetMatchedGenTopType;
-    std::vector<bool>  JetMatchedGenTopIsMerged;
-    std::vector<float> JetMatchedGenTopPt;
-    std::vector<float> JetMatchedGenTopJetDR;
-    std::vector<float> GenBJetDR;
-    std::vector<float> GenWJetDR;
-    std::vector<float> GenWGenBDR;
-    std::vector<float> GenLepJetDR;
-    std::vector<float> GenLepGenBDR;
-    int NGenLepFromTop;
-    std::vector<bool>  IsGenTop;
-    std::vector<int> GenTopType;
-    std::vector<bool>  GenTopHasMatchedJet;
-    std::vector<bool>  GenTopHasMatchedTopTagJet;
-    std::vector<bool>  JetIsHadTopTagged;
-    std::vector<float> maxSubjetCSV;
-    
-    // Triggers
-    // Hadronic
-    int HLT_AK8PFJet360_TrimMass30;
-    int HLT_PFJet450;
-    int HLT_PFJet500;
-    int HLT_AK8PFHT700_TrimR0p1PT0p03Mass50;
-    int HLT_PFHT750_4Jet;
-    int HLT_PFHT750_4JetPt50;
-    int HLT_ECALHT800;
-    int HLT_PFHT800;
-    int HLT_PFHT900;
-    // Hadronic - Prescaled Auxilary
-    int HLT_PFHT350;
-    int HLT_PFHT400;
-    int HLT_PFHT475;
-    int HLT_PFHT600;
-    int HLT_PFHT650;
-    int HLT_PFHT550_4Jet;
-    int HLT_PFHT650_4Jet;
-    // Razor
-    int HLT_Rsq0p25;
-    int HLT_Rsq0p30;
-    int HLT_RsqMR240_Rsq0p09_MR200_4jet;
-    int HLT_RsqMR240_Rsq0p09_MR200;
-    int HLT_RsqMR270_Rsq0p09_MR200_4jet;
-    int HLT_RsqMR270_Rsq0p09_MR200;
-    // Lepton + B-tag
-    int HLT_Mu10_CentralPFJet30_BTagCSV0p5PF;
-    int HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p5PF;
-    int HLT_Ele15_IsoVVVL_BTagtop8CSV07_PFHT400;
-    int HLT_Ele15_IsoVVVL_PFHT600;
-    int HLT_Ele15_PFHT300;
-    int HLT_Mu15_IsoVVVL_BTagCSV07_PFHT400;
-    int HLT_Mu15_IsoVVVL_PFHT600;
-    int HLT_Mu15_PFHT300;
-    // Lepton - Non-isolated
-    int HLT_Ele45_CaloIdVT_GsfTrkIdT_PFJet200_PFJet50;
-    int HLT_Mu40_eta2p1_PFJet200_PFJet50;
-    int HLT_Mu45_eta2p1;
-    int HLT_Mu50;
-    // Lepton - Isolated
-    int HLT_Ele32_eta2p1_WPLoose_Gsf;
-    int HLT_Ele32_eta2p1_WPTight_Gsf;
-    int HLT_IsoMu24_eta2p1;
-    int HLT_IsoMu27;
-    int HLT_IsoTkMu24_eta2p1;
-    int HLT_IsoTkMu27;
-    
-    // Event filters (these are automatically picked up)
-    int Flag_HBHEIsoNoiseFilterResult;
-    int Flag_HBHENoiseFilterResult;
-    int Flag_HBHENoiseFilterResultRun1;
-    int Flag_HBHENoiseFilterResultRun2Loose;
-    int Flag_HBHENoiseFilterResultRun2Tight;
-    int Flag_trackingFailureFilter;
-    int Flag_goodVertices;
-    int Flag_CSCTightHaloFilter;
-    int Flag_trkPOGFilters;
-    int Flag_trkPOG_logErrorTooManyClusters;
-    int Flag_EcalDeadCellTriggerPrimitiveFilter;
-    int Flag_ecalLaserCorrFilter;
-    int Flag_trkPOG_manystripclus53X;
-    int Flag_eeBadScFilter;
-    int Flag_METFilters;
-    int Flag_HBHENoiseFilter;
-    int Flag_trkPOG_toomanystripclus53X;
-    int Flag_hcalLaserEventFilter;
-  
-    // Vertices
-    int vtx_size;
-    std::vector<float> vtx_z;
-    std::vector<float> vtx_rho;
-    std::vector<float> vtx_chi;
-    std::vector<int> vtx_ndof;
-    
-    // Pileup
-    int pu_NtrueInt;
-    std::vector<int> pu_NInt;
-    std::vector<int> pu_BX;
-    
-    unsigned int RunNumber;
-    unsigned int LumiBlock;
-    unsigned long long EventNumber;
-    
-    void init() {
-      NLep=NOVAL_I;
-      NTopHad=NOVAL_I;
-      NTopLep=NOVAL_I;
-      NTop=NOVAL_I;
-      HtLep=NOVAL_F;
-      HtTop=NOVAL_F;
-      Ht=NOVAL_F;
-      HtAll=NOVAL_F;
-      HtEx=NOVAL_F;
-      HtExFr=NOVAL_F;
-      HtTopFr=NOVAL_F;
-      TTHadDR=NOVAL_F;
-      TTHadDPhi=NOVAL_F;
-      TTHadSumPt=NOVAL_F;
-      TTHadDEta=NOVAL_F;
-      TTHadMass=NOVAL_F;
-      TTHadPz=NOVAL_F;
-      TTHadHz=NOVAL_F;
-      TTHadDPz=NOVAL_F;
-      TTHadMR=NOVAL_F;
-      TTHadMTR=NOVAL_F;
-      TTHadR=NOVAL_F;
-      TTHadR2=NOVAL_F;
-      MR=NOVAL_F;
-      MTR=NOVAL_F;
-      R=NOVAL_F;
-      R2=NOVAL_F;
-
-      // Generator/LHE variables
-      XSec=NOVAL_F;
-      NEvent_Corr=NOVAL_F;
-      Lumi_Weight=NOVAL_F;
-      Gen_Weight=NOVAL_F;
-      init_vec(scale_Weights);
-      init_vec(pdf_Weights);
-      init_vec(alphas_Weights);
-      LHA_PDF_ID=NOVAL_I;
-      SUSY_Gluino_Mass=NOVAL_F;
-      SUSY_LSP_Mass=NOVAL_F;
-      
-      npv=NOVAL_I;
-      NGoodVtx=NOVAL_I;
-      
-      // Other Variables
-      HT=NOVAL_F;
-      HTall=NOVAL_F;
-      HTtt=NOVAL_F;
-      HTex=NOVAL_F;
-      HTttFraction=NOVAL_F;
-      HTexFraction=NOVAL_F;
-  
-      // Development 04 March
-      nmu=NOVAL_I;
-      nele=NOVAL_I;
-      neletight=NOVAL_I;
-      nmuveto=NOVAL_I;
-      neleveto=NOVAL_I;
-      
-      // Development 20 April
-      NGenLepFromTop=NOVAL_I;
-      
-      // Triggers
-      // Hadronic
-      HLT_AK8PFJet360_TrimMass30=NOVAL_I;
-      HLT_PFJet450=NOVAL_I;
-      HLT_PFJet500=NOVAL_I;
-      HLT_AK8PFHT700_TrimR0p1PT0p03Mass50=NOVAL_I;
-      HLT_PFHT750_4Jet=NOVAL_I;
-      HLT_PFHT750_4JetPt50=NOVAL_I;
-      HLT_ECALHT800=NOVAL_I;
-      HLT_PFHT800=NOVAL_I;
-      HLT_PFHT900=NOVAL_I;
-      // Hadronic - Prescaled Auxilary
-      HLT_PFHT350=NOVAL_I;
-      HLT_PFHT400=NOVAL_I;
-      HLT_PFHT475=NOVAL_I;
-      HLT_PFHT600=NOVAL_I;
-      HLT_PFHT650=NOVAL_I;
-      HLT_PFHT550_4Jet=NOVAL_I;
-      HLT_PFHT650_4Jet=NOVAL_I;
-      // Razor
-      HLT_Rsq0p25=NOVAL_I;
-      HLT_Rsq0p30=NOVAL_I;
-      HLT_RsqMR240_Rsq0p09_MR200_4jet=NOVAL_I;
-      HLT_RsqMR240_Rsq0p09_MR200=NOVAL_I;
-      HLT_RsqMR270_Rsq0p09_MR200_4jet=NOVAL_I;
-      HLT_RsqMR270_Rsq0p09_MR200=NOVAL_I;
-      // Lepton + B-tag
-      HLT_Mu10_CentralPFJet30_BTagCSV0p5PF=NOVAL_I;
-      HLT_Ele10_CaloIdM_TrackIdM_CentralPFJet30_BTagCSV0p5PF=NOVAL_I;
-      HLT_Ele15_IsoVVVL_BTagtop8CSV07_PFHT400=NOVAL_I;
-      HLT_Ele15_IsoVVVL_PFHT600=NOVAL_I;
-      HLT_Ele15_PFHT300=NOVAL_I;
-      HLT_Mu15_IsoVVVL_BTagCSV07_PFHT400=NOVAL_I;
-      HLT_Mu15_IsoVVVL_PFHT600=NOVAL_I;
-      HLT_Mu15_PFHT300=NOVAL_I;
-      // Lepton - Non-isolated
-      HLT_Ele45_CaloIdVT_GsfTrkIdT_PFJet200_PFJet50=NOVAL_I;
-      HLT_Mu40_eta2p1_PFJet200_PFJet50=NOVAL_I;
-      HLT_Mu45_eta2p1=NOVAL_I;
-      HLT_Mu50=NOVAL_I;
-      // Lepton - Isolated
-      HLT_Ele32_eta2p1_WPLoose_Gsf=NOVAL_I;
-      HLT_Ele32_eta2p1_WPTight_Gsf=NOVAL_I;
-      HLT_IsoMu24_eta2p1=NOVAL_I;
-      HLT_IsoMu27=NOVAL_I;
-      HLT_IsoTkMu24_eta2p1=NOVAL_I;
-      HLT_IsoTkMu27=NOVAL_I;
-      
-      init_vec(DRJetLep);
-      init_vec(EleDRJet);
-      init_vec(MuDRJet);
-      init_vec(RelPtJetLep);
-      init_vec(EleRelPtJet);
-      init_vec(MuRelPtJet);
-      init_vec(EleJetCombMass);
-      init_vec(MuJetCombMass);
-      init_vec(JetGenTruth);
-      init_vec(JetHasMatchedGenTop);
-      init_vec(JetMatchedGenTopType);
-      init_vec(JetMatchedGenTopIsMerged);
-      init_vec(JetMatchedGenTopPt);
-      init_vec(JetMatchedGenTopJetDR);
-      init_vec(GenBJetDR);
-      init_vec(GenWJetDR);
-      init_vec(GenWGenBDR);
-      init_vec(GenLepJetDR);
-      init_vec(GenLepGenBDR);
-      init_vec(IsGenTop);
-      init_vec(GenTopType);
-      init_vec(GenTopHasMatchedJet);
-      init_vec(GenTopHasMatchedTopTagJet);
-      init_vec(JetIsHadTopTagged);
-      init_vec(maxSubjetCSV);
-      init_vec(vtx_z);
-      init_vec(vtx_rho);
-      init_vec(vtx_chi);
-      init_vec(vtx_ndof);
-      
-      pu_NtrueInt = NOVAL_I;
-      init_vec(pu_NInt);
-      init_vec(pu_BX);
-    }
-  } evt;
 };
 
 #endif

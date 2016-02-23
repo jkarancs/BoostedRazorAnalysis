@@ -32,6 +32,12 @@ int main(int argc, char** argv) {
   int nevents = stream.size();
   cout << "Number of events: " << nevents << endl;
 
+  if (cmdline.quickTest) {
+    cout << "quickTest (cmdline): true"<< endl;
+    cout << "--> Doing a quick test on 1/100 statitics"<< endl;
+    nevents /= 100;
+  }
+
   // Select variables to be read
   DataStruct data;
   settings.selectVariables(stream, data);
@@ -80,6 +86,7 @@ int main(int argc, char** argv) {
     ofile = new utils::outputFile(cmdline.outputFileName);
     cout << "saveSkimmedNtuple (settings): false" << endl;
   }
+  TDirectory* out_dir = gDirectory;
 
   // ---------------------------------------------------------------------------
   // -- Read systematics file                                                 --
@@ -132,6 +139,8 @@ int main(int argc, char** argv) {
   // -- Declare histograms                                                    --
   // ---------------------------------------------------------------------------
 
+  // Histogram weight
+  double w;
   TH1::SetDefaultSumw2();
 
   // This section is moved and defined in the Analysis class
@@ -139,10 +148,11 @@ int main(int argc, char** argv) {
   // This is useful if someone wants to do quick study/define other search region etc.
   // But also, common methods in all anaylsis are defined in common/AnalysisBase.*
 
-  ana.declare_common_histos();
+  ana.define_histo_options(w, data, cmdline.dirname, settings.runOnSkim);
 
-  ana.declare_analysis_histos();
-  
+  ana.init_common_histos();
+  ana.init_analysis_histos();
+
   // --------------------------------------------------------------
   // -- Calculate the normalization factor for the event weights --
   // -- The original MC weight will be divided by this quantity  --
@@ -214,10 +224,12 @@ int main(int argc, char** argv) {
     // Read event into memory
     stream.read(entry);
 
+    // Calculate variables that do not exist in ntuple
+    ana.calculate_variables(data);
+
     if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;
 
-    double w = 1.;
-
+    w = 1;
     if ( !cmdline.isData ) {
       // Event weight normalized to luminosity
       w *= data.evt.Gen_Weight*weightnorm;
@@ -287,6 +299,11 @@ int main(int argc, char** argv) {
 
     if (DATA_BLINDED) {
 
+      // If option (saveSkimmedNtuple) is specified save all 
+      // skimmed events selected by the analysis to the output file
+      // tree is copied and current weight is saved as "eventWeight"
+      if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
+
       // Apply analysis cuts and fill histograms
       // These are all defined in [Name]_Analysis.cc (included from settings.h)
       // You specify there also which cut is applied for each histo
@@ -298,20 +315,15 @@ int main(int argc, char** argv) {
         if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
 
       // Count Signal events
-      if ( pass_all && ana.signal_selection(data) ) {
-	ofile->count("Signal", w);
-
-	// If option (saveSkimmedNtuple) is specified
-	// save all events selected by the analysis to the output file
-	// tree is copied and current weight is saved as "eventWeight"
-	if ( settings.saveSkimmedNtuple ) ofile->addEvent(w);
-      }
+      if ( pass_all && ana.signal_selection(data) ) ofile->count("Signal", w);
 
     } // end Blinding
 
   } // end event loop
 
   stream.close();
+  out_dir->cd();
+  ana.save_analysis_histos();
   ofile->close();
   return 0;
 }

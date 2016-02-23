@@ -10,12 +10,12 @@ OBJS          = $(ANALYZERO)
 PROGRAMS      = $(ANALYZER)
 
 #------------------------------------------------------------------------------
-EDMUTILSO      = EdmUtils.$(ObjSuf)
-EDMUTILSS      = EdmUtils.$(SrcSuf)
-EDMUTILS       = EdmUtils$(ExeSuf)
+PLOTTERO      = Plotter.$(ObjSuf)
+PLOTTERS      = Plotter.$(SrcSuf)
+PLOTTER       = Plotter$(ExeSuf)
 
-OBJS          += $(EDMUTILSO)
-PROGRAMS      += $(EDMUTILS)
+OBJS          += $(PLOTTERO)
+PROGRAMS      += $(PLOTTER)
 
 #------------------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ $(ANALYZER):    $(ANALYZERO)
 		$(MT_EXE)
 		@echo "$@ done"
 
-$(EDMUTILS):    $(EDMUTILSO)
+$(PLOTTER):    $(PLOTTERO)
 		$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
 		$(MT_EXE)
 		@echo "$@ done"

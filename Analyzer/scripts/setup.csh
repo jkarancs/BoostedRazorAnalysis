@@ -1,5 +1,6 @@
 set LATEST_NTUPLE_EOS="Dec06"
-set LATEST_NTUPLE_GRID18="Dec06_edm_Nov18"
+set LATEST_NTUPLE_GRID18="Jan12_edm_Jan06"
+#set LATEST_NTUPLE_GRID18="Skim_Jan26_1AK8JetPt350"
 
 cmsenv
 cd $CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer

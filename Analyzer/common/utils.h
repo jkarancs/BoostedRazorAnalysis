@@ -36,6 +36,24 @@
 //-----------------------------------------------------------------------------
 namespace utils {
   
+  //___________________________________________________
+  //                Run I top-pt reweighting
+  
+  // SUSY group recommendation for Run II - use Run I recipe:
+  // https://hypernews.cern.ch/HyperNews/CMS/get/susy/2112.html
+
+  // Scalefactor for top pt reweighting
+  // Taken from this twiki: https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting#Studies
+  // Values used are the ones for the 8 TeV, all combined measurement
+  double GetTopPtScaleFactor(double toppt){ // toppt is generator top(antitop) pt
+    double a = 0.156;
+    double b = -0.00137;
+    return exp(a+b*toppt);
+  }
+  
+  //___________________________________________________
+  //                     Other
+
   void
   error(std::string message)
   {
@@ -133,7 +151,7 @@ namespace utils {
       file_->cd();
       //file_->Write("", TObject::kWriteDelete);
       file_->Write();
-      file_->ls();
+      //file_->ls();
       file_->Close();
     }
     
@@ -150,11 +168,13 @@ namespace utils {
   struct commandLine
   {
     std::string progName;
-    std::string outputFileName;         // first non option argument
-    std::vector<std::string> fileNames; // second and rest non optional arguments
-    bool isData;                        // determined automatically from input file names
     std::string systematicsFileName;    // needs to be given only if doSystetmatics settings true
     int numSyst;                        // needs to be given only if doSystetmatics settings true
+    std::string outputFileName;         // first non option argument
+    std::vector<std::string> fileNames; // second and rest non optional arguments
+    std::string dirname;                // extracted from the 1st filename
+    bool isData;                        // determined automatically from input file names
+    bool quickTest;                     // Do a quick test on 1/100th of events
   };
   
   // Read ntuple fileNames from file list
@@ -194,6 +214,9 @@ namespace utils {
     cl.systematicsFileName = "";
     cl.numSyst = 0;
 
+    // Do a quick test on 1/100 statistics
+    cl.quickTest = false;
+
     for (int iarg=1; iarg<argc; ++iarg) {
       std::string arg = argv[iarg];
       // look for optional arguments (argument has "=" in it)
@@ -205,6 +228,7 @@ namespace utils {
 	// reading option
 	if (option=="numSyst") value>>cl.numSyst;
 	if (option=="systematicsFileName") value>>cl.systematicsFileName;
+	if (option=="quickTest") value>>cl.quickTest;
       } else {
 	if (cl.outputFileName=="") {
 	  // 1st non-optional (i.e xxx=yyy) command line argument is output ifle
@@ -225,6 +249,18 @@ namespace utils {
 	  }
 	  ++n_input;
 	}
+      }
+    }
+
+    // Get the directory name from the first file (used for plotting)
+    if (cl.fileNames.size()>0) {
+      std::stringstream ss;
+      ss<<cl.fileNames[0];
+      std::string prev, read, dirname;
+      while(std::getline(ss, read, '/')) {
+	if (read.find(".")!=std::string::npos)
+	  cl.dirname = prev;
+	prev = read;
       }
     }
 

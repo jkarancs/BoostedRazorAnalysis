@@ -20,7 +20,7 @@ public:
   // Functions used by the Analyzer
   void define_preselections(const DataStruct&);
 
-  void declare_common_histos();
+  void init_common_histos();
 
   double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
 
@@ -57,13 +57,14 @@ AnalysisBase::define_preselections(const DataStruct& data)
 { 
   // Apply the same cuts as it is in the ntuple - Only for check
   // cut is an std::function, which we can define easily with a lambda function
-  baseline_cuts.push_back({ .name="ntuple_filter", .func = [&data]() { 
-			      // Define cut function here:
-			      if ( !(data.jetsAK8.size>=2) ) return 0;
-			      if ( !(data.jetsAK8.Pt[0]>350) ) return 0;
-			      if ( !(data.jetsAK8.Pt[1]>350) ) return 0;
-			      return 1;
-			    } });
+
+  //baseline_cuts.push_back({ .name="ntuple_filter", .func = [&data]() { 
+  //      		      // Define cut function here:
+  //      		      if ( !(data.jetsAK8.size>=2) ) return 0;
+  //      		      if ( !(data.jetsAK8.Pt[0]>350) ) return 0;
+  //      		      if ( !(data.jetsAK8.Pt[1]>350) ) return 0;
+  //      		      return 1;
+  //      		    } });
   
   // Recommended event filters by MET group
   // In some cases we should use txt files
@@ -97,7 +98,7 @@ TH1D* h_nvtx_rw;
 //_______________________________________________________
 //              Define Histograms here
 void
-AnalysisBase::declare_common_histos()
+AnalysisBase::init_common_histos()
 {
   // total weight
   h_totweight     = new TH1D("totweight",     "MC;;Total (generator) event weight", 1,0,1);
