@@ -4,9 +4,9 @@ Run II Search for Supersymmetry using Razor variables in the boosted regime
 ## Checkout recipe
 
 ```Shell
-setenv SCRAM_ARCH slc6_amd64_gcc491
-cmsrel CMSSW_7_4_15_patch1
-cd CMSSW_7_4_15_patch1/src
+setenv SCRAM_ARCH slc6_amd64_gcc493
+cmsrel CMSSW_7_6_3_patch2
+cd CMSSW_7_6_3_patch2/src
 cmsenv
 git clone https://github.com/jkarancs/BoostedRazorAnalysis
 scram b -j 20
@@ -19,7 +19,6 @@ to mount eos on lxplus, create softlinks and create/update filelists
 ```Shell
 cd BoostedRazorAnalysis/Analyzer
 source scripts/setup.csh
-make
 ```
 
 Before running check/set the options for the Analyzer in settings.h
@@ -35,11 +34,22 @@ More info about Analyzer:
 
 Run your anaylsis code with
 ```Shell
+make
 ./Analyzer <output filename> <filelist.txt or root file(s) ... >
 eg:
 ./Analyzer Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
 ```
 
+There is a tcsh script to run the Analyzer and use the results to create plots all in once
+on part of the data (--test option)
+```Shell
+source scripts/run_all.csh --test
+```
+
+Or run a full analysis on all samples (--run option) and similarly create plots in the end
+```Shell
+source scripts/run_all.csh --run
+```
 
 Run systematics (first, set doSystematics = true in settings.h)  
 when running systematics, additionally must specify options:  
