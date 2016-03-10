@@ -13,9 +13,12 @@
 #include "FullHad_Analysis.h"
 
 int main(int argc, char** argv) {
+  std::vector<std::string> vname_data = {};
+  std::vector<std::string> vname_signal = {};
+
   // Get file list and histogram filename from command line
   utils::commandLine cmdline;
-  utils::decodeCommandLine(argc, argv, cmdline);
+  utils::decodeCommandLine(argc, argv, cmdline, vname_data, vname_signal);
 
   utils::outputFile* ofile;
   ofile = new utils::outputFile(cmdline.outputFileName);

@@ -101,7 +101,8 @@ namespace utils {
     {
       file_->cd();
       hist_ = new TH1D("counts", "", 1,0,1);
-      hist_->SetBit(TH1::kCanRebin);
+      //hist_->SetBit(TH1::kCanRebin);
+      hist_->SetCanExtend(TH1::kAllAxes);
       hist_->SetStats(0);
     }
     
@@ -117,7 +118,8 @@ namespace utils {
   	      << filename_ << std::endl;
       file_->cd();
       hist_ = new TH1D("counts", "", 1,0,1);
-      hist_->SetBit(TH1::kCanRebin);
+      //hist_->SetBit(TH1::kCanRebin);
+      hist_->SetCanExtend(TH1::kAllAxes);
       hist_->SetStats(0);
     }
     
@@ -174,6 +176,9 @@ namespace utils {
     std::vector<std::string> fileNames; // second and rest non optional arguments
     std::string dirname;                // extracted from the 1st filename
     bool isData;                        // determined automatically from input file names
+    bool isBkg;                         // determined automatically from input file names
+    bool isSignal;                      // determined automatically from input file names
+    std::string signalName;             // determined automatically from input file names
     bool quickTest;                     // Do a quick test on 1/100th of events
   };
   
@@ -198,7 +203,7 @@ namespace utils {
   }
   
   void
-  decodeCommandLine(int argc, char** argv, commandLine& cl)
+  decodeCommandLine(int argc, char** argv, commandLine& cl, std::vector<std::string>& vname_data, std::vector<std::string>& vname_signal)
   {
     cl.progName = std::string(argv[0]);
 
@@ -206,7 +211,11 @@ namespace utils {
 
     // decide whether input is data
     cl.isData = false;
+    cl.isBkg  = false;
+    cl.isSignal = false;
     int n_data_arg = 0;
+    int n_signal_arg = 0;
+    int n_bkg_arg = 0;
     int n_input = 0;
 
     // specify the nth line of the systematic file you want to consider
@@ -241,11 +250,24 @@ namespace utils {
 	    std::vector<std::string> list = getFilenames(arg);
 	    cl.fileNames.insert(cl.fileNames.end(), list.begin(), list.end());
 	    if (arg.find("filelists/data")!=std::string::npos) n_data_arg++;
+	    else if (arg.find("filelists/signals")!=std::string::npos) n_signal_arg++;
+	    else if (arg.find("filelists/backgrounds")!=std::string::npos) n_bkg_arg++;
 	  } else {
 	    // Otherwise add all root files to input file list
 	    if (std::string(arg).find(".root")!=std::string::npos) cl.fileNames.push_back(arg);
 	    else error(std::string("argument ")+arg+" is not a root file or a list (.txt file)!");
-	    if (std::string(arg).find("ns_2015")!=std::string::npos) n_data_arg++; // This part is in all data file names
+	    // Check if filename is data or signal
+	    bool found = false;
+	    for (auto data : vname_data) if (std::string(arg).find(data)!=std::string::npos) { 
+	      n_data_arg++;
+	      found=1;
+	    }
+	    for (auto signal : vname_signal) if (std::string(arg).find(signal)!=std::string::npos) { 
+	      n_signal_arg++;
+	      cl.signalName = signal;
+	      found=1; 
+	    }
+	    if (!found) n_bkg_arg++;
 	  }
 	  ++n_input;
 	}
@@ -266,7 +288,13 @@ namespace utils {
 
     // check number of input file arguments containing data-like strings
     if (n_data_arg != 0 && n_data_arg != n_input) error(" Data mixed with MC!");
-    else cl.isData = (n_data_arg == n_input);
+    else if (n_signal_arg != 0 && n_signal_arg != n_input) error(" signal mixed with other samples!");
+    else if (n_bkg_arg != 0 && n_bkg_arg != n_input) error(" Background mixed with other samples (OR signal not defined?)!");
+    else {
+      cl.isData = (n_data_arg == n_input);
+      cl.isBkg  = (n_bkg_arg == n_input);
+      cl.isSignal = (n_signal_arg == n_input);
+    }
   }
 }
 

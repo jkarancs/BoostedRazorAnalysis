@@ -8,20 +8,28 @@ struct settings {
   //-----------------------------------------------------------------------------
   // -- Constants
   //-----------------------------------------------------------------------------
-  settings( bool RunOnSkim = false ) :
-    runOnSkim           ( RunOnSkim ),
-    saveSkimmedNtuple   ( true ),
-    doPileupReweighting ( false ),
-    doSystematics       ( false ),
+  settings( bool RunOnSkim = true ) :
+    runOnSkim                ( RunOnSkim ),
+    saveSkimmedNtuple        ( false ),
+    doPileupReweighting      ( false ),
+    doSystematics            ( false ),
     // if above is true, must add these command line options:
     // systematicsFileName=<filename>
     // numSyst=<positive int> - nth line in the systematics file to consider
-    treeName            ( RunOnSkim ? "B2GTree" : "B2GTTreeMaker/B2GTree" ),
-    totWeightHistoName  ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
-    mcPileupHistoName   ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
-    pileupDir           ( "pileup/Dec13_Silver_JSON/" ),
-    intLumi             ( 2630.2 /* brilcalc - Dec18 Silver JSON */ ) // Tot int lumi in (pb^-1)
-  {};
+    treeName                 ( RunOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
+    totWeightHistoName       ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
+    mcPileupHistoName        ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
+    pileupDir                ( "pileup/Dec13_Silver_JSON/" ),
+    intLumi                  ( 2630.2 /* brilcalc - Dec18 Silver JSON */ ) // Tot int lumi in (pb^-1)
+  {
+    if (RunOnSkim) {
+      totWeightHistoNamesSignal.push_back("totweight_T1tttt"); // T1tttt (use same histo for fast and fullsim)
+      xsecHistoNamesSignal     .push_back("xsec_T1tttt");
+    } else {
+      totWeightHistoNamesSignal.push_back("EventCounter/h_totweight_T1tttt");
+      xsecHistoNamesSignal     .push_back("EventCounter/h_xsec_T1tttt");
+    }
+  };
   ~settings(){};
 
   const bool runOnSkim;
@@ -33,6 +41,8 @@ struct settings {
   const std::string mcPileupHistoName;
   const std::string pileupDir;
   const double intLumi;
+  std::vector<std::string> totWeightHistoNamesSignal;
+  std::vector<std::string> xsecHistoNamesSignal;
 
   //-----------------------------------------------------------------------------
   // -- Declare variables to be read by treestream

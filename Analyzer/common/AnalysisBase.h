@@ -7,6 +7,7 @@
 #include "TH1.h"
 
 #include "DataStruct.h"
+#include "GluinoXSec.h"
 
 class AnalysisBase
 {
@@ -25,6 +26,9 @@ public:
   double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
 
   double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
+
+  void calc_weightnorm_histo_from_ntuple(const std::vector<std::string>&, const double&, const std::vector<std::string>&,
+					 const std::vector<std::string>&, const std::vector<std::string>&, bool);
 
   void init_pileup_reweightin(const std::string&, const std::string&, const std::vector<std::string>&);
 
@@ -87,6 +91,9 @@ AnalysisBase::define_preselections(const DataStruct& data)
 //                 List of Histograms
 
 TH1D* h_totweight;
+std::vector<TH2D*> vh_totweight_signal;
+std::vector<TH2D*> vh_xsec_signal;
+std::vector<TH2D*> vh_weightnorm_signal;
 TH1D* h_pileup_data;
 TH1D* h_pileup_mc;
 TH1D* h_pileup_weight;
@@ -101,15 +108,19 @@ void
 AnalysisBase::init_common_histos()
 {
   // total weight
-  h_totweight     = new TH1D("totweight",     "MC;;Total (generator) event weight", 1,0,1);
+  h_totweight                  = new TH1D("totweight",          "MC;;Total (generator) event weight", 1,0,1);
+  // signal weight and xsec
+  vh_totweight_signal .push_back(new TH2D("totweight_T1tttt",   "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,-12.5,5012.5, 201,-12.5,5012.5));
+  vh_xsec_signal      .push_back(new TH2D("xsec_T1tttt",        "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  201,-12.5,5012.5, 201,-12.5,5012.5));
+  vh_weightnorm_signal.push_back(new TH2D("weightnorm_T1tttt",  "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,-12.5,5012.5, 201,-12.5,5012.5));
   // pileup
-  h_pileup_data        = new TH1D("pileup_data",        "Pile-up distribution - Data (Nominal);Pile-up", 100,0,100);
-  h_pileup_mc          = new TH1D("pileup_mc",          "Pile-up distribution - MC;Pile-up",   100,0,100);
-  h_pileup_weight      = new TH1D("pileup_weight",      "Pile-up weights - Nominal MB X-sec (69 mb);Pile-up;Weight",    100,0,100);
-  h_pileup_weight_down = new TH1D("pileup_weight_down", "Pile-up weights - MB X-sec up 5% (72.45 mb);Pile-up;Weight",   100,0,100);
-  h_pileup_weight_up   = new TH1D("pileup_weight_up",   "Pile-up weights - MB X-sec down 5% (65.55 mb);Pile-up;Weight", 100,0,100);
-  h_nvtx          = new TH1D("nvtx",   "Number of vertices - Nominal;N_{Vertices}",    100,0,100);
-  h_nvtx_rw       = new TH1D("nvtx_rw","Number of vertices - Pile-up reweighted (MC only);N_{Vertices}", 100,0,100);
+  h_pileup_data                = new TH1D("pileup_data",        "Pile-up distribution - Data (Nominal);Pile-up", 100,0,100);
+  h_pileup_mc                  = new TH1D("pileup_mc",          "Pile-up distribution - MC;Pile-up",   100,0,100);
+  h_pileup_weight              = new TH1D("pileup_weight",      "Pile-up weights - Nominal MB X-sec (69 mb);Pile-up;Weight",    100,0,100);
+  h_pileup_weight_down         = new TH1D("pileup_weight_down", "Pile-up weights - MB X-sec up 5% (72.45 mb);Pile-up;Weight",   100,0,100);
+  h_pileup_weight_up           = new TH1D("pileup_weight_up",   "Pile-up weights - MB X-sec down 5% (65.55 mb);Pile-up;Weight", 100,0,100);
+  h_nvtx                       = new TH1D("nvtx",               "Number of vertices - Nominal;N_{Vertices}",    100,0,100);
+  h_nvtx_rw                    = new TH1D("nvtx_rw",            "Number of vertices - Pile-up reweighted (MC only);N_{Vertices}", 100,0,100);
 }
 
 
@@ -132,7 +143,6 @@ AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, co
   return evt_XSec;
 }
 
-
 //_______________________________________________________
 //          Read total weight from ntuple histos
 double
@@ -145,6 +155,65 @@ AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filename
     f->Close();
   }
   return h_totweight->GetBinContent(1);
+}
+
+//_______________________________________________________
+//       Calculate weight normalization for signal
+void
+AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& filenames, const double& intLumi, const std::vector<std::string>& vname_signal,
+						const std::vector<std::string>& vname_xsec, const std::vector<std::string>& vname_totweight, bool verbose=1)
+{
+  // Get gluino cross sections and merge totweight histos
+  std::map<int, double> xsec_glu;
+  for (auto filename : filenames) {
+    TFile* f = TFile::Open(filename.c_str());
+    for (size_t i=0, n=vname_xsec.size(); i<n; ++i) {
+      // Get cross section (set only once for each new gluino weight)
+      /*          
+		  The filling of xsec histo has some bug in B2GTTree level
+		  
+      TH2D* xsec = (TH2D*)f->Get(vname_xsec[i].c_str());
+      for (int binx=1, nbinx=xsec->GetNbinsX(); binx<=nbinx; ++binx) 
+	for (int biny=1, nbiny=xsec->GetNbinsY(); biny<=nbiny; ++biny) {
+	  double xs = xsec->GetBinContent(binx, biny);
+	  if (xs!=0&&!xsec_glu.count(binx)) xsec_glu[binx] = xs;
+        }
+      */
+      // Get total weight
+      TH2D* totweight = (TH2D*)f->Get(vname_totweight[i].c_str());
+      vh_totweight_signal[i]->Add(totweight);
+    }
+    f->Close();
+  }
+  // Set xsec for each gluino mass bin
+  // This way we fix temporary bug with xsec for some bins
+  // Read gluino xsec from same file used in TTree step
+  for (size_t i=0, n=vname_xsec.size(); i<n; ++i) 
+    for (int binx=1, nbinx=vh_xsec_signal[i]->GetNbinsX(); binx<=nbinx; ++binx) {
+      double mGlu = vh_xsec_signal[i]->GetBinCenter(binx);
+      xsec_glu[binx] = GetGluinoXSec(mGlu).first; // first: mean xsec, second: error
+      for (int biny=1, nbiny=vh_xsec_signal[i]->GetNbinsY(); biny<=nbiny; ++biny)
+	vh_xsec_signal[i]->SetBinContent(binx, biny, xsec_glu[binx]);
+    }
+  // Calculate weight normalization
+  for (size_t i=0, n=vname_xsec.size(); i<n; ++i) {
+    // weightnorm = (settings.intLumi*xsec)/totweight;
+    // Divide(h1,h2,c1,c2) --> c1*h1/(c2*h2)
+    vh_weightnorm_signal[i]->Divide(vh_xsec_signal[i], vh_totweight_signal[i], intLumi);
+    if (verbose) {
+      std::cout<<"- Signal: "<<vname_signal[i]<<std::endl;
+      for (int binx=1, nbinx=vh_xsec_signal[i]->GetNbinsX(); binx<=nbinx; ++binx) 
+	for (int biny=1, nbiny=vh_xsec_signal[i]->GetNbinsY(); biny<=nbiny; ++biny) {
+	  double mGlu = vh_xsec_signal[i]->GetXaxis()->GetBinCenter(binx);
+	  double mLSP = vh_xsec_signal[i]->GetYaxis()->GetBinCenter(biny);
+	  double xsec  = vh_xsec_signal[i]      ->GetBinContent(binx, biny);
+	  double totw  = vh_totweight_signal[i] ->GetBinContent(binx, biny);
+	  double wnorm = vh_weightnorm_signal[i]->GetBinContent(binx, biny);
+	  if (totw>0) std::cout<<"  Bin: M(g~)="<<mGlu<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
+	}
+      std::cout<<std::endl;
+    }
+  }
 }
 
 

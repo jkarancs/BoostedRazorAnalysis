@@ -1537,23 +1537,30 @@ private:
     leg->Draw("SAME");
   }
   
-  void add_stack_ratio_plot_(TCanvas*& c, bool remove=false) {
+  void add_stack_ratio_plot_(TCanvas*& c, bool remove=false, bool debug = 0) {
     // Canvas division sizes
     int y1 = 350;
     int y2 = 150;
     int mid2 = 10;
     if (c->GetListOfPrimitives()->GetEntries()>2) {
+      if (debug) std::cout<<"add_stack_ratio ok 1"<<std::endl;
       // Histos
       TH1D* Data = (TH1D*)c->GetListOfPrimitives()->At(0);
+      if (debug) std::cout<<"add_stack_ratio ok 2"<<std::endl;
       THStack* MCstack = (THStack*)c->GetListOfPrimitives()->At(1);
+      if (debug) std::cout<<"add_stack_ratio ok 3"<<std::endl;
       TH1D* ratio = (TH1D*)Data->Clone();
+      if (debug) std::cout<<"add_stack_ratio ok 4"<<std::endl;
       TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
+      if (debug) std::cout<<"add_stack_ratio ok 5"<<std::endl;
       for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) mc_sum->Add((TH1D*)MCstack->GetHists()->At(iStack)->Clone());
       ratio->Divide(mc_sum);
+      if (debug) std::cout<<"add_stack_ratio ok 6"<<std::endl;
       // Legend
       TLegend* leg = 0;
       // Remove Non-Data non-stack plots (eg. signal)
       std::vector<TH1D*> rest;
+      if (debug) std::cout<<"add_stack_ratio ok 7"<<std::endl;
       // indices:
       // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
       for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
@@ -1562,6 +1569,7 @@ private:
 	else if (!remove&&prim_name!=Data->GetName())
 	  rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
       }
+      if (debug) std::cout<<"add_stack_ratio ok 8"<<std::endl;
       if (remove) {
 	for (int i=leg->GetListOfPrimitives()->GetEntries(); i>0; --i) {
 	  bool match = 0;
@@ -1570,6 +1578,7 @@ private:
 	  if (!match) leg->GetListOfPrimitives()->RemoveAt(i);
 	}
       }
+      if (debug) std::cout<<"add_stack_ratio ok 9"<<std::endl;
       // Styles
       Data->SetLabelSize(20.0/(y1+40),"xyz");
       ratio->SetTitleSize(32.0/(y2+60+mid2),"xyz");
@@ -1583,15 +1592,18 @@ private:
       ratio->SetMarkerStyle(20);
       ratio->SetMarkerColor(1);
       ratio->SetLineColor(1);
+      if (debug) std::cout<<"add_stack_ratio ok 10"<<std::endl;
       // Canvas
       bool logScale = c->GetLogy();
       c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), 604,626+(y1-500)+y2+mid2); // 600, 600
       c->Divide(1,2);
+      if (debug) std::cout<<"add_stack_ratio ok 11"<<std::endl;
       // Pad 1 (80+500+20 x 40+500)
       TVirtualPad* p = c->cd(1);
       p->SetPad(0,(y2+60+mid2)/(y1+y2+100.0+mid2),1,1);
       p->SetTopMargin(40.0/(y1+40));
       p->SetBottomMargin(0);
+      if (debug) std::cout<<"add_stack_ratio ok 12"<<std::endl;
       if (logScale) p->SetLogy(1);
       Data->Draw("PE1");
       MCstack->Draw("SAMEHIST");
@@ -1599,6 +1611,7 @@ private:
       Data->Draw("SAMEPE1");
       leg->Draw("SAME");
       gPad->Update();
+      if (debug) std::cout<<"add_stack_ratio ok 12"<<std::endl;
       // Pad 2 (80+500+20 x 200+60)
       p = c->cd(2);
       p->SetGrid(0,1);
@@ -1611,6 +1624,7 @@ private:
       //l->SetLineColor(2);
       l->SetLineStyle(2);
       l->Draw();
+      if (debug) std::cout<<"add_stack_ratio ok 14"<<std::endl;
     }
   }
   

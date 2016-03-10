@@ -14,19 +14,26 @@
 using namespace std;
 
 int main(int argc, char** argv) {
+  // List names in filenames from which the code can decide if it is data or signal
+  // For the rest it's assumed it's background MC
+  // if .txt file is given as input then from the directory name we can already tell
+  std::vector<std::string> vname_data = { "2015B", "2015C", "2015D"};
+  std::vector<std::string> vname_signal = { "T1tttt" }; // T1tttt
+
   // ------------------------------
   // -- Parse command line stuff --
   // ------------------------------
 
   // Get file list and histogram filename from command line
   utils::commandLine cmdline;
-  utils::decodeCommandLine(argc, argv, cmdline);
+  utils::decodeCommandLine(argc, argv, cmdline, vname_data, vname_signal);
 
   itreestream stream(cmdline.fileNames, settings.treeName);      
   if ( !stream.good() ) utils::error("unable to open ntuple file(s)");                         
 
   if ( cmdline.isData ) cout << "Running on Data." << endl;
-  else cout << "Running on MC." << endl;
+  else if ( cmdline.isBkg ) cout << "Running on Background MC." << endl;
+  else cout << "Running on Signal MC." << endl;
 
   // Get number of events to be read
   int nevents = stream.size();
@@ -160,7 +167,7 @@ int main(int argc, char** argv) {
 
   cout << endl;
   double weightnorm = 1 ;
-  if ( !cmdline.isData ) {
+  if ( cmdline.isBkg ) {
     cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
     double xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
@@ -170,8 +177,14 @@ int main(int argc, char** argv) {
     double totweight = ana.get_totweight_from_ntuple(cmdline.fileNames, settings.totWeightHistoName); // weight histo name given in settings.h
     cout << "totweight (ntuple): " << totweight << endl;
 
-    weightnorm = (xsec*settings.intLumi)/totweight;
+    weightnorm = (settings.intLumi*xsec)/totweight;
     cout << "weightnorm (calc): " << weightnorm << endl;
+  } else if ( cmdline.isSignal ) {
+    cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
+
+    cout << "Normalization variables:" << endl;
+    ana.calc_weightnorm_histo_from_ntuple(cmdline.fileNames, settings.intLumi, vname_signal,
+					  settings.xsecHistoNamesSignal, settings.totWeightHistoNamesSignal); // histo names given in settings.h
   }
 
   // ---------------------------------------
@@ -231,8 +244,16 @@ int main(int argc, char** argv) {
 
     w = 1;
     if ( !cmdline.isData ) {
-      // Event weight normalized to luminosity
-      w *= data.evt.Gen_Weight*weightnorm;
+      // Event weights
+      // Signals are binned so we get the total weight separately for each bin
+      if (cmdline.isSignal) {
+	for (size_t i=0, n=vname_signal.size(); i<n; ++i) if (cmdline.signalName == vname_signal[i]) {
+	  int bin = vh_weightnorm_signal[i]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
+	  weightnorm = vh_weightnorm_signal[i]->GetBinContent(bin);
+	}
+      }
+      // Normalize to chosen luminosity
+      w *= data.evt.Gen_Weight*weightnorm;	
 
       // Pileup reweighting
       h_nvtx->Fill(data.evt.NGoodVtx, w);

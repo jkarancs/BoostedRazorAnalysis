@@ -45,10 +45,14 @@ if ( $opt_run || $opt_skim || $no_opt ) then
     eval_or_echo "make clean"
     eval_or_echo "make Analyzer ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
     eval_or_echo "make Plotter ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "mkdir -p $OUTDIR/log"
-    eval_or_echo "mkdir -p $OUTDIR/backup/common"
+    eval_or_echo "mkdir -p $OUTDIR/log $OUTDIR/backup/pileup $OUTDIR/backup/systematics"
+    eval_or_echo "mkdir -p $OUTDIR/backup/filelists $OUTDIR/backup/common $OUTDIR/backup/scripts"
     eval_or_echo "cp -rp *.h *.cc Makefile* $OUTDIR/backup/"
+    eval_or_echo "cp -rp pileup/* $OUTDIR/backup/pileup/"
+    eval_or_echo "cp -rp systematics/* $OUTDIR/backup/systematics/"
+    eval_or_echo "cp -rp filelists/* $OUTDIR/backup/filelists/"
     eval_or_echo "cp -rp common/*.h common/*.cc $OUTDIR/backup/common/"
+    eval_or_echo "cp -rp scripts/*.C scripts/*.csh scripts/*.py $OUTDIR/backup/scripts/"
     
     set all_output=""
     # Print commands for backgrounds
@@ -98,7 +102,7 @@ if ( $opt_run || $opt_skim || $no_opt ) then
     eval_or_echo "mv $SCRIPT $OUTDIR/backup/"
     eval_or_echo "./Plotter results/Plotter_out_$DATE.root $all_output"
     eval_or_echo "if ( -e Latest_plots.root ) rm Latest_plots.root"
-    eval_or_echo "ln -s results/Plotter_out_$DATE.root Latest_plots.root"
+    eval_or_echo "ln -sf results/Plotter_out_$DATE.root Latest_plots.root"
 
 else if ( $opt_replot ) then
     set infile=`ls -tr results/Plotter_out_* | grep -v replot | tail -1`
@@ -106,12 +110,17 @@ else if ( $opt_replot ) then
     set orig_outdir=`echo $infile | sed "s;Plotter_out_;;;s;\.root;;"`
     eval_or_echo "make clean"
     eval_or_echo "make Plotter ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "mkdir -p $orig_outdir/backup_replot/common"
-    eval_or_echo "cp -rp *.h *.cc Makefile* $orig_outdir/backup_replot/"
-    eval_or_echo "cp -rp common/*.h common/*.cc $orig_outdir/backup_replot/common/"
+    eval_or_echo "mkdir -p $OUTDIR/backup_replot/pileup $OUTDIR/backup_replot/systematics"
+    eval_or_echo "mkdir -p $OUTDIR/backup_replot/filelists $OUTDIR/backup_replot/common $OUTDIR/backup_replot/scripts"
+    eval_or_echo "cp -rp *.h *.cc Makefile* $OUTDIR/backup_replot/"
+    eval_or_echo "cp -rp pileup/* $OUTDIR/backup_replot/pileup/"
+    eval_or_echo "cp -rp systematics/* $OUTDIR/backup_replot/systematics/"
+    eval_or_echo "cp -rp filelists/* $OUTDIR/backup_replot/filelists/"
+    eval_or_echo "cp -rp common/*.h common/*.cc $OUTDIR/backup_replot/common/"
+    eval_or_echo "cp -rp scripts/*.C scripts/*.csh scripts/*.py $OUTDIR/backup_replot/scripts/"
     eval_or_echo "./Plotter $outfile $infile"
     eval_or_echo "if ( -e Latest_plots.root ) rm Latest_plots.root"
-    eval_or_echo "ln -s $outfile Latest_plots.root"
+    eval_or_echo "ln -sf $outfile Latest_plots.root"
     echo "\nRemaking the latest plots...\n"
     source temp_$DATE.csh
     if ( ! $?makefailed ) then
