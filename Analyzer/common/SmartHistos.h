@@ -286,16 +286,16 @@ private:
   TF1* ring_fit_[3][4];
   void init_() {
     // Get Hit Eff vs DCol Eff functions (previously measured)
-    std::string fname[3] = {"hiteff_vs_dcol_l1", "hiteff_vs_dcol_l2", "hiteff_vs_dcol_l3"};
-    std::string ringname[4] = {"_ring1", "_ring2", "_ring3", "_ring4"};
-    TFile *f_func = TFile::Open("/data/jkarancs/CMSSW/TimingStudy/CMSSW_7_1_0_pre1/src/DPGAnalysis/PixelTimingStudy/test/DynIneff_scale_factors/HitEffvsDColFunctions.root");
-    if (f_func) {
-      for (int lay=0; lay<3; ++lay) for (int ring=0; ring<4; ring++) {
-	TF1* f = (TF1*)f_func->Get((fname[lay]+ringname[ring]).c_str());
-	ring_fit_[lay][ring] = (TF1*)f->Clone();
-      }
-      f_func->Close();
-    } else std::cout<<"SmartHisto::init_() - File not found: "<<f_func->GetName()<<std::endl;
+    //std::string fname[3] = {"hiteff_vs_dcol_l1", "hiteff_vs_dcol_l2", "hiteff_vs_dcol_l3"};
+    //std::string ringname[4] = {"_ring1", "_ring2", "_ring3", "_ring4"};
+    //TFile *f_func = TFile::Open("/data/jkarancs/CMSSW/TimingStudy/CMSSW_7_1_0_pre1/src/DPGAnalysis/PixelTimingStudy/test/DynIneff_scale_factors/HitEffvsDColFunctions.root");
+    //if (f_func) {
+    //  for (int lay=0; lay<3; ++lay) for (int ring=0; ring<4; ring++) {
+    //    TF1* f = (TF1*)f_func->Get((fname[lay]+ringname[ring]).c_str());
+    //    ring_fit_[lay][ring] = (TF1*)f->Clone();
+    //  }
+    //  f_func->Close();
+    //} else std::cout<<"SmartHisto::init_() - File not found: "<<f_func->GetName()<<std::endl;
     
     // Initialize some variables
     h1d_0p_ = 0;
