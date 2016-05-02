@@ -38,5 +38,5 @@ int main(int argc, char** argv) {
   ana.save_analysis_histos(1);
   ofile->close();
   
-  return 1;
+  return 0;
 }

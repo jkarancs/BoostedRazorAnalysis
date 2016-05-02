@@ -70,20 +70,23 @@ AnalysisBase::define_preselections(const DataStruct& data)
   //      		      return 1;
   //      		    } });
   
-  // Recommended event filters by MET group
-  // In some cases we should use txt files
-  //
+  // Recommended event filters by MET group - Updated for 76X!
+  // https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#MiniAOD_76X_v2_produced_with_the
+  // 
   // Select at least one good vertex (z<24, rho<2, ndof>=4)
   // NGoodVtx defined in:
   // https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L272-L275
-  baseline_cuts.push_back({ .name="met_filter_NVtx",            .func = [&data](){ return data.evt.NGoodVtx>0; } });
-  // baseline_cuts.push_back({ .name="NGoodVtx",         .func = [&data](){ return data.evt.Flag_goodVertices; } }); // Did not work correctly in MiniAOD
-
+  // baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data](){ return data.evt.NGoodVtx>0; } });
+  baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data](){ return data.filter.goodVertices; } }); // Now works in 76X MiniAOD
+  
   // Other filters (From MiniAOD)
-  baseline_cuts.push_back({ .name="met_filter_HBHE_Iso",        .func = [&data](){ return data.evt.Flag_HBHEIsoNoiseFilterResult; } });
-  baseline_cuts.push_back({ .name="met_filter_HBHE_Run2_Loose", .func = [&data](){ return data.evt.Flag_HBHENoiseFilterResultRun2Loose; } });
-  baseline_cuts.push_back({ .name="met_filter_EE_Bad_Sc",       .func = [&data](){ return data.evt.Flag_eeBadScFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_CSC_Halo_Tight",  .func = [&data](){ return data.evt.Flag_CSCTightHaloFilter; } });  
+  baseline_cuts.push_back({ .name="met_filter_EE_Bad_Sc",         .func = [&data](){ return data.filter.eeBadScFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_Ecal_Dead_Cell_TP", .func = [&data](){ return data.filter.EcalDeadCellTriggerPrimitiveFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_HBHE_Noise",        .func = [&data](){ return data.filter.HBHENoiseFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_HBHE_IsoNoise",     .func = [&data](){ return data.filter.HBHENoiseIsoFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_CSC_Halo_Tight",    .func = [&data](){ return data.filter.CSCTightHalo2015Filter; } });
+  //baseline_cuts.push_back({ .name="met_filter_Muon_Bad_Track",    .func = [&data](){ return data.filter.muonBadTrackFilter; } });
+  //baseline_cuts.push_back({ .name="met_filter_CH_Track_Resol",    .func = [&data](){ return data.filter.chargedHadronTrackResolutionFilter; } });
 }
 
 

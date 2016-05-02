@@ -180,6 +180,7 @@ namespace utils {
     bool isSignal;                      // determined automatically from input file names
     std::string signalName;             // determined automatically from input file names
     bool quickTest;                     // Do a quick test on 1/100th of events
+    bool noPlots;                       // Do not make analysis histos (for skimming)
   };
   
   // Read ntuple fileNames from file list
@@ -226,6 +227,9 @@ namespace utils {
     // Do a quick test on 1/100 statistics
     cl.quickTest = false;
 
+    // Do a quick test on 1/100 statistics
+    cl.noPlots = false;
+
     for (int iarg=1; iarg<argc; ++iarg) {
       std::string arg = argv[iarg];
       // look for optional arguments (argument has "=" in it)
@@ -238,6 +242,7 @@ namespace utils {
 	if (option=="numSyst") value>>cl.numSyst;
 	if (option=="systematicsFileName") value>>cl.systematicsFileName;
 	if (option=="quickTest") value>>cl.quickTest;
+	if (option=="noPlots") value>>cl.noPlots;
       } else {
 	if (cl.outputFileName=="") {
 	  // 1st non-optional (i.e xxx=yyy) command line argument is output ifle

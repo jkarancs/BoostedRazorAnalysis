@@ -18,7 +18,7 @@ When running for the first time, run the setup script in order
 to mount eos on lxplus, create softlinks and create/update filelists
 ```Shell
 cd BoostedRazorAnalysis/Analyzer
-source scripts/setup.csh
+source scripts/setup.(c)sh
 ```
 
 Before running check/set the options for the Analyzer in settings.h
@@ -40,16 +40,24 @@ eg:
 ./Analyzer Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
 ```
 
-There is a tcsh script to run the Analyzer and use the results to create plots all in once
+There is a py script to run the Analyzer and use the results to create plots all in once
 on part of the data (--test option)
 ```Shell
-source scripts/run_all.csh --test
+python scripts/run_all.py --test --plot --run
 ```
 
 Or run a full analysis on all samples (--run option) and similarly create plots in the end
 ```Shell
-source scripts/run_all.csh --run
+python scripts/run_all.py --full --plot --run
 ```
+
+All options:
+   * --run: without specifying this iption, the script does nothing (dry run, prints commands to be run only)
+   * --test: run a test with a few datasets: TTbar, QCD, small JetHT dataset
+   * --quick: run a quick test with 1/100 events
+   * --full: run on all datasets
+   * --plot: produce plots in the output root files
+   * --skim: Make a skimmed ntuple in the directory specified inside the script
 
 Run systematics (first, set doSystematics = true in settings.h)  
 when running systematics, additionally must specify options:  

@@ -95,6 +95,11 @@ int main(int argc, char** argv) {
   }
   TDirectory* out_dir = gDirectory;
 
+  if (cmdline.noPlots) {
+    cout << "noPlots (cmdline): true"<< endl;
+    cout << "--> Will not save analysis histos"<< endl;
+  }
+
   // ---------------------------------------------------------------------------
   // -- Read systematics file                                                 --
   // ---------------------------------------------------------------------------
@@ -155,10 +160,12 @@ int main(int argc, char** argv) {
   // This is useful if someone wants to do quick study/define other search region etc.
   // But also, common methods in all anaylsis are defined in common/AnalysisBase.*
 
-  ana.define_histo_options(w, data, cmdline.dirname, settings.runOnSkim);
+  if (!cmdline.noPlots)
+    ana.define_histo_options(w, data, cmdline.dirname, settings.runOnSkim);
 
   ana.init_common_histos();
-  ana.init_analysis_histos();
+  if (!cmdline.noPlots)
+    ana.init_analysis_histos();
 
   // --------------------------------------------------------------
   // -- Calculate the normalization factor for the event weights --
@@ -258,7 +265,7 @@ int main(int argc, char** argv) {
       // Pileup reweighting
       h_nvtx->Fill(data.evt.NGoodVtx, w);
       if ( settings.doPileupReweighting ) {
-	w *= ana.get_pileup_weight(data.evt.pu_NtrueInt, settings.doSystematics, syst.nSigmaPU);
+	w *= ana.get_pileup_weight(data.pu.NtrueInt, settings.doSystematics, syst.nSigmaPU);
 	h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
       }
 
@@ -271,23 +278,26 @@ int main(int argc, char** argv) {
 	// A set of two weights
 	// Only stored for NLO, otherwise vector size==0
 	// If vector was not filled (LO samples), not doing any weighting
-	if ( data.evt.alphas_Weights.size() == 2 )
-	  w *= ana.get_alphas_weight(data.evt.alphas_Weights, syst.nSigmaAlphaS, data.evt.LHA_PDF_ID);
+	if ( data.syst_alphas.Weights.size() == 2 )
+	  w *= ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS, data.evt.LHA_PDF_ID);
 
 	// Scale variations
 	// A set of six weights, unphysical combinations excluded
 	// If numScale=0 is specified, not doing any weighting
 	if ( syst.numScale >= 1 && syst.numScale <= 3 )
-	  w *= ana.get_scale_weight(data.evt.scale_Weights, syst.nSigmaScale, syst.numScale);
+	  w *= ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale, syst.numScale);
 
 	// PDF weights
 	// A set of 100 weights for the nominal PDF
 	// If numPdf=0 is specified, not doing any weighting
-	if ( syst.numPdf >= 1 && syst.numPdf <= data.evt.pdf_Weights.size() )
-	  w *= data.evt.pdf_Weights[syst.numPdf-1];
-	else if ( syst.numPdf > data.evt.pdf_Weights.size() )
+	if ( syst.numPdf >= 1 && syst.numPdf <= data.syst_pdf.Weights.size() )
+	  w *= data.syst_pdf.Weights[syst.numPdf-1];
+	else if ( syst.numPdf > data.syst_pdf.Weights.size() )
 	  utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
       }
+
+      // Analysis specific weights
+      w *= ana.get_analysis_weight(data);
     }
 
     ofile->count("NoCuts", w);
@@ -329,7 +339,9 @@ int main(int argc, char** argv) {
       // These are all defined in [Name]_Analysis.cc (included from settings.h)
       // You specify there also which cut is applied for each histo
       // But all common baseline cuts are alreay applied above
-      if ( pass_all ) ana.fill_analysis_histos(data, w);
+      if (!cmdline.noPlots) {
+	if ( pass_all ) ana.fill_analysis_histos(data, w);
+      }
 
       // Save counts for the analysis cuts
       for (auto cut : ana.analysis_cuts) if (pass_all)
@@ -344,7 +356,8 @@ int main(int argc, char** argv) {
 
   stream.close();
   out_dir->cd();
-  ana.save_analysis_histos();
+  if (!cmdline.noPlots)
+    ana.save_analysis_histos();
   ofile->close();
   return 0;
 }
