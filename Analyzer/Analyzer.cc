@@ -8,8 +8,8 @@
 #include <unistd.h>
 #include <vector>
 
-#include "common/utils.h" // Helper functions
-#include "settings.h"         // Define all Analysis specific settings here
+#include "common/utils.h"   // Helper functions
+#include "settings_Sezen.h" // Define all Analysis specific settings here
 
 using namespace std;
 

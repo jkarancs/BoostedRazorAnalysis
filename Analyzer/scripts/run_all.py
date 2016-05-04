@@ -20,12 +20,6 @@ if "--skim" in options:
 # For skimming/full running, all datasets are used
 # for testing a selected few
 
-ana_arguments_test = [
-    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],
-    ["results/Analyzer_test_ttbar.root", "filelists/backgrounds/TTJets_amcatnloFXFX.txt", "results/Analyzer_test_ttbar.log"],
-    ["results/Analyzer_test_qcd.root",   "filelists/backgrounds/QCD_HT700to1000.txt",     "results/Analyzer_test_qcd.log"],
-]
-
 ana_arguments_full = []
 ana_arguments_skim = []
 for input_file in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backgrounds/*.txt") + glob.glob("filelists/signals/*.txt"):
@@ -37,6 +31,50 @@ for input_file in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backg
 
 #ana_arguments_skim = [ana_arguments_skim[0], ana_arguments_skim[22], ana_arguments_skim[36]]
 
+def subset(list, match):
+    result = []
+    for i in range(0, len(list)):
+        if match in list[i][0]: result.append(list[i])
+    return result
+
+jetht                = subset(ana_arguments_full, "JetHT")
+met                  = subset(ana_arguments_full, "MET")
+single_ele           = subset(ana_arguments_full, "SingleElectron")
+single_mu            = subset(ana_arguments_full, "SingleMuon")
+dy_z                 = subset(ana_arguments_full, "DYJets")
+dy_z                += subset(ana_arguments_full, "ZJets")
+qcd                  = subset(ana_arguments_full, "QCD_HT")
+#qcd                += subset(ana_arguments_full, "QCD_GenJets5_HT")
+singletop            = subset(ana_arguments_full, "ST")
+ttx                  = subset(ana_arguments_full, "TTG")
+ttx                 += subset(ana_arguments_full, "TTW")
+ttx                 += subset(ana_arguments_full, "TTZ")
+ttx                 += subset(ana_arguments_full, "TTTT")
+tt_madgraph_ht       = subset(ana_arguments_full, "TTJets_HT")
+tt_mcatnlo           = subset(ana_arguments_full, "TTJets_amcatnloFXFX")
+tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraph")
+tt_mcatnlo_her       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
+tt_mcatnlo_py8       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
+tt_powheg_her        = subset(ana_arguments_full, "TT_powheg_herwig")
+tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg_pythia8.txt")
+tt_powheg_py8_mpiOff = subset(ana_arguments_full, "TT_powheg_pythia8_mpiOFF")
+tt_powheg_py8_noCR   = subset(ana_arguments_full, "TT_powheg_pythia8_noCR")
+wjets                = subset(ana_arguments_full, "WJets")
+diboson              = subset(ana_arguments_full, "WW")
+diboson             += subset(ana_arguments_full, "WZ")
+diboson             += subset(ana_arguments_full, "ZZ")
+diboson             += subset(ana_arguments_full, "ZH")
+T1tttt               = subset(ana_arguments_full, "SMS-T1tttt_mGluino-1500_mLSP-100_FullSim")
+#T1tttt              += subset(ana_arguments_full, "SMS-T1tttt_mGluino-1200_mLSP-800_FullSim")
+
+#ana_arguments_test = [
+#    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],
+#    ["results/Analyzer_test_ttbar.root", "filelists/backgrounds/TTJets_amcatnloFXFX.txt", "results/Analyzer_test_ttbar.log"],
+#    ["results/Analyzer_test_qcd.root",   "filelists/backgrounds/QCD_HT700to1000.txt",     "results/Analyzer_test_qcd.log"],
+#]
+ana_arguments_test = jetht + tt_powheg_py8 + qcd
+
+
 # Plotter:
 # It gets input automatically from the output of Analyzer, output will be on screen
 plotter_output_file = "results/Plotter_out_"+DATE+".root"
@@ -47,7 +85,7 @@ opt_dry = int(not "--run" in options)
 opt_plot = int("--plot" in options)
 opt_quick = 0
 opt_test = 0
-opt_transfer = 0
+opt_skim = 0
 if (opt_dry): print "--run option not specified, doing a dry run (only printing out commands)"
 
 if "--full" in options:
@@ -56,7 +94,7 @@ if "--full" in options:
 elif "--skim" in options:
     print "Running with option: --skim"
     ana_arguments = ana_arguments_skim
-    opt_transfer = 1
+    opt_skim = 1
 elif "--replot" in options:
     print "Running with option: --replot"
     ORIGOUTDIR = max(glob.glob(OUTDIR.replace(DATE,"*")), key=os.path.getmtime)
@@ -130,16 +168,16 @@ def backup_files(backup_dir):
 
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
 def analyzer_job((output_file, input_list, output_log)):
-    global opt_dry, opt_quick, opt_transfer, opt_plot
+    global opt_dry, opt_quick, opt_plot, opt_skim
     if not opt_dry:
         print "Start Analyzing: "+input_list
     if not os.path.exists(os.path.dirname(output_file)):
         special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
     cmd = ["./Analyzer", output_file, input_list]
-    if not opt_plot: cmd.append("noPlots=1")
+    if opt_skim and not opt_plot: cmd.append("noPlots=1")
     if opt_quick: cmd.append("quickTest=1")
     logged_call(cmd, output_log)
-    if opt_transfer:
+    if opt_skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
         logged_call(["lcg-cp", "-v", output_file, EOSDIR+outpath], output_log)
     return output_file
@@ -188,187 +226,3 @@ else:
         show_result(plotter_output_file)
 
 print "Done."
-
-
-"""
-
-set DATE=`date | cut -f2- -d" " | sed "s; ;_;g;s;:;h;1;s;:;m;1"`
-set OUTDIR="results/run_$DATE"
-set SKIMOUTDIR="ntuple/grid18/Skim_Feb22_1AK8JetPt300"
-set SCRIPT="run_$DATE.csh"
-
-set args=""
-foreach n ( `seq 1 $#argv` )
-    set args="$args "$argv[$n]
-end
-
-
-# options
-set opt_run=0
-set opt_skim=0
-set opt_test=0
-set opt_replot=0
-set no_opt=0
-set N=0
-if ( `echo "$args" | grep "\-\-run" | wc -l` ) then
-    set opt_run=1
-    alias eval_or_echo   'echo \!* >! temp_$DATE.csh; source temp_$DATE.csh; rm temp_$DATE.csh'
-
-else if ( `echo "$args" | grep "\-\-skim" | wc -l` ) then
-    set opt_skim=1
-    set SCRIPT="skim_$DATE.csh"
-    set OUTDIR="results/skim_$DATE"
-    alias eval_or_echo   'echo \!* >! temp_$DATE.csh; source temp_$DATE.csh; rm temp_$DATE.csh'
-
-else if ( `echo "$args" | grep "\-\-test" | wc -l` ) then
-    set opt_test=1
-    alias eval_or_echo 'echo "echo \\[$N\\] "\!*"\necho" >>! temp_$DATE.csh; set N=`expr $N + 1`; echo \!* >>! temp_$DATE.csh'
-
-else if ( `echo "$args" | grep "\-\-replot" | wc -l` ) then
-    set opt_replot=1
-    alias eval_or_echo 'echo "echo \\[$N\\] "\!*"\necho" >>! temp_$DATE.csh; set N=`expr $N + 1`; echo \!* >>! temp_$DATE.csh'
-
-else
-    set no_opt=1
-    alias eval_or_echo   'echo "[$N] "\!*; echo; set N=`expr $N + 1`; echo \!* >>! temp_$DATE.csh'
-    echo "The script will run the following if --run added:\n"
-
-endif
-
-if ( $opt_run || $opt_skim || $no_opt ) then
-    eval_or_echo "make clean"
-    eval_or_echo "make Analyzer ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "make Plotter ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "mkdir -p $OUTDIR/log $OUTDIR/backup/pileup $OUTDIR/backup/systematics"
-    eval_or_echo "mkdir -p $OUTDIR/backup/filelists $OUTDIR/backup/common $OUTDIR/backup/scripts"
-    eval_or_echo "cp -rp *.h *.cc Makefile* $OUTDIR/backup/"
-    eval_or_echo "cp -rp pileup/* $OUTDIR/backup/pileup/"
-    eval_or_echo "cp -rp systematics/* $OUTDIR/backup/systematics/"
-    eval_or_echo "cp -rp filelists/* $OUTDIR/backup/filelists/"
-    eval_or_echo "cp -rp common/*.h common/*.cc $OUTDIR/backup/common/"
-    eval_or_echo "cp -rp scripts/*.C scripts/*.csh scripts/*.py $OUTDIR/backup/scripts/"
-    
-    set all_output=""
-    # Print commands for backgrounds
-    echo -n "" >! $SCRIPT
-    foreach bkg ( `ls filelists/backgrounds | grep "\.txt" | sed "s;\.txt;;"` )
-	if ( $opt_skim) then
-	    eval_or_echo "mkdir -p $SKIMOUTDIR/$bkg"
-	    echo "./Analyzer $SKIMOUTDIR/$bkg/Skim.root filelists/backgrounds/$bkg.txt >! $OUTDIR/log/Bkg_$bkg"_"$DATE.log" >> $SCRIPT
-	    set all_output="$all_output $SKIMOUTDIR/$bkg/Skim.root"
-	else
-	    echo "./Analyzer $OUTDIR/Bkg_$bkg.root filelists/backgrounds/$bkg.txt >! $OUTDIR/log/Bkg_$bkg"_"$DATE.log" >> $SCRIPT
-	    set all_output="$all_output $OUTDIR/Bkg_$bkg.root"
-	endif
-    end
-    
-    # Print commands for data
-    foreach data ( `ls filelists/data | grep "\.txt" | sed "s;\.txt;;"` )
-	if ( $opt_skim) then
-            eval_or_echo "mkdir -p $SKIMOUTDIR/$data"
-            echo "./Analyzer $SKIMOUTDIR/$data/Skim.root filelists/data/$data.txt >! $OUTDIR/log/Data_$data"_"$DATE.log" >> $SCRIPT
-            set all_output="$all_output $SKIMOUTDIR/$data/Skim.root"
-	else
-	    echo "./Analyzer $OUTDIR/Data_$data.root filelists/data/$data.txt >! $OUTDIR/log/Data_$data"_"$DATE.log" >> $SCRIPT
-	    set all_output="$all_output $OUTDIR/Data_$data.root"
-	endif
-    end
-    
-    # Print commands for signal
-    foreach signal ( `ls filelists/signals | grep "\.txt" | sed "s;\.txt;;"` )
-	if ( $opt_skim ) then
-            eval_or_echo "mkdir -p $SKIMOUTDIR/$signal"
-            echo "./Analyzer $SKIMOUTDIR/$signal/Skim.root filelists/signals/$signal.txt >! $OUTDIR/log/Signal_$signal"_"$DATE.log" >> $SCRIPT
-            set all_output="$all_output $SKIMOUTDIR/$signal/Skim.root"
-	else
-	    #echo "./Analyzer $OUTDIR/Signal_$signal.root filelists/signals/$signal.txt >! $OUTDIR/log/Signal_$signal"_"$DATE.log" >> $SCRIPT
-	    #set all_output="$all_output $OUTDIR/Signal_$signal.root"
-	endif
-    end
-    
-    # Run scripts (Analyzers in parallel, then Plotter)
-    if ( $opt_skim ) then
-	eval_or_echo "source $SCRIPT"
-    else
-	eval_or_echo "par_source $SCRIPT 2"
-    endif
-    eval_or_echo "sleep 1s"
-    eval_or_echo "mv $SCRIPT $OUTDIR/backup/"
-    eval_or_echo "./Plotter results/Plotter_out_$DATE.root $all_output"
-    eval_or_echo "if ( -e Latest_plots.root ) rm Latest_plots.root"
-    eval_or_echo "ln -sf results/Plotter_out_$DATE.root Latest_plots.root"
-
-else if ( $opt_replot ) then
-    set infile=`ls -tr results/Plotter_out_* | grep -v replot | tail -1`
-    set outfile=`echo $infile | sed "s;\.root;_replot\.root;"`
-    set orig_outdir=`echo $infile | sed "s;Plotter_out_;;;s;\.root;;"`
-    eval_or_echo "make clean"
-    eval_or_echo "make Plotter ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "mkdir -p $OUTDIR/backup_replot/pileup $OUTDIR/backup_replot/systematics"
-    eval_or_echo "mkdir -p $OUTDIR/backup_replot/filelists $OUTDIR/backup_replot/common $OUTDIR/backup_replot/scripts"
-    eval_or_echo "cp -rp *.h *.cc Makefile* $OUTDIR/backup_replot/"
-    eval_or_echo "cp -rp pileup/* $OUTDIR/backup_replot/pileup/"
-    eval_or_echo "cp -rp systematics/* $OUTDIR/backup_replot/systematics/"
-    eval_or_echo "cp -rp filelists/* $OUTDIR/backup_replot/filelists/"
-    eval_or_echo "cp -rp common/*.h common/*.cc $OUTDIR/backup_replot/common/"
-    eval_or_echo "cp -rp scripts/*.C scripts/*.csh scripts/*.py $OUTDIR/backup_replot/scripts/"
-    eval_or_echo "./Plotter $outfile $infile"
-    eval_or_echo "if ( -e Latest_plots.root ) rm Latest_plots.root"
-    eval_or_echo "ln -sf $outfile Latest_plots.root"
-    echo "\nRemaking the latest plots...\n"
-    source temp_$DATE.csh
-    if ( ! $?makefailed ) then
-        echo "\nDone.\nShowing the result..."
-	root 'scripts/show_result.C("'Latest_plots.root'")'
-    else
-	unsetenv makefailed
-    endif
-    rm temp_$DATE.csh
-
-else if ( $opt_test ) then
-    eval_or_echo "make clean"
-    eval_or_echo "make Analyzer ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "make Plotter ||  echo '\\nCompilation failed. Exiting...' && setenv makefailed && exit"
-    eval_or_echo "./Analyzer quickTest=1 results/Analyzer_test_Data.root filelists/data/JetHT_25ns.txt"
-    eval_or_echo "./Analyzer quickTest=1 results/Analyzer_test_QCD.root filelists/backgrounds/QCD_HT500to700.txt"
-    eval_or_echo "./Analyzer quickTest=1 results/Analyzer_test_TTbar.root filelists/backgrounds/TTJets_HT-600to800.txt"
-    eval_or_echo "./Plotter results/Plotter_test.root results/Analyzer_test_Data.root results/Analyzer_test_QCD.root results/Analyzer_test_TTbar.root"
-    echo "\nRunning the following test...\n"
-    source temp_$DATE.csh
-    if ( ! $?makefailed ) then
-        echo "\nDone.\nShowing the result..."
-        root 'scripts/show_result.C("'results/Plotter_test.root'")'
-    else
-	unsetenv makefailed
-    endif
-    rm temp_$DATE.csh
-
-endif
-
-if ( $no_opt ) then
-    echo "------------------------------------\n"
-    echo "Possible options:"
-    echo "  --run       runs above lines"
-    echo "  --skim      creates skimmed ntuples in $SKIMOUTDIR"
-    echo "  --replot    remake plots from the output of last run"
-    echo "  --test      runs a quick test instead\n"
-    echo "None of the above specified, do you want to run?"
-    echo -n "Please type your answer (yes/no): "
-    set answer=$<
-    echo
-    if ( $answer == "yes" ) then
-        echo "\nOk. Running...\n"
-        source temp_$DATE.csh
-        if ( ! $?makefailed ) then
-            echo "\nDone.\nShowing the result..."
-            root 'scripts/show_result.C("'Latest_plots.root'")'
-        else
-            unsetenv makefailed
-        endif
-    else
-	echo "OK. Exiting...\n"
-	rm $SCRIPT
-    endif
-    rm temp_$DATE.csh
-endif
-"""

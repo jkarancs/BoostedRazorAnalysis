@@ -10,7 +10,7 @@
 
 #include "common/utils.h" // Helper functions
 #include "common/DataStruct.h"
-#include "FullHad_Analysis.h"
+#include "Analysis_Viktor.h"
 
 int main(int argc, char** argv) {
   std::vector<std::string> vname_data = {};

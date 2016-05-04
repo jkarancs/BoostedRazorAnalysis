@@ -1,7 +1,7 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
 
-#include "FullHad_Analysis.h" // Specify here the implementations for you Analysis
+#include "Analysis_Viktor.h" // Specify here the implementations for you Analysis
 
 struct settings {
 
@@ -19,7 +19,7 @@ struct settings {
     treeName                 ( RunOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName        ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
-    pileupDir                ( "pileup/Dec13_Silver_JSON/" ),
+    pileupDir                ( "pileup/Mar02_Silver_JSON/" ),
     intLumi                  ( 2684.07 /* brilcalc - Mar02 Silver v2 ReReco JSON */ ) // Tot int lumi in (pb^-1)
   {
     if (RunOnSkim) {

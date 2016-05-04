@@ -24,12 +24,12 @@ source scripts/setup.(c)sh
 Before running check/set the options for the Analyzer in settings.h
 
 More info about Analyzer:
-   * The Analyzer program is basically an event looper, histograms/methods/cuts etc. are defined in [Name]_Analysis.h
-   * All settings (printed also while running) are defined in settings.h it also includes the Analysis code you want
+   * The Analyzer program is basically an event looper, histograms/methods/cuts etc. are defined in Analysis_[Name].h
+   * All settings (printed also while running) are defined in settings_[Name].h it also includes the Analysis_[Name].h
    * common methods (for all analyses/studies) are defined in common/AnalysisBase.h
    * The cross-sections and total weight is taken straight from ntuple files
    * Reweighting and systematics weight methods are also given in AnalysisBase
-   * Additionally there's an option (in settings.h) to save a skimmed TTree with same content for the selected events
+   * Additionally there's an option (in settings_[Name].h) to save a skimmed TTree with same content for the selected events
    * counts are saved for all common and specific analysis cuts in the order they are defined
 
 Run your anaylsis code with
@@ -41,9 +41,9 @@ eg:
 ```
 
 There is a py script to run the Analyzer and use the results to create plots all in once
-on part of the data (--test option)
+on a few datasets (--test option) and fewer events (--quick option)
 ```Shell
-python scripts/run_all.py --test --plot --run
+python scripts/run_all.py --quick --test --run
 ```
 
 Or run a full analysis on all samples (--run option) and similarly create plots in the end
@@ -56,7 +56,7 @@ All options:
    * --test: run a test with a few datasets: TTbar, QCD, small JetHT dataset
    * --quick: run a quick test with 1/100 events
    * --full: run on all datasets
-   * --plot: produce plots in the output root files
+   * --plot: after the Analyses, use the Plotter to produce plots in the output root files (also uses the Analysis methods)
    * --skim: Make a skimmed ntuple in the directory specified inside the script
 
 Run systematics (first, set doSystematics = true in settings.h)  
