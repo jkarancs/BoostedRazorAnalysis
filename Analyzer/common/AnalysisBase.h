@@ -21,6 +21,8 @@ public:
   // Functions used by the Analyzer
   void define_preselections(const DataStruct&);
 
+  void calculate_common_variables(DataStruct&);
+
   void init_common_histos();
 
   double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
@@ -89,6 +91,143 @@ AnalysisBase::define_preselections(const DataStruct& data)
   //baseline_cuts.push_back({ .name="met_filter_CH_Track_Resol",    .func = [&data](){ return data.filter.chargedHadronTrackResolutionFilter; } });
 }
 
+//_______________________________________________________
+//                 Define common variables
+
+/*
+  Jet ID:
+  https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetID#Recommendations_for_13_TeV_data
+
+  Choose:
+  - Loose jet ID
+*/
+
+/*
+   Top Tagging working points:
+   https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging#13_TeV_working_points
+
+   Latest WPs not yet on twiki (Gregor Kasieczka, Mareike Meyer):
+   https://indico.cern.ch/event/518509/contributions/2032850/attachments/1256008/1854115/TopTagging11_04.pdf
+
+   Scale factors (?):
+   
+
+   Choose:
+   - Loose selection: e(B) = 10% WP
+   - AK8 Puppi jets
+   - 60 < SD Mass < 190
+   - tau32 < 0.76
+*/
+
+#define TOP_PT_CUT            400
+#define TOP_SD_MASS_CUT_LOW    60 // prev 110
+#define TOP_SD_MASS_CUT_HIGH  190 // prev 210
+#define TOP_TAU32_CUT        0.76 // prev 0.75
+
+
+/* 
+   W tagging working points:
+   https://twiki.cern.ch/twiki/bin/view/CMS/JetWtagging
+
+   Latest WPs not yet on twiki (Thea Aarrestad, slide 77):
+   https://indico.cern.ch/event/530683/contributions/2164853/attachments/1271780/1884879/WtagSF_JMAR_TAarrestad.pdf
+
+   Scale factors (Thea Aarrestad, slide 77):
+   https://indico.cern.ch/event/530683/contributions/2164853/attachments/1271780/1884879/WtagSF_JMAR_TAarrestad.pdf
+
+   Choose:
+   - Loose selection e(S) = 93.3%
+   - AK8 Puppi jets
+   - 65 < SD Mass < 105
+   - tau21 <= 0.56
+*/
+
+#define W_PT_CUT            200
+#define W_SD_MASS_CUT_LOW    65
+#define W_SD_MASS_CUT_HIGH  105
+#define W_TAU21_CUT        0.56
+
+// AK8 jets
+std::vector<int> passLooseJetID;
+std::vector<int> passHadTopTag;
+std::vector<int> passHadTopPreTag;
+std::vector<int> passHadWTag;
+
+// Event
+unsigned int nLooseJet;
+unsigned int nHadTopTag;
+unsigned int nHadTopPreTag;
+unsigned int nHadWTag;
+double AK4_Ht, AK4Puppi_Ht, AK8Puppi_Ht;
+
+void
+AnalysisBase::calculate_common_variables(DataStruct& data)
+{
+  AK4_Ht = 0;
+  while(data.jetsAK4.Loop()) AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];    
+
+  AK4Puppi_Ht = 0;
+  while(data.jetsAK4Puppi.Loop()) AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
+
+  AK8Puppi_Ht = 0;
+  nLooseJet = nHadTopTag = nHadTopPreTag = nHadWTag = 0;
+
+  // Loop on AK8 Puppi jets
+  while(data.jetsAK8Puppi.Loop()) {
+    AK8Puppi_Ht += data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
+
+    // Jet ID - Loose
+    double eta = data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it];
+    double nhf = data.jetsAK8Puppi.neutralHadronEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+    double nemf = data.jetsAK8Puppi.neutralEmEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+    double chf = data.jetsAK8Puppi.chargedHadronEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+    double cemf = data.jetsAK8Puppi.chargedEmEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+    int NumConst = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it] + data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
+    int chm = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it];
+    int NumNeutralParticle = data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
+    bool pass_Loose_ID = ( (nhf<0.99 && nemf<0.99 && NumConst>1) && ((fabs(eta)<=2.4 && chf>0 && chm>0 && cemf<0.99) || fabs(eta)>2.4) && fabs(eta)<=3.0 )
+      || ( nemf<0.9 && NumNeutralParticle>10 && fabs(eta)>3.0 );
+    passLooseJetID.push_back(pass_Loose_ID);
+    if (pass_Loose_ID) nLooseJet++;
+
+    // _______________________________________________________
+    //                  Boosted Objects
+
+    double sd_mass = data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it];
+    double tau21 = data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
+    if (data.jetsAK8Puppi.tau1[data.jetsAK8Puppi.it]!=0) tau21 /= data.jetsAK8Puppi.tau1[data.jetsAK8Puppi.it];
+    else tau21 = 9999;
+    double tau32 = data.jetsAK8Puppi.tau3[data.jetsAK8Puppi.it];
+    if (data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it]!=0) tau32 /= data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
+    else tau32 = 9999;
+    
+    // _______________________________________________________
+    //                  Hadronic Top Tag definition
+    
+    passHadTopTag.push_back(0);
+    passHadTopPreTag.push_back(0);
+    // New hadronic top tag
+    if (sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH) {
+      passHadTopPreTag[data.jetsAK8Puppi.it] = 1;
+      ++nHadTopPreTag;
+      if (tau32 < TOP_TAU32_CUT) {
+	passHadTopTag[data.jetsAK8Puppi.it] = 1;
+	++nHadTopTag;
+      }
+    }
+    
+    // _______________________________________________________
+    //                  Hadronic W Tag definition
+    passHadWTag.push_back(0);
+    // New hadronic top tag
+    if (sd_mass>=W_SD_MASS_CUT_LOW && sd_mass<W_SD_MASS_CUT_HIGH) {
+      if (tau21 < W_TAU21_CUT) {
+	passHadWTag[data.jetsAK8Puppi.it] = 1;
+	++nHadWTag;
+      }
+    }
+  } // end of AK8 (Puppi) jet loop
+}
 
 //_______________________________________________________
 //                 List of Histograms

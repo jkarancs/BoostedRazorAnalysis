@@ -47,45 +47,22 @@ Analysis::~Analysis() { }
 //_______________________________________________________
 //                  Calculate variables
 
-// AK8 CHS jets
-std::vector<int>   pass_Loose_Jet_ID;
-
-// event
-unsigned int nLooseJet;
-double AK4_Ht;
+unsigned int nLooseIDHadTopTagJets;
+unsigned int nLooseIDHadWTagJets;
 
 void
 Analysis::calculate_variables(DataStruct& data)
 {
   // Jet variables (initialize)
-  nLooseJet = 0;
-  pass_Loose_Jet_ID.clear();
+  nLooseIDHadTopTagJets = nLooseIDHadWTagJets = 0;
 
   // Loop on jets
-  while(data.jetsAK8.Loop()) {
-    // _______________________________________________________
-    //                       Jet ID
-    
-    double eta = data.jetsAK8.Eta[data.jetsAK8.it];
-    double NHF = data.jetsAK8.neutralHadronEnergy[data.jetsAK8.it] / data.jetsAK8.E[data.jetsAK8.it];
-    double NEMF = data.jetsAK8.neutralEmEnergy[data.jetsAK8.it] / data.jetsAK8.E[data.jetsAK8.it];
-    double CHF = data.jetsAK8.chargedHadronEnergy[data.jetsAK8.it]/data.jetsAK8.E[data.jetsAK8.it];
-    double CEMF = data.jetsAK8.chargedEmEnergy[data.jetsAK8.it]/data.jetsAK8.E[data.jetsAK8.it];
-    int NumConst = data.jetsAK8.chargedMultiplicity[data.jetsAK8.it] + data.jetsAK8.neutralMultiplicity[data.jetsAK8.it];
-    int CHM = data.jetsAK8.chargedMultiplicity[data.jetsAK8.it];
-    int NumNeutralParticle = data.jetsAK8.neutralMultiplicity[data.jetsAK8.it];
-    bool pass_Loose_ID = ( (NHF<0.99 && NEMF<0.99 && NumConst>1) && ((fabs(eta)<=2.4 && CHF>0 && CHM>0 && CEMF<0.99) || fabs(eta)>2.4) && fabs(eta)<=3.0 )
-      || ( NEMF<0.9 && NumNeutralParticle>10 && fabs(eta)>3.0 );
-    pass_Loose_Jet_ID.push_back(pass_Loose_ID);
-    if (pass_Loose_ID) nLooseJet++;
-    
+  while(data.jetsAK8Puppi.Loop()) {
+    if (passLooseJetID[data.jetsAK8Puppi.it]) {
+      if (passHadTopTag[data.jetsAK8Puppi.it]) ++nLooseIDHadTopTagJets;
+      if (passHadWTag[data.jetsAK8Puppi.it]) ++nLooseIDHadWTagJets;
+    }
   } // end of AK8 jet loop
-  
-  AK4_Ht = 0;
-  // Loop on AK4 jets
-  while(data.jetsAK4.Loop()) {
-    AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];
-  }
 }
 
 //_______________________________________________________
@@ -132,30 +109,30 @@ Analysis::define_selections(const DataStruct& data)
   // cut1: njet >= 1
   analysis_cuts.push_back({ .name="1jet",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8.size<1) return 0;
+			      if (data.jetsAK8Puppi.size<1) return 0;
 			      return 1;
 			    } });
 
   // cut2: jet 1 pass loose jet id
   analysis_cuts.push_back({ .name="jet1_id",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8.size<1) return 0; // for safety
-			      return pass_Loose_Jet_ID[0];
+			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
+			      return passLooseJetID[0];
 			    } });
 
   // cut3: jet 1 eta < 2.4
   analysis_cuts.push_back({ .name="jet1_eta",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8.size<1) return 0; // for safety
-			      if (fabs(data.jetsAK8.Eta[0])>=2.4) return 0;
+			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
+			      if (fabs(data.jetsAK8Puppi.Eta[0])>=2.4) return 0;
 			      return 1;
 			    } });
 
   // cut4: jet 1 pt >= 400
   analysis_cuts.push_back({ .name="jet1_pt",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8.size<1) return 0; // for safety
-			      if (data.jetsAK8.Pt[0]<400) return 0;
+			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
+			      if (data.jetsAK8Puppi.Pt[0]<400) return 0;
 			      return 1;
 			    } });
 
@@ -186,16 +163,19 @@ Analysis::_apply_ncut(size_t ncut) {
 
 bool
 Analysis::signal_selection(const DataStruct& data) {
-  //if ( data.evt.NTopHad<2 ) return 0;
-  //if ( data.evt.TTHadDPhi>=2.7) return 0;
-  //if ( data.evt.R<0.4 ) return 0;
   return 0;
 }
 
 //_______________________________________________________
 //                 List of Histograms
 TH1D* h_njet;
-TH1D* h_ht;
+TH1D* h_nhadtop;
+TH1D* h_nhadw;
+TH1D* h_ht_gen;
+TH1D* h_ht_AK4;
+TH1D* h_ht_AK4Puppi;
+TH1D* h_ht_AK8;
+TH1D* h_ht_AK8Puppi;
 TH1D* h_jet1_pt;
 
 //_______________________________________________________
@@ -203,12 +183,24 @@ TH1D* h_jet1_pt;
 void
 Analysis::init_analysis_histos()
 {
-  h_njet    = new TH1D("njet",   ";N_{AK8-jet, loose ID}",  20, 0,  20);
-  h_ht      = new TH1D("ht",     ";H_{T, AK4}",            200, 0,2000);
-  h_jet1_pt = new TH1D("jet1_pt",";p_{T, jet1}",           200, 0,2000);
-
+  h_njet         = new TH1D("njet",         ";N_{AK8 (Puppi), loose ID}",  20, 0,  20);
+  h_nhadtop      = new TH1D("nhadtop",      ";N_{top tag}",                20, 0,  20);
+  h_nhadw        = new TH1D("nhadw",        ";N_{W tag}",                  20, 0,  20);
+  h_ht_gen       = new TH1D("ht_gen",       ";H_{T}^{gen}",            200, 0,2000);
+  h_ht_AK4       = new TH1D("ht_AK4",       ";H_{T}^{AK4 (CHS)}",      200, 0,2000);
+  h_ht_AK4Puppi  = new TH1D("ht_AK4Puppi",  ";H_{T}^{AK4 (Puppi)}",    200, 0,2000);
+  h_ht_AK8       = new TH1D("ht_AK8",       ";H_{T}^{AK8 (CHS)}",      200, 0,2000);
+  h_ht_AK8Puppi  = new TH1D("ht_AK8Puppi",  ";H_{T}^{AK8 (Puppi)}",    200, 0,2000);
+  h_jet1_pt      = new TH1D("jet1_pt",      ";p_{T, jet1}",            200, 0,2000);
+  
   h_njet->Sumw2();
-  h_ht->Sumw2();
+  h_nhadtop->Sumw2();
+  h_nhadw->Sumw2();
+  h_ht_gen->Sumw2();
+  h_ht_AK4->Sumw2();
+  h_ht_AK4Puppi->Sumw2();
+  h_ht_AK8->Sumw2();
+  h_ht_AK8Puppi->Sumw2();
   h_jet1_pt->Sumw2();
 }
 
@@ -218,13 +210,17 @@ Analysis::init_analysis_histos()
 void
 Analysis::fill_analysis_histos(DataStruct& data, const double& weight)
 {
-  h_njet->Fill(nLooseJet, weight);
+  h_njet   ->Fill(nLooseJet, weight);
+  h_nhadtop->Fill(nLooseIDHadTopTagJets, weight);
+  h_nhadw  ->Fill(nLooseIDHadWTagJets, weight);
   
-  h_ht->Fill(AK4_Ht, weight);
+  h_ht_gen->Fill(data.evt.Gen_Ht, weight);  // in ntuple
+  h_ht_AK4->Fill(AK4_Ht, weight);           // Calculated in AnalysisBase.h
+  h_ht_AK4Puppi->Fill(AK4Puppi_Ht, weight); // Calculated in AnalysisBase.h
+  h_ht_AK8->Fill(data.evt.Ht, weight);      // in ntuple, AK8 CHS is default, will switch to Puppi
+  h_ht_AK8Puppi->Fill(AK8Puppi_Ht, weight); // Calculated in AnalysisBase.h
   
-  if (_apply_ncut(2)) {
-    h_jet1_pt->Fill(data.jetsAK8.Pt[0], weight);
-  }
+  if (_apply_ncut(2)) h_jet1_pt->Fill(data.jetsAK8Puppi.Pt[0], weight);
 }
 
 // Methods used by SmartHistos (Plotter)

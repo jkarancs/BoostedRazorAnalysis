@@ -7,9 +7,10 @@ options = cmdargs[1:]
 # ----------------------  Settings -----------------------
 DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
 OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
-SKIMNAME="Skim_Apr28_1AK8JetPt300"
+SKIMNAME="Skim_May21_1AK8JetPt300"
 EOSDIR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
 NPROC = 4 # Number of processors to use for Analyzer jobs
+EXEC_PATH = os.getcwd()
 
 if "--skim" in options:
     OUTDIR = OUTDIR.replace("run_", "skim_")
@@ -22,20 +23,27 @@ if "--skim" in options:
 
 ana_arguments_full = []
 ana_arguments_skim = []
-for input_file in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backgrounds/*.txt") + glob.glob("filelists/signals/*.txt"):
-    output_file = OUTDIR+"/"+input_file.split("/")[-1].replace("txt", "root")
-    skim_output_file = "ntuple/grid18/"+SKIMNAME+"/"+input_file.split("/")[-1].replace(".txt","/Skim.root")
-    log_file = OUTDIR+"/log/"+input_file.split("/")[-1].replace("txt", "log")
-    ana_arguments_full.append([output_file,      input_file, log_file])
-    ana_arguments_skim.append([skim_output_file, input_file, log_file])
-
-#ana_arguments_skim = [ana_arguments_skim[0], ana_arguments_skim[22], ana_arguments_skim[36]]
+for input_list in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backgrounds/*.txt") + glob.glob("filelists/signals/*.txt"):
+    output_file = OUTDIR+"/"+input_list.split("/")[-1].replace("txt", "root")
+    skim_output_file = "ntuple/grid18/"+SKIMNAME+"/"+input_list.split("/")[-1].replace(".txt","/Skim.root")
+    log_file = OUTDIR+"/log/"+input_list.split("/")[-1].replace("txt", "log")
+    ana_arguments_full.append([output_file, [input_list], log_file])
+    with open(input_list) as f:
+        lines = f.read().splitlines()
+        for n in range(1, len(lines)/5+2):
+            input_files = []
+            for i in range((n-1)*5, min(n*5,len(lines))):
+                input_files.append(lines[i])
+            args = [skim_output_file.replace(".root","_"+str(n)+".root"), input_files, log_file.replace(".log","_"+str(n)+".log")]
+            ana_arguments_skim.append(args)
 
 def subset(list, match):
     result = []
     for i in range(0, len(list)):
         if match in list[i][0]: result.append(list[i])
     return result
+
+#ana_arguments_skim = subset(ana_arguments_skim, "QCD_GenJets5_HT700to1000") +subset(ana_arguments_skim, "TT_powheg_pythia8/")
 
 jetht                = subset(ana_arguments_full, "JetHT")
 met                  = subset(ana_arguments_full, "MET")
@@ -51,12 +59,13 @@ ttx                 += subset(ana_arguments_full, "TTW")
 ttx                 += subset(ana_arguments_full, "TTZ")
 ttx                 += subset(ana_arguments_full, "TTTT")
 tt_madgraph_ht       = subset(ana_arguments_full, "TTJets_HT")
+tt_madgraph_ht0to600 = subset(ana_arguments_full, "TTJets_HT-0to600")
 tt_mcatnlo           = subset(ana_arguments_full, "TTJets_amcatnloFXFX")
 tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraph")
 tt_mcatnlo_her       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
 tt_mcatnlo_py8       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
 tt_powheg_her        = subset(ana_arguments_full, "TT_powheg_herwig")
-tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg_pythia8.txt")
+tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg_pythia8.")
 tt_powheg_py8_mpiOff = subset(ana_arguments_full, "TT_powheg_pythia8_mpiOFF")
 tt_powheg_py8_noCR   = subset(ana_arguments_full, "TT_powheg_pythia8_noCR")
 wjets                = subset(ana_arguments_full, "WJets")
@@ -67,13 +76,14 @@ diboson             += subset(ana_arguments_full, "ZH")
 T1tttt               = subset(ana_arguments_full, "SMS-T1tttt_mGluino-1500_mLSP-100_FullSim")
 #T1tttt              += subset(ana_arguments_full, "SMS-T1tttt_mGluino-1200_mLSP-800_FullSim")
 
+ana_arguments_test = jetht + tt_mcatnlo + qcd
+#ana_arguments_test = jetht + tt_madgraph_ht0to600 + qcd
+
 #ana_arguments_test = [
 #    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],
 #    ["results/Analyzer_test_ttbar.root", "filelists/backgrounds/TTJets_amcatnloFXFX.txt", "results/Analyzer_test_ttbar.log"],
 #    ["results/Analyzer_test_qcd.root",   "filelists/backgrounds/QCD_HT700to1000.txt",     "results/Analyzer_test_qcd.log"],
 #]
-ana_arguments_test = jetht + tt_powheg_py8 + qcd
-
 
 # Plotter:
 # It gets input automatically from the output of Analyzer, output will be on screen
@@ -150,11 +160,15 @@ def logged_call(cmd, logfile):
 
 # Compile programs
 def compile(Ana = 1, Plotter = 1):
+    global opt_dry, EXEC_PATH
     print "Compiling ..."
     print
+    saved_path = os.getcwd()
+    if not opt_dry: os.chdir(EXEC_PATH)
     special_call(["make", "clean"])
     if Ana: special_call(["make", "Analyzer"])
     if Plotter: special_call(["make", "Plotter"])
+    if not opt_dry: os.chdir(saved_path)
     print "Compilation successful."
     print
 
@@ -168,12 +182,12 @@ def backup_files(backup_dir):
 
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
 def analyzer_job((output_file, input_list, output_log)):
-    global opt_dry, opt_quick, opt_plot, opt_skim
+    global opt_dry, opt_quick, opt_plot, opt_skim, EXEC_PATH
     if not opt_dry:
-        print "Start Analyzing: "+input_list
+        print "Start Analyzing: "+output_file
     if not os.path.exists(os.path.dirname(output_file)):
         special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
-    cmd = ["./Analyzer", output_file, input_list]
+    cmd = [EXEC_PATH+"/Analyzer", output_file] + input_list
     if opt_skim and not opt_plot: cmd.append("noPlots=1")
     if opt_quick: cmd.append("quickTest=1")
     logged_call(cmd, output_log)
@@ -188,6 +202,7 @@ def analysis(ana_arguments, nproc):
     if njob<nproc: nproc = njob
     print "Running "+str(njob)+" instances of Analyzer jobs:"
     print
+    saved_path = os.getcwd()
     workers = multiprocessing.Pool(processes=nproc)
     output_files = workers.map(analyzer_job, ana_arguments, chunksize=1)
     print "All Analyzer jobs finished."
@@ -196,9 +211,13 @@ def analysis(ana_arguments, nproc):
 
 # Run Plotter, output of Analyzer is input for this code
 def plotter(input_files, output_file):
+    opt_dry
     print "Start plotting from output files"
     print
-    special_call(["./Plotter", output_file] + input_files)
+    saved_path = os.getcwd()
+    if not opt_dry: os.chdir(EXEC_PATH)
+    special_call([EXEC_PATH+"/Plotter", output_file] + input_files)
+    if not opt_dry: os.chdir(saved_path)
     print "Plotting finished."
     print
 
@@ -210,16 +229,19 @@ def show_result(plotter_out):
 # ---------------------- Running -------------------------
 
 if "--replot" in options:
+    EXEC_PATH = ORIGOUTDIR+"/backup_replot"
+    backup_files(EXEC_PATH)
     compile(0)
-    backup_files(ORIGOUTDIR+"/backup_replot")
     #plotter_input_files = glob.glob(ORIGOUTDIR+"/*.root")
     plotter_input_file = max(glob.glob("results/Plotter_out_*.root"), key=os.path.getmtime).replace("_replot","")
     plotter_output_file = plotter_input_file.replace(".root","_replot.root")
     plotter([plotter_input_file], plotter_output_file)
     show_result(plotter_output_file)
 else:
+    if not opt_test:
+        EXEC_PATH = OUTDIR+"/backup"
+        backup_files(EXEC_PATH)
     compile(1, "--plot" in options)
-    if not opt_test: backup_files(OUTDIR+"/backup")
     plotter_input_files = analysis(ana_arguments, NPROC)
     if "--plot" in options:
         plotter(plotter_input_files, plotter_output_file)

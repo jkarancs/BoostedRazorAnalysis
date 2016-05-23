@@ -840,8 +840,8 @@ struct settings {
     //stream.select("jetAK8Puppi_neutralEmEnergyFrac", data.jetsAK8Puppi.neutralEmEnergyFrac);
     //stream.select("jetAK8Puppi_chargedHadronEnergyFrac", data.jetsAK8Puppi.chargedHadronEnergyFrac);
     //stream.select("jetAK8Puppi_muonEnergyFrac", data.jetsAK8Puppi.muonEnergyFrac);
-    stream.select("jetAK8Puppi_chargedEmEnergyFrac", data.jetsAK8Puppi.chargedEmEnergyFrac);
-    //stream.select("jetAK8Puppi_chargedMultiplicity", data.jetsAK8Puppi.chargedMultiplicity);
+    //stream.select("jetAK8Puppi_chargedEmEnergyFrac", data.jetsAK8Puppi.chargedEmEnergyFrac);
+    stream.select("jetAK8Puppi_chargedMultiplicity", data.jetsAK8Puppi.chargedMultiplicity);
     //stream.select("jetAK8Puppi_NumConstituents", data.jetsAK8Puppi.NumConstituents);
     //stream.select("jetAK8Puppi_jecFactor0", data.jetsAK8Puppi.jecFactor0);
     //stream.select("jetAK8Puppi_jecFactorL3Absolute", data.jetsAK8Puppi.jecFactorL3Absolute);

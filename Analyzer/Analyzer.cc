@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h"   // Helper functions
-#include "settings_Sezen.h" // Define all Analysis specific settings here
+#include "settings_Viktor.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -245,6 +245,7 @@ int main(int argc, char** argv) {
     stream.read(entry);
 
     // Calculate variables that do not exist in ntuple
+    ana.calculate_common_variables(data);
     ana.calculate_variables(data);
 
     if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;
