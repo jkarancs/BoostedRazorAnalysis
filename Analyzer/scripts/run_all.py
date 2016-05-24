@@ -33,7 +33,7 @@ for input_list in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backg
         for n in range(1, len(lines)/5+2):
             input_files = []
             for i in range((n-1)*5, min(n*5,len(lines))):
-                input_files.append(lines[i])
+                input_files.append(os.path.realpath(lines[i]))
             args = [skim_output_file.replace(".root","_"+str(n)+".root"), input_files, log_file.replace(".log","_"+str(n)+".log")]
             ana_arguments_skim.append(args)
 
@@ -44,6 +44,7 @@ def subset(list, match):
     return result
 
 #ana_arguments_skim = subset(ana_arguments_skim, "QCD_GenJets5_HT700to1000") +subset(ana_arguments_skim, "TT_powheg_pythia8/")
+
 
 jetht                = subset(ana_arguments_full, "JetHT")
 met                  = subset(ana_arguments_full, "MET")
@@ -59,7 +60,6 @@ ttx                 += subset(ana_arguments_full, "TTW")
 ttx                 += subset(ana_arguments_full, "TTZ")
 ttx                 += subset(ana_arguments_full, "TTTT")
 tt_madgraph_ht       = subset(ana_arguments_full, "TTJets_HT")
-tt_madgraph_ht0to600 = subset(ana_arguments_full, "TTJets_HT-0to600")
 tt_mcatnlo           = subset(ana_arguments_full, "TTJets_amcatnloFXFX")
 tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraph")
 tt_mcatnlo_her       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
@@ -76,8 +76,8 @@ diboson             += subset(ana_arguments_full, "ZH")
 T1tttt               = subset(ana_arguments_full, "SMS-T1tttt_mGluino-1500_mLSP-100_FullSim")
 #T1tttt              += subset(ana_arguments_full, "SMS-T1tttt_mGluino-1200_mLSP-800_FullSim")
 
-ana_arguments_test = jetht + tt_mcatnlo + qcd
-#ana_arguments_test = jetht + tt_madgraph_ht0to600 + qcd
+#ana_arguments_test = jetht + tt_mcatnlo + qcd
+ana_arguments_test = jetht + tt_madgraph_ht + qcd
 
 #ana_arguments_test = [
 #    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],
@@ -207,6 +207,7 @@ def analysis(ana_arguments, nproc):
     output_files = workers.map(analyzer_job, ana_arguments, chunksize=1)
     print "All Analyzer jobs finished."
     print
+    time.sleep(1)
     return output_files
 
 # Run Plotter, output of Analyzer is input for this code

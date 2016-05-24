@@ -1,7 +1,7 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
 
-#include "Analysis_Viktor.h" // Specify here the implementations for you Analysis
+#include "Analysis_Janos.h" // Specify here the implementations for you Analysis
 
 struct settings {
 
@@ -178,10 +178,10 @@ struct settings {
     //stream.select("HLT_PFJet80_prescale", data.hlt.PFJet80_prescale);
     //stream.select("HLT_PFJet140", data.hlt.PFJet140);
     //stream.select("HLT_PFJet140_prescale", data.hlt.PFJet140_prescale);
-    stream.select("HLT_PFJet200", data.hlt.PFJet200);
-    stream.select("HLT_PFJet200_prescale", data.hlt.PFJet200_prescale);
-    stream.select("HLT_PFJet260", data.hlt.PFJet260);
-    stream.select("HLT_PFJet260_prescale", data.hlt.PFJet260_prescale);
+    //stream.select("HLT_PFJet200", data.hlt.PFJet200);
+    //stream.select("HLT_PFJet200_prescale", data.hlt.PFJet200_prescale);
+    //stream.select("HLT_PFJet260", data.hlt.PFJet260);
+    //stream.select("HLT_PFJet260_prescale", data.hlt.PFJet260_prescale);
     stream.select("HLT_PFJet320", data.hlt.PFJet320);
     stream.select("HLT_PFJet320_prescale", data.hlt.PFJet320_prescale);
     stream.select("HLT_PFJet400", data.hlt.PFJet400);
@@ -328,10 +328,10 @@ struct settings {
     //stream.select("HLT_Mu8_prescale", data.hlt.Mu8_prescale);
     //stream.select("HLT_Mu17", data.hlt.Mu17);
     //stream.select("HLT_Mu17_prescale", data.hlt.Mu17_prescale);
-    stream.select("HLT_Mu20", data.hlt.Mu20);
-    stream.select("HLT_Mu20_prescale", data.hlt.Mu20_prescale);
-    stream.select("HLT_TkMu20", data.hlt.TkMu20);
-    stream.select("HLT_TkMu20_prescale", data.hlt.TkMu20_prescale);
+    //stream.select("HLT_Mu20", data.hlt.Mu20);
+    //stream.select("HLT_Mu20_prescale", data.hlt.Mu20_prescale);
+    //stream.select("HLT_TkMu20", data.hlt.TkMu20);
+    //stream.select("HLT_TkMu20_prescale", data.hlt.TkMu20_prescale);
     //stream.select("HLT_Mu24_eta2p1", data.hlt.Mu24_eta2p1);
     //stream.select("HLT_Mu24_eta2p1_prescale", data.hlt.Mu24_eta2p1_prescale);
     //stream.select("HLT_TkMu24_eta2p1", data.hlt.TkMu24_eta2p1);

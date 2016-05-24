@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h"   // Helper functions
-#include "settings_Viktor.h" // Define all Analysis specific settings here
+#include "settings_Janos.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -28,8 +28,8 @@ int main(int argc, char** argv) {
   utils::commandLine cmdline;
   utils::decodeCommandLine(argc, argv, cmdline, vname_data, vname_signal);
 
-  itreestream stream(cmdline.fileNames, settings.treeName);      
-  if ( !stream.good() ) utils::error("unable to open ntuple file(s)");                         
+  itreestream stream(cmdline.fileNames, settings.treeName);
+  if ( !stream.good() ) utils::error("unable to open ntuple file(s)");
 
   if ( cmdline.isData ) cout << "Running on Data." << endl;
   else if ( cmdline.isBkg ) cout << "Running on Background MC." << endl;

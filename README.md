@@ -18,7 +18,7 @@ When running for the first time, run the setup script in order
 to mount eos on lxplus, create softlinks and create/update filelists
 ```Shell
 cd BoostedRazorAnalysis/Analyzer
-source scripts/setup.(c)sh
+python scripts/setup.py
 ```
 
 Before running check/set the options for the Analyzer in settings.h
