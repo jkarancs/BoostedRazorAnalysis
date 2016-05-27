@@ -300,16 +300,16 @@ private:
   TF1* ring_fit_[3][4];
   void init_() {
     // Get Hit Eff vs DCol Eff functions (previously measured)
-    std::string fname[3] = {"hiteff_vs_dcol_l1", "hiteff_vs_dcol_l2", "hiteff_vs_dcol_l3"};
-    std::string ringname[4] = {"_ring1", "_ring2", "_ring3", "_ring4"};
-    TFile *f_func = TFile::Open("/data/jkarancs/CMSSW/TimingStudy/CMSSW_7_1_0_pre1/src/DPGAnalysis/PixelTimingStudy/test/DynIneff_scale_factors/HitEffvsDColFunctions.root");
-    if (f_func) {
-      for (int lay=0; lay<3; ++lay) for (int ring=0; ring<4; ring++) {
-	TF1* f = (TF1*)f_func->Get((fname[lay]+ringname[ring]).c_str());
-	ring_fit_[lay][ring] = (TF1*)f->Clone();
-      }
-      f_func->Close();
-    } else std::cout<<"SmartHisto::init_() - File not found: "<<f_func->GetName()<<std::endl;
+    //std::string fname[3] = {"hiteff_vs_dcol_l1", "hiteff_vs_dcol_l2", "hiteff_vs_dcol_l3"};
+    //std::string ringname[4] = {"_ring1", "_ring2", "_ring3", "_ring4"};
+    //TFile *f_func = TFile::Open("/data/jkarancs/CMSSW/TimingStudy/CMSSW_7_1_0_pre1/src/DPGAnalysis/PixelTimingStudy/test/DynIneff_scale_factors/HitEffvsDColFunctions.root");
+    //if (f_func) {
+    //  for (int lay=0; lay<3; ++lay) for (int ring=0; ring<4; ring++) {
+    //    TF1* f = (TF1*)f_func->Get((fname[lay]+ringname[ring]).c_str());
+    //    ring_fit_[lay][ring] = (TF1*)f->Clone();
+    //  }
+    //  f_func->Close();
+    //} else std::cout<<"SmartHisto::init_() - File not found: "<<f_func->GetName()<<std::endl;
     
     // Initialize some variables
     h1d_0p_ = 0;
@@ -338,6 +338,7 @@ private:
     if (s==0) calc_eff_1d_(h1d, h2d, 1, savemother); // Average (Use ProfileX)
     else if (s==1) calc_mpv_1d_(h1d, h2d, savemother); // Fit landau + gaus, extract maximum
     else if (name_.find("DColEfficiency")!=std::string::npos) calc_dcol_1d_(h1d, h2d, savemother);
+    else if (name_.find("Counts")!=std::string::npos) calc_syst_1d_(h1d, h2d, savemother);
     else calc_eff_1d_(h1d, h2d, 1, savemother); // Efficiencies/Fractions/Rates
   }
   
@@ -514,6 +515,29 @@ private:
       h1d->SetBinError(bin, 0);
     }
     h1d->SetEntries(h2d->GetEntries());
+  }
+
+  // ************** Systematic Unc. Calculation **************
+  void calc_syst_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
+    for (int binx=1; binx<=h2d->GetNbinsX(); ++binx) {
+      double mean = 0, sum_diff_sqr = 0;
+      for (int biny=1; biny<=h2d->GetNbinsY(); ++biny) {
+	double cont = h2d->GetBinContent(binx, biny);
+	double stat_err = h2d->GetBinError(binx, biny);
+	if (biny==1) {
+	  mean = cont;
+	  sum_diff_sqr += stat_err*stat_err;
+	} else {
+	  double syst_err = mean-cont;
+	  sum_diff_sqr += syst_err*syst_err;
+	}
+      }
+      double std_dev = sqrt(sum_diff_sqr/h2d->GetNbinsY()-1);
+      h1d->SetBinContent(binx, mean);
+      h1d->SetBinError(binx, std_dev);
+    }
+    h1d->SetEntries(h2d->GetEntries());
+    if (savemother) mother_2d_[h1d]=h2d;
   }
   
   //TF1* get_eff_vs_dcol_func_(TH1* h) {

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h"   // Helper functions
-#include "settings_Janos.h" // Define all Analysis specific settings here
+#include "settings_Viktor.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -104,24 +104,50 @@ int main(int argc, char** argv) {
   // -- Read systematics file                                                 --
   // ---------------------------------------------------------------------------
 
-  // Initialize all systemtics (0 - off)
+  // Initialize all systemtics variables (0 = default/mean, no variation)
   struct Systematics {
-    double nSigmaPU = 0;
-    double nSigmaAlphaS = 0;
-    double nSigmaScale  = 0;
-    unsigned int numScale = 0;
-    unsigned int numPdf = 0;
+    unsigned int index = 0;
+    unsigned int nSyst = 0;
+    std::vector<double> nSigmaLumi     = std::vector<double>(1,0);
+    std::vector<double> nSigmaPU       = std::vector<double>(1,0);
+    std::vector<double> nSigmaTrigger  = std::vector<double>(1,0);
+    std::vector<double> nSigmaJEC      = std::vector<double>(1,0);
+
+    std::vector<double> nSigmaAlphaS   = std::vector<double>(1,0);
+    std::vector<double> nSigmaScale    = std::vector<double>(1,0);
+    std::vector<unsigned int> numScale = std::vector<unsigned int>(1,0);
+    std::vector<unsigned int> numPdf   = std::vector<unsigned int>(1,0);
   } syst;
 
-  if (settings.doSystematics) {
-    cout << "doSystematics (settings): true" << endl;
+  if (settings.varySystematics) {
+    cout << "varySystematics (settings): true" << endl;
+    cout << "systematicsFileName (settings): " << settings.systematicsFileName << endl;
+    std::ifstream systFile(settings.systematicsFileName.c_str());
+    if ( !systFile.good() ) utils::error("unable to open systematics file: " + settings.systematicsFileName);
 
-    if ( cmdline.systematicsFileName == "" ) utils::error("doSystematics true, but command line argument systematicsFileName=<filename> was not given");
-    cout << "systematicsFileName (cmdline): " << cmdline.numSyst << endl;
-    std::ifstream systFile(cmdline.systematicsFileName.c_str());
-    if ( !systFile.good() ) utils::error("unable to open systematics file: " + cmdline.systematicsFileName);
+    // Read all nSigmas, nums
+    double dbl = 0;
+    unsigned int uint = 0;
+    std::string line;
+    std::cout<<"Systematics read from file:"<<std::endl;
+    while ( std::getline(systFile, line) ) {
+      ++syst.nSyst;
+      std::cout<<" line "<<syst.nSyst<<": "<<line<<std::endl;
+      std::stringstream nth_line;
+      nth_line<<line;
+      nth_line>>dbl; syst.nSigmaLumi.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaPU.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaJEC.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
+      nth_line>>uint; syst.numScale.push_back(uint);
+      nth_line>>uint; syst.numPdf.push_back(uint);
+    }
+    std::cout<<std::endl;
 
-    if ( cmdline.numSyst <= 0 ) utils::error("doSystematics true, but command line argument numSyst=<positive integer> was not given");
+    /*
+    if ( cmdline.numSyst <= 0 ) utils::error("varySystematics true, but command line argument numSyst=<positive integer> was not given");
     cout << "numSyst (cmdline): " << cmdline.numSyst << endl;
 
     // read nth line
@@ -134,17 +160,21 @@ int main(int argc, char** argv) {
 
     // Assign the systematic sigmas:
     nth_line>>syst.nSigmaPU;
+    nth_line>>syst.nSigmaJEC;
     nth_line>>syst.nSigmaAlphaS;
     nth_line>>syst.nSigmaScale;
     nth_line>>syst.numScale;
     nth_line>>syst.numPdf;
     cout << " nSigmaPU     = " << syst.nSigmaPU << endl;
+    cout << " nSigmaJEC    = " << syst.nSigmaJEC << endl;
     cout << " nSigmaAlphaS = " << syst.nSigmaAlphaS << endl;
     cout << " nSigmaScale  = " << syst.nSigmaScale << endl;
     cout << " numScale     = " << syst.numScale << endl;
     cout << " numPdf       = " << syst.numPdf << endl;
+    */
+    
   } else {
-    cout << "doSystematics (settings): false" << endl;
+    cout << "varySystematics (settings): false" << endl;
   }
 
   // ---------------------------------------------------------------------------
@@ -161,11 +191,11 @@ int main(int argc, char** argv) {
   // But also, common methods in all anaylsis are defined in common/AnalysisBase.*
 
   if (!cmdline.noPlots)
-    ana.define_histo_options(w, data, cmdline.dirname, settings.runOnSkim);
+    ana.define_histo_options(w, data, syst.nSyst, syst.index, cmdline.dirname, settings.runOnSkim);
 
   ana.init_common_histos();
   if (!cmdline.noPlots)
-    ana.init_analysis_histos();
+    ana.init_analysis_histos(syst.nSyst, syst.index);
 
   // --------------------------------------------------------------
   // -- Calculate the normalization factor for the event weights --
@@ -244,33 +274,103 @@ int main(int argc, char** argv) {
     // Read event into memory
     stream.read(entry);
 
-    // Calculate variables that do not exist in ntuple
-    ana.calculate_common_variables(data);
-    ana.calculate_variables(data);
-
     if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;
 
-    w = 1;
-    if ( !cmdline.isData ) {
-      // Event weights
-      // Signals are binned so we get the total weight separately for each bin
-      if (cmdline.isSignal) {
-	for (size_t i=0, n=vname_signal.size(); i<n; ++i) if (cmdline.signalName == vname_signal[i]) {
-	  int bin = vh_weightnorm_signal[i]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
-	  weightnorm = vh_weightnorm_signal[i]->GetBinContent(bin);
+    if ( cmdline.isData ) {
+      w = 1;
+      syst.index = 0;
+
+      // Calculate variables that do not exist in the ntuple
+      ana.calculate_common_variables(data, syst.index);
+      ana.calculate_variables(data, syst.index);
+
+      // Save counts (after each cuts)
+      ofile->count("NoCuts", w);
+      bool pass_all_cuts = true;
+      for (auto cut : ana.baseline_cuts) if (pass_all_cuts)
+	if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
+
+      // _______________________________________________________
+      //                  BLINDING DATA
+
+      // Before doing anything serious (eg. filling any histogram)
+      // Define Signal region and blind it!!!!!!!!!!!!!!!!!!!!!!!!
+      bool DATA_BLINDED = ! ( cmdline.isData && ana.signal_selection(data) );
+
+      /*
+	Some more warning to make sure :)
+	_   _   _   ____    _        _____   _   _   _____    _____   _   _    _____   _   _   _ 
+	| | | | | | |  _ \  | |      |_   _| | \ | | |  __ \  |_   _| | \ | |  / ____| | | | | | |
+	| | | | | | | |_) | | |        | |   |  \| | | |  | |   | |   |  \| | | |  __  | | | | | |
+	| | | | | | |  _ <  | |        | |   | . ` | | |  | |   | |   | . ` | | | |_ | | | | | | |
+	|_| |_| |_| | |_) | | |____   _| |_  | |\  | | |__| |  _| |_  | |\  | | |__| | |_| |_| |_|
+	(_) (_) (_) |____/  |______| |_____| |_| \_| |_____/  |_____| |_| \_|  \_____| (_) (_) (_)
+      */
+
+      //________________________________________________________
+      //
+
+      if (DATA_BLINDED) {
+
+	// If option (saveSkimmedNtuple) is specified save all 
+	// skimmed events selected by the analysis to the output file
+	// tree is copied and current weight is saved as "eventWeight"
+	if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
+
+	// Apply analysis cuts and fill histograms
+	// These are all defined in [Name]_Analysis.cc (included from settings.h)
+	// You specify there also which cut is applied for each histo
+	// But all common baseline cuts are alreay applied above
+	if (!cmdline.noPlots) {
+	  if ( pass_all_cuts ) ana.fill_analysis_histos(data, syst.index, w);
 	}
-      }
-      // Normalize to chosen luminosity
-      w *= data.evt.Gen_Weight*weightnorm;	
 
-      // Pileup reweighting
-      h_nvtx->Fill(data.evt.NGoodVtx, w);
-      if ( settings.doPileupReweighting ) {
-	w *= ana.get_pileup_weight(data.pu.NtrueInt, settings.doSystematics, syst.nSigmaPU);
-	h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
-      }
+	// Save counts for the analysis cuts
+	for (auto cut : ana.analysis_cuts) if (pass_all_cuts)
+	  if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
 
-      if ( settings.doSystematics ) {
+	// Count Signal events
+	if ( pass_all_cuts && ana.signal_selection(data) ) ofile->count("Signal", w);
+
+      } // end Blinding
+      
+    } // End DATA
+    else {
+      // Background and Signal MCs
+
+      // Loop and vary systematics
+      for (syst.index = 0; syst.index <= (settings.varySystematics ? syst.nSyst : 0); ++syst.index) {
+	w = 1;
+
+	// Event weights
+	// Signals are binned so we get the total weight separately for each bin
+	if (cmdline.isSignal) {
+	  for (size_t i=0, n=vname_signal.size(); i<n; ++i) if (cmdline.signalName == vname_signal[i]) {
+	    int bin = vh_weightnorm_signal[i]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
+	    weightnorm = vh_weightnorm_signal[i]->GetBinContent(bin);
+	  }
+	}
+
+	// Normalize to chosen luminosity, consider symmateric up/down variation
+	w *= ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);
+	//std::cout<<syst.index<<" lumi "<<w<<std::endl;
+
+	// Pileup reweighting
+	if (syst.index == 0) h_nvtx->Fill(data.evt.NGoodVtx, w);
+	if ( settings.doPileupReweighting ) {
+	  w *= ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index]);
+	  if (syst.index == 0) h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
+	}
+	//std::cout<<syst.index<<" pu "<<w<<std::endl;
+
+	// Trigger efficiency scale factor
+	w *= ana.get_syst_weight(settings.triggerEffScaleFactor, settings.triggerEffUncertainty, syst.nSigmaTrigger[syst.index]);
+	//std::cout<<syst.index<<" trig "<<w<<std::endl;
+
+	// Jet Energy Scale uncertainty
+	// Rescale jet 4-momenta
+	ana.rescale_jets(data, syst.index, syst.nSigmaJEC[syst.index]);
+
 	// LHE weight variations
 	// More info about them here:
 	// https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L165-L237
@@ -280,78 +380,62 @@ int main(int argc, char** argv) {
 	// Only stored for NLO, otherwise vector size==0
 	// If vector was not filled (LO samples), not doing any weighting
 	if ( data.syst_alphas.Weights.size() == 2 )
-	  w *= ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS, data.evt.LHA_PDF_ID);
+	  w *= ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS[syst.index], data.evt.LHA_PDF_ID);
+	//std::cout<<syst.index<<" alpha_s "<<w<<std::endl;
 
 	// Scale variations
 	// A set of six weights, unphysical combinations excluded
 	// If numScale=0 is specified, not doing any weighting
-	if ( syst.numScale >= 1 && syst.numScale <= 3 )
-	  w *= ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale, syst.numScale);
+	if ( syst.numScale[syst.index] >= 1 && syst.numScale[syst.index] <= 3 )
+	  w *= ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
+	//std::cout<<syst.index<<" scale "<<w<<std::endl;
 
 	// PDF weights
 	// A set of 100 weights for the nominal PDF
 	// If numPdf=0 is specified, not doing any weighting
-	if ( syst.numPdf >= 1 && syst.numPdf <= data.syst_pdf.Weights.size() )
-	  w *= data.syst_pdf.Weights[syst.numPdf-1];
-	else if ( syst.numPdf > data.syst_pdf.Weights.size() )
+	if ( syst.numPdf[syst.index] >= 1 && syst.numPdf[syst.index] <= data.syst_pdf.Weights.size() )
+	  w *= data.syst_pdf.Weights[syst.numPdf[syst.index]-1];
+	else if ( syst.numPdf[syst.index] > data.syst_pdf.Weights.size() )
 	  utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
-      }
+	//std::cout<<syst.index<<" pdf "<<w<<std::endl;
 
-      // Analysis specific weights
-      w *= ana.get_analysis_weight(data);
-    }
+	// Analysis specific weights (comes last, as things may depend on jet energy)
+	w *= ana.get_analysis_weight(data);
 
-    ofile->count("NoCuts", w);
+	// Calculate variables that do not exist in the ntuple
+	ana.calculate_common_variables(data, syst.index);
+	ana.calculate_variables(data, syst.index);
 
-    // Apply preselections and save counts
-    bool pass_all = true;
-    for (auto cut : ana.baseline_cuts) if (pass_all)
-      if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
+	// Save counts (after each cuts)
+	bool pass_all_cuts = true;
+	if (syst.index == 0) ofile->count("NoCuts", w);
 
-    // _______________________________________________________
-    //                  BLINDING DATA
+	for (auto cut : ana.baseline_cuts) if (pass_all_cuts) {
+	  pass_all_cuts = cut.func();
+	  if (pass_all_cuts && syst.index==0) ofile->count(cut.name, w);
+	}
 
-    // Before doing anything serious (eg. filling any histogram)
-    // Define Signal region and blind it!!!!!!!!!!!!!!!!!!!!!!!!
-    bool DATA_BLINDED = ! ( cmdline.isData && ana.signal_selection(data) );
+	// If option (saveSkimmedNtuple) is specified save all 
+	// skimmed events selected by the analysis to the output file
+	// tree is copied and current weight is saved as "eventWeight"
+	if ( settings.saveSkimmedNtuple && syst.index==0 ) if (ana.pass_skimming(data)) ofile->addEvent(w);
 
-    /*
-      Some more warning to make sure :)
-     _   _   _   ____    _        _____   _   _   _____    _____   _   _    _____   _   _   _ 
-    | | | | | | |  _ \  | |      |_   _| | \ | | |  __ \  |_   _| | \ | |  / ____| | | | | | |
-    | | | | | | | |_) | | |        | |   |  \| | | |  | |   | |   |  \| | | |  __  | | | | | |
-    | | | | | | |  _ <  | |        | |   | . ` | | |  | |   | |   | . ` | | | |_ | | | | | | |
-    |_| |_| |_| | |_) | | |____   _| |_  | |\  | | |__| |  _| |_  | |\  | | |__| | |_| |_| |_|
-    (_) (_) (_) |____/  |______| |_____| |_| \_| |_____/  |_____| |_| \_|  \_____| (_) (_) (_)
+	// Apply analysis cuts and fill histograms
+	// These are all defined in [Name]_Analysis.cc (included from settings.h)
+	// You specify there also which cut is applied for each histo
+	// But all common baseline cuts will be already applied above
+	if (!cmdline.noPlots && pass_all_cuts ) ana.fill_analysis_histos(data, syst.index, w);
 
-    */
+	// Save counts after each analysis cut
+	for (auto cut : ana.analysis_cuts) if (pass_all_cuts) {
+	  pass_all_cuts = cut.func();
+	  if (pass_all_cuts && syst.index==0) ofile->count(cut.name, w);
+	}
+	// Count remaining signal events
+	if ( pass_all_cuts && syst.index==0 && ana.signal_selection(data) ) ofile->count("Signal", w);
 
-    //________________________________________________________
-    //
-
-    if (DATA_BLINDED) {
-
-      // If option (saveSkimmedNtuple) is specified save all 
-      // skimmed events selected by the analysis to the output file
-      // tree is copied and current weight is saved as "eventWeight"
-      if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
-
-      // Apply analysis cuts and fill histograms
-      // These are all defined in [Name]_Analysis.cc (included from settings.h)
-      // You specify there also which cut is applied for each histo
-      // But all common baseline cuts are alreay applied above
-      if (!cmdline.noPlots) {
-	if ( pass_all ) ana.fill_analysis_histos(data, w);
-      }
-
-      // Save counts for the analysis cuts
-      for (auto cut : ana.analysis_cuts) if (pass_all)
-        if ( ( pass_all = cut.func() ) ) ofile->count(cut.name, w);
-
-      // Count Signal events
-      if ( pass_all && ana.signal_selection(data) ) ofile->count("Signal", w);
-
-    } // end Blinding
+      } // end systematics loop
+    } // end Background/Signal MC
 
   } // end event loop
 

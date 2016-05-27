@@ -1,40 +1,6 @@
 #include "TLorentzVector.h"
 #include "common/AnalysisBase.h"
 
-class Analysis : public AnalysisBase
-{
-public:
-  Analysis();
-  ~Analysis();
-
-  void calculate_variables(DataStruct&);
-
-  double get_analysis_weight(DataStruct&);
-
-  bool pass_skimming(DataStruct&);
-
-  void define_selections(const DataStruct&);
-
-  virtual bool signal_selection(const DataStruct&);
-
-  void define_histo_options(const double&, const DataStruct&, std::string, bool);
-
-  void init_analysis_histos();
-
-  void fill_analysis_histos(DataStruct&, const double&);
-
-  void load_analysis_histos(std::string);
-
-  void save_analysis_histos(bool);
-
-  std::vector<Cut> analysis_cuts;
-
-private:
-  bool _apply_cut(std::string);
-  bool _apply_ncut(size_t);
-};
-
-
 //_______________________________________________________
 //                       Constructor
 Analysis::Analysis() : AnalysisBase() { }
@@ -51,7 +17,7 @@ unsigned int nLooseIDHadTopTagJets;
 unsigned int nLooseIDHadWTagJets;
 
 void
-Analysis::calculate_variables(DataStruct& data)
+Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 {
   // Jet variables (initialize)
   nLooseIDHadTopTagJets = nLooseIDHadWTagJets = 0;
@@ -177,11 +143,12 @@ TH1D* h_ht_AK4Puppi;
 TH1D* h_ht_AK8;
 TH1D* h_ht_AK8Puppi;
 TH1D* h_jet1_pt;
+std::vector<TH1D*> vh_jet1_pt;
 
 //_______________________________________________________
 //              Define Histograms here
 void
-Analysis::init_analysis_histos()
+Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned int& syst_index)
 {
   h_njet         = new TH1D("njet",         ";N_{AK8 (Puppi), loose ID}",  20, 0,  20);
   h_nhadtop      = new TH1D("nhadtop",      ";N_{top tag}",                20, 0,  20);
@@ -192,6 +159,13 @@ Analysis::init_analysis_histos()
   h_ht_AK8       = new TH1D("ht_AK8",       ";H_{T}^{AK8 (CHS)}",      200, 0,2000);
   h_ht_AK8Puppi  = new TH1D("ht_AK8Puppi",  ";H_{T}^{AK8 (Puppi)}",    200, 0,2000);
   h_jet1_pt      = new TH1D("jet1_pt",      ";p_{T, jet1}",            200, 0,2000);
+  for (unsigned int i=0; i<=syst_nSyst; ++i) {
+    std::stringstream histoname, title;
+    histoname<<"jet1_pt_syst"<<i;
+    title<<"Systematic variation #="<<i<<";p_{T, jet1}";
+    vh_jet1_pt.push_back(new TH1D(histoname.str().c_str(), title.str().c_str(), 200, 0,2000));
+    vh_jet1_pt[i]->Sumw2();
+  }
   
   h_njet->Sumw2();
   h_nhadtop->Sumw2();
@@ -208,25 +182,38 @@ Analysis::init_analysis_histos()
 //_______________________________________________________
 //               Fill Histograms here
 void
-Analysis::fill_analysis_histos(DataStruct& data, const double& weight)
+Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index, const double& weight)
 {
-  h_njet   ->Fill(nLooseJet, weight);
-  h_nhadtop->Fill(nLooseIDHadTopTagJets, weight);
-  h_nhadw  ->Fill(nLooseIDHadWTagJets, weight);
+  if (syst_index == 0) {
+    // syst_index should only be non-0 if settings.varySystematics is true
+    // in case of studying systematics, one should fill a different histogram for each syst_index
+    // this variable can be used to chose the correct vector element in case there is a vector of histograms
+    // It makes sense, to cut on syst_index == 0, for all ordinary plots
+    // syst_index == 0 always guarantees, there are no variations in any systematics
+    
+    h_njet   ->Fill(nLooseJet, weight);
+    h_nhadtop->Fill(nLooseIDHadTopTagJets, weight);
+    h_nhadw  ->Fill(nLooseIDHadWTagJets, weight);
+    
+    h_ht_gen->Fill(data.evt.Gen_Ht, weight);  // in ntuple
+    h_ht_AK4->Fill(AK4_Ht, weight);           // Calculated in AnalysisBase.h
+    h_ht_AK4Puppi->Fill(AK4Puppi_Ht, weight); // Calculated in AnalysisBase.h
+    h_ht_AK8->Fill(data.evt.Ht, weight);      // in ntuple, AK8 CHS is default, will switch to Puppi
+    h_ht_AK8Puppi->Fill(AK8Puppi_Ht, weight); // Calculated in AnalysisBase.h
+    
+    if (_apply_ncut(2)) h_jet1_pt->Fill(data.jetsAK8Puppi.Pt[0], weight);
+  }
   
-  h_ht_gen->Fill(data.evt.Gen_Ht, weight);  // in ntuple
-  h_ht_AK4->Fill(AK4_Ht, weight);           // Calculated in AnalysisBase.h
-  h_ht_AK4Puppi->Fill(AK4Puppi_Ht, weight); // Calculated in AnalysisBase.h
-  h_ht_AK8->Fill(data.evt.Ht, weight);      // in ntuple, AK8 CHS is default, will switch to Puppi
-  h_ht_AK8Puppi->Fill(AK8Puppi_Ht, weight); // Calculated in AnalysisBase.h
-  
-  if (_apply_ncut(2)) h_jet1_pt->Fill(data.jetsAK8Puppi.Pt[0], weight);
+  // Vary systematics and save each variation into a different historgam
+  // Switch on settings.varySystematics to be effective
+  if (_apply_ncut(2)) vh_jet1_pt[syst_index]->Fill(data.jetsAK8Puppi.Pt[0], weight);
 }
 
 // Methods used by SmartHistos (Plotter)
 // Can leave them empty
 void
-Analysis::define_histo_options(const double& weight, const DataStruct& d, std::string dirname, bool runOnSkim=false)
+Analysis::define_histo_options(const double& weight, const DataStruct& d, const unsigned int& syst_nSyst, 
+			       const unsigned int& syst_index, std::string dirname, bool runOnSkim=false)
 {
 }
 

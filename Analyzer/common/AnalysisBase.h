@@ -9,6 +9,9 @@
 #include "DataStruct.h"
 #include "GluinoXSec.h"
 
+// _____________________________________________________________
+//        AnalysisBase: Methods common in all analysis
+
 class AnalysisBase
 {
 public:
@@ -21,7 +24,7 @@ public:
   // Functions used by the Analyzer
   void define_preselections(const DataStruct&);
 
-  void calculate_common_variables(DataStruct&);
+  void calculate_common_variables(DataStruct&, const unsigned int&);
 
   void init_common_histos();
 
@@ -34,17 +37,59 @@ public:
 
   void init_pileup_reweightin(const std::string&, const std::string&, const std::vector<std::string>&);
 
-  double get_pileup_weight(const int&, const bool&, const double&);
+  double get_pileup_weight(const int&, const double&);
+
+  void rescale_jets(DataStruct&, const unsigned int&, const double&);
 
   double get_alphas_weight(const std::vector<float>&, const double&, const int&);
 
   double get_scale_weight(const std::vector<float>&, const double&, const unsigned int&);
 
-private:
-  double get_syst_weight_(const double&, const double&, const double&, const double&);
+  double get_syst_weight(const double&, const double&, const double&, const double&);
+
+  double get_syst_weight(const double&, const double&, const double&);
 
 };
 
+// _____________________________________________________________
+//         Analysis: Analysis specific methods/histos
+
+class Analysis : public AnalysisBase
+{
+public:
+  Analysis();
+  ~Analysis();
+
+  void calculate_variables(DataStruct&, const unsigned int&);
+
+  double get_analysis_weight(DataStruct&);
+
+  bool pass_skimming(DataStruct&);
+
+  void define_selections(const DataStruct&);
+
+  virtual bool signal_selection(const DataStruct&);
+
+  void define_histo_options(const double&, const DataStruct&, const unsigned int&, const unsigned int&, std::string, bool);
+
+  void init_analysis_histos(const unsigned int&, const unsigned int&);
+
+  void fill_analysis_histos(DataStruct&, const unsigned int&, const double&);
+
+  void load_analysis_histos(std::string);
+
+  void save_analysis_histos(bool);
+
+  std::vector<Cut> analysis_cuts;
+
+private:
+  bool _apply_cut(std::string);
+  bool _apply_ncut(size_t);
+
+  typedef struct Sample { std::string postfix; std::string legend; std::string color; std::vector<std::string> dirs; } Sample;
+  typedef struct PostfixOptions { size_t index; std::string postfixes; std::string legends; std::string colors; } PostfixOptions;
+  PostfixOptions get_pf_opts_(std::vector<std::vector<Sample> > lists, std::string);
+};
 
 //_______________________________________________________
 //                       Constructor
@@ -161,8 +206,32 @@ unsigned int nHadWTag;
 double AK4_Ht, AK4Puppi_Ht, AK8Puppi_Ht;
 
 void
-AnalysisBase::calculate_common_variables(DataStruct& data)
+AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
+  // It only makes sense to calculate certain variables only once if they don't depend on jet energy
+  if (syst_index == 0) {
+    nLooseJet = 0;
+
+    // Jet ID - Loose (Fractions should not depend on JEC)
+    // Loop on AK8 Puppi jets
+    while(data.jetsAK8Puppi.Loop()) {
+      double eta = data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it];
+      double nhf = data.jetsAK8Puppi.neutralHadronEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+      double nemf = data.jetsAK8Puppi.neutralEmEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+      double chf = data.jetsAK8Puppi.chargedHadronEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+      double cemf = data.jetsAK8Puppi.chargedEmEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
+      int NumConst = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it] + data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
+      int chm = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it];
+      int NumNeutralParticle = data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
+      bool pass_Loose_ID = ( (nhf<0.99 && nemf<0.99 && NumConst>1) && ((fabs(eta)<=2.4 && chf>0 && chm>0 && cemf<0.99) || fabs(eta)>2.4) && fabs(eta)<=3.0 )
+        || ( nemf<0.9 && NumNeutralParticle>10 && fabs(eta)>3.0 );
+      passLooseJetID.push_back(pass_Loose_ID);
+      if (pass_Loose_ID) nLooseJet++;
+    }
+  }
+
+  // Rest of the vairables need to be recalculated each time the jet energy is changed
+  // eg. top/W tags and HT (obviously) depends on jet pt
   AK4_Ht = 0;
   while(data.jetsAK4.Loop()) AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];    
 
@@ -170,25 +239,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data)
   while(data.jetsAK4Puppi.Loop()) AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
 
   AK8Puppi_Ht = 0;
-  nLooseJet = nHadTopTag = nHadTopPreTag = nHadWTag = 0;
+  nHadTopTag = nHadTopPreTag = nHadWTag = 0;
 
   // Loop on AK8 Puppi jets
   while(data.jetsAK8Puppi.Loop()) {
     AK8Puppi_Ht += data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
-
-    // Jet ID - Loose
-    double eta = data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it];
-    double nhf = data.jetsAK8Puppi.neutralHadronEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-    double nemf = data.jetsAK8Puppi.neutralEmEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-    double chf = data.jetsAK8Puppi.chargedHadronEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-    double cemf = data.jetsAK8Puppi.chargedEmEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-    int NumConst = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it] + data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
-    int chm = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it];
-    int NumNeutralParticle = data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
-    bool pass_Loose_ID = ( (nhf<0.99 && nemf<0.99 && NumConst>1) && ((fabs(eta)<=2.4 && chf>0 && chm>0 && cemf<0.99) || fabs(eta)>2.4) && fabs(eta)<=3.0 )
-      || ( nemf<0.9 && NumNeutralParticle>10 && fabs(eta)>3.0 );
-    passLooseJetID.push_back(pass_Loose_ID);
-    if (pass_Loose_ID) nLooseJet++;
 
     // _______________________________________________________
     //                  Boosted Objects
@@ -237,6 +292,8 @@ std::vector<TH2D*> vh_totweight_signal;
 std::vector<TH2D*> vh_xsec_signal;
 std::vector<TH2D*> vh_weightnorm_signal;
 TH1D* h_pileup_data;
+TH1D* h_pileup_data_down;
+TH1D* h_pileup_data_up;
 TH1D* h_pileup_mc;
 TH1D* h_pileup_weight;
 TH1D* h_pileup_weight_down;
@@ -257,11 +314,13 @@ AnalysisBase::init_common_histos()
   vh_weightnorm_signal.push_back(new TH2D("weightnorm_T1tttt",  "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,-12.5,5012.5, 201,-12.5,5012.5));
   // pileup
   h_pileup_data                = new TH1D("pileup_data",        "Pile-up distribution - Data (Nominal);Pile-up", 100,0,100);
-  h_pileup_mc                  = new TH1D("pileup_mc",          "Pile-up distribution - MC;Pile-up",   100,0,100);
+  h_pileup_data_down           = new TH1D("pileup_data_down",   "Pile-up distribution - Data (down);Pile-up",    100,0,100);
+  h_pileup_data_up             = new TH1D("pileup_data_up",     "Pile-up distribution - Data (up);Pile-up",      100,0,100);
+  h_pileup_mc                  = new TH1D("pileup_mc",          "Pile-up distribution - MC;Pile-up",             100,0,100);
   h_pileup_weight              = new TH1D("pileup_weight",      "Pile-up weights - Nominal MB X-sec (69 mb);Pile-up;Weight",    100,0,100);
   h_pileup_weight_down         = new TH1D("pileup_weight_down", "Pile-up weights - MB X-sec up 5% (72.45 mb);Pile-up;Weight",   100,0,100);
   h_pileup_weight_up           = new TH1D("pileup_weight_up",   "Pile-up weights - MB X-sec down 5% (65.55 mb);Pile-up;Weight", 100,0,100);
-  h_nvtx                       = new TH1D("nvtx",               "Number of vertices - Nominal;N_{Vertices}",    100,0,100);
+  h_nvtx                       = new TH1D("nvtx",               "Number of vertices - Nominal;N_{Vertices}",                      100,0,100);
   h_nvtx_rw                    = new TH1D("nvtx_rw",            "Number of vertices - Pile-up reweighted (MC only);N_{Vertices}", 100,0,100);
 }
 
@@ -368,59 +427,152 @@ AnalysisBase::init_pileup_reweightin(const std::string& pileupDir, const std::st
   TFile* f_pileup_data = TFile::Open((pileupDir+"data_pileup.root").c_str());
   h_pileup_data->Add((TH1D*)f_pileup_data->Get("pileup"));
   f_pileup_data->Close();
-  // Get mc histogram saved inside the ntuple (unfiltered pileup distribution)
-  for (auto filename : filenames) {
-    TFile* f_pileup_mc = TFile::Open(filename.c_str());
-    h_pileup_mc->Add((TH1D*)f_pileup_mc->Get(mcPileupHistoName.c_str()));
-    f_pileup_mc->Close();
-  }
-  // Divide normalized data histo by normalized mc histo to get pileup weights for each bin
-  h_pileup_weight->Divide(h_pileup_data, h_pileup_mc, 1/h_pileup_data->Integral(), 1/h_pileup_mc->Integral());
-  //for (int bin=1; bin<=100; ++bin) cout << bin << " " << h_pileup_weight->GetBinContent(bin) << endl;
-  // Also get systematic weights
+  // Also get up/down variations
   TFile* f_pileup_data_down = TFile::Open((pileupDir+"data_pileup_down.root").c_str());
-  TH1D* h_pileup_data_down = (TH1D*)f_pileup_data_down->Get("pileup");
-  h_pileup_weight_down->Divide(h_pileup_data_down, h_pileup_mc, 1/h_pileup_data_down->Integral(), 1/h_pileup_mc->Integral());    
+  h_pileup_data_down->Add((TH1D*)f_pileup_data_down->Get("pileup"));
   f_pileup_data_down->Close();
   TFile* f_pileup_data_up = TFile::Open((pileupDir+"data_pileup_up.root").c_str());
-  TH1D* h_pileup_data_up = (TH1D*)f_pileup_data_up->Get("pileup");
-  h_pileup_weight_up->Divide(h_pileup_data_up, h_pileup_mc, 1/h_pileup_data_up->Integral(), 1/h_pileup_mc->Integral());    
+  h_pileup_data_up->Add((TH1D*)f_pileup_data_up->Get("pileup"));
   f_pileup_data_up->Close();
+  // get mc histogram (used to generate mc pile-up)
+  TFile* f_pileup_mc = TFile::Open((pileupDir+"mc_pileup.root").c_str());
+  h_pileup_mc->Add((TH1D*)f_pileup_mc->Get("pileup"));
+  f_pileup_mc->Close();
+  // // Get mc histogram saved inside the ntuple (unfiltered pileup distribution)
+  // std::cout<<h_pileup_mc->GetEntries()<<std::endl;
+  // for (auto filename : filenames) {
+  //   TFile* f_pileup_mc = TFile::Open(filename.c_str());
+  //   h_pileup_mc->Add((TH1D*)f_pileup_mc->Get(mcPileupHistoName.c_str()));
+  //   f_pileup_mc->Close();
+  //   std::cout<<h_pileup_mc->GetEntries()<<std::endl;
+  // }
+  // Divide normalized data histo by normalized mc histo to get pileup weights for each bin
+  h_pileup_weight     ->Divide(h_pileup_data,      h_pileup_mc, 1/h_pileup_data->Integral(),      1/h_pileup_mc->Integral());
+  h_pileup_weight_down->Divide(h_pileup_data_down, h_pileup_mc, 1/h_pileup_data_down->Integral(), 1/h_pileup_mc->Integral());    
+  h_pileup_weight_up  ->Divide(h_pileup_data_up,   h_pileup_mc, 1/h_pileup_data_up->Integral(),   1/h_pileup_mc->Integral());    
 }
 
 
 //_______________________________________________________
-//        private function to get scaled weight
+//              function to get scaled weight
 double
-AnalysisBase::get_syst_weight_(const double& weight_nominal, const double& weight_up, const double& weight_down, const double& nSigma)
+AnalysisBase::get_syst_weight(const double& weight_nominal, const double& weight_up, const double& weight_down, const double& nSigma)
 {
-  // Compute the weight according to the systematic variation considered
-  // Use difference between nominal and up/down as 1 sigma variation 
-  double dw_up = weight_up - weight_nominal;
-  double dw_down = weight_nominal - weight_down;
   double w = weight_nominal;
-  if (nSigma >= 0.) {
-    w += nSigma*dw_up; 
+  if (nSigma == 0) {
+    return w;
   } else {
-    w += nSigma*dw_down;
+    // Compute the weight according to the systematic variation considered
+    // Use difference between nominal and up/down as 1 sigma variation 
+    double dw_up = weight_up - weight_nominal;
+    double dw_down = weight_nominal - weight_down;
+    if (nSigma >= 0.) {
+      w += nSigma*dw_up; 
+    } else {
+      w += nSigma*dw_down;
+    }
+    return w; 
   }
-  return w; 
+}
+
+double
+AnalysisBase::get_syst_weight(const double& weight_nominal, const double& uncertainty, const double& nSigma)
+{
+  double w = weight_nominal;
+  if (nSigma == 0) {
+    return w;
+  } else {
+    // Compute the weight according to the systematic variation considered
+    // Use difference between nominal and up/down as 1 sigma variation 
+    double dw_up = weight_nominal * uncertainty;
+    double dw_down = -1.0 * dw_up;
+    if (nSigma >= 0.) {
+      w += nSigma*dw_up; 
+    } else {
+      w += nSigma*dw_down;
+    }
+    return w; 
+  }
 }
 
 
 //_______________________________________________________
 //                  Get pile-up weight
 double
-AnalysisBase::get_pileup_weight(const int& NtrueInt, const bool& doSystematics, const double& nSigmaPU)
+AnalysisBase::get_pileup_weight(const int& NtrueInt, const double& nSigmaPU)
 {
   int pu_bin = NtrueInt+1; // eg. pileup 0, is filled in bin 1
   double w_pileup = h_pileup_weight->GetBinContent(pu_bin);
-  if ( doSystematics ) {
-    double w_pileup_up = h_pileup_weight_up->GetBinContent(pu_bin);
-    double w_pileup_down = h_pileup_weight_down->GetBinContent(pu_bin);
-    w_pileup = get_syst_weight_(w_pileup, w_pileup_up, w_pileup_down, nSigmaPU);
+  double w_pileup_up = h_pileup_weight_up->GetBinContent(pu_bin);
+  double w_pileup_down = h_pileup_weight_down->GetBinContent(pu_bin);
+  double w = get_syst_weight(w_pileup, w_pileup_up, w_pileup_down, nSigmaPU);
+  return w;
+}
+
+
+//_______________________________________________________
+//              Rescale jet 4-momenta
+
+std::vector<float> AK4_E, AK4_Pt;
+std::vector<float> AK4Puppi_E, AK4Puppi_Pt;
+std::vector<float> AK8_E, AK8_Pt, AK8_softDropMass, AK8_trimmedMass, AK8_prunedMass, AK8_filteredMass;
+std::vector<float> AK8Puppi_E, AK8Puppi_Pt, AK8Puppi_softDropMass, AK8Puppi_trimmedMass, AK8Puppi_prunedMass, AK8Puppi_filteredMass;
+
+void
+AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, const double& nSigmaJEC)
+{
+  if (syst_index==0) {
+    AK4_E            = data.jetsAK4.E;
+    AK4_Pt           = data.jetsAK4.Pt;
+    AK8_E            = data.jetsAK8.E;
+    AK8_Pt           = data.jetsAK8.Pt;
+    AK8_softDropMass = data.jetsAK8.softDropMass;
+    AK8_trimmedMass  = data.jetsAK8.trimmedMass;
+    AK8_prunedMass   = data.jetsAK8.prunedMass;
+    AK8_filteredMass = data.jetsAK8.filteredMass;
+    AK4Puppi_E            = data.jetsAK4Puppi.E;
+    AK4Puppi_Pt           = data.jetsAK4Puppi.Pt;
+    AK8Puppi_E            = data.jetsAK8Puppi.E;
+    AK8Puppi_Pt           = data.jetsAK8Puppi.Pt;
+    AK8Puppi_softDropMass = data.jetsAK8Puppi.softDropMass;
+    AK8Puppi_trimmedMass  = data.jetsAK8Puppi.trimmedMass;
+    AK8Puppi_prunedMass   = data.jetsAK8Puppi.prunedMass;
+    AK8Puppi_filteredMass = data.jetsAK8Puppi.filteredMass;
   }
-  return w_pileup;
+  if (nSigmaJEC != 0) {
+    // AK4 CHS jets
+    while(data.jetsAK4.Loop()) {
+      double scale = get_syst_weight(1.0, data.jetsAK4.jecUncertainty[data.jetsAK4.it], nSigmaJEC);
+      data.jetsAK4.Pt[data.jetsAK4.it] = AK4_Pt[data.jetsAK4.it] * scale;
+      data.jetsAK4.E[data.jetsAK4.it]  = AK4_E[data.jetsAK4.it]  * scale;
+    }
+    // AK4 Puppi jets
+    while(data.jetsAK4Puppi.Loop()) {
+      double scale = get_syst_weight(1.0, data.jetsAK4Puppi.jecUncertainty[data.jetsAK4Puppi.it], nSigmaJEC);
+      data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it] = AK4Puppi_Pt[data.jetsAK4Puppi.it] * scale;
+      data.jetsAK4Puppi.E[data.jetsAK4Puppi.it]  = AK4Puppi_E[data.jetsAK4Puppi.it]  * scale;
+    }
+    // AK8 CHS jets
+    while(data.jetsAK8.Loop()) {
+      double scale = get_syst_weight(1.0, data.jetsAK8.jecUncertainty[data.jetsAK8.it], nSigmaJEC);
+      data.jetsAK8.Pt[data.jetsAK8.it]           = AK8_Pt[data.jetsAK8.it]           * scale;
+      data.jetsAK8.E[data.jetsAK8.it]            = AK8_E[data.jetsAK8.it]            * scale;
+      data.jetsAK8.softDropMass[data.jetsAK8.it] = AK8_softDropMass[data.jetsAK8.it] * scale;
+      data.jetsAK8.trimmedMass[data.jetsAK8.it]  = AK8_trimmedMass[data.jetsAK8.it]  * scale;
+      data.jetsAK8.prunedMass[data.jetsAK8.it]   = AK8_prunedMass[data.jetsAK8.it]   * scale;
+      data.jetsAK8.filteredMass[data.jetsAK8.it] = AK8_filteredMass[data.jetsAK8.it] * scale;
+    }
+    // AK8 Puppi jets
+    while(data.jetsAK8Puppi.Loop()) {
+      double scale = get_syst_weight(1.0, data.jetsAK8Puppi.jecUncertainty[data.jetsAK8Puppi.it], nSigmaJEC);
+      data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it]           = AK8Puppi_Pt[data.jetsAK8Puppi.it]           * scale;
+      data.jetsAK8Puppi.E[data.jetsAK8Puppi.it]            = AK8Puppi_E[data.jetsAK8Puppi.it]            * scale;
+      data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it] = AK8Puppi_softDropMass[data.jetsAK8Puppi.it] * scale;
+      data.jetsAK8Puppi.trimmedMass[data.jetsAK8Puppi.it]  = AK8Puppi_trimmedMass[data.jetsAK8Puppi.it]  * scale;
+      data.jetsAK8Puppi.prunedMass[data.jetsAK8Puppi.it]   = AK8Puppi_prunedMass[data.jetsAK8Puppi.it]   * scale;
+      data.jetsAK8Puppi.filteredMass[data.jetsAK8Puppi.it] = AK8Puppi_filteredMass[data.jetsAK8Puppi.it] * scale;
+    }
+  }
 }
 
 
@@ -445,7 +597,7 @@ AnalysisBase::get_alphas_weight(const std::vector<float>& alphas_Weights, const 
     // aMC@NLO samples have -+ 0.002
     nSigma_0_0015 *= 0.75;
   }
-  w_alphas = get_syst_weight_(w_alphas, w_alphas_up, w_alphas_down, 0.75*nSigmaAlphaS);
+  w_alphas = get_syst_weight(w_alphas, w_alphas_up, w_alphas_down, nSigma_0_0015);
   return w_alphas;
 }
 
@@ -491,6 +643,6 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
     w_scale_up   = scale_Weights[3];
     w_scale_down = scale_Weights[5];
   }
-  w_scale = get_syst_weight_(w_scale, w_scale_up, w_scale_down, nSigmaScale);
+  w_scale = get_syst_weight(w_scale, w_scale_up, w_scale_down, nSigmaScale);
   return w_scale;
 }

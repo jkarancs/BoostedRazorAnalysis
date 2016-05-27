@@ -170,8 +170,6 @@ namespace utils {
   struct commandLine
   {
     std::string progName;
-    std::string systematicsFileName;    // needs to be given only if doSystetmatics settings true
-    int numSyst;                        // needs to be given only if doSystetmatics settings true
     std::string outputFileName;         // first non option argument
     std::vector<std::string> fileNames; // second and rest non optional arguments
     std::string dirname;                // extracted from the 1st filename
@@ -219,11 +217,6 @@ namespace utils {
     int n_bkg_arg = 0;
     int n_input = 0;
 
-    // specify the nth line of the systematic file you want to consider
-    // if settings.doSystematics is true this number needs to be > 0
-    cl.systematicsFileName = "";
-    cl.numSyst = 0;
-
     // Do a quick test on 1/100 statistics
     cl.quickTest = false;
 
@@ -239,8 +232,6 @@ namespace utils {
 	std::stringstream value;
 	value<<arg.substr(f+1, arg.size()-f-1);
 	// reading option
-	if (option=="numSyst") value>>cl.numSyst;
-	if (option=="systematicsFileName") value>>cl.systematicsFileName;
 	if (option=="quickTest") value>>cl.quickTest;
 	if (option=="noPlots") value>>cl.noPlots;
       } else {

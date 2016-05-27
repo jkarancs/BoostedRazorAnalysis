@@ -59,15 +59,9 @@ All options:
    * --plot: after the Analyses, use the Plotter to produce plots in the output root files (also uses the Analysis methods)
    * --skim: Make a skimmed ntuple in the directory specified inside the script
 
-Run systematics (first, set doSystematics = true in settings.h)  
-when running systematics, additionally must specify options:  
-systematicsFileName and numSyst (i.e. the line to read in syst file)
-```Shell
-./Analyzer systematicsFileName=systematics/2015_12_18.txt numSyst=1   Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
-./Analyzer systematicsFileName=systematics/2015_12_18.txt numSyst=2   Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
-...
-./Analyzer systematicsFileName=systematics/2015_12_18.txt numSyst=100 Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
-```
+Run systematics (first, set varySystematics = true in settings.h)  
+when running systematics, make sure you define one histogram for each variation
+syst.index in the Analyzer.cc files can be used to select a histogram from a vector
 
 You can remake the systematics file with:
 ```Shell

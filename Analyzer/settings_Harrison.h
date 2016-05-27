@@ -1,7 +1,7 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
 
-#include "Analysis_Janos.h" // Specify here the implementations for you Analysis
+#include "Analysis_Harrison.h" // Specify here the implementations for you Analysis
 
 struct settings {
 
@@ -11,16 +11,17 @@ struct settings {
   settings( bool RunOnSkim = true ) :
     runOnSkim                ( RunOnSkim ),
     saveSkimmedNtuple        ( false ),
-    doPileupReweighting      ( false ),
-    doSystematics            ( false ),
-    // if above is true, must add these command line options:
-    // systematicsFileName=<filename>
-    // numSyst=<positive int> - nth line in the systematics file to consider
+    doPileupReweighting      ( true ),
+    varySystematics          ( true ),
+    systematicsFileName      ( "systematics/2016_05_26.txt" ),
     treeName                 ( RunOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName        ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
     pileupDir                ( "pileup/Mar02_Silver_JSON/" ),
-    intLumi                  ( 2684.07 /* brilcalc - Mar02 Silver v2 ReReco JSON */ ) // Tot int lumi in (pb^-1)
+    intLumi                  ( 2684.07 /* brilcalc - Mar02 Silver v2 ReReco JSON */ ), // Tot int lumi in (pb^-1),
+    lumiUncertainty          ( 0.027 ),
+    triggerEffScaleFactor    ( 1.0 ),
+    triggerEffUncertainty    ( 0.00 )
   {
     if (RunOnSkim) {
       totWeightHistoNamesSignal.push_back("totweight_T1tttt"); // T1tttt (use same histo for fast and fullsim)
@@ -35,12 +36,16 @@ struct settings {
   const bool runOnSkim;
   const bool saveSkimmedNtuple;
   const bool doPileupReweighting;
-  const bool doSystematics;
+  const bool varySystematics;
+  const std::string systematicsFileName;
   const std::string treeName;
   const std::string totWeightHistoName;
   const std::string mcPileupHistoName;
   const std::string pileupDir;
   const double intLumi;
+  const double lumiUncertainty;
+  const double triggerEffScaleFactor;
+  const double triggerEffUncertainty;
   std::vector<std::string> totWeightHistoNamesSignal;
   std::vector<std::string> xsecHistoNamesSignal;
 
