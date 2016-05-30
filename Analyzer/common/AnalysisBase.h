@@ -41,6 +41,10 @@ public:
 
   void rescale_jets(DataStruct&, const unsigned int&, const double&);
 
+  double get_top_tagging_sf(DataStruct&, const double&);
+
+  double get_jet_pt_weight(DataStruct&, const double&);
+
   double get_alphas_weight(const std::vector<float>&, const double&, const int&);
 
   double get_scale_weight(const std::vector<float>&, const double&, const unsigned int&);
@@ -151,37 +155,37 @@ AnalysisBase::define_preselections(const DataStruct& data)
    Top Tagging working points:
    https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging#13_TeV_working_points
 
-   Latest WPs not yet on twiki (Gregor Kasieczka, Mareike Meyer):
-   https://indico.cern.ch/event/518509/contributions/2032850/attachments/1256008/1854115/TopTagging11_04.pdf
-
-   Scale factors (?):
+   Latest WPs/SFs not yet on twiki (Angela Mc Lean, Mareike Meyer, Svenja Schumann):
+   https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868103/TopTaggingWp_v5.pdf
+   https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868207/TopTaggingSF_76X.pdf
    
+   !! Warning, Scale factor to be updated for Puppi jets !!
 
    Choose:
-   - Loose selection: e(B) = 10% WP
+   - Loose selection: e(S) = 51.2%, e(B) = 3% WP
    - AK8 Puppi jets
-   - 60 < SD Mass < 190
-   - tau32 < 0.76
+   - 105 < SD Mass < 200
+   - tau32 < 0.84
 */
 
 #define TOP_PT_CUT            400
-#define TOP_SD_MASS_CUT_LOW    60 // prev 110
-#define TOP_SD_MASS_CUT_HIGH  190 // prev 210
-#define TOP_TAU32_CUT        0.76 // prev 0.75
-
+#define TOP_SD_MASS_CUT_LOW   105 // prev 110
+#define TOP_SD_MASS_CUT_HIGH  200 // prev 210
+#define TOP_TAU32_CUT        0.67 // prev 0.75
+#define TOP_TAG_SF_LOW       0.97
+#define TOP_TAG_SF_LOW_ERR   0.09
+#define TOP_TAG_SF_HIGH      0.99
+#define TOP_TAG_SF_HIGH_ERR  0.18
 
 /* 
    W tagging working points:
    https://twiki.cern.ch/twiki/bin/view/CMS/JetWtagging
 
-   Latest WPs not yet on twiki (Thea Aarrestad, slide 77):
-   https://indico.cern.ch/event/530683/contributions/2164853/attachments/1271780/1884879/WtagSF_JMAR_TAarrestad.pdf
-
-   Scale factors (Thea Aarrestad, slide 77):
+   Latest WPs/SFs not yet on twiki (Thea Aarrestad, slide 77):
    https://indico.cern.ch/event/530683/contributions/2164853/attachments/1271780/1884879/WtagSF_JMAR_TAarrestad.pdf
 
    Choose:
-   - Loose selection e(S) = 93.3%
+   - Very loose selection e(S) = 93.3%
    - AK8 Puppi jets
    - 65 < SD Mass < 105
    - tau21 <= 0.56
@@ -211,6 +215,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   // It only makes sense to calculate certain variables only once if they don't depend on jet energy
   if (syst_index == 0) {
     nLooseJet = 0;
+    passLooseJetID.clear();
 
     // Jet ID - Loose (Fractions should not depend on JEC)
     // Loop on AK8 Puppi jets
@@ -240,6 +245,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 
   AK8Puppi_Ht = 0;
   nHadTopTag = nHadTopPreTag = nHadWTag = 0;
+  passHadTopTag.clear();
+  passHadTopPreTag.clear();
+  passHadWTag.clear();
 
   // Loop on AK8 Puppi jets
   while(data.jetsAK8Puppi.Loop()) {
@@ -248,6 +256,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     // _______________________________________________________
     //                  Boosted Objects
 
+    double pt = data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
     double sd_mass = data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it];
     double tau21 = data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
     if (data.jetsAK8Puppi.tau1[data.jetsAK8Puppi.it]!=0) tau21 /= data.jetsAK8Puppi.tau1[data.jetsAK8Puppi.it];
@@ -262,7 +271,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     passHadTopTag.push_back(0);
     passHadTopPreTag.push_back(0);
     // New hadronic top tag
-    if (sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH) {
+    if (pt >= TOP_PT_CUT && sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH) {
       passHadTopPreTag[data.jetsAK8Puppi.it] = 1;
       ++nHadTopPreTag;
       if (tau32 < TOP_TAU32_CUT) {
@@ -275,7 +284,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     //                  Hadronic W Tag definition
     passHadWTag.push_back(0);
     // New hadronic top tag
-    if (sd_mass>=W_SD_MASS_CUT_LOW && sd_mass<W_SD_MASS_CUT_HIGH) {
+    if (pt >= W_PT_CUT && sd_mass>=W_SD_MASS_CUT_LOW && sd_mass<W_SD_MASS_CUT_HIGH) {
       if (tau21 < W_TAU21_CUT) {
 	passHadWTag[data.jetsAK8Puppi.it] = 1;
 	++nHadWTag;
@@ -283,6 +292,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
   } // end of AK8 (Puppi) jet loop
 }
+
 
 //_______________________________________________________
 //                 List of Histograms
@@ -573,6 +583,53 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
       data.jetsAK8Puppi.filteredMass[data.jetsAK8Puppi.it] = AK8Puppi_filteredMass[data.jetsAK8Puppi.it] * scale;
     }
   }
+}
+
+
+//____________________________________________________
+//               Top-Tagging Scale factor
+double
+AnalysisBase::get_top_tagging_sf(DataStruct& data, const double& nSigmaHadTopTagSF)
+{
+  double w = 1.0;
+
+  while(data.jetsAK8Puppi.Loop()) {
+    double pt = data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
+    double sd_mass = data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it];
+    double tau32 = data.jetsAK8Puppi.tau3[data.jetsAK8Puppi.it];
+    if (data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it]!=0) tau32 /= data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
+    else tau32 = 9999;
+    if (pt >= TOP_PT_CUT && sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH && tau32 < TOP_TAU32_CUT) {
+      // Top-tagged AK8 jets
+      if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 400 && data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] < 550)
+        w *= get_syst_weight(TOP_TAG_SF_LOW, TOP_TAG_SF_LOW_ERR, nSigmaHadTopTagSF);
+      else if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 550)
+        w *= get_syst_weight(TOP_TAG_SF_HIGH, TOP_TAG_SF_HIGH_ERR, nSigmaHadTopTagSF);
+    }
+  }
+
+  return w;
+}
+
+ 
+//____________________________________________________
+//               Jet pT reweighting
+double
+AnalysisBase::get_jet_pt_weight(DataStruct& data, const double& nSigmaJetPt)
+{
+  // Use linear function calculated by scripts/JetPtScaleFactors.C script
+  // reweight event corresponding to the product of SFs for each jet
+  // linear function: p0 + p1 * jet pt
+
+  const double p0 = 0.970718;
+  const double p1 = -0.000331894;
+
+  double w = 1.0;
+  while(data.jetsAK8Puppi.Loop()) {
+    w *= p0 + p1 * data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
+  }
+
+  return w;
 }
 
 

@@ -108,15 +108,16 @@ int main(int argc, char** argv) {
   struct Systematics {
     unsigned int index = 0;
     unsigned int nSyst = 0;
-    std::vector<double> nSigmaLumi     = std::vector<double>(1,0);
-    std::vector<double> nSigmaPU       = std::vector<double>(1,0);
-    std::vector<double> nSigmaTrigger  = std::vector<double>(1,0);
-    std::vector<double> nSigmaJEC      = std::vector<double>(1,0);
-
-    std::vector<double> nSigmaAlphaS   = std::vector<double>(1,0);
-    std::vector<double> nSigmaScale    = std::vector<double>(1,0);
-    std::vector<unsigned int> numScale = std::vector<unsigned int>(1,0);
-    std::vector<unsigned int> numPdf   = std::vector<unsigned int>(1,0);
+    std::vector<double> nSigmaLumi        = std::vector<double>(1,0);
+    std::vector<double> nSigmaPU          = std::vector<double>(1,0);
+    std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
+    std::vector<double> nSigmaJEC         = std::vector<double>(1,0);
+    std::vector<double> nSigmaHadTopTagSF = std::vector<double>(1,0);
+    std::vector<double> nSigmaJetPt       = std::vector<double>(1,0);
+    std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
+    std::vector<double> nSigmaScale       = std::vector<double>(1,0);
+    std::vector<unsigned int> numScale    = std::vector<unsigned int>(1,0);
+    std::vector<unsigned int> numPdf      = std::vector<unsigned int>(1,0);
   } syst;
 
   if (settings.varySystematics) {
@@ -139,6 +140,8 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaPU.push_back(dbl);
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJEC.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaHadTopTagSF.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaJetPt.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
       nth_line>>uint; syst.numScale.push_back(uint);
@@ -225,13 +228,20 @@ int main(int argc, char** argv) {
   }
 
   // ---------------------------------------
-  // --- Pileup Reweighting              ---
+  // --- ScaleFectors/Reweighting        ---
   // ---------------------------------------
   
+  // Pile-up reweighting
   if ( !cmdline.isData && settings.doPileupReweighting ) {
     cout << "doPileupReweighting (settings): true" << endl;
     ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.fileNames);
   } else cout << "doPileupReweighting (settings): false" << endl;
+
+  // Hadronic top tagging scale factors
+  cout << "applyHadTopTagSF (settings): " << ( settings.applyHadTopTagSF ? "true" : "false" ) << endl;
+
+  // Jet Pt Reweighting
+  cout << "doJetPtReweighting (settings): " << ( settings.doJetPtReweighting ? "true" : "false" ) << endl;
 
   // ------------------------------------------------------------------------------
   // -- Define the order of cuts (and corresponding bins in the counts histogram --
@@ -343,6 +353,7 @@ int main(int argc, char** argv) {
 	w = 1;
 
 	// Event weights
+	// Lumi normalization
 	// Signals are binned so we get the total weight separately for each bin
 	if (cmdline.isSignal) {
 	  for (size_t i=0, n=vname_signal.size(); i<n; ++i) if (cmdline.signalName == vname_signal[i]) {
@@ -350,10 +361,8 @@ int main(int argc, char** argv) {
 	    weightnorm = vh_weightnorm_signal[i]->GetBinContent(bin);
 	  }
 	}
-
-	// Normalize to chosen luminosity, consider symmateric up/down variation
+	// Normalize to chosen luminosity, also consider symmeteric up/down variation in lumi uncertainty
 	w *= ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);
-	//std::cout<<syst.index<<" lumi "<<w<<std::endl;
 
 	// Pileup reweighting
 	if (syst.index == 0) h_nvtx->Fill(data.evt.NGoodVtx, w);
@@ -361,16 +370,23 @@ int main(int argc, char** argv) {
 	  w *= ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index]);
 	  if (syst.index == 0) h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
 	}
-	//std::cout<<syst.index<<" pu "<<w<<std::endl;
 
 	// Trigger efficiency scale factor
 	w *= ana.get_syst_weight(settings.triggerEffScaleFactor, settings.triggerEffUncertainty, syst.nSigmaTrigger[syst.index]);
-	//std::cout<<syst.index<<" trig "<<w<<std::endl;
 
 	// Jet Energy Scale uncertainty
 	// Rescale jet 4-momenta
 	ana.rescale_jets(data, syst.index, syst.nSigmaJEC[syst.index]);
 
+	// Hadronic top-tagging scale factor
+	if (settings.applyHadTopTagSF)
+	  w *= ana.get_top_tagging_sf(data, syst.nSigmaHadTopTagSF[syst.index]);
+
+	// Jet pT reweighting
+	if (settings.doJetPtReweighting)
+	  w *= ana.get_jet_pt_weight(data, syst.nSigmaJetPt[syst.index]);
+
+	// Theory weights
 	// LHE weight variations
 	// More info about them here:
 	// https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L165-L237
@@ -381,14 +397,12 @@ int main(int argc, char** argv) {
 	// If vector was not filled (LO samples), not doing any weighting
 	if ( data.syst_alphas.Weights.size() == 2 )
 	  w *= ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS[syst.index], data.evt.LHA_PDF_ID);
-	//std::cout<<syst.index<<" alpha_s "<<w<<std::endl;
 
 	// Scale variations
 	// A set of six weights, unphysical combinations excluded
 	// If numScale=0 is specified, not doing any weighting
 	if ( syst.numScale[syst.index] >= 1 && syst.numScale[syst.index] <= 3 )
 	  w *= ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
-	//std::cout<<syst.index<<" scale "<<w<<std::endl;
 
 	// PDF weights
 	// A set of 100 weights for the nominal PDF
@@ -397,7 +411,6 @@ int main(int argc, char** argv) {
 	  w *= data.syst_pdf.Weights[syst.numPdf[syst.index]-1];
 	else if ( syst.numPdf[syst.index] > data.syst_pdf.Weights.size() )
 	  utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
-	//std::cout<<syst.index<<" pdf "<<w<<std::endl;
 
 	// Analysis specific weights (comes last, as things may depend on jet energy)
 	w *= ana.get_analysis_weight(data);

@@ -1620,6 +1620,7 @@ private:
 	}
       }
       for (int i=(int)vh_max.size()-1; i>=0; --i) s->Add(vh_max[i]);
+      s->SetTitle(std::to_string(vh_max.size()).c_str());
       s->Draw(n_nostack_ ? "SAMEHIST" : "HIST");
       for (int i=n_nostack_-1; i>=(int)skip; --i)
 	hvec[i]->Draw(i==0 ? "SAMEPE1" : "SAMEHIST");
@@ -1649,71 +1650,73 @@ private:
       // Histos
       TH1D* Data = (TH1D*)c->GetListOfPrimitives()->At(0);
       THStack* MCstack = (THStack*)c->GetListOfPrimitives()->At(1);
-      TH1D* ratio = (TH1D*)Data->Clone();
-      TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
-      for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) mc_sum->Add((TH1D*)MCstack->GetHists()->At(iStack)->Clone());
-      ratio->Divide(mc_sum);
-      // Legend
-      TLegend* leg = 0;
-      // Remove Non-Data non-stack plots (eg. signal)
-      std::vector<TH1D*> rest;
-      // indices:
-      // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
-      for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
-	std::string prim_name = c->GetListOfPrimitives()->At(i)->GetName();
-	if (prim_name=="TPave") leg = (TLegend*)c->GetListOfPrimitives()->At(i);
-	else if (!remove&&prim_name!=Data->GetName())
-	  rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
+      if (std::string(MCstack->GetTitle())!="0") {
+        TH1D* ratio = (TH1D*)Data->Clone();
+        TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
+        for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) mc_sum->Add((TH1D*)MCstack->GetHists()->At(iStack)->Clone());
+        ratio->Divide(mc_sum);
+        // Legend
+        TLegend* leg = 0;
+        // Remove Non-Data non-stack plots (eg. signal)
+        std::vector<TH1D*> rest;
+        // indices:
+        // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
+        for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
+          std::string prim_name = c->GetListOfPrimitives()->At(i)->GetName();
+          if (prim_name=="TPave") leg = (TLegend*)c->GetListOfPrimitives()->At(i);
+          else if (!remove&&prim_name!=Data->GetName())
+            rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
+        }
+        if (remove) {
+          for (int i=leg->GetListOfPrimitives()->GetEntries(); i>0; --i) {
+            bool match = 0;
+            std::string name = ((TLegendEntry*)leg->GetListOfPrimitives()->At(i))->GetObject()->GetName();
+            for (int j=0; j<MCstack->GetHists()->GetEntries(); ++j) if (name==MCstack->GetHists()->At(j)->GetName()) match = 1;
+            if (!match) leg->GetListOfPrimitives()->RemoveAt(i);
+          }
+        }
+        // Styles
+        Data->SetLabelSize(20.0/(y1+40),"xyz");
+        ratio->SetTitleSize(32.0/(y2+60+mid2),"xyz");
+        ratio->SetLabelSize(20.0/(y2+60+mid2),"xyz");
+        ratio->GetYaxis()->SetRangeUser(0,2);
+        ratio->GetYaxis()->SetNdivisions(305);
+        ratio->GetYaxis()->SetTitle("Ratio");
+        ratio->GetYaxis()->SetTitleOffset(0.45);
+        ratio->SetTitleSize(24.0/(y2+60+mid2),"y");
+        ratio->SetTitle("");
+        ratio->SetMarkerStyle(20);
+        ratio->SetMarkerColor(1);
+        ratio->SetLineColor(1);
+        // Canvas
+        bool logScale = c->GetLogy();
+        c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), 604,626+(y1-500)+y2+mid2); // 600, 600
+        c->Divide(1,2);
+        // Pad 1 (80+500+20 x 40+500)
+        TVirtualPad* p = c->cd(1);
+        p->SetPad(0,(y2+60+mid2)/(y1+y2+100.0+mid2),1,1);
+        p->SetTopMargin(40.0/(y1+40));
+        p->SetBottomMargin(0);
+        if (logScale) p->SetLogy(1);
+        Data->Draw("PE1");
+        MCstack->Draw("SAMEHIST");
+        for (size_t i=0; i<rest.size(); ++i) rest[i]->Draw("SAMEHIST");
+        Data->Draw("SAMEPE1");
+        leg->Draw("SAME");
+        gPad->Update();
+        // Pad 2 (80+500+20 x 200+60)
+        p = c->cd(2);
+        p->SetGrid(0,1);
+        p->SetPad(0,0,1,(y2+60+mid2)/(y1+y2+100.0+mid2));
+        p->SetTopMargin(((double)mid2)/(y2+60+mid2));
+        p->SetBottomMargin(60.0/(y2+60+mid2));
+        ratio->Draw("PE1");
+        TLine* l = new TLine(ratio->GetXaxis()->GetXmin(), 1, ratio->GetXaxis()->GetXmax(), 1);
+        l->SetLineWidth(2);
+        //l->SetLineColor(2);
+        l->SetLineStyle(2);
+        l->Draw();
       }
-      if (remove) {
-	for (int i=leg->GetListOfPrimitives()->GetEntries(); i>0; --i) {
-	  bool match = 0;
-	  std::string name = ((TLegendEntry*)leg->GetListOfPrimitives()->At(i))->GetObject()->GetName();
-	  for (int j=0; j<MCstack->GetHists()->GetEntries(); ++j) if (name==MCstack->GetHists()->At(j)->GetName()) match = 1;
-	  if (!match) leg->GetListOfPrimitives()->RemoveAt(i);
-	}
-      }
-      // Styles
-      Data->SetLabelSize(20.0/(y1+40),"xyz");
-      ratio->SetTitleSize(32.0/(y2+60+mid2),"xyz");
-      ratio->SetLabelSize(20.0/(y2+60+mid2),"xyz");
-      ratio->GetYaxis()->SetRangeUser(0,2);
-      ratio->GetYaxis()->SetNdivisions(305);
-      ratio->GetYaxis()->SetTitle("Ratio");
-      ratio->GetYaxis()->SetTitleOffset(0.45);
-      ratio->SetTitleSize(24.0/(y2+60+mid2),"y");
-      ratio->SetTitle("");
-      ratio->SetMarkerStyle(20);
-      ratio->SetMarkerColor(1);
-      ratio->SetLineColor(1);
-      // Canvas
-      bool logScale = c->GetLogy();
-      c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), 604,626+(y1-500)+y2+mid2); // 600, 600
-      c->Divide(1,2);
-      // Pad 1 (80+500+20 x 40+500)
-      TVirtualPad* p = c->cd(1);
-      p->SetPad(0,(y2+60+mid2)/(y1+y2+100.0+mid2),1,1);
-      p->SetTopMargin(40.0/(y1+40));
-      p->SetBottomMargin(0);
-      if (logScale) p->SetLogy(1);
-      Data->Draw("PE1");
-      MCstack->Draw("SAMEHIST");
-      for (size_t i=0; i<rest.size(); ++i) rest[i]->Draw("SAMEHIST");
-      Data->Draw("SAMEPE1");
-      leg->Draw("SAME");
-      gPad->Update();
-      // Pad 2 (80+500+20 x 200+60)
-      p = c->cd(2);
-      p->SetGrid(0,1);
-      p->SetPad(0,0,1,(y2+60+mid2)/(y1+y2+100.0+mid2));
-      p->SetTopMargin(((double)mid2)/(y2+60+mid2));
-      p->SetBottomMargin(60.0/(y2+60+mid2));
-      ratio->Draw("PE1");
-      TLine* l = new TLine(ratio->GetXaxis()->GetXmin(), 1, ratio->GetXaxis()->GetXmax(), 1);
-      l->SetLineWidth(2);
-      //l->SetLineColor(2);
-      l->SetLineStyle(2);
-      l->Draw();
     }
   }
   

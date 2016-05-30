@@ -1,7 +1,7 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
 
-#include "Analysis_Changgi.h" // Specify here the implementations for you Analysis
+#include "Analysis_Viktor.h" // Specify here the implementations for you Analysis
 
 struct settings {
 
@@ -12,8 +12,10 @@ struct settings {
     runOnSkim                ( RunOnSkim ),
     saveSkimmedNtuple        ( false ),
     doPileupReweighting      ( true ),
-    varySystematics          ( true ),
-    systematicsFileName      ( "systematics/2016_05_26.txt" ),
+    applyHadTopTagSF         ( true ),
+    doJetPtReweighting       ( false ),
+    varySystematics          ( false ),
+    systematicsFileName      ( "systematics/2016_05_27.txt" ),
     treeName                 ( RunOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName        ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
@@ -36,6 +38,8 @@ struct settings {
   const bool runOnSkim;
   const bool saveSkimmedNtuple;
   const bool doPileupReweighting;
+  const bool applyHadTopTagSF;
+  const bool doJetPtReweighting;
   const bool varySystematics;
   const std::string systematicsFileName;
   const std::string treeName;
