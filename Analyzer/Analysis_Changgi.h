@@ -72,10 +72,10 @@ Analysis::pass_skimming(DataStruct& data)
 void
 Analysis::define_selections(const DataStruct& data)
 {
-  // cut1: njet >= 1
+  // cut1: njet >= 3 // cut from thesis
   analysis_cuts.push_back({ .name="1jet",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0;
+			      if (data.jetsAK8Puppi.size<3) return 0;
 			      return 1;
 			    } });
 
@@ -109,44 +109,35 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut6: jet 1 pt >= 400
-  // cut6: jet 1 pt >= 200  // cut from thesis
+  // cut6: one of jet pt >= 200  // cut from thesis
   analysis_cuts.push_back({ .name="jet1_pt",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      if (data.jetsAK8Puppi.Pt[0]<200) return 0;
 			      return 1;
 			    } });
-  // cut7: jet 2 pt >= 400
-  // cut7: jet 2 pt >= 200  // cut from thesis
-  analysis_cuts.push_back({ .name="jet2_pt",   .func = [&data](){
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      if (data.jetsAK8Puppi.Pt[1]<200) return 0;
-			      return 1;
-			    } });
 
-
-  // cut8: 110 <= jet 1 mass (softdrop) < 210
-  // cut8: 70  <= jet 1 mass (softdrop) < 100 // cut from thesis
+  // cut7: 110 <= jet 1 mass (softdrop) < 210
+  // cut7: 70  <= jet 1 mass (softdrop) < 100 // cut from thesis
   analysis_cuts.push_back({ .name="jet1_mass", .func = [&data](){
             // Define cut function here:
             if (data.jetsAK8Puppi.size<1) return 0; // for safety
-            if (data.jetsAK8Puppi.softDropMass[0]< 100.) return 0;
-            if (data.jetsAK8Puppi.softDropMass[0]>= 70.) return 0;
+            if (data.jetsAK8Puppi.softDropMass.at(0)< 100.) return 0;
+            if (data.jetsAK8Puppi.softDropMass.at(0)>= 70.) return 0;
             return 1;
           } });
 
-  // cut9: 110 <= jet 2 mass (softdrop) < 210
-  // cut9: 70  <= jet 2 mass (softdrop) < 100 // cut from thesis
+  // cut8: 110 <= jet 2 mass (softdrop) < 210
+  // cut8: 70  <= jet 2 mass (softdrop) < 100 // cut from thesis
   analysis_cuts.push_back({ .name="jet2_mass", .func = [&data](){
             // Define cut function here:
             if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            if (data.jetsAK8Puppi.softDropMass[1]< 100.) return 0;
-            if (data.jetsAK8Puppi.softDropMass[1]>= 70.) return 0;
+            if (data.jetsAK8Puppi.softDropMass.at(1)< 100.) return 0;
+            if (data.jetsAK8Puppi.softDropMass.at(1)>= 70.) return 0;
             return 1;
           } });
 
-  // cut10: Full-hadronic trigger
+  // cut9: Full-hadronic trigger
   analysis_cuts.push_back({ .name="hlt_ak8ht700_mass50", .func = [&data](){
   //analysis_cuts.push_back({ .name="hlt_pfht800", .func = [&data](){
   //analysis_cuts.push_back({ .name="hlt_pfjet450", .func = [&data](){
@@ -381,7 +372,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     h_nhadtop->Fill(nLooseIDHadTopTagJets, weight);
     h_nhadw  ->Fill(nLooseIDHadWTagJets, weight);
     
-    if (_apply_ncut(10)){
+    if (_apply_ncut(9)){
     h_ht_gen->Fill(data.evt.Gen_Ht, weight);  // in ntuple
     h_ht_AK4->Fill(AK4_Ht, weight);           // Calculated in AnalysisBase.h
     h_ht_AK4Puppi->Fill(AK4Puppi_Ht, weight); // Calculated in AnalysisBase.h
@@ -453,7 +444,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
   
   // Vary systematics and save each variation into a different historgam
   // Switch on settings.varySystematics to be effective
-  if (_apply_ncut(10)){
+  if (_apply_ncut(9)){
      vh_jet1_pt[syst_index]->Fill(data.jetsAK8.Pt[0], weight);
      vh_AK8Puppi_jet1_pt[syst_index]->Fill(data.jetsAK8Puppi.Pt[0], weight);
      vh_AK4_jet1_pt[syst_index]->Fill(data.jetsAK4.Pt[0], weight);
