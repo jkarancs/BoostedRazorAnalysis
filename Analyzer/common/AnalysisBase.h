@@ -43,7 +43,7 @@ public:
 
   double get_top_tagging_sf(DataStruct&, const double&);
 
-  double get_jet_pt_weight(DataStruct&, const double&);
+  double get_ht_weight(DataStruct&, const double&);
 
   double get_alphas_weight(const std::vector<float>&, const double&, const int&);
 
@@ -165,17 +165,49 @@ AnalysisBase::define_preselections(const DataStruct& data)
    - Loose selection: e(S) = 51.2%, e(B) = 3% WP
    - AK8 Puppi jets
    - 105 < SD Mass < 200
-   - tau32 < 0.84
+   - tau32 < 0.67
 */
 
+#define USE_BTAG 0
+
+#if USE_BTAG == 0
+
 #define TOP_PT_CUT            400
-#define TOP_SD_MASS_CUT_LOW   105 // prev 110
-#define TOP_SD_MASS_CUT_HIGH  200 // prev 210
-#define TOP_TAU32_CUT        0.67 // prev 0.75
+#define TOP_SD_MASS_CUT_LOW   105 // prev 74X 110
+#define TOP_SD_MASS_CUT_HIGH  200 // prev 74X 210
+#define TOP_TAU32_CUT        0.67 // prev 74X 0.75
+
 #define TOP_TAG_SF_LOW       0.97
 #define TOP_TAG_SF_LOW_ERR   0.09
 #define TOP_TAG_SF_HIGH      0.99
 #define TOP_TAG_SF_HIGH_ERR  0.18
+
+/*
+  Latest TOP Tagging working point (08 June 2016)
+
+   Latest WPs/SFs not yet on twiki (Gregor Kasieczka et al.):
+   https://indico.cern.ch/event/540674/contributions/2196235/attachments/1287602/1915958/TopTagging_2016-06-08.pdf
+   
+   Choose:
+   - Loose selection: e(S) = 56.6%, e(B) = 3% WP
+   - AK8 Puppi jets
+   - 105 < SD Mass < 210
+   - tau32 < 0.8
+   - max subjet BTag CSV > 0.46
+*/
+
+#else
+#define TOP_PT_CUT            400
+#define TOP_SD_MASS_CUT_LOW   105
+#define TOP_SD_MASS_CUT_HIGH  210
+#define TOP_TAU32_CUT        0.80
+#define TOP_BTAG_CSV         0.46
+
+#define TOP_TAG_SF_LOW       1.21
+#define TOP_TAG_SF_LOW_ERR   0.16
+#define TOP_TAG_SF_HIGH      0.82
+#define TOP_TAG_SF_HIGH_ERR  0.20
+#endif
 
 /* 
    W tagging working points:
@@ -198,12 +230,15 @@ AnalysisBase::define_preselections(const DataStruct& data)
 
 // AK8 jets
 std::vector<int> passLooseJetID;
+std::vector<int> passSubjetBTag;
 std::vector<int> passHadTopTag;
 std::vector<int> passHadTopPreTag;
 std::vector<int> passHadWTag;
+std::vector<double> subjetBTagDiscr;
 
 // Event
 unsigned int nLooseJet;
+unsigned int nSubjetBTag;
 unsigned int nHadTopTag;
 unsigned int nHadTopPreTag;
 unsigned int nHadWTag;
@@ -215,11 +250,14 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   // It only makes sense to calculate certain variables only once if they don't depend on jet energy
   if (syst_index == 0) {
     nLooseJet = 0;
+    nSubjetBTag = 0;
     passLooseJetID.clear();
+    passSubjetBTag.clear();
+    subjetBTagDiscr.clear();
 
-    // Jet ID - Loose (Fractions should not depend on JEC)
     // Loop on AK8 Puppi jets
     while(data.jetsAK8Puppi.Loop()) {
+      // Jet ID - Loose (Fractions should not depend on JEC)
       double eta = data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it];
       double nhf = data.jetsAK8Puppi.neutralHadronEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
       double nemf = data.jetsAK8Puppi.neutralEmEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
@@ -232,6 +270,32 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
         || ( nemf<0.9 && NumNeutralParticle>10 && fabs(eta)>3.0 );
       passLooseJetID.push_back(pass_Loose_ID);
       if (pass_Loose_ID) nLooseJet++;
+
+      // Match AK8 Puppi jets to CHS jets
+      TLorentzVector jet; jet.SetPtEtaPhiE(data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it], data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it], 
+					   data.jetsAK8Puppi.Phi[data.jetsAK8Puppi.it], data.jetsAK8Puppi.E[data.jetsAK8Puppi.it]);
+      double match_dR = 9999;
+      unsigned int match_it = 9999;
+      while(data.jetsAK8.Loop()) {
+        TLorentzVector jetCHS; jetCHS.SetPtEtaPhiE(data.jetsAK8.Pt[data.jetsAK8.it], data.jetsAK8.Eta[data.jetsAK8.it],
+						   data.jetsAK8.Phi[data.jetsAK8.it], data.jetsAK8.E[data.jetsAK8.it]);
+        double dR = jet.DeltaR(jetCHS);
+        if (dR < match_dR) {
+          match_dR = dR;
+          match_it = data.jetsAK8.it;
+        }
+      }
+      // Maximum Subjet btag discriminator
+      // Puppi jets doesn't store them correctly, get them from CHS jets for now
+      double subjet_btag_discr = (match_dR<0.1) ? data.jetsAK8.CSVv2[match_it] : -9999;
+#if USE_BTAG == 1
+      passSubjetBTag.push_back((subjet_btag_discr>= TOP_BTAG_CSV));
+      if (subjet_btag_discr >= TOP_BTAG_CSV) ++nSubjetBTag;
+#else
+      passSubjetBTag.push_back((subjet_btag_discr>= 0.46));
+      if (subjet_btag_discr >= 0.46) ++nSubjetBTag;
+#endif
+      subjetBTagDiscr.push_back(subjet_btag_discr);
     }
   }
 
@@ -275,8 +339,14 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       passHadTopPreTag[data.jetsAK8Puppi.it] = 1;
       ++nHadTopPreTag;
       if (tau32 < TOP_TAU32_CUT) {
-	passHadTopTag[data.jetsAK8Puppi.it] = 1;
-	++nHadTopTag;
+#if USE_BTAG == 1
+	if (passSubjetBTag[data.jetsAK8Puppi.it]) {
+#endif
+	  passHadTopTag[data.jetsAK8Puppi.it] = 1;
+	  ++nHadTopTag;
+#if USE_BTAG == 1
+	}
+#endif
       }
     }
     
@@ -401,7 +471,7 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
   // Read gluino xsec from same file used in TTree step
   for (size_t i=0, n=vname_xsec.size(); i<n; ++i) 
     for (int binx=1, nbinx=vh_xsec_signal[i]->GetNbinsX(); binx<=nbinx; ++binx) {
-      double mGlu = vh_xsec_signal[i]->GetBinCenter(binx);
+      double mGlu = vh_xsec_signal[i]->GetXaxis()->GetBinCenter(binx);
       xsec_glu[binx] = GetGluinoXSec(mGlu).first; // first: mean xsec, second: error
       for (int biny=1, nbiny=vh_xsec_signal[i]->GetNbinsY(); biny<=nbiny; ++biny)
 	vh_xsec_signal[i]->SetBinContent(binx, biny, xsec_glu[binx]);
@@ -489,20 +559,9 @@ double
 AnalysisBase::get_syst_weight(const double& weight_nominal, const double& uncertainty, const double& nSigma)
 {
   double w = weight_nominal;
-  if (nSigma == 0) {
-    return w;
-  } else {
-    // Compute the weight according to the systematic variation considered
-    // Use difference between nominal and up/down as 1 sigma variation 
-    double dw_up = weight_nominal * uncertainty;
-    double dw_down = -1.0 * dw_up;
-    if (nSigma >= 0.) {
-      w += nSigma*dw_up; 
-    } else {
-      w += nSigma*dw_down;
-    }
-    return w; 
-  }
+  // Use symmetrical difference for up/down variation
+  if (nSigma!=0.) w *= 1.0 + nSigma * uncertainty;
+  return w;
 }
 
 
@@ -551,18 +610,23 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
   }
   if (nSigmaJEC != 0) {
     // AK4 CHS jets
+    AK4_Ht = 0;
     while(data.jetsAK4.Loop()) {
       double scale = get_syst_weight(1.0, data.jetsAK4.jecUncertainty[data.jetsAK4.it], nSigmaJEC);
       data.jetsAK4.Pt[data.jetsAK4.it] = AK4_Pt[data.jetsAK4.it] * scale;
       data.jetsAK4.E[data.jetsAK4.it]  = AK4_E[data.jetsAK4.it]  * scale;
+      AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];    
     }
     // AK4 Puppi jets
+    AK4Puppi_Ht = 0;
     while(data.jetsAK4Puppi.Loop()) {
       double scale = get_syst_weight(1.0, data.jetsAK4Puppi.jecUncertainty[data.jetsAK4Puppi.it], nSigmaJEC);
       data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it] = AK4Puppi_Pt[data.jetsAK4Puppi.it] * scale;
       data.jetsAK4Puppi.E[data.jetsAK4Puppi.it]  = AK4Puppi_E[data.jetsAK4Puppi.it]  * scale;
+      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
     }
     // AK8 CHS jets
+    data.evt.Ht = 0;
     while(data.jetsAK8.Loop()) {
       double scale = get_syst_weight(1.0, data.jetsAK8.jecUncertainty[data.jetsAK8.it], nSigmaJEC);
       data.jetsAK8.Pt[data.jetsAK8.it]           = AK8_Pt[data.jetsAK8.it]           * scale;
@@ -571,8 +635,10 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
       data.jetsAK8.trimmedMass[data.jetsAK8.it]  = AK8_trimmedMass[data.jetsAK8.it]  * scale;
       data.jetsAK8.prunedMass[data.jetsAK8.it]   = AK8_prunedMass[data.jetsAK8.it]   * scale;
       data.jetsAK8.filteredMass[data.jetsAK8.it] = AK8_filteredMass[data.jetsAK8.it] * scale;
+      data.evt.Ht += data.jetsAK8.Pt[data.jetsAK8.it];
     }
     // AK8 Puppi jets
+    AK8Puppi_Ht = 0;
     while(data.jetsAK8Puppi.Loop()) {
       double scale = get_syst_weight(1.0, data.jetsAK8Puppi.jecUncertainty[data.jetsAK8Puppi.it], nSigmaJEC);
       data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it]           = AK8Puppi_Pt[data.jetsAK8Puppi.it]           * scale;
@@ -581,6 +647,7 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
       data.jetsAK8Puppi.trimmedMass[data.jetsAK8Puppi.it]  = AK8Puppi_trimmedMass[data.jetsAK8Puppi.it]  * scale;
       data.jetsAK8Puppi.prunedMass[data.jetsAK8Puppi.it]   = AK8Puppi_prunedMass[data.jetsAK8Puppi.it]   * scale;
       data.jetsAK8Puppi.filteredMass[data.jetsAK8Puppi.it] = AK8Puppi_filteredMass[data.jetsAK8Puppi.it] * scale;
+      AK8Puppi_Ht += data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
     }
   }
 }
@@ -600,34 +667,57 @@ AnalysisBase::get_top_tagging_sf(DataStruct& data, const double& nSigmaHadTopTag
     if (data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it]!=0) tau32 /= data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
     else tau32 = 9999;
     if (pt >= TOP_PT_CUT && sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH && tau32 < TOP_TAU32_CUT) {
-      // Top-tagged AK8 jets
-      if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 400 && data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] < 550)
-        w *= get_syst_weight(TOP_TAG_SF_LOW, TOP_TAG_SF_LOW_ERR, nSigmaHadTopTagSF);
-      else if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 550)
-        w *= get_syst_weight(TOP_TAG_SF_HIGH, TOP_TAG_SF_HIGH_ERR, nSigmaHadTopTagSF);
+#if USE_BTAG == 1
+      if (passSubjetBTag[data.jetsAK8Puppi.it]) {
+#endif
+	// Top-tagged AK8 jets
+	if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 400 && data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] < 550)
+	  w *= get_syst_weight(TOP_TAG_SF_LOW, TOP_TAG_SF_LOW_ERR, nSigmaHadTopTagSF);
+	else if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 550)
+	  w *= get_syst_weight(TOP_TAG_SF_HIGH, TOP_TAG_SF_HIGH_ERR, nSigmaHadTopTagSF);
+#if USE_BTAG == 1
+      }
+#endif
     }
   }
 
   return w;
 }
 
- 
-//____________________________________________________
-//               Jet pT reweighting
-double
-AnalysisBase::get_jet_pt_weight(DataStruct& data, const double& nSigmaJetPt)
-{
-  // Use linear function calculated by scripts/JetPtScaleFactors.C script
-  // reweight event corresponding to the product of SFs for each jet
-  // linear function: p0 + p1 * jet pt
 
-  const double p0 = 0.970718;
-  const double p1 = -0.000331894;
+//____________________________________________________
+//                  HT reweighting
+
+// Silver JSON
+/*
+const double p0[2]     = { 1.16434, 1.00188 };
+const double p0_err[2] = { 0.00459931, 0.0266651 };
+const double p1[2]     = { -0.000142391, -7.80628e-05 };
+const double p1_err[2] = { 3.62929e-06, 1.11035e-05 };
+*/
+
+// Golden JSON
+const double p0[2]     = { 1.17155, 1.00513 };
+const double p0_err[2] = { 0.00477137, 0.028861 };
+const double p1[2]     = { -0.000143935, -7.81881e-05 };
+const double p1_err[2] = { 3.79477e-06, 1.20209e-05 };
+
+double
+AnalysisBase::get_ht_weight(DataStruct& data, const double& nSigmaHT)
+{
+  // Using method described by Julie Hogan:
+  // https://indico.cern.ch/event/508384/contributions/2029874/attachments/1255336/1852975/JetRwtIssues_B2GWkshp_040816.pdf
+  // Use linear functions calculated with scripts/CalcHTScaleFactors.C macro
+  // linear function(s): p0 + p1 * HT
+
+  // Calculate unscaled jet HT
+  double ht = 0; for (auto pt : AK8Puppi_Pt) ht += pt;
 
   double w = 1.0;
-  while(data.jetsAK8Puppi.Loop()) {
-    w *= p0 + p1 * data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
-  }
+  if (ht>=800&&ht<2000)
+    w *= get_syst_weight(p0[0], p0_err[0]/p0[0], nSigmaHT) + get_syst_weight(p1[0], p1_err[0]/p1[0], nSigmaHT) * ht;
+  else if (ht>=2000)
+    w *= get_syst_weight(p0[1], p0_err[1]/p0[1], nSigmaHT) + get_syst_weight(p1[1], p1_err[1]/p1[1], nSigmaHT) * ht;
 
   return w;
 }
@@ -685,20 +775,20 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
     and rescale weight difference the usual way by desired nSigma
   */
   double w_scale = 1;
-  double w_scale_up = 1;
-  double w_scale_down = 1;
+  double w_scale_up = 1;   // Corresponds to 0.5 (More signal events)
+  double w_scale_down = 1; // Corresponds to 2.0 (Less signal events)
   if (numScale==1) {
-    // fix mu_r = 1.0, vary mu_f = 2.0, 0.5
-    w_scale_up   = scale_Weights[0];
-    w_scale_down = scale_Weights[1];
+    // fix mu_r = 1.0, vary mu_f = 0,5, 2.0
+    w_scale_up   = scale_Weights[1];
+    w_scale_down = scale_Weights[0];
   } else if (numScale==2) {
-    // fix mu_f = 1.0, vary mu_r = 2.0, 0.5
-    w_scale_up   = scale_Weights[2];
-    w_scale_down = scale_Weights[4];
+    // fix mu_f = 1.0, vary mu_r = 0,5, 2.0
+    w_scale_up   = scale_Weights[4];
+    w_scale_down = scale_Weights[2];
   } else if (numScale==3) {
-    // vary simulataneously mu_r = mu_f = 2.0, 0.5
-    w_scale_up   = scale_Weights[3];
-    w_scale_down = scale_Weights[5];
+    // vary simulataneously mu_r = mu_f = 0,5, 2.0
+    w_scale_up   = scale_Weights[5];
+    w_scale_down = scale_Weights[3];
   }
   w_scale = get_syst_weight(w_scale, w_scale_up, w_scale_down, nSigmaScale);
   return w_scale;

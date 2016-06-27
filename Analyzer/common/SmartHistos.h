@@ -520,21 +520,18 @@ private:
   // ************** Systematic Unc. Calculation **************
   void calc_syst_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
     for (int binx=1; binx<=h2d->GetNbinsX(); ++binx) {
-      double mean = 0, sum_diff_sqr = 0;
-      for (int biny=1; biny<=h2d->GetNbinsY(); ++biny) {
-	double cont = h2d->GetBinContent(binx, biny);
-	double stat_err = h2d->GetBinError(binx, biny);
-	if (biny==1) {
-	  mean = cont;
-	  sum_diff_sqr += stat_err*stat_err;
-	} else {
-	  double syst_err = mean-cont;
-	  sum_diff_sqr += syst_err*syst_err;
+      double mean = h2d->GetBinContent(binx, 1);
+      // Statistical error
+      double variance = h2d->GetBinError(binx, 1)*h2d->GetBinError(binx, 1);
+      // Add systematic error to statistical error in quadrature
+      if (h2d->GetNbinsY()>=2) {
+	if (h2d->Integral(binx,binx,2,h2d->GetNbinsY())!=0) for (int biny=2; biny<=h2d->GetNbinsY(); ++biny) {
+	  double cont = h2d->GetBinContent(binx, biny);
+	  variance += (mean-cont)*(mean-cont)/(h2d->GetNbinsY()-1);
 	}
       }
-      double std_dev = sqrt(sum_diff_sqr/h2d->GetNbinsY()-1);
       h1d->SetBinContent(binx, mean);
-      h1d->SetBinError(binx, std_dev);
+      h1d->SetBinError  (binx, sqrt(variance));
     }
     h1d->SetEntries(h2d->GetEntries());
     if (savemother) mother_2d_[h1d]=h2d;
@@ -1448,13 +1445,13 @@ private:
     era_and_prelim_lat_(xmin, xmax, ymin, ymax, approval);
   }
   void era_and_prelim_lat_(double xmin, double xmax, double ymin, double ymax, bool approval, bool in=0) {
-    std::string era = "#sqrt{s}=13 TeV (25ns)";
-    TLatex* era_lat = new TLatex(xmax, ymax+(ymax-ymin)/25.0, era.c_str());
-    era_lat->SetTextAlign(32);
-    era_lat->SetTextSize(0.04);
-    era_lat->SetTextFont(42);
-    era_lat->SetLineWidth(2);
-    era_lat->Draw();
+    //std::string era = "#sqrt{s}=13 TeV (25ns)";
+    //TLatex* era_lat = new TLatex(xmax, ymax+(ymax-ymin)/25.0, era.c_str());
+    //era_lat->SetTextAlign(32);
+    //era_lat->SetTextSize(0.04);
+    //era_lat->SetTextFont(42);
+    //era_lat->SetLineWidth(2);
+    //era_lat->Draw();
     if (approval) {
       // Latex example: #font[22]{Times bold} and #font[12]{Times Italic}
       std::string prelim = "CMS #scale[0.8]{#font[52]{Preliminary 2015}}";
@@ -1627,10 +1624,19 @@ private:
     } else if (ratio_&&!plot_asymm_err_) {
       // Additionally draw ratio of first 2 plots
       TH1D* ratio = (TH1D*)hvec[0]->Clone();
-      ratio->Divide(hvec[1]);
+      TH1D* den_err = (TH1D*)hvec[1]->Clone();
+      // Instead of Divide(), scale the error of num, and plot error of den around 1
+      //ratio->Divide(hvec[1]);
+      for (int bin=1; bin<=ratio->GetNbinsX(); ++bin) {
+	ratio  ->SetBinContent(bin, hvec[0]->GetBinContent(bin)/hvec[1]->GetBinContent(bin));
+	ratio  ->SetBinError  (bin, hvec[0]->GetBinError(bin)  /hvec[1]->GetBinContent(bin));
+	den_err->SetBinContent(bin, 1);
+	den_err->SetBinError  (bin, hvec[1]->GetBinError(bin)  /hvec[1]->GetBinContent(bin));
+      }
       ratio->SetMarkerColor(417);
       ratio->SetMarkerStyle(22);
       ratio->SetLineColor(417);
+      den_err->Draw("SAME E2");
       ratio->Draw(same.c_str());
       leg->AddEntry(ratio, "#color[417]{Ratio}", "P");
     }
@@ -1654,7 +1660,24 @@ private:
         TH1D* ratio = (TH1D*)Data->Clone();
         TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
         for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) mc_sum->Add((TH1D*)MCstack->GetHists()->At(iStack)->Clone());
+	TH1D* den_err = (TH1D*)mc_sum->Clone("den_err");
+	// Instead of Divide(), scale the error of num, and plot error of den around 1
         ratio->Divide(mc_sum);
+	for (int bin=1; bin<=ratio->GetNbinsX(); ++bin) {
+	  if (mc_sum->GetBinContent(bin)!=0) {
+	    ratio  ->SetBinContent(bin, Data->GetBinContent(bin)/mc_sum->GetBinContent(bin));
+	    ratio  ->SetBinError  (bin, Data->GetBinError(bin)  /mc_sum->GetBinContent(bin));
+	    den_err->SetBinContent(bin, 1);
+	    den_err->SetBinError  (bin, mc_sum->GetBinError(bin)  /mc_sum->GetBinContent(bin));
+	  } else {
+	    ratio  ->SetBinContent(bin, 0);
+	    ratio  ->SetBinError  (bin, 0);
+	    den_err->SetBinContent(bin, 1);
+	    den_err->SetBinError  (bin, 0);
+	  }
+	}
+	den_err->SetFillColor(1);
+	den_err->SetFillStyle(3004);
         // Legend
         TLegend* leg = 0;
         // Remove Non-Data non-stack plots (eg. signal)
@@ -1711,6 +1734,7 @@ private:
         p->SetTopMargin(((double)mid2)/(y2+60+mid2));
         p->SetBottomMargin(60.0/(y2+60+mid2));
         ratio->Draw("PE1");
+	den_err->Draw("SAME E2");
         TLine* l = new TLine(ratio->GetXaxis()->GetXmin(), 1, ratio->GetXaxis()->GetXmax(), 1);
         l->SetLineWidth(2);
         //l->SetLineColor(2);
@@ -2061,7 +2085,7 @@ private:
     if (count) return hp_map_[name];
     else {
       std::cout<<"!!! ERROR: SmartHistos::get_hp_: FillParams with name = "<<name<<" was not found."<<std::endl;
-      return FillParams({.nbin=0,.bins={},.fill={ [](){return -9999.9;} },.axis_title=""});
+      return FillParams({.nbin=0,.bins={},.fill={ [](){return -9999.9;} },.axis_title="", .def_range={}, .bin_labels=std::map<int, std::string>()});
     }
   }
   

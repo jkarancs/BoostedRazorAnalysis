@@ -122,6 +122,7 @@ printclass( tree, "AK8CHSJetVars",      "jetsAK8",         ["jetAK8_"],         
 printclass( tree, "AK8PuppiJetVars",    "jetsAK8Puppi",    ["jetAK8Puppi_"],    1 )
 printclass( tree, "AK8CHSSubjetVars",   "subjetsAK8",      ["subjetAK8_"],      1 )
 printclass( tree, "AK8PuppiSubjetVars", "subjetsAK8Puppi", ["subjetAK8Puppi_"], 1 )
+printclass( tree, "AK8GenJetVars",      "genjetsAK8",      ["genjetAK8SD_"],    1 )
 
 print """
 };

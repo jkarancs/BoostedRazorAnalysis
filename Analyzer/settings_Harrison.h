@@ -8,24 +8,27 @@ struct settings {
   //-----------------------------------------------------------------------------
   // -- Constants
   //-----------------------------------------------------------------------------
-  settings( bool RunOnSkim = true ) :
-    runOnSkim                ( RunOnSkim ),
+  settings() :
+    runOnSkim                ( true ),
     saveSkimmedNtuple        ( false ),
     doPileupReweighting      ( true ),
     applyHadTopTagSF         ( true ),
-    doJetPtReweighting       ( false ),
-    varySystematics          ( false ),
-    systematicsFileName      ( "systematics/2016_05_27.txt" ),
-    treeName                 ( RunOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
-    totWeightHistoName       ( RunOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
-    mcPileupHistoName        ( RunOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
-    pileupDir                ( "pileup/Mar02_Silver_JSON/" ),
-    intLumi                  ( 2684.07 /* brilcalc - Mar02 Silver v2 ReReco JSON */ ), // Tot int lumi in (pb^-1),
+    scaleQCD                 ( true ),
+    doHTReweighting          ( true ),
+    varySystematics          ( true ),
+    systematicsFileName      ( "systematics/2016_06_24_noPdf.txt" ),
+    treeName                 ( runOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
+    totWeightHistoName       ( runOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
+    mcPileupHistoName        ( runOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
+    useJSON                  ( true ), // Default is not appliying any JSON, but Golden JSON (tighter selection) can be applied on top of the Default Silver JSON
+    jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions15/13TeV/Reprocessing/Cert_13TeV_16Dec2015ReReco_Collisions15_25ns_JSON_v2.txt" ),
+    pileupDir                ( useJSON ? "pileup/Mar02_Golden_JSON/" : "pileup/Mar02_Silver_JSON/" ),
+    intLumi                  ( useJSON ? 2318.278 : 2690.625  /* brilcalc - Mar02 Golden/Silver v2 ReReco JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.027 ),
     triggerEffScaleFactor    ( 1.0 ),
-    triggerEffUncertainty    ( 0.00 )
+    triggerEffUncertainty    ( 0.02 )
   {
-    if (RunOnSkim) {
+    if (runOnSkim) {
       totWeightHistoNamesSignal.push_back("totweight_T1tttt"); // T1tttt (use same histo for fast and fullsim)
       xsecHistoNamesSignal     .push_back("xsec_T1tttt");
     } else {
@@ -39,12 +42,15 @@ struct settings {
   const bool saveSkimmedNtuple;
   const bool doPileupReweighting;
   const bool applyHadTopTagSF;
-  const bool doJetPtReweighting;
+  const bool scaleQCD;
+  const bool doHTReweighting;
   const bool varySystematics;
   const std::string systematicsFileName;
   const std::string treeName;
   const std::string totWeightHistoName;
   const std::string mcPileupHistoName;
+  const bool useJSON;
+  const std::string jsonFileName;
   const std::string pileupDir;
   const double intLumi;
   const double lumiUncertainty;
@@ -999,6 +1005,14 @@ struct settings {
     //stream.select("subjetAK8Puppi_SV0mass", data.subjetsAK8Puppi.SV0mass);
     //stream.select("subjetAK8Puppi_SV1mass", data.subjetsAK8Puppi.SV1mass);
     //stream.select("subjetAK8Puppi_Keys", data.subjetsAK8Puppi.Keys);
+
+    stream.select("genjetAK8SD_size", data.genjetsAK8.size);
+    stream.select("genjetAK8SD_Pt", data.genjetsAK8.Pt);
+    stream.select("genjetAK8SD_Eta", data.genjetsAK8.Eta);
+    stream.select("genjetAK8SD_Phi", data.genjetsAK8.Phi);
+    stream.select("genjetAK8SD_E", data.genjetsAK8.E);
+    //stream.select("genjetAK8SD_Charge", data.genjetsAK8.Charge);
+
   }
 
 } settings;

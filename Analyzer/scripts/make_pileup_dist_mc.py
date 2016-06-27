@@ -4,7 +4,7 @@ import ROOT
 from SimGeneral.MixingModule.mix_2015_25ns_FallMC_matchData_PoissonOOTPU_cfi import mix
 numPileupBins = 100
 maxPileupBin  = 100
-outputfile = "pileup/Mar02_Silver_JSON/mc_pileup.root"
+outputfile = "pileup/Mar02_Golden_JSON/mc_pileup.root"
 
 # Write histogram to specified file
 f = ROOT.TFile.Open(outputfile, "recreate")

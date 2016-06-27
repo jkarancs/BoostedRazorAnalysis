@@ -1,4 +1,4 @@
-import os, sys, glob, time, multiprocessing, subprocess
+import os, sys, glob, time, logging, multiprocessing, subprocess
 
 # Parse command line arguments
 cmdargs = sys.argv
@@ -9,7 +9,7 @@ DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
 OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
 SKIMNAME="Skim_May21_1AK8JetPt300"
 EOSDIR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
-NPROC = 4 # Number of processors to use for Analyzer jobs
+NPROC = 3 # Number of processors to use for Analyzer jobs
 EXEC_PATH = os.getcwd()
 
 if "--skim" in options:
@@ -153,10 +153,18 @@ def logged_call(cmd, logfile):
     if opt_dry:
         subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
     else:
-        log = open(logfile, 'a')
-        proc = subprocess.Popen(cmd, stdout=log, stderr=log)
+        logger = logging.getLogger(logfile)
+        hdlr = logging.FileHandler(logfile)
+        logger.addHandler(hdlr)
+        logger.setLevel(logging.INFO)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if stdout:
+            logger.info(stdout)
+        if stderr:
+            logger.error(stderr)
         proc.wait()
-        log.close()
+        time.sleep(1)
 
 # Compile programs
 def compile(Ana = 1, Plotter = 1):
@@ -194,6 +202,7 @@ def analyzer_job((output_file, input_list, output_log)):
     if opt_skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
         logged_call(["lcg-cp", "-v", output_file, EOSDIR+outpath], output_log)
+    time.sleep(1)
     return output_file
 
 # Run all Analyzer jobs in parallel
@@ -205,14 +214,15 @@ def analysis(ana_arguments, nproc):
     saved_path = os.getcwd()
     workers = multiprocessing.Pool(processes=nproc)
     output_files = workers.map(analyzer_job, ana_arguments, chunksize=1)
+    workers.close()
+    workers.join()
     print "All Analyzer jobs finished."
     print
-    time.sleep(1)
     return output_files
 
 # Run Plotter, output of Analyzer is input for this code
 def plotter(input_files, output_file):
-    opt_dry
+    global opt_dry, EXEC_PATH
     print "Start plotting from output files"
     print
     saved_path = os.getcwd()

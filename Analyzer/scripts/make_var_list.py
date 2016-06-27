@@ -34,5 +34,6 @@ printvars( tree, "jetsAK8",         ["jetAK8_"] )
 printvars( tree, "jetsAK8Puppi",    ["jetAK8Puppi_"] )
 printvars( tree, "subjetsAK8",      ["subjetAK8_"] )
 printvars( tree, "subjetsAK8Puppi", ["subjetAK8Puppi_"] )
+printvars( tree, "genjetsAK8",      ["genjetAK8SD_"] )
 
 print "  }"

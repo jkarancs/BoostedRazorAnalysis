@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   // List names in filenames from which the code can decide if it is data or signal
   // For the rest it's assumed it's background MC
   // if .txt file is given as input then from the directory name we can already tell
-  std::vector<std::string> vname_data = { "2015B", "2015C", "2015D"};
+  std::vector<std::string> vname_data = { "2015B", "2015C", "2015D", "2016B", "2016C", "2016D", "2016E", "2016F" };
   std::vector<std::string> vname_signal = { "T1tttt" }; // T1tttt
 
   // ------------------------------
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaJEC         = std::vector<double>(1,0);
     std::vector<double> nSigmaHadTopTagSF = std::vector<double>(1,0);
-    std::vector<double> nSigmaJetPt       = std::vector<double>(1,0);
+    std::vector<double> nSigmaHT          = std::vector<double>(1,0);
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
     std::vector<unsigned int> numScale    = std::vector<unsigned int>(1,0);
@@ -133,7 +133,6 @@ int main(int argc, char** argv) {
     std::cout<<"Systematics read from file:"<<std::endl;
     while ( std::getline(systFile, line) ) {
       ++syst.nSyst;
-      std::cout<<" line "<<syst.nSyst<<": "<<line<<std::endl;
       std::stringstream nth_line;
       nth_line<<line;
       nth_line>>dbl; syst.nSigmaLumi.push_back(dbl);
@@ -141,11 +140,12 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJEC.push_back(dbl);
       nth_line>>dbl; syst.nSigmaHadTopTagSF.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaJetPt.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
       nth_line>>uint; syst.numScale.push_back(uint);
       nth_line>>uint; syst.numPdf.push_back(uint);
+      std::cout<<" line "<<syst.nSyst<<": "<<line<<std::endl;
     }
     std::cout<<std::endl;
 
@@ -179,6 +179,45 @@ int main(int argc, char** argv) {
   } else {
     cout << "varySystematics (settings): false" << endl;
   }
+
+
+  // ---------------------------------------------------------------------------
+  // -- Read and apply JSON file (Data)                                       --
+  // ---------------------------------------------------------------------------
+
+  std::map<int, std::map<int, bool> > json_run_ls;
+  if (settings.useJSON) {
+    cout << "useJSON (settings): true" << endl;
+    cout << "jsonFileName (settings): " << settings.jsonFileName << endl;
+    std::ifstream jsonFile(settings.jsonFileName.c_str());
+    if ( !jsonFile.good() ) utils::error("unable to open systematics file: " + settings.jsonFileName);
+
+    std::string line;
+    int run, ls_low, ls_high;
+    while ( std::getline(jsonFile, line, ' ') ) {
+      if (TString(line).Contains("\"")) {
+	std::stringstream run_str;
+	run_str<<line.substr(line.find("\"")+1, 6);
+	run_str>>run;
+      } else {
+	if (TString(line).Contains("[")) {
+	  std::stringstream ls_low_str;
+	  while (line.find("[")!=std::string::npos) line.erase(line.find("["),1);
+	  ls_low_str<<line;
+	  ls_low_str>>ls_low;
+	} else if (TString(line).Contains("]")) {
+	  std::stringstream ls_high_str;
+	  ls_high_str<<line;
+	  ls_high_str>>ls_high;
+	  for (int ls=ls_low; ls<=ls_high; ++ls)
+	    json_run_ls[run].insert(std::pair<int, bool>(ls, 1));
+	}
+      }
+    }
+  } else {
+    cout << "useJSON (settings): false" << endl;
+  }
+
 
   // ---------------------------------------------------------------------------
   // -- Declare histograms                                                    --
@@ -240,8 +279,11 @@ int main(int argc, char** argv) {
   // Hadronic top tagging scale factors
   cout << "applyHadTopTagSF (settings): " << ( settings.applyHadTopTagSF ? "true" : "false" ) << endl;
 
+  // Scale QCD to match data in a QCD dominated region
+  cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
+
   // Jet Pt Reweighting
-  cout << "doJetPtReweighting (settings): " << ( settings.doJetPtReweighting ? "true" : "false" ) << endl;
+  cout << "doHTReweighting (settings): " << ( settings.doHTReweighting ? "true" : "false" ) << endl;
 
   // ------------------------------------------------------------------------------
   // -- Define the order of cuts (and corresponding bins in the counts histogram --
@@ -290,60 +332,65 @@ int main(int argc, char** argv) {
       w = 1;
       syst.index = 0;
 
-      // Calculate variables that do not exist in the ntuple
-      ana.calculate_common_variables(data, syst.index);
-      ana.calculate_variables(data, syst.index);
+      // Only analyze events that are in the JSON file
+      if (settings.useJSON ? json_run_ls[data.evt.RunNumber][data.evt.LumiBlock] : 1) {
 
-      // Save counts (after each cuts)
-      ofile->count("NoCuts", w);
-      bool pass_all_cuts = true;
-      for (auto cut : ana.baseline_cuts) if (pass_all_cuts)
-	if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
+	// Calculate variables that do not exist in the ntuple
+	ana.calculate_common_variables(data, syst.index);
+	ana.calculate_variables(data, syst.index);
 
-      // _______________________________________________________
-      //                  BLINDING DATA
-
-      // Before doing anything serious (eg. filling any histogram)
-      // Define Signal region and blind it!!!!!!!!!!!!!!!!!!!!!!!!
-      bool DATA_BLINDED = ! ( cmdline.isData && ana.signal_selection(data) );
-
-      /*
-	Some more warning to make sure :)
-	_   _   _   ____    _        _____   _   _   _____    _____   _   _    _____   _   _   _ 
-	| | | | | | |  _ \  | |      |_   _| | \ | | |  __ \  |_   _| | \ | |  / ____| | | | | | |
-	| | | | | | | |_) | | |        | |   |  \| | | |  | |   | |   |  \| | | |  __  | | | | | |
-	| | | | | | |  _ <  | |        | |   | . ` | | |  | |   | |   | . ` | | | |_ | | | | | | |
-	|_| |_| |_| | |_) | | |____   _| |_  | |\  | | |__| |  _| |_  | |\  | | |__| | |_| |_| |_|
-	(_) (_) (_) |____/  |______| |_____| |_| \_| |_____/  |_____| |_| \_|  \_____| (_) (_) (_)
-      */
-
-      //________________________________________________________
-      //
-
-      if (DATA_BLINDED) {
-
-	// If option (saveSkimmedNtuple) is specified save all 
-	// skimmed events selected by the analysis to the output file
-	// tree is copied and current weight is saved as "eventWeight"
-	if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
-
-	// Apply analysis cuts and fill histograms
-	// These are all defined in [Name]_Analysis.cc (included from settings.h)
-	// You specify there also which cut is applied for each histo
-	// But all common baseline cuts are alreay applied above
-	if (!cmdline.noPlots) {
-	  if ( pass_all_cuts ) ana.fill_analysis_histos(data, syst.index, w);
-	}
-
-	// Save counts for the analysis cuts
-	for (auto cut : ana.analysis_cuts) if (pass_all_cuts)
+	// Save counts (after each cuts)
+	ofile->count("NoCuts", w);
+	bool pass_all_cuts = true;
+	for (auto cut : ana.baseline_cuts) if (pass_all_cuts)
 	  if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
 
-	// Count Signal events
-	if ( pass_all_cuts && ana.signal_selection(data) ) ofile->count("Signal", w);
+	// _______________________________________________________
+	//                  BLINDING DATA
 
-      } // end Blinding
-      
+	// Before doing anything serious (eg. filling any histogram)
+	// Define Signal region and blind it!!!!!!!!!!!!!!!!!!!!!!!!
+	bool DATA_BLINDED = ! ( cmdline.isData && ana.signal_selection(data) );
+
+	/*
+	  Some more warning to make sure :)
+	  _   _   _   ____    _        _____   _   _   _____    _____   _   _    _____   _   _   _ 
+	  | | | | | | |  _ \  | |      |_   _| | \ | | |  __ \  |_   _| | \ | |  / ____| | | | | | |
+	  | | | | | | | |_) | | |        | |   |  \| | | |  | |   | |   |  \| | | |  __  | | | | | |
+	  | | | | | | |  _ <  | |        | |   | . ` | | |  | |   | |   | . ` | | | |_ | | | | | | |
+	  |_| |_| |_| | |_) | | |____   _| |_  | |\  | | |__| |  _| |_  | |\  | | |__| | |_| |_| |_|
+	  (_) (_) (_) |____/  |______| |_____| |_| \_| |_____/  |_____| |_| \_|  \_____| (_) (_) (_)
+	*/
+
+	//________________________________________________________
+	//
+
+	if (DATA_BLINDED) {
+
+	  // If option (saveSkimmedNtuple) is specified save all 
+	  // skimmed events selected by the analysis to the output file
+	  // tree is copied and current weight is saved as "eventWeight"
+	  if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
+
+	  // Apply analysis cuts and fill histograms
+	  // These are all defined in [Name]_Analysis.cc (included from settings.h)
+	  // You specify there also which cut is applied for each histo
+	  // But all common baseline cuts are alreay applied above
+	  if (!cmdline.noPlots) {
+	    if ( pass_all_cuts ) ana.fill_analysis_histos(data, syst.index, w);
+	  }
+
+	  // Save counts for the analysis cuts
+	  for (auto cut : ana.analysis_cuts) if (pass_all_cuts)
+	    if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
+
+	  // Count Signal events
+	  if ( pass_all_cuts && ana.signal_selection(data) ) ofile->count("Signal", w);
+
+	} // end Blinding
+
+      } // end JSON file cut
+
     } // End DATA
     else {
       // Background and Signal MCs
@@ -356,10 +403,8 @@ int main(int argc, char** argv) {
 	// Lumi normalization
 	// Signals are binned so we get the total weight separately for each bin
 	if (cmdline.isSignal) {
-	  for (size_t i=0, n=vname_signal.size(); i<n; ++i) if (cmdline.signalName == vname_signal[i]) {
-	    int bin = vh_weightnorm_signal[i]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
-	    weightnorm = vh_weightnorm_signal[i]->GetBinContent(bin);
-	  }
+	  int bin = vh_weightnorm_signal[0]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
+	  weightnorm = vh_weightnorm_signal[0]->GetBinContent(bin);
 	}
 	// Normalize to chosen luminosity, also consider symmeteric up/down variation in lumi uncertainty
 	w *= ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);
@@ -382,9 +427,17 @@ int main(int argc, char** argv) {
 	if (settings.applyHadTopTagSF)
 	  w *= ana.get_top_tagging_sf(data, syst.nSigmaHadTopTagSF[syst.index]);
 
-	// Jet pT reweighting
-	if (settings.doJetPtReweighting)
-	  w *= ana.get_jet_pt_weight(data, syst.nSigmaJetPt[syst.index]);
+	// Scale QCD to match data in QCD dominated region
+	if (TString(cmdline.dirname).Contains("QCD")) {
+	  // Scale factor
+	  // value obtained with ROOT macro: scripts/CalcQCDNormFactor.C
+	  if (settings.scaleQCD)
+	    w *= settings.useJSON ? 0.776458 : 0.785087; // Golden/Silver JSON
+
+	  // HT reweighting
+	  if (settings.doHTReweighting)
+	    w *= ana.get_ht_weight(data, syst.nSigmaHT[syst.index]);
+	}
 
 	// Theory weights
 	// LHE weight variations

@@ -9,6 +9,7 @@ import os, re, sys, glob, socket, subprocess
 LATEST_NTUPLE_EOS="Skim_May21_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Apr13_edm_Apr01"
 #LATEST_NTUPLE_GRID18="Skim_Apr28_1AK8JetPt300"
+#LATEST_NTUPLE_GRID18="Jun08"
 LATEST_NTUPLE_GRID18="Skim_May21_1AK8JetPt300"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'

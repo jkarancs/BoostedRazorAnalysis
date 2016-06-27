@@ -2193,7 +2193,41 @@ public:
     }
     
   } subjetsAK8Puppi;
-  
+
+  class AK8GenJetVars {
+  public:
+    AK8GenJetVars() { init(); };
+
+    unsigned int size;
+    std::vector<float> Pt;
+    std::vector<float> Eta;
+    std::vector<float> Phi;
+    std::vector<float> E;
+    std::vector<float> Charge;
+
+    unsigned int it;
+
+    void init() {
+      it = -1;
+      size=9999;
+      init_vec(Pt);
+      init_vec(Eta);
+      init_vec(Phi);
+      init_vec(E);
+      init_vec(Charge);
+    }
+
+    bool Loop() {
+      ++it;
+      if (it<size) {
+        return 1;
+      } else {
+        it=-1;
+        return 0;
+      }
+    }
+
+  } genjetsAK8;
 
 };
 

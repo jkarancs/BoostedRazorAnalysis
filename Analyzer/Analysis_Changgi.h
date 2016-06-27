@@ -15,6 +15,7 @@ Analysis::~Analysis() { }
 
 unsigned int nLooseIDHadTopTagJets;
 unsigned int nLooseIDHadWTagJets;
+double dPhi;
 
 void
 Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
@@ -29,6 +30,15 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
       if (passHadWTag[data.jetsAK8Puppi.it]) ++nLooseIDHadWTagJets;
     }
   } // end of AK8 jet loop
+  
+  // Delta-phi
+  dPhi = -9999;
+  if (data.jetsAK8Puppi.size>=2) {
+    TLorentzVector jet1, jet2;
+    jet1.SetPtEtaPhiE(data.jetsAK8Puppi.Pt[0], data.jetsAK8Puppi.Eta[0], data.jetsAK8Puppi.Phi[0], data.jetsAK8Puppi.E[0]);
+    jet2.SetPtEtaPhiE(data.jetsAK8Puppi.Pt[1], data.jetsAK8Puppi.Eta[1], data.jetsAK8Puppi.Phi[1], data.jetsAK8Puppi.E[1]);
+    dPhi = fabs(jet1.DeltaPhi(jet2));
+  }
 }
 
 //_______________________________________________________
@@ -37,22 +47,7 @@ double
 Analysis::get_analysis_weight(DataStruct& data)
 {
   double w = 1;
-  
-  /*
-  //____________________________________________________
-  //               Jet pT reweighting
-  
-  // Use linear function calculated by scripts/JetPtScaleFactors.C script
-  // reweight event corresponding to the product of SFs for each jet
-  // linear function: p0 + p1 * jet pt
-  
-  const double p0 = 0.970718;
-  const double p1 = -0.000331894;
-  while(data.jetsAK8.Loop()) {
-    w *= p0 + p1 * data.jetsAK8.Pt[data.jetsAK8.it];
-  }
-  */
-  
+    
   return w;
 }
 
@@ -69,13 +64,18 @@ Analysis::pass_skimming(DataStruct& data)
   return (N_CHS >= 1 || N_Puppi >= 1);
 }
 
+
+#define R_CUT             0.4
+#define R_CUT_LOW         0.2
+#define DPHI_CUT          2.7
+
 void
 Analysis::define_selections(const DataStruct& data)
 {
-  // cut1: njet >= 1
-  analysis_cuts.push_back({ .name="1jet",   .func = [&data](){
+  // cut1: njet >= 2
+  analysis_cuts.push_back({ .name="2jet",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0;
+			      if (data.jetsAK8Puppi.size<2) return 0;
 			      return 1;
 			    } });
 
@@ -86,7 +86,14 @@ Analysis::define_selections(const DataStruct& data)
 			      return passLooseJetID[0];
 			    } });
 
-  // cut3: jet 1 eta < 2.4
+  // cut3: jet 2 pass loose jet id
+  analysis_cuts.push_back({ .name="jet2_id",   .func = [&data](){
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
+			      return passLooseJetID[1];
+			    } });
+
+  // cut4: jet 1 eta < 2.4
   analysis_cuts.push_back({ .name="jet1_eta",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
@@ -94,18 +101,89 @@ Analysis::define_selections(const DataStruct& data)
 			      return 1;
 			    } });
 
-  // cut4: jet 1 pt >= 400
-  analysis_cuts.push_back({ .name="jet1_pt",   .func = [&data](){
+  // cut5: jet 2 eta < 2.4
+  analysis_cuts.push_back({ .name="jet2_eta",   .func = [&data](){
 			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      if (data.jetsAK8Puppi.Pt[0]<400) return 0;
+			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
+			      if (fabs(data.jetsAK8Puppi.Eta[1])>=2.4) return 0;
 			      return 1;
 			    } });
 
-  // cut5: Full-hadronic trigger
+  // cut6: jet 1 pt >= 400
+  analysis_cuts.push_back({ .name="jet1_pt",   .func = [&data](){
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
+			      if (data.jetsAK8Puppi.Pt[0]<TOP_PT_CUT) return 0;
+			      return 1;
+			    } });
+
+  // cut7: jet 2 pt >= 400
+  analysis_cuts.push_back({ .name="jet2_pt",   .func = [&data](){ 
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
+			      if (data.jetsAK8Puppi.Pt[1]<TOP_PT_CUT) return 0;
+			      return 1;
+			    } });
+
+  // cut8: 110 <= jet 1 mass (softdrop) < 210
+  analysis_cuts.push_back({ .name="jet1_mass", .func = [&data](){ 
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
+			      if (data.jetsAK8Puppi.softDropMass[0]<TOP_SD_MASS_CUT_LOW) return 0;
+			      if (data.jetsAK8Puppi.softDropMass[0]>=TOP_SD_MASS_CUT_HIGH) return 0;
+			      return 1;
+			    } });
+
+  // cut9: 110 <= jet 2 mass (softdrop) < 210
+  analysis_cuts.push_back({ .name="jet2_mass", .func = [&data](){ 
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
+			      if (data.jetsAK8Puppi.softDropMass[1]<TOP_SD_MASS_CUT_LOW) return 0;
+			      if (data.jetsAK8Puppi.softDropMass[1]>=TOP_SD_MASS_CUT_HIGH) return 0;
+			      return 1;
+			    } });
+
+  // cut10: Full-hadronic trigger
   analysis_cuts.push_back({ .name="hlt_ak8ht700_mass50", .func = [&data](){
 			      // Define cut function here:
 			      return data.hlt.AK8PFHT700_TrimR0p1PT0p03Mass50==1; 
+			    } });
+
+  // cut11: | DeltaPhi | < DPHI_CUT
+  analysis_cuts.push_back({ .name="delta_phi", .func = [&data](){
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
+			      if (dPhi>=DPHI_CUT) return 0;
+			      return 1;
+			    } });
+
+  // cut12: jet 1 tau32 < TOP_TAU32_CUT
+  analysis_cuts.push_back({ .name="jet1_tau32",   .func = [&data](){
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
+			      double tau32 = data.jetsAK8Puppi.tau3[0];
+			      if (data.jetsAK8Puppi.tau2[0]!=0) tau32 /= data.jetsAK8Puppi.tau2[0];
+			      else tau32 = 9999;
+			      if (tau32>=TOP_TAU32_CUT) return 0;
+			      return 1;
+			    } });
+
+  // cut13: jet 2 tau32 < TOP_TAU32_CUT
+  analysis_cuts.push_back({ .name="jet2_tau32",   .func = [&data](){ 
+			      // Define cut function here:
+			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
+			      double tau32 = data.jetsAK8Puppi.tau3[1];
+			      if (data.jetsAK8Puppi.tau2[1]!=0) tau32 /= data.jetsAK8Puppi.tau2[1];
+			      else tau32 = 9999;
+			      if (tau32>=TOP_TAU32_CUT) return 0;
+			      return 1;
+			    } });
+
+  // cut14: R >= R_CUT
+  analysis_cuts.push_back({ .name="R", .func = [&data](){
+			      // Define cut function here:
+			      if (data.evt.AK8Puppi_R>=R_CUT) return 0;
+			      return 1;
 			    } });
 
 }
@@ -144,6 +222,7 @@ TH1D* h_ht_AK8;
 TH1D* h_ht_AK8Puppi;
 TH1D* h_jet1_pt;
 std::vector<TH1D*> vh_jet1_pt;
+std::vector<TH2D*> vh_abcd;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -159,23 +238,18 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_ht_AK8       = new TH1D("ht_AK8",       ";H_{T}^{AK8 (CHS)}",      200, 0,2000);
   h_ht_AK8Puppi  = new TH1D("ht_AK8Puppi",  ";H_{T}^{AK8 (Puppi)}",    200, 0,2000);
   h_jet1_pt      = new TH1D("jet1_pt",      ";p_{T, jet1}",            200, 0,2000);
+  Double_t R_bins[3] = { 0.2, 0.4, 100 };
+  
   for (unsigned int i=0; i<=syst_nSyst; ++i) {
     std::stringstream histoname, title;
     histoname<<"jet1_pt_syst"<<i;
-    title<<"Systematic variation #="<<i<<";p_{T, jet1}";
-    vh_jet1_pt.push_back(new TH1D(histoname.str().c_str(), title.str().c_str(), 200, 0,2000));
+    title<<"Systematic variation #="<<i;
+    vh_jet1_pt.push_back(new TH1D(histoname.str().c_str(), (title.str()+";p_{T, jet1}").c_str(), 200, 0,2000));
     vh_jet1_pt[i]->Sumw2();
+    std::stringstream h_abcd_name;
+    h_abcd_name<<"abcd_syst"<<i;
+    vh_abcd.push_back(new TH2D(h_abcd_name.str().c_str(),  (title.str()+";R (AK8 Puppi);Both jets pass tau32 cuts").c_str(), 2,R_bins, 2,0,2));
   }
-  
-  h_njet->Sumw2();
-  h_nhadtop->Sumw2();
-  h_nhadw->Sumw2();
-  h_ht_gen->Sumw2();
-  h_ht_AK4->Sumw2();
-  h_ht_AK4Puppi->Sumw2();
-  h_ht_AK8->Sumw2();
-  h_ht_AK8Puppi->Sumw2();
-  h_jet1_pt->Sumw2();
 }
 
 
@@ -207,6 +281,9 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
   // Vary systematics and save each variation into a different historgam
   // Switch on settings.varySystematics to be effective
   if (_apply_ncut(2)) vh_jet1_pt[syst_index]->Fill(data.jetsAK8Puppi.Pt[0], weight);
+
+  // ABCD background estimation
+  if (_apply_ncut(analysis_cuts.size()-3)) vh_abcd[syst_index]->Fill(data.evt.AK8Puppi_R, passHadTopTag[0]&&passHadTopTag[1], weight);
 }
 
 // Methods used by SmartHistos (Plotter)
