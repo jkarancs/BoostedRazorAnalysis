@@ -16,10 +16,6 @@ Analysis::~Analysis() { }
 //_______________________________________________________
 //                  Calculate variables
 
-#define R_CUT             0.4
-#define R_CUT_LOW         0.2
-#define DPHI_CUT          2.7
-
 // gen particles
 std::vector<bool> is_Gen_Top;
 std::vector<int>  gen_Top_Type;

@@ -77,7 +77,7 @@ T1tttt               = subset(ana_arguments_full, "SMS-T1tttt_mGluino-1500_mLSP-
 #T1tttt              += subset(ana_arguments_full, "SMS-T1tttt_mGluino-1200_mLSP-800_FullSim")
 
 #ana_arguments_test = jetht + tt_mcatnlo + qcd
-ana_arguments_test = jetht + tt_madgraph_ht + qcd
+ana_arguments_test = jetht + tt_powheg_py8 + qcd
 
 #ana_arguments_test = [
 #    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],

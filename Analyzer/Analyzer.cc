@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h"   // Helper functions
-#include "settings_Viktor.h" // Define all Analysis specific settings here
+#include "settings_Changgi.h" // Define all Analysis specific settings here
 
 using namespace std;
 

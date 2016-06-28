@@ -228,6 +228,11 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define W_SD_MASS_CUT_HIGH  105
 #define W_TAU21_CUT        0.56
 
+// Further analysis cuts
+#define R_CUT             0.4
+#define R_CUT_LOW         0.2
+#define DPHI_CUT          2.7
+
 // AK8 jets
 std::vector<int> passLooseJetID;
 std::vector<int> passSubjetBTag;
