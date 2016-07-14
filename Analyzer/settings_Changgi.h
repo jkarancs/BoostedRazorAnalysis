@@ -587,7 +587,7 @@ struct settings {
     stream.select("jetAK4_GenPartonPt", data.jetsAK4.GenPartonPt);
     //stream.select("jetAK4_GenPartonE", data.jetsAK4.GenPartonE);
     //stream.select("jetAK4_GenPartonCharge", data.jetsAK4.GenPartonCharge);
-    //stream.select("jetAK4_PartonFlavour", data.jetsAK4.PartonFlavour);
+    stream.select("jetAK4_PartonFlavour", data.jetsAK4.PartonFlavour);
     //stream.select("jetAK4_HadronFlavour", data.jetsAK4.HadronFlavour);
     //stream.select("jetAK4_GenJetY", data.jetsAK4.GenJetY);
     //stream.select("jetAK4_GenJetEta", data.jetsAK4.GenJetEta);
@@ -658,7 +658,7 @@ struct settings {
     stream.select("jetAK4Puppi_GenPartonPt", data.jetsAK4Puppi.GenPartonPt);
     //stream.select("jetAK4Puppi_GenPartonE", data.jetsAK4Puppi.GenPartonE);
     //stream.select("jetAK4Puppi_GenPartonCharge", data.jetsAK4Puppi.GenPartonCharge);
-    //stream.select("jetAK4Puppi_PartonFlavour", data.jetsAK4Puppi.PartonFlavour);
+    stream.select("jetAK4Puppi_PartonFlavour", data.jetsAK4Puppi.PartonFlavour);
     //stream.select("jetAK4Puppi_HadronFlavour", data.jetsAK4Puppi.HadronFlavour);
     //stream.select("jetAK4Puppi_GenJetY", data.jetsAK4Puppi.GenJetY);
     //stream.select("jetAK4Puppi_GenJetEta", data.jetsAK4Puppi.GenJetEta);
@@ -728,7 +728,7 @@ struct settings {
     stream.select("jetAK8_GenPartonPt", data.jetsAK8.GenPartonPt);
     //stream.select("jetAK8_GenPartonE", data.jetsAK8.GenPartonE);
     //stream.select("jetAK8_GenPartonCharge", data.jetsAK8.GenPartonCharge);
-    //stream.select("jetAK8_PartonFlavour", data.jetsAK8.PartonFlavour);
+    stream.select("jetAK8_PartonFlavour", data.jetsAK8.PartonFlavour);
     //stream.select("jetAK8_HadronFlavour", data.jetsAK8.HadronFlavour);
     //stream.select("jetAK8_GenJetY", data.jetsAK8.GenJetY);
     //stream.select("jetAK8_GenJetEta", data.jetsAK8.GenJetEta);
@@ -824,7 +824,7 @@ struct settings {
     stream.select("jetAK8Puppi_GenPartonPt", data.jetsAK8Puppi.GenPartonPt);
     //stream.select("jetAK8Puppi_GenPartonE", data.jetsAK8Puppi.GenPartonE);
     //stream.select("jetAK8Puppi_GenPartonCharge", data.jetsAK8Puppi.GenPartonCharge);
-    //stream.select("jetAK8Puppi_PartonFlavour", data.jetsAK8Puppi.PartonFlavour);
+    stream.select("jetAK8Puppi_PartonFlavour", data.jetsAK8Puppi.PartonFlavour);
     //stream.select("jetAK8Puppi_HadronFlavour", data.jetsAK8Puppi.HadronFlavour);
     //stream.select("jetAK8Puppi_GenJetY", data.jetsAK8Puppi.GenJetY);
     //stream.select("jetAK8Puppi_GenJetEta", data.jetsAK8Puppi.GenJetEta);
@@ -903,7 +903,7 @@ struct settings {
     stream.select("subjetAK8_GenPartonPt", data.subjetsAK8.GenPartonPt);
     //stream.select("subjetAK8_GenPartonE", data.subjetsAK8.GenPartonE);
     //stream.select("subjetAK8_GenPartonCharge", data.subjetsAK8.GenPartonCharge);
-    //stream.select("subjetAK8_PartonFlavour", data.subjetsAK8.PartonFlavour);
+    stream.select("subjetAK8_PartonFlavour", data.subjetsAK8.PartonFlavour);
     //stream.select("subjetAK8_HadronFlavour", data.subjetsAK8.HadronFlavour);
     //stream.select("subjetAK8_GenJetY", data.subjetsAK8.GenJetY);
     //stream.select("subjetAK8_GenJetEta", data.subjetsAK8.GenJetEta);
@@ -964,7 +964,7 @@ struct settings {
     stream.select("subjetAK8Puppi_GenPartonPt", data.subjetsAK8Puppi.GenPartonPt);
     //stream.select("subjetAK8Puppi_GenPartonE", data.subjetsAK8Puppi.GenPartonE);
     //stream.select("subjetAK8Puppi_GenPartonCharge", data.subjetsAK8Puppi.GenPartonCharge);
-    //stream.select("subjetAK8Puppi_PartonFlavour", data.subjetsAK8Puppi.PartonFlavour);
+    stream.select("subjetAK8Puppi_PartonFlavour", data.subjetsAK8Puppi.PartonFlavour);
     //stream.select("subjetAK8Puppi_HadronFlavour", data.subjetsAK8Puppi.HadronFlavour);
     //stream.select("subjetAK8Puppi_GenJetY", data.subjetsAK8Puppi.GenJetY);
     //stream.select("subjetAK8Puppi_GenJetEta", data.subjetsAK8Puppi.GenJetEta);
