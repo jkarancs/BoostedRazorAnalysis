@@ -1,7 +1,7 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
 
-#include "Analysis_Harrison.h" // Specify here the implementations for you Analysis
+#include "Analysis_Viktor.h" // Specify here the implementations for you Analysis
 
 struct settings {
 

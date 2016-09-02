@@ -25,7 +25,7 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 
   // Loop on jets
   while(data.jetsAK8Puppi.Loop()) {
-    if (passLooseJetID[data.jetsAK8Puppi.it]) {
+    if (data.jetsAK8Puppi.looseJetID[data.jetsAK8Puppi.it]) {
       if (passHadTopTag[data.jetsAK8Puppi.it]) ++nLooseIDHadTopTagJets;
       if (passHadWTag[data.jetsAK8Puppi.it]) ++nLooseIDHadWTagJets;
     }
@@ -58,10 +58,9 @@ bool
 Analysis::pass_skimming(DataStruct& data)
 {
   float pt_threshold = 300;
-  int N_CHS = 0, N_Puppi = 0;
-  while(data.jetsAK8.Loop()) if (data.jetsAK8.Pt[data.jetsAK8.it]>=pt_threshold) ++N_CHS;
+  int N_Puppi = 0;
   while(data.jetsAK8Puppi.Loop()) if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it]>=pt_threshold) ++N_Puppi;
-  return (N_CHS >= 1 || N_Puppi >= 1);
+  return (N_Puppi >= 1);
 }
 
 
@@ -83,14 +82,14 @@ Analysis::define_selections(const DataStruct& data)
   analysis_cuts.push_back({ .name="jet1_id",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      return passLooseJetID[0];
+			      return data.jetsAK8Puppi.looseJetID[0];
 			    } });
 
   // cut3: jet 2 pass loose jet id
   analysis_cuts.push_back({ .name="jet2_id",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      return passLooseJetID[1];
+			      return data.jetsAK8Puppi.looseJetID[1];
 			    } });
 
   // cut4: jet 1 eta < 2.4
@@ -182,7 +181,7 @@ Analysis::define_selections(const DataStruct& data)
   // cut14: R >= R_CUT
   analysis_cuts.push_back({ .name="R", .func = [&data](){
 			      // Define cut function here:
-			      if (data.evt.AK8Puppi_R>=R_CUT) return 0;
+			      if (data.evt.R>=R_CUT) return 0;
 			      return 1;
 			    } });
 
@@ -216,9 +215,7 @@ TH1D* h_njet;
 TH1D* h_nhadtop;
 TH1D* h_nhadw;
 TH1D* h_ht_gen;
-TH1D* h_ht_AK4;
 TH1D* h_ht_AK4Puppi;
-TH1D* h_ht_AK8;
 TH1D* h_ht_AK8Puppi;
 TH1D* h_jet1_pt;
 std::vector<TH1D*> vh_jet1_pt;
@@ -233,9 +230,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_nhadtop      = new TH1D("nhadtop",      ";N_{top tag}",                20, 0,  20);
   h_nhadw        = new TH1D("nhadw",        ";N_{W tag}",                  20, 0,  20);
   h_ht_gen       = new TH1D("ht_gen",       ";H_{T}^{gen}",            200, 0,2000);
-  h_ht_AK4       = new TH1D("ht_AK4",       ";H_{T}^{AK4 (CHS)}",      200, 0,2000);
   h_ht_AK4Puppi  = new TH1D("ht_AK4Puppi",  ";H_{T}^{AK4 (Puppi)}",    200, 0,2000);
-  h_ht_AK8       = new TH1D("ht_AK8",       ";H_{T}^{AK8 (CHS)}",      200, 0,2000);
   h_ht_AK8Puppi  = new TH1D("ht_AK8Puppi",  ";H_{T}^{AK8 (Puppi)}",    200, 0,2000);
   h_jet1_pt      = new TH1D("jet1_pt",      ";p_{T, jet1}",            200, 0,2000);
   Double_t R_bins[3] = { 0.2, 0.4, 100 };
@@ -270,9 +265,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     h_nhadw  ->Fill(nLooseIDHadWTagJets, weight);
     
     h_ht_gen->Fill(data.evt.Gen_Ht, weight);  // in ntuple
-    h_ht_AK4->Fill(AK4_Ht, weight);           // Calculated in AnalysisBase.h
     h_ht_AK4Puppi->Fill(AK4Puppi_Ht, weight); // Calculated in AnalysisBase.h
-    h_ht_AK8->Fill(data.evt.Ht, weight);      // in ntuple, AK8 CHS is default, will switch to Puppi
     h_ht_AK8Puppi->Fill(AK8Puppi_Ht, weight); // Calculated in AnalysisBase.h
     
     if (_apply_ncut(2)) h_jet1_pt->Fill(data.jetsAK8Puppi.Pt[0], weight);
@@ -283,7 +276,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
   if (_apply_ncut(2)) vh_jet1_pt[syst_index]->Fill(data.jetsAK8Puppi.Pt[0], weight);
 
   // ABCD background estimation
-  if (_apply_ncut(analysis_cuts.size()-3)) vh_abcd[syst_index]->Fill(data.evt.AK8Puppi_R, passHadTopTag[0]&&passHadTopTag[1], weight);
+  if (_apply_ncut(analysis_cuts.size()-3)) vh_abcd[syst_index]->Fill(data.evt.R, passHadTopTag[0]&&passHadTopTag[1], weight);
 }
 
 // Methods used by SmartHistos (Plotter)
