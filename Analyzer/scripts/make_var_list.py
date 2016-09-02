@@ -1,5 +1,5 @@
 import ROOT
-file = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_60.root")
+file = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD_1000.root")
 tree = file.Get("B2GTTreeMaker/B2GTree")
 
 def printvars( tree, name, prefix_list ):
@@ -28,11 +28,8 @@ printvars( tree, "hlt",             ["HLT_"] )
 printvars( tree, "gen",             ["gen_"] )
 printvars( tree, "ele",             ["el_"] )
 printvars( tree, "mu",              ["mu_"] )
-printvars( tree, "jetsAK4",         ["jetAK4_"] )
 printvars( tree, "jetsAK4Puppi",    ["jetAK4Puppi_"] )
-printvars( tree, "jetsAK8",         ["jetAK8_"] )
 printvars( tree, "jetsAK8Puppi",    ["jetAK8Puppi_"] )
-printvars( tree, "subjetsAK8",      ["subjetAK8_"] )
 printvars( tree, "subjetsAK8Puppi", ["subjetAK8Puppi_"] )
 printvars( tree, "genjetsAK8",      ["genjetAK8SD_"] )
 

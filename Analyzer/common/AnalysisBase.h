@@ -28,7 +28,7 @@ public:
 
   void init_common_histos();
 
-  double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
+  double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&, const std::string&);
 
   double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
 
@@ -234,7 +234,6 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define DPHI_CUT          2.7
 
 // AK8 jets
-std::vector<int> passLooseJetID;
 std::vector<int> passSubjetBTag;
 std::vector<int> passHadTopTag;
 std::vector<int> passHadTopPreTag;
@@ -247,7 +246,7 @@ unsigned int nSubjetBTag;
 unsigned int nHadTopTag;
 unsigned int nHadTopPreTag;
 unsigned int nHadWTag;
-double AK4_Ht, AK4Puppi_Ht, AK8Puppi_Ht;
+double AK4Puppi_Ht, AK8Puppi_Ht;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
@@ -256,59 +255,32 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   if (syst_index == 0) {
     nLooseJet = 0;
     nSubjetBTag = 0;
-    passLooseJetID.clear();
     passSubjetBTag.clear();
     subjetBTagDiscr.clear();
 
     // Loop on AK8 Puppi jets
     while(data.jetsAK8Puppi.Loop()) {
-      // Jet ID - Loose (Fractions should not depend on JEC)
-      double eta = data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it];
-      double nhf = data.jetsAK8Puppi.neutralHadronEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-      double nemf = data.jetsAK8Puppi.neutralEmEnergy[data.jetsAK8Puppi.it] / data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-      double chf = data.jetsAK8Puppi.chargedHadronEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-      double cemf = data.jetsAK8Puppi.chargedEmEnergy[data.jetsAK8Puppi.it]/data.jetsAK8Puppi.E[data.jetsAK8Puppi.it];
-      int NumConst = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it] + data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
-      int chm = data.jetsAK8Puppi.chargedMultiplicity[data.jetsAK8Puppi.it];
-      int NumNeutralParticle = data.jetsAK8Puppi.neutralMultiplicity[data.jetsAK8Puppi.it];
-      bool pass_Loose_ID = ( (nhf<0.99 && nemf<0.99 && NumConst>1) && ((fabs(eta)<=2.4 && chf>0 && chm>0 && cemf<0.99) || fabs(eta)>2.4) && fabs(eta)<=3.0 )
-        || ( nemf<0.9 && NumNeutralParticle>10 && fabs(eta)>3.0 );
-      passLooseJetID.push_back(pass_Loose_ID);
-      if (pass_Loose_ID) nLooseJet++;
+      if (data.jetsAK8Puppi.looseJetID[data.jetsAK8Puppi.it]) nLooseJet++;
 
-      // Match AK8 Puppi jets to CHS jets
-      TLorentzVector jet; jet.SetPtEtaPhiE(data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it], data.jetsAK8Puppi.Eta[data.jetsAK8Puppi.it], 
-					   data.jetsAK8Puppi.Phi[data.jetsAK8Puppi.it], data.jetsAK8Puppi.E[data.jetsAK8Puppi.it]);
-      double match_dR = 9999;
-      unsigned int match_it = 9999;
-      while(data.jetsAK8.Loop()) {
-        TLorentzVector jetCHS; jetCHS.SetPtEtaPhiE(data.jetsAK8.Pt[data.jetsAK8.it], data.jetsAK8.Eta[data.jetsAK8.it],
-						   data.jetsAK8.Phi[data.jetsAK8.it], data.jetsAK8.E[data.jetsAK8.it]);
-        double dR = jet.DeltaR(jetCHS);
-        if (dR < match_dR) {
-          match_dR = dR;
-          match_it = data.jetsAK8.it;
-        }
-      }
       // Maximum Subjet btag discriminator
       // Puppi jets doesn't store them correctly, get them from CHS jets for now
-      double subjet_btag_discr = (match_dR<0.1) ? data.jetsAK8.CSVv2[match_it] : -9999;
+      double max_subjet_btag_discr = -9999;
+      int subjet0_index = data.jetsAK8Puppi.vSubjetIndex0[data.jetsAK8Puppi.it], subjet1_index = data.jetsAK8Puppi.vSubjetIndex1[data.jetsAK8Puppi.it];
+      if (subjet0_index != -1) if (data.subjetsAK8Puppi.CSVv2[subjet0_index] > max_subjet_btag_discr) max_subjet_btag_discr = data.subjetsAK8Puppi.CSVv2[subjet0_index];
+      if (subjet1_index != -1) if (data.subjetsAK8Puppi.CSVv2[subjet1_index] > max_subjet_btag_discr) max_subjet_btag_discr = data.subjetsAK8Puppi.CSVv2[subjet1_index];
 #if USE_BTAG == 1
-      passSubjetBTag.push_back((subjet_btag_discr>= TOP_BTAG_CSV));
-      if (subjet_btag_discr >= TOP_BTAG_CSV) ++nSubjetBTag;
+      passSubjetBTag.push_back((max_subjet_btag_discr >= TOP_BTAG_CSV));
+      if (max_subjet_btag_discr >= TOP_BTAG_CSV) ++nSubjetBTag;
 #else
-      passSubjetBTag.push_back((subjet_btag_discr>= 0.46));
-      if (subjet_btag_discr >= 0.46) ++nSubjetBTag;
+      passSubjetBTag.push_back((max_subjet_btag_discr>= 0.46));
+      if (max_subjet_btag_discr >= 0.46) ++nSubjetBTag;
 #endif
-      subjetBTagDiscr.push_back(subjet_btag_discr);
+      subjetBTagDiscr.push_back(max_subjet_btag_discr);
     }
   }
 
   // Rest of the vairables need to be recalculated each time the jet energy is changed
   // eg. top/W tags and HT (obviously) depends on jet pt
-  AK4_Ht = 0;
-  while(data.jetsAK4.Loop()) AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];    
-
   AK4Puppi_Ht = 0;
   while(data.jetsAK4Puppi.Loop()) AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
 
@@ -394,9 +366,9 @@ AnalysisBase::init_common_histos()
   // total weight
   h_totweight                  = new TH1D("totweight",          "MC;;Total (generator) event weight", 1,0,1);
   // signal weight and xsec
-  vh_totweight_signal .push_back(new TH2D("totweight_T1tttt",   "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,-12.5,5012.5, 201,-12.5,5012.5));
-  vh_xsec_signal      .push_back(new TH2D("xsec_T1tttt",        "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  201,-12.5,5012.5, 201,-12.5,5012.5));
-  vh_weightnorm_signal.push_back(new TH2D("weightnorm_T1tttt",  "T1tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,-12.5,5012.5, 201,-12.5,5012.5));
+  vh_totweight_signal .push_back(new TH2D("totweight_T1tttt",   "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,-12.5,5012.5, 201,-12.5,5012.5));
+  vh_xsec_signal      .push_back(new TH2D("xsec_T1tttt",        "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  201,-12.5,5012.5, 201,-12.5,5012.5));
+  vh_weightnorm_signal.push_back(new TH2D("weightnorm_T1tttt",  "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,-12.5,5012.5, 201,-12.5,5012.5));
   // pileup
   h_pileup_data                = new TH1D("pileup_data",        "Pile-up distribution - Data (Nominal);Pile-up", 100,0,100);
   h_pileup_data_down           = new TH1D("pileup_data_down",   "Pile-up distribution - Data (down);Pile-up",    100,0,100);
@@ -413,19 +385,52 @@ AnalysisBase::init_common_histos()
 //_______________________________________________________
 //           Read cross-section from ntuple
 double
-AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const std::string& treename)
+AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const std::string& treename, const std::string& dirname)
 {
+  /*
+    Aug17 ntuple production did not correctly fill cross-sections
+
   float evt_XSec=0, prev_XSec=0;
   for (auto filename : filenames) {
-    TTree* tree = (TTree*)TFile::Open(filename.c_str())->Get(treename.c_str());
+    TFile *f = TFile::Open(filename.c_str());
+    TTree* tree = (TTree*)f->Get(treename.c_str());
     tree->GetBranch("evt_XSec")->SetAddress(&evt_XSec);
     tree->GetEntry(0);
+    f->Close();
     if (prev_XSec!=0&&prev_XSec!=evt_XSec) {
       cout << "!! Error !! Analysis - Files added with different cross-sections. Please, add them separately!" << endl;
       return 0;
     }
     prev_XSec = evt_XSec;
   }
+  */
+
+  // Temporarily read cross-sections from txt file
+  double evt_XSec = 0;
+  std::ifstream xsecFile("common/BackGroundXSec.txt");
+  if ( !xsecFile.good() ) {
+    return -9999.0;
+    std::cout<<"Unable to open cross-section file: common/BackGroundXSec.txt"<<std::endl;
+  } else {
+
+    // Read all nSigmas, nums
+    std::string line;
+    std::string shortname;
+    std::string primary_dataset;
+    double xsec;
+    while ( std::getline(xsecFile, line) ) {
+      std::stringstream nth_line;
+      nth_line<<line;
+      nth_line>>shortname;
+      nth_line>>primary_dataset;
+      nth_line>>xsec;
+      if (dirname==shortname) {
+	evt_XSec = xsec;
+	std::cout<<"( TEMPORARY FIX: Cross section successfully read from common/BackGroundXSec.txt )"<<std::endl;
+      }
+    }
+  }
+
   return evt_XSec;
 }
 
@@ -449,57 +454,58 @@ void
 AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& filenames, const double& intLumi, const std::vector<std::string>& vname_signal,
 						const std::vector<std::string>& vname_xsec, const std::vector<std::string>& vname_totweight, bool verbose=1)
 {
-  // Get gluino cross sections and merge totweight histos
-  std::map<int, double> xsec_glu;
-  for (auto filename : filenames) {
-    TFile* f = TFile::Open(filename.c_str());
-    for (size_t i=0, n=vname_xsec.size(); i<n; ++i) {
-      // Get cross section (set only once for each new gluino weight)
-      /*          
-		  The filling of xsec histo has some bug in B2GTTree level
-		  
-      TH2D* xsec = (TH2D*)f->Get(vname_xsec[i].c_str());
-      for (int binx=1, nbinx=xsec->GetNbinsX(); binx<=nbinx; ++binx) 
-	for (int biny=1, nbiny=xsec->GetNbinsY(); biny<=nbiny; ++biny) {
-	  double xs = xsec->GetBinContent(binx, biny);
-	  if (xs!=0&&!xsec_glu.count(binx)) xsec_glu[binx] = xs;
-        }
-      */
+  // Find the index of the current signal
+  int signal_index = -1;
+  std::string signal_name = "";
+  if (filenames.size()>0) for (size_t i=0, n=vname_signal.size(); i<n; ++i) 
+    if (filenames[0].find(vname_signal[i])!=std::string::npos&&signal_index==-1) {
+      signal_index = i;
+      signal_name = vname_signal[i];
+    }
+  signal_index = (signal_index>=3); // 0: T1tttt, T5ttcc, T5tttt; 1: T2tt
+  
+  // Scans of MLSP vs MGluino 
+  if (signal_index==0) { 
+    // Get gluino cross sections and merge totweight histos
+    std::map<int, double> xsec_glu;
+    for (auto filename : filenames) {
+      TFile* f = TFile::Open(filename.c_str());
       // Get total weight
-      TH2D* totweight = (TH2D*)f->Get(vname_totweight[i].c_str());
-      vh_totweight_signal[i]->Add(totweight);
+      TH2D* totweight = (TH2D*)f->Get(vname_totweight[signal_index].c_str());
+      vh_totweight_signal[signal_index]->Add(totweight);
+      f->Close();
     }
-    f->Close();
-  }
-  // Set xsec for each gluino mass bin
-  // This way we fix temporary bug with xsec for some bins
-  // Read gluino xsec from same file used in TTree step
-  for (size_t i=0, n=vname_xsec.size(); i<n; ++i) 
-    for (int binx=1, nbinx=vh_xsec_signal[i]->GetNbinsX(); binx<=nbinx; ++binx) {
-      double mGlu = vh_xsec_signal[i]->GetXaxis()->GetBinCenter(binx);
+    // Set xsec for each gluino mass bin
+    // This way we fix temporary bug with xsec for some bins
+    // Read gluino xsec from same file used in TTree step
+    for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) {
+      double mGlu = vh_xsec_signal[signal_index]->GetXaxis()->GetBinCenter(binx);
       xsec_glu[binx] = GetGluinoXSec(mGlu).first; // first: mean xsec, second: error
-      for (int biny=1, nbiny=vh_xsec_signal[i]->GetNbinsY(); biny<=nbiny; ++biny)
-	vh_xsec_signal[i]->SetBinContent(binx, biny, xsec_glu[binx]);
+      for (int biny=1, nbiny=vh_xsec_signal[signal_index]->GetNbinsY(); biny<=nbiny; ++biny)
+	vh_xsec_signal[signal_index]->SetBinContent(binx, biny, xsec_glu[binx]);
     }
-  // Calculate weight normalization
-  for (size_t i=0, n=vname_xsec.size(); i<n; ++i) {
+    // Calculate weight normalization
     // weightnorm = (settings.intLumi*xsec)/totweight;
     // Divide(h1,h2,c1,c2) --> c1*h1/(c2*h2)
-    vh_weightnorm_signal[i]->Divide(vh_xsec_signal[i], vh_totweight_signal[i], intLumi);
+    vh_weightnorm_signal[signal_index]->Divide(vh_xsec_signal[signal_index], vh_totweight_signal[signal_index], intLumi);
     if (verbose) {
-      std::cout<<"- Signal: "<<vname_signal[i]<<std::endl;
-      for (int binx=1, nbinx=vh_xsec_signal[i]->GetNbinsX(); binx<=nbinx; ++binx) 
-	for (int biny=1, nbiny=vh_xsec_signal[i]->GetNbinsY(); biny<=nbiny; ++biny) {
-	  double mGlu = vh_xsec_signal[i]->GetXaxis()->GetBinCenter(binx);
-	  double mLSP = vh_xsec_signal[i]->GetYaxis()->GetBinCenter(biny);
-	  double xsec  = vh_xsec_signal[i]      ->GetBinContent(binx, biny);
-	  double totw  = vh_totweight_signal[i] ->GetBinContent(binx, biny);
-	  double wnorm = vh_weightnorm_signal[i]->GetBinContent(binx, biny);
-	  if (totw>0) std::cout<<"  Bin: M(g~)="<<mGlu<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
-	}
+      std::cout<<"- Signal: "<<signal_name<<std::endl;
+      for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) 
+        for (int biny=1, nbiny=vh_xsec_signal[signal_index]->GetNbinsY(); biny<=nbiny; ++biny) {
+          double mGlu = vh_xsec_signal[signal_index]->GetXaxis()->GetBinCenter(binx);
+          double mLSP = vh_xsec_signal[signal_index]->GetYaxis()->GetBinCenter(biny);
+          double xsec  = vh_xsec_signal[signal_index]      ->GetBinContent(binx, biny);
+          double totw  = vh_totweight_signal[signal_index] ->GetBinContent(binx, biny);
+          double wnorm = vh_weightnorm_signal[signal_index]->GetBinContent(binx, biny);
+          if (totw>0) std::cout<<"  Bin: M(g~)="<<mGlu<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
+        }
       std::cout<<std::endl;
     }
-  }
+  } 
+  // Scans of MLSP vs MStop
+  //else {
+  //  
+  //}
 }
 
 
@@ -587,41 +593,23 @@ AnalysisBase::get_pileup_weight(const int& NtrueInt, const double& nSigmaPU)
 //_______________________________________________________
 //              Rescale jet 4-momenta
 
-std::vector<float> AK4_E, AK4_Pt;
 std::vector<float> AK4Puppi_E, AK4Puppi_Pt;
-std::vector<float> AK8_E, AK8_Pt, AK8_softDropMass, AK8_trimmedMass, AK8_prunedMass, AK8_filteredMass;
-std::vector<float> AK8Puppi_E, AK8Puppi_Pt, AK8Puppi_softDropMass, AK8Puppi_trimmedMass, AK8Puppi_prunedMass, AK8Puppi_filteredMass;
+std::vector<float> AK8Puppi_E, AK8Puppi_Pt, AK8Puppi_softDropMass;//, AK8Puppi_trimmedMass, AK8Puppi_prunedMass, AK8Puppi_filteredMass;
 
 void
 AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, const double& nSigmaJEC)
 {
   if (syst_index==0) {
-    AK4_E            = data.jetsAK4.E;
-    AK4_Pt           = data.jetsAK4.Pt;
-    AK8_E            = data.jetsAK8.E;
-    AK8_Pt           = data.jetsAK8.Pt;
-    AK8_softDropMass = data.jetsAK8.softDropMass;
-    AK8_trimmedMass  = data.jetsAK8.trimmedMass;
-    AK8_prunedMass   = data.jetsAK8.prunedMass;
-    AK8_filteredMass = data.jetsAK8.filteredMass;
     AK4Puppi_E            = data.jetsAK4Puppi.E;
     AK4Puppi_Pt           = data.jetsAK4Puppi.Pt;
     AK8Puppi_E            = data.jetsAK8Puppi.E;
     AK8Puppi_Pt           = data.jetsAK8Puppi.Pt;
     AK8Puppi_softDropMass = data.jetsAK8Puppi.softDropMass;
-    AK8Puppi_trimmedMass  = data.jetsAK8Puppi.trimmedMass;
-    AK8Puppi_prunedMass   = data.jetsAK8Puppi.prunedMass;
-    AK8Puppi_filteredMass = data.jetsAK8Puppi.filteredMass;
+    //AK8Puppi_trimmedMass  = data.jetsAK8Puppi.trimmedMass;
+    //AK8Puppi_prunedMass   = data.jetsAK8Puppi.prunedMass;
+    //AK8Puppi_filteredMass = data.jetsAK8Puppi.filteredMass;
   }
   if (nSigmaJEC != 0) {
-    // AK4 CHS jets
-    AK4_Ht = 0;
-    while(data.jetsAK4.Loop()) {
-      double scale = get_syst_weight(1.0, data.jetsAK4.jecUncertainty[data.jetsAK4.it], nSigmaJEC);
-      data.jetsAK4.Pt[data.jetsAK4.it] = AK4_Pt[data.jetsAK4.it] * scale;
-      data.jetsAK4.E[data.jetsAK4.it]  = AK4_E[data.jetsAK4.it]  * scale;
-      AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];    
-    }
     // AK4 Puppi jets
     AK4Puppi_Ht = 0;
     while(data.jetsAK4Puppi.Loop()) {
@@ -630,18 +618,6 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
       data.jetsAK4Puppi.E[data.jetsAK4Puppi.it]  = AK4Puppi_E[data.jetsAK4Puppi.it]  * scale;
       AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
     }
-    // AK8 CHS jets
-    data.evt.Ht = 0;
-    while(data.jetsAK8.Loop()) {
-      double scale = get_syst_weight(1.0, data.jetsAK8.jecUncertainty[data.jetsAK8.it], nSigmaJEC);
-      data.jetsAK8.Pt[data.jetsAK8.it]           = AK8_Pt[data.jetsAK8.it]           * scale;
-      data.jetsAK8.E[data.jetsAK8.it]            = AK8_E[data.jetsAK8.it]            * scale;
-      data.jetsAK8.softDropMass[data.jetsAK8.it] = AK8_softDropMass[data.jetsAK8.it] * scale;
-      data.jetsAK8.trimmedMass[data.jetsAK8.it]  = AK8_trimmedMass[data.jetsAK8.it]  * scale;
-      data.jetsAK8.prunedMass[data.jetsAK8.it]   = AK8_prunedMass[data.jetsAK8.it]   * scale;
-      data.jetsAK8.filteredMass[data.jetsAK8.it] = AK8_filteredMass[data.jetsAK8.it] * scale;
-      data.evt.Ht += data.jetsAK8.Pt[data.jetsAK8.it];
-    }
     // AK8 Puppi jets
     AK8Puppi_Ht = 0;
     while(data.jetsAK8Puppi.Loop()) {
@@ -649,9 +625,9 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
       data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it]           = AK8Puppi_Pt[data.jetsAK8Puppi.it]           * scale;
       data.jetsAK8Puppi.E[data.jetsAK8Puppi.it]            = AK8Puppi_E[data.jetsAK8Puppi.it]            * scale;
       data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it] = AK8Puppi_softDropMass[data.jetsAK8Puppi.it] * scale;
-      data.jetsAK8Puppi.trimmedMass[data.jetsAK8Puppi.it]  = AK8Puppi_trimmedMass[data.jetsAK8Puppi.it]  * scale;
-      data.jetsAK8Puppi.prunedMass[data.jetsAK8Puppi.it]   = AK8Puppi_prunedMass[data.jetsAK8Puppi.it]   * scale;
-      data.jetsAK8Puppi.filteredMass[data.jetsAK8Puppi.it] = AK8Puppi_filteredMass[data.jetsAK8Puppi.it] * scale;
+      //data.jetsAK8Puppi.trimmedMass[data.jetsAK8Puppi.it]  = AK8Puppi_trimmedMass[data.jetsAK8Puppi.it]  * scale;
+      //data.jetsAK8Puppi.prunedMass[data.jetsAK8Puppi.it]   = AK8Puppi_prunedMass[data.jetsAK8Puppi.it]   * scale;
+      //data.jetsAK8Puppi.filteredMass[data.jetsAK8Puppi.it] = AK8Puppi_filteredMass[data.jetsAK8Puppi.it] * scale;
       AK8Puppi_Ht += data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
     }
   }
@@ -772,6 +748,17 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
       <weight id="8"> mur=0.5 muf=2 </weight>
       <weight id="9"> mur=0.5 muf=0.5 </weight> --> save [5]
     </weightgroup>
+
+    SUSY GEN Lumi info:
+    GEN:   LHE, id = 1, Central scale variation,  mur=1 muf=1                               
+    GEN:   LHE, id = 2, Central scale variation,  mur=1 muf=2                               
+    GEN:   LHE, id = 3, Central scale variation,  mur=1 muf=0.5                             
+    GEN:   LHE, id = 4, Central scale variation,  mur=2 muf=1                               
+    GEN:   LHE, id = 5, Central scale variation,  mur=2 muf=2                               
+    GEN:   LHE, id = 6, Central scale variation,  mur=2 muf=0.5                             
+    GEN:   LHE, id = 7, Central scale variation,  mur=0.5 muf=1                             
+    GEN:   LHE, id = 8, Central scale variation,  mur=0.5 muf=2                             
+    GEN:   LHE, id = 9, Central scale variation,  mur=0.5 muf=0.5
 
     https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L195-L202
     We save only ids: 2,3,4,5,7,9 (in this order)

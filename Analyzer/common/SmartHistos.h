@@ -1162,6 +1162,7 @@ public:
   // Fill Histograms using the std::function<double()>
   void Fill(const bool debug = 0) {
     if (debug) {
+    //if (debug&&name_=="AvgOnCluSize_vs_InstLumi") {
       std::cout<<name_;
       std::cout<<" pass_cuts: "<<pass_cuts_();
       if (npf_) {
@@ -1174,6 +1175,11 @@ public:
       std::cout<<" fill: "<<fill_1d_();
       if (ndim_>1) std::cout<<", "<<fill_2d_();
       if (ndim_>2) std::cout<<", "<<fill_3d_();
+      std::cout<<" weight: ";
+      if (nweight_==0) std::cout<<1;
+      if (nweight_==1) std::cout<<weight1_();
+      if (nweight_==2) std::cout<<weight1_()<<" * "<<weight2_();
+      if (nweight_==3) std::cout<<weight1_()<<" * "<<weight2_()<<" * "<<weight3_();
       std::cout<<"\n";
     }
     //std::cout<<pfs_[0].sel()<<std::endl;

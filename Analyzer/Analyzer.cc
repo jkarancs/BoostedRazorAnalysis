@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h"   // Helper functions
-#include "settings_Changgi.h" // Define all Analysis specific settings here
+#include "settings_Janos.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -17,8 +17,12 @@ int main(int argc, char** argv) {
   // List names in filenames from which the code can decide if it is data or signal
   // For the rest it's assumed it's background MC
   // if .txt file is given as input then from the directory name we can already tell
-  std::vector<std::string> vname_data = { "2015B", "2015C", "2015D", "2016B", "2016C", "2016D", "2016E", "2016F" };
-  std::vector<std::string> vname_signal = { "T1tttt" }; // T1tttt
+  std::vector<std::string> vname_data = { "JetHT", "MET", "SingleEle", "SingleMu", 
+					  "2015B", "2015C", "2015D", 
+					  "2016B", "2016C", "2016D", "2016E", 
+					  "2016F", "2016G", "2016H", "2016I", 
+					  "2016J", "2016K", "2016L", "2016M" };
+  std::vector<std::string> vname_signal = { "T1tttt", "T5ttcc", "T5tttt", "T2tt" }; // SMS
 
   // ------------------------------
   // -- Parse command line stuff --
@@ -245,11 +249,12 @@ int main(int argc, char** argv) {
   // --------------------------------------------------------------
 
   cout << endl;
-  double weightnorm = 1 ;
+  double weightnorm = 1;
+  int signal_index = -1;
   if ( cmdline.isBkg ) {
     cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
-    double xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
+    double xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName, cmdline.dirname); // treename given in settings.h
     if ( xsec==0 ) return 1;
     cout << "xsec (ntuple): " << xsec << endl;
 
@@ -264,6 +269,11 @@ int main(int argc, char** argv) {
     cout << "Normalization variables:" << endl;
     ana.calc_weightnorm_histo_from_ntuple(cmdline.fileNames, settings.intLumi, vname_signal,
 					  settings.xsecHistoNamesSignal, settings.totWeightHistoNamesSignal); // histo names given in settings.h
+
+    // Find the index of the current signal
+    if (cmdline.fileNames.size()>0) for (size_t i=0, n=vname_signal.size(); i<n; ++i) 
+      if (cmdline.fileNames[0].find(vname_signal[i])!=std::string::npos&&signal_index==-1) signal_index = i;
+    signal_index = (signal_index>=3); // 0: T1tttt, T5ttcc, T5tttt; 1: T2tt
   }
 
   // ---------------------------------------
@@ -403,8 +413,15 @@ int main(int argc, char** argv) {
 	// Lumi normalization
 	// Signals are binned so we get the total weight separately for each bin
 	if (cmdline.isSignal) {
-	  int bin = vh_weightnorm_signal[0]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
-	  weightnorm = vh_weightnorm_signal[0]->GetBinContent(bin);
+	  if (signal_index==0) {
+	    int bin = vh_weightnorm_signal[signal_index]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
+	    weightnorm = vh_weightnorm_signal[signal_index]->GetBinContent(bin);
+	  }
+	  else {
+	    //int bin = vh_weightnorm_signal[signal_index]->FindBin(data.evt.SUSY_Stop_Mass, data.evt.SUSY_LSP_Mass);
+	    //weightnorm = vh_weightnorm_signal[signal_index]->GetBinContent(bin);
+	    weightnorm = 0;
+	  }
 	}
 	// Normalize to chosen luminosity, also consider symmeteric up/down variation in lumi uncertainty
 	w *= ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);

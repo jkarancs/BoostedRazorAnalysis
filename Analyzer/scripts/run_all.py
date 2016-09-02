@@ -7,7 +7,8 @@ options = cmdargs[1:]
 # ----------------------  Settings -----------------------
 DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
 OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
-SKIMNAME="Skim_May21_1AK8JetPt300"
+SKIMNAME="Skim_Aug30_1AK8JetPt300"
+SPLIT_SKIM_NFILE = 0
 EOSDIR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
 NPROC = 3 # Number of processors to use for Analyzer jobs
 EXEC_PATH = os.getcwd()
@@ -28,14 +29,17 @@ for input_list in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backg
     skim_output_file = "ntuple/grid18/"+SKIMNAME+"/"+input_list.split("/")[-1].replace(".txt","/Skim.root")
     log_file = OUTDIR+"/log/"+input_list.split("/")[-1].replace("txt", "log")
     ana_arguments_full.append([output_file, [input_list], log_file])
-    with open(input_list) as f:
-        lines = f.read().splitlines()
-        for n in range(1, len(lines)/5+2):
-            input_files = []
-            for i in range((n-1)*5, min(n*5,len(lines))):
-                input_files.append(os.path.realpath(lines[i]))
-            args = [skim_output_file.replace(".root","_"+str(n)+".root"), input_files, log_file.replace(".log","_"+str(n)+".log")]
-            ana_arguments_skim.append(args)
+    if SPLIT_SKIM_NFILE == 0:
+        ana_arguments_skim.append([skim_output_file, [input_list], log_file])
+    else:
+        with open(input_list) as f:
+            lines = f.read().splitlines()
+            for n in range(1, len(lines)/SPLIT_SKIM_NFILE+2):
+                input_files = []
+                for i in range((n-1)*SPLIT_SKIM_NFILE, min(n*SPLIT_SKIM_NFILE,len(lines))):
+                    input_files.append(os.path.realpath(lines[i]))
+                args = [skim_output_file.replace(".root","_"+str(n)+".root"), input_files, log_file.replace(".log","_"+str(n)+".log")]
+                ana_arguments_skim.append(args)
 
 def subset(list, match):
     result = []
@@ -59,25 +63,38 @@ ttx                  = subset(ana_arguments_full, "TTG")
 ttx                 += subset(ana_arguments_full, "TTW")
 ttx                 += subset(ana_arguments_full, "TTZ")
 ttx                 += subset(ana_arguments_full, "TTTT")
+# TT 76X
+#tt_madgraph_ht       = subset(ana_arguments_full, "TTJets_HT")
+#tt_mcatnlo           = subset(ana_arguments_full, "TTJets_amcatnloFXFX")
+#tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraph")
+#tt_mcatnlo_py8       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
+#tt_powheg_her        = subset(ana_arguments_full, "TT_powheg_herwig")
+#tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg_pythia8")
+#tt_powheg_py8_mpiOff = subset(ana_arguments_full, "TT_powheg_pythia8_mpiOFF")
+#tt_powheg_py8_noCR   = subset(ana_arguments_full, "TT_powheg_pythia8_noCR")
+# TT 80X
 tt_madgraph_ht       = subset(ana_arguments_full, "TTJets_HT")
-tt_mcatnlo           = subset(ana_arguments_full, "TTJets_amcatnloFXFX")
-tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraph")
-tt_mcatnlo_her       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
-tt_mcatnlo_py8       = subset(ana_arguments_full, "TT_amcatnlo_pythia8")
-tt_powheg_her        = subset(ana_arguments_full, "TT_powheg_herwig")
-tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg_pythia8.")
-tt_powheg_py8_mpiOff = subset(ana_arguments_full, "TT_powheg_pythia8_mpiOFF")
-tt_powheg_py8_noCR   = subset(ana_arguments_full, "TT_powheg_pythia8_noCR")
+tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraphMLM-pythia8")
+tt_mcatnlo_py8       = subset(ana_arguments_full, "TT_amcatnlo-pythia8")
+tt_mcatnloFXFX       = subset(ana_arguments_full, "TTJets_amcatnloFXFX-pythia8")
+tt_powheg_her        = subset(ana_arguments_full, "TT_powheg-herwigpp")
+tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg-pythia8")
+tt_powheg_py8_evtgen = subset(ana_arguments_full, "TT_powheg-pythia8_evtgen")
+tt_powheg_py8_ext    = subset(ana_arguments_full, "TT_powheg-pythia8_ext")
 wjets                = subset(ana_arguments_full, "WJets")
 diboson              = subset(ana_arguments_full, "WW")
 diboson             += subset(ana_arguments_full, "WZ")
 diboson             += subset(ana_arguments_full, "ZZ")
 diboson             += subset(ana_arguments_full, "ZH")
-T1tttt               = subset(ana_arguments_full, "SMS-T1tttt_mGluino-1500_mLSP-100_FullSim")
-#T1tttt              += subset(ana_arguments_full, "SMS-T1tttt_mGluino-1200_mLSP-800_FullSim")
+T1tttt               = subset(ana_arguments_full, "FastSim_SMS-T1tttt")
+T5ttcc               = subset(ana_arguments_full, "FastSim_SMS-T5ttcc")
+T5tttt               = subset(ana_arguments_full, "FastSim_SMS-T5tttt_dM175")
 
 #ana_arguments_test = jetht + tt_mcatnlo + qcd
-ana_arguments_test = jetht + tt_powheg_py8 + qcd
+ana_arguments_test = jetht + tt_powheg_py8_evtgen + qcd + T5ttcc
+
+#ana_arguments_skim = tt_powheg_py8 + wjets + dy_z + qcd + singletop + ttx + diboson + T1tttt
+#ana_arguments_skim = tt_powheg_py8_ext
 
 #ana_arguments_test = [
 #    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],
@@ -124,6 +141,7 @@ if opt_quick:
     print "Running with option: --quick (1/100 statistics)"
 if opt_plot:
     print "Running with option: --plot (will produce plots)"
+
 
 # --------------------- Functions ------------------------
 # Show and run command with stdout on screen

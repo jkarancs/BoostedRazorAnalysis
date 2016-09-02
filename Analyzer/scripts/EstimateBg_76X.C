@@ -24,7 +24,9 @@ void EstimateBg_76X(bool save=0, std::string in = "",
   std::string dphi_cut = ss.str().replace(ss.str().find("."),1,"p");
   std::string r_cut = ss2.str().replace(ss2.str().find("."),1,"p");
   
-  std::string filename = in.size() ? in : "results/Plotter_out_2016_05_31_08h48m57_replot.root";
+  std::string filename = in.size() ? in : 
+    //"results/Plotter_out_2016_05_31_08h48m57_replot.root";
+    "results/Plotter_out_2016_06_24_14h28m51.root";
   
   std::vector<std::string> samples[4];
   //samples[0].push_back("TTJetsMGHT");
@@ -59,12 +61,12 @@ void EstimateBg_76X(bool save=0, std::string in = "",
     //samples[1].push_back("TTPowhegmpiOff");
     //samples[1].push_back("TTPowhegnoCR");
     //samples[1].push_back("TTPowhegHerwig");
-    samples[1].push_back("WJets");
     samples[1].push_back("ZJets");
-    samples[1].push_back("Top");
     samples[1].push_back("TTX");
-    samples[1].push_back("QCD");
+    samples[1].push_back("WJets");
     samples[1].push_back("Diboson");
+    samples[1].push_back("Top");
+    samples[1].push_back("QCD");
     //ZERO samples[1].push_back("TZQ");
     //ZERO samples[1].push_back("ZJetsToQQ"); // Also WJetsToQQ
     //ZERO samples[1].push_back("GJets");
@@ -133,10 +135,10 @@ void EstimateBg_76X(bool save=0, std::string in = "",
     for (size_t iSample = 0; iSample<samples[iMethod].size(); ++iSample)  {
       std::string canname = 
 	iMethod==0 ? std::string("DPhiBins")+(ABCD_prime ? "/RBins_0To1HadTop_" : "/RBins_2HadTop_")+samples[iMethod][iSample] :
-	iMethod==1 ? std::string("RFine/NTopBands_")+(ABCD_prime ? "Fail" : "Pass")+"DPhiCut_"+samples[iMethod][iSample] :
-	iMethod==2 ? std::string("RFine/NTopBands_")+(ABCD_prime ? "Fail" : "Pass")+"DPhiCut_Background" :
-	iMethod==3 ? std::string("RFine/NTopBands_")+(ABCD_prime ? "Fail" : "Pass")+"DPhiCut_"+samples[iMethod][iSample] : "";
-      TCanvas *can = (TCanvas*)(f->Get(canname.c_str())); 
+	iMethod==1 ? std::string("RFine/Tau32Cuts_")+(ABCD_prime ? "Fail" : "Pass")+"DPhiCut_"+samples[iMethod][iSample] :
+	iMethod==2 ? std::string("RFine/Tau32Cuts_")+(ABCD_prime ? "Fail" : "Pass")+"DPhiCut_Background" :
+	iMethod==3 ? std::string("RFine/Tau32Cuts_")+(ABCD_prime ? "Fail" : "Pass")+"DPhiCut_"+samples[iMethod][iSample] : "";
+      TCanvas *can = (TCanvas*)(f->Get(canname.c_str()));
       can = (TCanvas*)can->Clone();
       can->Draw();
       TH1D *h_side = (TH1D*)can->GetListOfPrimitives()->At(i_h_side[iMethod]);
@@ -158,7 +160,7 @@ void EstimateBg_76X(bool save=0, std::string in = "",
       }
       TH1D *h_pred =(TH1D*)h_side->Clone();
       if (iMethod!=0&&rebin>1) { h_side->Rebin(rebin); h_signal->Rebin(rebin); h_pred->Rebin(rebin); }
-      TLegend *leg = (TLegend*)can->GetListOfPrimitives()->At(can->GetListOfPrimitives()->GetEntries()-2);
+      TLegend *leg = (TLegend*)can->GetListOfPrimitives()->At(can->GetListOfPrimitives()->GetEntries()-1);
       leg->SetX1(0.35); leg->SetX2(0.65); leg->SetY1(0.6);
       
       // Add ratio plot

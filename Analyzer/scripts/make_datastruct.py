@@ -1,11 +1,13 @@
 import ROOT
-file = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_60.root")
+file = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD_1000.root")
 tree = file.Get("B2GTTreeMaker/B2GTree")
 
 def printvars( varname, vartype, prefix, isvector, keep_prefix ):
     if varname.startswith(prefix):
         short = varname if keep_prefix else varname[len(prefix):]
-        if isvector:
+        if "Keys" in varname:
+            print "    std::vector<std::vector<int> > "+short+";"
+        elif isvector:
             if "i" in vartype:
                 print "    std::vector<unsigned int> "+short+";"
             elif "I" in vartype:
@@ -32,7 +34,7 @@ def printvars( varname, vartype, prefix, isvector, keep_prefix ):
 def printinits( varname, vartype, prefix, isvector, keep_prefix ):
     if varname.startswith(prefix):
         short = varname if keep_prefix else varname[len(prefix):]
-        if isvector:
+        if isvector or "Keys" in varname:
             print "      init_vec("+short+");"
         else:
             if "i" in vartype:
@@ -106,8 +108,8 @@ public:
 
 printclass( tree, "EventData",          "evt",             ["evt_", "SUSY_"],   0 )
 printclass( tree, "METData",            "met",             ["met_"],            0 )
-printclass( tree, "PileupData",         "pu",              ["pu_"],             1 )
-printclass( tree, "VertexData",         "vtx",             ["vtx_"],            1 )
+printclass( tree, "PileupData",         "pu",              ["pu_"],             0 )
+printclass( tree, "VertexData",         "vtx",             ["vtx_"],            0 )
 printclass( tree, "SystScaleData",      "syst_scale",      ["scale_"],          1 )
 printclass( tree, "SystPDFData",        "syst_pdf",        ["pdf_"],            1 )
 printclass( tree, "SystAlphaSData",     "syst_alphas",     ["alphas_"],         1 )
@@ -116,11 +118,8 @@ printclass( tree, "HLTData",            "hlt",             ["HLT_"],            
 printclass( tree, "GenVars",            "gen",             ["gen_"],            1 )
 printclass( tree, "ElectronVars",       "ele",             ["el_"],             1 )
 printclass( tree, "MuonVars",           "mu",              ["mu_"],             1 )
-printclass( tree, "AK4CHSJetVars",      "jetsAK4",         ["jetAK4_"],         1 )
 printclass( tree, "AK4PuppiJetVars",    "jetsAK4Puppi",    ["jetAK4Puppi_"],    1 )
-printclass( tree, "AK8CHSJetVars",      "jetsAK8",         ["jetAK8_"],         1 )
 printclass( tree, "AK8PuppiJetVars",    "jetsAK8Puppi",    ["jetAK8Puppi_"],    1 )
-printclass( tree, "AK8CHSSubjetVars",   "subjetsAK8",      ["subjetAK8_"],      1 )
 printclass( tree, "AK8PuppiSubjetVars", "subjetsAK8Puppi", ["subjetAK8Puppi_"], 1 )
 printclass( tree, "AK8GenJetVars",      "genjetsAK8",      ["genjetAK8SD_"],    1 )
 
