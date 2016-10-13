@@ -32,10 +32,6 @@ int main(int argc, char** argv) {
     while ( std::getline(systFile, line) ) ++syst.nSyst;
   }
 
-  utils::outputFile* ofile;
-  ofile = new utils::outputFile(cmdline.outputFileName);
-  TDirectory* out_dir = gDirectory;
-
   DataStruct data;
   double w = 1;
   Analysis ana;
@@ -46,9 +42,9 @@ int main(int argc, char** argv) {
 
   for (auto in_file : cmdline.fileNames) ana.load_analysis_histos(in_file);
 
-  out_dir->cd();
+  TFile *f = new TFile(cmdline.outputFileName.c_str(),"RECREATE");
   ana.save_analysis_histos(1);
-  ofile->close();
+  f->Close();
   
   return 0;
 }

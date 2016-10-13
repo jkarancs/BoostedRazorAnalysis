@@ -1,4 +1,3 @@
-
 #ifndef DataStruct_h
 #define DataStruct_h
 
@@ -38,6 +37,7 @@ public:
     float XSec;
     float Gen_Weight;
     float Gen_Ht;
+    float SUSY_Stop_Mass;
     float SUSY_Gluino_Mass;
     float SUSY_LSP_Mass;
     
@@ -58,6 +58,7 @@ public:
       XSec=NOVAL_F;
       Gen_Weight=NOVAL_F;
       Gen_Ht=NOVAL_F;
+      SUSY_Stop_Mass=NOVAL_F;
       SUSY_Gluino_Mass=NOVAL_F;
       SUSY_LSP_Mass=NOVAL_F;
     }

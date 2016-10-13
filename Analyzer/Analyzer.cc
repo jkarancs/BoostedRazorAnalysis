@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "common/utils.h"   // Helper functions
-#include "settings_Viktor.h" // Define all Analysis specific settings here
+#include "settings_Janos.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -268,12 +268,12 @@ int main(int argc, char** argv) {
 
     cout << "Normalization variables:" << endl;
     ana.calc_weightnorm_histo_from_ntuple(cmdline.fileNames, settings.intLumi, vname_signal,
-					  settings.xsecHistoNamesSignal, settings.totWeightHistoNamesSignal); // histo names given in settings.h
+					  settings.totWeightHistoNamesSignal); // histo names given in settings.h
 
     // Find the index of the current signal
     if (cmdline.fileNames.size()>0) for (size_t i=0, n=vname_signal.size(); i<n; ++i) 
-      if (cmdline.fileNames[0].find(vname_signal[i])!=std::string::npos&&signal_index==-1) signal_index = i;
-    signal_index = (signal_index>=3); // 0: T1tttt, T5ttcc, T5tttt; 1: T2tt
+      if (cmdline.fileNames[0].find(vname_signal[i])!=std::string::npos&&signal_index==-1) 
+	signal_index = (i>=3); // 0: T1tttt, T5ttcc, T5tttt; 1: T2tt
   }
 
   // ---------------------------------------
@@ -413,15 +413,8 @@ int main(int argc, char** argv) {
 	// Lumi normalization
 	// Signals are binned so we get the total weight separately for each bin
 	if (cmdline.isSignal) {
-	  if (signal_index==0) {
-	    int bin = vh_weightnorm_signal[signal_index]->FindBin(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
-	    weightnorm = vh_weightnorm_signal[signal_index]->GetBinContent(bin);
-	  }
-	  else {
-	    //int bin = vh_weightnorm_signal[signal_index]->FindBin(data.evt.SUSY_Stop_Mass, data.evt.SUSY_LSP_Mass);
-	    //weightnorm = vh_weightnorm_signal[signal_index]->GetBinContent(bin);
-	    weightnorm = 0;
-	  }
+	  int bin = vh_weightnorm_signal[signal_index]->FindBin(signal_index ? data.evt.SUSY_Stop_Mass : data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass);
+	  weightnorm = vh_weightnorm_signal[signal_index]->GetBinContent(bin);
 	}
 	// Normalize to chosen luminosity, also consider symmeteric up/down variation in lumi uncertainty
 	w *= ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);

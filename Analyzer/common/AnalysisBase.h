@@ -8,6 +8,7 @@
 
 #include "DataStruct.h"
 #include "GluinoXSec.h"
+#include "StopXSec.h"
 
 // _____________________________________________________________
 //        AnalysisBase: Methods common in all analysis
@@ -33,7 +34,7 @@ public:
   double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
 
   void calc_weightnorm_histo_from_ntuple(const std::vector<std::string>&, const double&, const std::vector<std::string>&,
-					 const std::vector<std::string>&, const std::vector<std::string>&, bool);
+					 const std::vector<std::string>&, bool);
 
   void init_pileup_reweightin(const std::string&, const std::string&, const std::vector<std::string>&);
 
@@ -168,7 +169,7 @@ AnalysisBase::define_preselections(const DataStruct& data)
    - tau32 < 0.67
 */
 
-#define USE_BTAG 0
+#define USE_BTAG 1
 
 #if USE_BTAG == 0
 
@@ -183,15 +184,15 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define TOP_TAG_SF_HIGH_ERR  0.18
 
 /*
-  Latest TOP Tagging working point (08 June 2016)
+  Latest TOP Tagging working point (2015 Data)
 
-   Latest WPs/SFs not yet on twiki (Gregor Kasieczka et al.):
-   https://indico.cern.ch/event/540674/contributions/2196235/attachments/1287602/1915958/TopTagging_2016-06-08.pdf
+   Latest WPs/SFs -  JME-16-003 PAS:
+   http://cms.cern.ch/iCMS/analysisadmin/viewanalysis?id=1694&field=id&value=1694
    
    Choose:
-   - Loose selection: e(S) = 56.6%, e(B) = 3% WP
+   - Loose selection: e(S) ~= 55%, e(B) = 3.0% WP
    - AK8 Puppi jets
-   - 105 < SD Mass < 210
+   - 105 <= SD Mass < 210
    - tau32 < 0.8
    - max subjet BTag CSV > 0.46
 */
@@ -203,10 +204,10 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define TOP_TAU32_CUT        0.80
 #define TOP_BTAG_CSV         0.46
 
-#define TOP_TAG_SF_LOW       1.21
-#define TOP_TAG_SF_LOW_ERR   0.16
-#define TOP_TAG_SF_HIGH      0.82
-#define TOP_TAG_SF_HIGH_ERR  0.20
+#define TOP_TAG_SF_LOW       1.04
+#define TOP_TAG_SF_LOW_ERR   0.11
+#define TOP_TAG_SF_HIGH      1.05
+#define TOP_TAG_SF_HIGH_ERR  0.26
 #endif
 
 /* 
@@ -240,13 +241,64 @@ std::vector<int> passHadTopPreTag;
 std::vector<int> passHadWTag;
 std::vector<double> subjetBTagDiscr;
 
-// Event
+// Event - Jets
 unsigned int nLooseJet;
 unsigned int nSubjetBTag;
 unsigned int nHadTopTag;
 unsigned int nHadTopPreTag;
 unsigned int nHadWTag;
 double AK4Puppi_Ht, AK8Puppi_Ht;
+
+/*
+  Electron Veto ID:
+  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2
+
+  ID used in AugXX/SepXX ntuple production:
+  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#Spring15_selection_25ns
+
+  Latest ID (upcoming production):
+  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#Working_points_for_2016_data_for
+
+  Choose:
+  - Cut based Veto ID without relIso (EA) cut
+  - Mini-Isolation (EA)/pt < 0.1
+  - pt >= 5
+  - |eta| < 2.5
+
+-------------------------------
+  
+  Muon Loose ID:
+  https://twiki.cern.ch/twiki/bin/viewauth/CMS/SWGuideMuonIdRun2
+  
+  Latest ID used:
+  https://twiki.cern.ch/twiki/bin/viewauth/CMS/SWGuideMuonIdRun2#Loose_Muon
+  
+  Choose:
+  - POG recommended Loose ID
+  - Mini-Isolation (EA)/pt < 0.2
+  - pt >= 5
+  - |eta| < 2.4
+
+  Not (yet) used - variable needs to be added for next production:
+  - Impact point: |d0| < 0.2, |dz| < 0.5
+
+*/
+
+#define ELE_PT_CUT 5
+#define ELE_ABSETA_CUT 2.5
+#define ELE_MINIISO_CUT 0.1
+#define MU_PT_CUT 5
+#define MU_ABSETA_CUT 2.4
+#define MU_MINIISO_CUT 0.2
+//#define MU_ABSD0_CUT 0.2
+//#define MU_ABSDZ_CUT 0.5
+
+// Event Letpons
+unsigned int nEleVeto;
+unsigned int nMuLoose;
+
+// Min(DeltaPhi(Jet_i, MET)), i=1,2,3
+double minDeltaPhi;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
@@ -269,13 +321,45 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if (subjet0_index != -1) if (data.subjetsAK8Puppi.CSVv2[subjet0_index] > max_subjet_btag_discr) max_subjet_btag_discr = data.subjetsAK8Puppi.CSVv2[subjet0_index];
       if (subjet1_index != -1) if (data.subjetsAK8Puppi.CSVv2[subjet1_index] > max_subjet_btag_discr) max_subjet_btag_discr = data.subjetsAK8Puppi.CSVv2[subjet1_index];
 #if USE_BTAG == 1
-      passSubjetBTag.push_back((max_subjet_btag_discr >= TOP_BTAG_CSV));
-      if (max_subjet_btag_discr >= TOP_BTAG_CSV) ++nSubjetBTag;
+      passSubjetBTag.push_back((max_subjet_btag_discr > TOP_BTAG_CSV));
+      if (max_subjet_btag_discr > TOP_BTAG_CSV) ++nSubjetBTag;
 #else
-      passSubjetBTag.push_back((max_subjet_btag_discr>= 0.46));
-      if (max_subjet_btag_discr >= 0.46) ++nSubjetBTag;
+      passSubjetBTag.push_back((max_subjet_btag_discr> 0.46));
+      if (max_subjet_btag_discr > 0.46) ++nSubjetBTag;
 #endif
       subjetBTagDiscr.push_back(max_subjet_btag_discr);
+    }
+
+    // AK4 Puppi jets
+    minDeltaPhi = 9999;
+    while(data.jetsAK4Puppi.Loop()) {
+      // minDeltaPhi
+      if (data.jetsAK4Puppi.it<3) {
+	double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4Puppi.Phi[data.jetsAK4Puppi.it]));
+	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
+      }
+    }
+
+    // Number of Veto Electrons
+    nEleVeto = 0;
+    while(data.ele.Loop()) {
+      if (data.ele.Pt[data.ele.it] < ELE_PT_CUT) continue;
+      if (fabs(data.ele.Eta[data.ele.it]) >= ELE_ABSETA_CUT) continue;
+      if (!data.ele.IDVeto_NoIso[data.ele.it]) continue;
+      if (data.ele.MiniIso[data.ele.it]/data.ele.Pt[data.ele.it] >= ELE_MINIISO_CUT) continue;
+      ++nEleVeto;
+    }
+
+    // Number of Loose Muons
+    nMuLoose = 0;
+    while(data.mu.Loop()) {
+      if (data.mu.Pt[data.mu.it] < MU_PT_CUT) continue;
+      if (fabs(data.mu.Eta[data.mu.it]) >= MU_ABSETA_CUT) continue;
+      if (!data.mu.IsLooseMuon[data.mu.it]) continue;
+      if (data.mu.MiniIso[data.mu.it]/data.mu.Pt[data.mu.it] >= MU_MINIISO_CUT) continue;
+      //if (fabs(data.mu.Dxy[data.mu.it]) >= MU_ABSD0_CUT) continue;
+      //if (fabs(data.mu.Dz[data.mu.it]) >= MU_ABSDZ_CUT) continue;
+      ++nMuLoose;
     }
   }
 
@@ -326,7 +410,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 #endif
       }
     }
-    
+
     // _______________________________________________________
     //                  Hadronic W Tag definition
     passHadWTag.push_back(0);
@@ -365,10 +449,13 @@ AnalysisBase::init_common_histos()
 {
   // total weight
   h_totweight                  = new TH1D("totweight",          "MC;;Total (generator) event weight", 1,0,1);
-  // signal weight and xsec
+  // signal weight
   vh_totweight_signal .push_back(new TH2D("totweight_T1tttt",   "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,-12.5,5012.5, 201,-12.5,5012.5));
   vh_xsec_signal      .push_back(new TH2D("xsec_T1tttt",        "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  201,-12.5,5012.5, 201,-12.5,5012.5));
   vh_weightnorm_signal.push_back(new TH2D("weightnorm_T1tttt",  "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,-12.5,5012.5, 201,-12.5,5012.5));
+  vh_totweight_signal .push_back(new TH2D("totweight_T2tt",     "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        401,-2.5,2002.5, 401,-2.5,2002.5));
+  vh_xsec_signal      .push_back(new TH2D("xsec_T2tt",          "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  401,-2.5,2002.5, 401,-2.5,2002.5));
+  vh_weightnorm_signal.push_back(new TH2D("weightnorm_T2tt",    "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 401,-2.5,2002.5, 401,-2.5,2002.5));
   // pileup
   h_pileup_data                = new TH1D("pileup_data",        "Pile-up distribution - Data (Nominal);Pile-up", 100,0,100);
   h_pileup_data_down           = new TH1D("pileup_data_down",   "Pile-up distribution - Data (down);Pile-up",    100,0,100);
@@ -452,7 +539,7 @@ AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filename
 //       Calculate weight normalization for signal
 void
 AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& filenames, const double& intLumi, const std::vector<std::string>& vname_signal,
-						const std::vector<std::string>& vname_xsec, const std::vector<std::string>& vname_totweight, bool verbose=1)
+						const std::vector<std::string>& vname_totweight, bool verbose=1)
 {
   // Find the index of the current signal
   int signal_index = -1;
@@ -462,50 +549,42 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
       signal_index = i;
       signal_name = vname_signal[i];
     }
-  signal_index = (signal_index>=3); // 0: T1tttt, T5ttcc, T5tttt; 1: T2tt
-  
-  // Scans of MLSP vs MGluino 
-  if (signal_index==0) { 
-    // Get gluino cross sections and merge totweight histos
-    std::map<int, double> xsec_glu;
-    for (auto filename : filenames) {
-      TFile* f = TFile::Open(filename.c_str());
-      // Get total weight
-      TH2D* totweight = (TH2D*)f->Get(vname_totweight[signal_index].c_str());
-      vh_totweight_signal[signal_index]->Add(totweight);
-      f->Close();
-    }
-    // Set xsec for each gluino mass bin
-    // This way we fix temporary bug with xsec for some bins
-    // Read gluino xsec from same file used in TTree step
-    for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) {
-      double mGlu = vh_xsec_signal[signal_index]->GetXaxis()->GetBinCenter(binx);
-      xsec_glu[binx] = GetGluinoXSec(mGlu).first; // first: mean xsec, second: error
-      for (int biny=1, nbiny=vh_xsec_signal[signal_index]->GetNbinsY(); biny<=nbiny; ++biny)
-	vh_xsec_signal[signal_index]->SetBinContent(binx, biny, xsec_glu[binx]);
-    }
-    // Calculate weight normalization
-    // weightnorm = (settings.intLumi*xsec)/totweight;
-    // Divide(h1,h2,c1,c2) --> c1*h1/(c2*h2)
-    vh_weightnorm_signal[signal_index]->Divide(vh_xsec_signal[signal_index], vh_totweight_signal[signal_index], intLumi);
-    if (verbose) {
-      std::cout<<"- Signal: "<<signal_name<<std::endl;
-      for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) 
-        for (int biny=1, nbiny=vh_xsec_signal[signal_index]->GetNbinsY(); biny<=nbiny; ++biny) {
-          double mGlu = vh_xsec_signal[signal_index]->GetXaxis()->GetBinCenter(binx);
-          double mLSP = vh_xsec_signal[signal_index]->GetYaxis()->GetBinCenter(biny);
-          double xsec  = vh_xsec_signal[signal_index]      ->GetBinContent(binx, biny);
-          double totw  = vh_totweight_signal[signal_index] ->GetBinContent(binx, biny);
-          double wnorm = vh_weightnorm_signal[signal_index]->GetBinContent(binx, biny);
-          if (totw>0) std::cout<<"  Bin: M(g~)="<<mGlu<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
-        }
-      std::cout<<std::endl;
-    }
-  } 
-  // Scans of MLSP vs MStop
-  //else {
-  //  
-  //}
+  signal_index = (signal_index>=3); // 0: Mlsp vs Mgluino - T1tttt, T5ttcc, T5tttt; 1: Mlsp vs Mstop - T2tt
+
+  // Merge totweight histos
+  std::map<int, double> xsec_mother;
+  for (auto filename : filenames) {
+    TFile* f = TFile::Open(filename.c_str());
+    // Get total weight
+    TH2D* totweight = (TH2D*)f->Get(vname_totweight[signal_index].c_str());
+    vh_totweight_signal[signal_index]->Add(totweight);
+    f->Close();
+  }
+  // Set xsec for each gluino/stop mass bin
+  // Read gluino/stop xsec from same file used in TTree step
+  for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) {
+    double mMother = vh_xsec_signal[signal_index]->GetXaxis()->GetBinCenter(binx);
+    xsec_mother[binx] = signal_index ? GetStopXSec(mMother).first : GetGluinoXSec(mMother).first; // first: mean xsec (pb), second: error (%)
+    for (int biny=1, nbiny=vh_xsec_signal[signal_index]->GetNbinsY(); biny<=nbiny; ++biny)
+      vh_xsec_signal[signal_index]->SetBinContent(binx, biny, xsec_mother[binx]);
+  }
+  // Calculate weight normalization
+  // weightnorm = (settings.intLumi*xsec)/totweight;
+  // Divide(h1,h2,c1,c2) --> c1*h1/(c2*h2)
+  vh_weightnorm_signal[signal_index]->Divide(vh_xsec_signal[signal_index], vh_totweight_signal[signal_index], intLumi);
+  if (verbose) {
+    std::cout<<"- Signal: "<<signal_name<<std::endl;
+    for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) 
+      for (int biny=1, nbiny=vh_xsec_signal[signal_index]->GetNbinsY(); biny<=nbiny; ++biny) {
+        double mMother = vh_xsec_signal[signal_index]->GetXaxis()->GetBinCenter(binx);
+        double mLSP = vh_xsec_signal[signal_index]->GetYaxis()->GetBinCenter(biny);
+        double xsec  = vh_xsec_signal[signal_index]      ->GetBinContent(binx, biny);
+        double totw  = vh_totweight_signal[signal_index] ->GetBinContent(binx, biny);
+        double wnorm = vh_weightnorm_signal[signal_index]->GetBinContent(binx, biny);
+        if (totw>0) std::cout<<(signal_index?"  Bin: M(s~)=":"  Bin: M(g~)=")<<mMother<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
+      }
+    std::cout<<std::endl;
+  }
 }
 
 

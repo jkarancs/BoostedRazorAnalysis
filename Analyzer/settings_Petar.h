@@ -1,7 +1,7 @@
 #include "common/DataStruct.h"
 #include "common/treestream.h"
 
-#include "Analysis_Viktor.h" // Specify here the implementations for you Analysis
+#include "Analysis_Petar.h" // Specify here the implementations for you Analysis
 
 struct settings {
 
@@ -30,14 +30,10 @@ struct settings {
   {
     if (runOnSkim) {
       totWeightHistoNamesSignal.push_back("totweight_T1tttt"); // lsp mass vs gluino mass scan, also used for T5ttcc and T5tttt
-      //totWeightHistoNamesSignal.push_back("totweight_T2tt");   // T2tt
-      xsecHistoNamesSignal     .push_back("xsec_T1tttt"); // lsp mass vs gluino mass scan, also used for T5ttcc and T5tttt
-      //xsecHistoNamesSignal     .push_back("xsec_T2tt");   // T2tt
+      totWeightHistoNamesSignal.push_back("totweight_T2tt");   // T2tt
     } else {
       totWeightHistoNamesSignal.push_back("EventCounter/h_totweight_T1tttt");
-      //totWeightHistoNamesSignal.push_back("EventCounter/h_totweight_T2tt"); not yet added
-      xsecHistoNamesSignal     .push_back("EventCounter/h_xsec_T1tttt");
-      //xsecHistoNamesSignal     .push_back("EventCounter/h_xsec_T2tt"); not yet added
+      totWeightHistoNamesSignal.push_back("EventCounter/h_totweight_T2tt");
     }
   };
   ~settings(){};
@@ -61,7 +57,6 @@ struct settings {
   const double triggerEffScaleFactor;
   const double triggerEffUncertainty;
   std::vector<std::string> totWeightHistoNamesSignal;
-  std::vector<std::string> xsecHistoNamesSignal;
 
   //-----------------------------------------------------------------------------
   // -- Declare variables to be read by treestream
@@ -89,6 +84,7 @@ struct settings {
     stream.select("evt_XSec", data.evt.XSec);
     stream.select("evt_Gen_Weight", data.evt.Gen_Weight);
     stream.select("evt_Gen_Ht", data.evt.Gen_Ht);
+    stream.select("SUSY_Stop_Mass", data.evt.SUSY_Stop_Mass);
     stream.select("SUSY_Gluino_Mass", data.evt.SUSY_Gluino_Mass);
     stream.select("SUSY_LSP_Mass", data.evt.SUSY_LSP_Mass);
     
