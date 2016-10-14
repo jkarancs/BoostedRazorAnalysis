@@ -284,7 +284,7 @@ double AK4Puppi_Ht, AK8Puppi_Ht;
 
 */
 
-#define ELE_PT_CUT 5
+#define ELE_PT_CUT 10 // Cut in B2G ntuples
 #define ELE_ABSETA_CUT 2.5
 #define ELE_MINIISO_CUT 0.1
 #define MU_PT_CUT 5
