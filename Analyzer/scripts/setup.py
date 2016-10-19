@@ -55,9 +55,9 @@ else:
     sys.exit()
 
 print "Creating file lists ... ",
-if not os.path.exists(ANA_BASE+'/filelists/data'): os.mkdirs(ANA_BASE+'/filelists/data')
-if not os.path.exists(ANA_BASE+'/filelists/signals'): os.mkdirs(ANA_BASE+'/filelists/signals')
-if not os.path.exists(ANA_BASE+'/filelists/backgrounds'): os.mkdirs(ANA_BASE+'/filelists/backgrounds')
+if not os.path.exists(ANA_BASE+'/filelists/data'): os.makedirs(ANA_BASE+'/filelists/data')
+if not os.path.exists(ANA_BASE+'/filelists/signals'): os.makedirs(ANA_BASE+'/filelists/signals')
+if not os.path.exists(ANA_BASE+'/filelists/backgrounds'): os.makedirs(ANA_BASE+'/filelists/backgrounds')
 for txtfile in glob.glob('filelists/*/*.txt'):
     os.remove(txtfile)
 
