@@ -795,13 +795,13 @@ private:
     }
     for (size_t iaxis=0; iaxis<ndim_; ++iaxis) {
       TAxis* axis = iaxis==0 ? h->GetXaxis() : iaxis==1 ? h->GetYaxis() : h->GetZaxis();
-      size_t max_size = 0;
-      for (auto pair : bin_labels_[iaxis]) {
+      bool set_opt = 0;
+      for (auto pair : bin_labels_[iaxis]) { 
 	axis->SetBinLabel(pair.first, pair.second.c_str());
-	if (pair.second.size()>max_size) max_size = pair.second.size();
+	if (pair.second.size()>8) set_opt = 1;
       }
-      if (max_size) axis->SetLabelSize(0.05);
-      if (max_size>8) axis->LabelsOption("d");
+      if (set_opt) axis->LabelsOption("d");
+      axis->SetLabelSize(0.05);
     }
   }
   

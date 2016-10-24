@@ -34,9 +34,6 @@ double dEta;
 double dR;
 int passTau32Cuts;
 
-// cut decision bits
-unsigned int cutbits;
-
 void
 Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 {
@@ -107,7 +104,7 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
           }
         }
       }
-    } // end gen
+    }
 
     // Find bs and Ws
     // Method: bs and Ws with top parent are combined
@@ -147,7 +144,7 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
           good_W_matches = false;
         }
       }
-    } // end b/W
+    }
 
     // If we have lepton from W, find parent
     // Do as above with tops, but use neutrino and lepton instead to find W parent
@@ -284,11 +281,7 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
       else jet2_tau32 = 9999;
       passTau32Cuts = (jet1_tau32 < TOP_TAU32_CUT) && (jet2_tau32 < TOP_TAU32_CUT);
     }
-  } // end variables with no jet energy dependence
-
-  // Calculate decision of each individual cut
-  cutbits = 0;
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) if (analysis_cuts[i].func()) cutbits += 1<<i;
+  }
 }
 
 //_______________________________________________________
@@ -320,31 +313,29 @@ Analysis::pass_skimming(DataStruct& data)
 void
 Analysis::define_selections(const DataStruct& data)
 {
-  analysis_cuts.clear();
-
   // cut1: njet >= 2
-  analysis_cuts.push_back({ .name="2Jet",   .func = [&data] {
+  analysis_cuts.push_back({ .name="2jet",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0;
 			      return 1;
 			    } });
 
   // cut2: jet 1 pass loose jet id
-  analysis_cuts.push_back({ .name="Jet1ID",   .func = [&data] {
+  analysis_cuts.push_back({ .name="jet1_id",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      return data.jetsAK8Puppi.looseJetID[0];
 			    } });
 
   // cut3: jet 2 pass loose jet id
-  analysis_cuts.push_back({ .name="Jet2ID",   .func = [&data] {
+  analysis_cuts.push_back({ .name="jet2_id",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      return data.jetsAK8Puppi.looseJetID[1];
 			    } });
 
   // cut4: jet 1 eta < 2.4
-  analysis_cuts.push_back({ .name="Jet1Eta",   .func = [&data] {
+  analysis_cuts.push_back({ .name="jet1_eta",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      if (fabs(data.jetsAK8Puppi.Eta[0])>=2.4) return 0;
@@ -352,7 +343,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut5: jet 2 eta < 2.4
-  analysis_cuts.push_back({ .name="Jet2Eta",   .func = [&data] {
+  analysis_cuts.push_back({ .name="jet2_eta",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      if (fabs(data.jetsAK8Puppi.Eta[1])>=2.4) return 0;
@@ -360,7 +351,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut6: jet 1 pt >= 400
-  analysis_cuts.push_back({ .name="Jet1Pt",   .func = [&data] {
+  analysis_cuts.push_back({ .name="jet1_pt",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      if (data.jetsAK8Puppi.Pt[0]<TOP_PT_CUT) return 0;
@@ -368,7 +359,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut7: jet 2 pt >= 400
-  analysis_cuts.push_back({ .name="Jet2Pt",   .func = [&data] { 
+  analysis_cuts.push_back({ .name="jet2_pt",   .func = [&data](){ 
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      if (data.jetsAK8Puppi.Pt[1]<TOP_PT_CUT) return 0;
@@ -376,7 +367,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut8: 105 <= jet 1 mass (softdrop) < 210
-  analysis_cuts.push_back({ .name="Jet1Mass", .func = [&data] { 
+  analysis_cuts.push_back({ .name="jet1_mass", .func = [&data](){ 
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      if (data.jetsAK8Puppi.softDropMass[0]<TOP_SD_MASS_CUT_LOW) return 0;
@@ -385,7 +376,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut9: 105 <= jet 2 mass (softdrop) < 210
-  analysis_cuts.push_back({ .name="Jet2Mass", .func = [&data] { 
+  analysis_cuts.push_back({ .name="jet2_mass", .func = [&data](){ 
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      if (data.jetsAK8Puppi.softDropMass[1]<TOP_SD_MASS_CUT_LOW) return 0;
@@ -394,14 +385,14 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut10: jet 1 pass subjet b-tag requirement ( CVS > 0.46 )
-  analysis_cuts.push_back({ .name="Jet1BTag", .func = [&data] { 
+  analysis_cuts.push_back({ .name="jet1_btag", .func = [&data](){ 
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      return passSubjetBTag[0];
 			    } });
 
   // cut11: jet 2 pass subjet b-tag requirement ( CVS > 0.46 )
-  analysis_cuts.push_back({ .name="Jet2BTag", .func = [&data] { 
+  analysis_cuts.push_back({ .name="jet2_btag", .func = [&data](){ 
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      return passSubjetBTag[1];
@@ -409,14 +400,14 @@ Analysis::define_selections(const DataStruct& data)
 
   /*
   // cutN: Full-hadronic trigger
-  analysis_cuts.push_back({ .name="hlt_ak8ht700_mass50", .func = [&data] {
+  analysis_cuts.push_back({ .name="hlt_ak8ht700_mass50", .func = [&data](){
                               // Define cut function here:
                               return data.hlt.AK8PFHT700_TrimR0p1PT0p03Mass50==1; 
                             } });
   */
 
   // cut12: lepton Veto
-  analysis_cuts.push_back({ .name="LepVeto", .func = [&data] { 
+  analysis_cuts.push_back({ .name="lep_veto", .func = [&data](){ 
 			      // Define cut function here:
 			      if (nEleVeto>0) return 0;
 			      if (nMuLoose>0) return 0;
@@ -425,7 +416,7 @@ Analysis::define_selections(const DataStruct& data)
   
 
   // cut13: | DeltaPhi | < DPHI_CUT
-  analysis_cuts.push_back({ .name="DeltaPhi", .func = [&data] {
+  analysis_cuts.push_back({ .name="delta_phi", .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      if (dPhi>=DPHI_CUT) return 0;
@@ -433,7 +424,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut14: jet 1 tau32 < TOP_TAU32_CUT
-  analysis_cuts.push_back({ .name="Jet1Tau32",   .func = [&data] {
+  analysis_cuts.push_back({ .name="jet1_tau32",   .func = [&data](){
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
 			      double tau32 = data.jetsAK8Puppi.tau3[0];
@@ -444,7 +435,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut15: jet 2 tau32 < TOP_TAU32_CUT
-  analysis_cuts.push_back({ .name="Jet2Tau32",   .func = [&data] { 
+  analysis_cuts.push_back({ .name="jet2_tau32",   .func = [&data](){ 
 			      // Define cut function here:
 			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
 			      double tau32 = data.jetsAK8Puppi.tau3[1];
@@ -455,7 +446,7 @@ Analysis::define_selections(const DataStruct& data)
 			    } });
 
   // cut16: R >= R_CUT
-  analysis_cuts.push_back({ .name="R", .func = [&data] {
+  analysis_cuts.push_back({ .name="R", .func = [&data](){
 			      // Define cut function here:
 			      return data.evt.R>=R_CUT;
 			    } });
@@ -510,9 +501,7 @@ Analysis::get_pf_opts_(std::vector<std::vector<Sample> > lists, std::string dirn
 void
 Analysis::define_histo_options(const double& weight, const DataStruct& d, const unsigned int& syst_nSyst, const unsigned int& syst_index, std::string dirname, bool runOnSkim=false)
 {
-  define_selections(d);
-
-  sh.SetHistoWeights({ [&weight] { return weight; } });
+  sh.SetHistoWeights({ [&weight](){ return weight; } });
 
   // --------------------------------------------------------------------
   //                            Colors
@@ -540,12 +529,12 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   //                            Cuts
   // --------------------------------------------------------------------
 
-  sh.AddNewCut("JetHasMatchedGenTop", [&d] { return d.jetsAK8Puppi.HasNearGenTop[d.jetsAK8Puppi.it]==1; });
-  sh.AddNewCut("IsGenTop",            [&d] { return is_Gen_Top[d.gen.it]; });
-  //sh.AddNewCut("HLT",               [this] { return _apply_cut("hlt_ak8ht700_mass50"); });
+  sh.AddNewCut("JetHasMatchedGenTop", [&d](){ return d.jetsAK8Puppi.HasNearGenTop[d.jetsAK8Puppi.it]==1; });
+  sh.AddNewCut("IsGenTop",            [&d](){ return is_Gen_Top[d.gen.it]; });
+  //sh.AddNewCut("HLT",               [this](){ return _apply_cut("hlt_ak8ht700_mass50"); });
 
   // Pass each cut
-  sh.AddNewCut("PassAnaSelection",    [this] { return analysis_cuts[cut_index].func(); });
+  sh.AddNewCut("PassAnaSelection",    [this](){ return analysis_cuts[cut_index].func(); });
   
   //__________________________________
   //            Postfixes
@@ -561,86 +550,96 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // AddNewPostfix("Name of Postfix", lambda function returning non-negative integer, "postfix 1;2;3; ...", "legend text 1;2;3; ...", "ROOT color 1,2,3, ...")
 
   // Systematics variations
-  sh.AddNewPostfix("Syst", [&syst_index] { return syst_index; }, std::string(";Syst[0to")+std::to_string(syst_nSyst)+"]", std::string(";systematics [0to")+std::to_string(syst_nSyst)+"]", "1-999");
+  sh.AddNewPostfix("Syst", [&syst_index]() { return syst_index; }, std::string(";Syst[0to")+std::to_string(syst_nSyst)+"]", std::string(";systematics [0to")+std::to_string(syst_nSyst)+"]", "1-999");
   if (syst_nSyst>998) std::cout<<"Warning: Too large number of systematics, define more colors!"<<std::endl;
-  
+
   // Jets
-  //sh.AddNewPostfix("AK4JetsPtOrdered", [&d] { return d.jetsAK4.it; }, "Jet[1to10]", "1st Jet;2nd Jet;3rd Jet;[4to10]th Jet", "1-10");
+  //sh.AddNewPostfix("AK4JetsPtOrdered", [&d](){ return d.jetsAK4.it; }, "Jet[1to10]", "1st Jet;2nd Jet;3rd Jet;[4to10]th Jet", "1-10");
   sh.AddNewPostfix("PtOrderedJets", [&d]()
 		    { 
 		      if (d.jetsAK8Puppi.it>=4) return (size_t)-1;
 		      return (size_t)d.jetsAK8Puppi.it;
 		    }, "Jet[1to4]", "1st Jet;2nd Jet;3rd Jet;4th Jet", col4_cyan_to_red);
 
+  sh.AddNewPostfix("CutFlow",       [this]()
+		    { 
+		      for (int i=0; i<16; ++i) if (!analysis_cuts[i].func()) return i;
+		      return 16;
+		    }, "2Jet;jet1ID;jet2ID;Jet1Eta;Jet2Eta;Jet1Pt;Jet2Pt;Jet1Mass;Jet2Mass;Jet1BTag;Jet2BTag;LepVeto;Jet1Tau32;Jet2Tau32;DeltaPhi;R;PassAll", "2 jet;jet1 loose id;jet2 loose id;jet1 eta;jet2 eta;jet1 pt;jet2 pt;jet1 mass;jet2 mass;jet1 btag;jet2 btag;lepton veto;jet1 tau32;jet2 tau32;#Delta#phi;R;pass all", col10+col10);
+
   // Cut Postfixes
-  sh.AddNewPostfix("Pass0Cuts", [] { return 0; }, "Pass0Cuts", "No cuts", "1");
-  std::string cutflow_str = "";
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) {
-    std::stringstream name, legend;
-    name<<"Pass"<<i+1<<"Cuts";
-    legend<<"Cuts up to "<<analysis_cuts[i].name;
-    sh.AddNewPostfix(name.str(), [this,i] { return _apply_ncut(i) ? 0 : (size_t)-1; }, name.str(), legend.str(), "1");
-    cutflow_str += analysis_cuts[i].name;
-    cutflow_str += ";";
-    
-    // Cuts using cutbits
-    std::stringstream cb_name, cb_legend;
-    cb_name<<"AllCutsExcl"<<analysis_cuts[i].name;
-    cb_legend<<analysis_cuts[i].name<<" (N-1)";
-    sh.AddNewPostfix(cb_name.str(), [this,i] { unsigned int mask = (1<<analysis_cuts.size())-1 - (1<<i); return ((cutbits & mask) == mask) ? 0 : (size_t)-1; }, cb_name.str(), cb_legend.str(), "1");
-  }
-  sh.AddNewPostfix("CutFlow",       [this] { for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) if (!analysis_cuts[i].func()) return i; return analysis_cuts.size(); }, cutflow_str+"PassAll", cutflow_str+"pass all", col10+col10);
-  
-  sh.AddNewPostfix("PassHLTCut",      [this,&dirname,&d] { 
+  sh.AddNewPostfix("Pass0Cuts",       [this]() { return 0;                               }, "Pass0Cuts", "No cuts", "1");
+  sh.AddNewPostfix("Pass1Cuts",       [this]() { return _apply_ncut( 1) ? 0 : (size_t)-1; }, "Pass1Cuts", "Cuts up to 2jet", "1");
+  sh.AddNewPostfix("Pass2Cuts",       [this]() { return _apply_ncut( 2) ? 0 : (size_t)-1; }, "Pass2Cuts", "Cuts up to jet1 id", "1");
+  sh.AddNewPostfix("Pass3Cuts",       [this]() { return _apply_ncut( 3) ? 0 : (size_t)-1; }, "Pass3Cuts", "Cuts up to jet2 id", "1");
+  sh.AddNewPostfix("Pass4Cuts",       [this]() { return _apply_ncut( 4) ? 0 : (size_t)-1; }, "Pass4Cuts", "Cuts up to jet1 eta", "1");
+  sh.AddNewPostfix("Pass5Cuts",       [this]() { return _apply_ncut( 5) ? 0 : (size_t)-1; }, "Pass5Cuts", "Cuts up to jet2 eta", "1");
+  sh.AddNewPostfix("Pass6Cuts",       [this]() { return _apply_ncut( 6) ? 0 : (size_t)-1; }, "Pass6Cuts", "Cuts up to jet1 pt", "1");
+  sh.AddNewPostfix("Pass7Cuts",       [this]() { return _apply_ncut( 7) ? 0 : (size_t)-1; }, "Pass7Cuts", "Cuts up to jet2 pt", "1");
+  sh.AddNewPostfix("Pass8Cuts",       [this]() { return _apply_ncut( 8) ? 0 : (size_t)-1; }, "Pass8Cuts", "Cuts up to jet1 mass", "1");
+  sh.AddNewPostfix("Pass9Cuts",       [this]() { return _apply_ncut( 9) ? 0 : (size_t)-1; }, "Pass9Cuts", "Cuts up to jet2 mass", "1");
+  sh.AddNewPostfix("Pass10Cuts",      [this]() { return _apply_ncut(10) ? 0 : (size_t)-1; }, "Pass10Cuts", "Cuts up to jet1 btag", "1");
+  sh.AddNewPostfix("Pass11Cuts",      [this]() { return _apply_ncut(11) ? 0 : (size_t)-1; }, "Pass11Cuts", "Cuts up to jet2 btag", "1");
+  sh.AddNewPostfix("Pass12Cuts",      [this]() { return _apply_ncut(12) ? 0 : (size_t)-1; }, "Pass12Cuts", "Cuts up to lepton veto", "1");
+  sh.AddNewPostfix("Pass13Cuts",      [this]() { return _apply_ncut(13) ? 0 : (size_t)-1; }, "Pass13Cuts", "Cuts up to delta phi", "1");
+  sh.AddNewPostfix("Pass14Cuts",      [this]() { return _apply_ncut(14) ? 0 : (size_t)-1; }, "Pass14Cuts", "Cuts up to jet1 tau32", "1");
+  sh.AddNewPostfix("Pass15Cuts",      [this]() { return _apply_ncut(15) ? 0 : (size_t)-1; }, "Pass15Cuts", "Cuts up to jet2 tau32", "1");
+  sh.AddNewPostfix("Pass16Cuts",      [this]() { return _apply_ncut(16) ? 0 : (size_t)-1; }, "Pass16Cuts", "Cuts up to R", "1");
+  //sh.AddNewPostfix("Pass13Cuts",      [this]() { return _apply_ncut(12) && _apply_cut("delta_phi") ? 0 : (size_t)-1; }, "Pass13Cuts", "Cuts up to delta phi", "1");
+  //sh.AddNewPostfix("Pass14Cuts",      [this]() { return _apply_ncut(12) && _apply_cut("delta_phi") && _apply_cut("jet1_tau32")  ? 0 : (size_t)-1; }, "Pass14Cuts", "Cuts up to jet1 tau32", "1");
+  //sh.AddNewPostfix("Pass15Cuts",      [this]() { return _apply_ncut(12) && _apply_cut("delta_phi") && _apply_cut("jet1_tau32") && _apply_cut("jet2_tau32") ? 0 : (size_t)-1; }, "Pass15Cuts", "Cuts up to jet2 tau32", "1");
+  //sh.AddNewPostfix("Pass16Cuts",      [this]() { return _apply_ncut(12) && _apply_cut("delta_phi") && _apply_cut("jet1_tau32") && _apply_cut("jet2_tau32") && _apply_cut("R") ? 0 : (size_t)-1; }, "Pass16Cuts", "Cuts up to R", "1");
+
+  sh.AddNewPostfix("PassHLTCut",      [this,&dirname,&d]() { 
 		     if (dirname.find("SingleElectron")!=std::string::npos) return (size_t)-1;
 		     else if (dirname.find("SingleMuon")!=std::string::npos) return (size_t)-1;
 		     else if (dirname.find("MET")!=std::string::npos) return (size_t)-1;
 		     else if (dirname.find("JetHT")!=std::string::npos) return d.hlt.AK8PFHT700_TrimR0p1PT0p03Mass50==1 ? 0 : (size_t)-1;
 		     else return (size_t)0;
 		   }, "PassHLT",      "HLT cut", "1");
-  sh.AddNewPostfix("PassDPhiCut",     [this] { return _apply_cut("delta_phi")  ? 0 : (size_t)-1;                           }, "PassDPhi",     "#Delta#phi cut", "1");
-  sh.AddNewPostfix("PassJetMassCuts", [this] { return _apply_cut("jet1_mass") && _apply_cut("jet2_mass") ? 0 : (size_t)-1; }, "PassMassCuts", "Mass cuts", "1");
+  sh.AddNewPostfix("PassDPhiCut",     [this]() { return _apply_cut("delta_phi")  ? 0 : (size_t)-1;                           }, "PassDPhi",     "#Delta#phi cut", "1");
+  sh.AddNewPostfix("PassJetMassCuts", [this]() { return _apply_cut("jet1_mass") && _apply_cut("jet2_mass") ? 0 : (size_t)-1; }, "PassMassCuts", "Mass cuts", "1");
 
-  //sh.AddNewPostfix("NSubJet",       [&d] { return (size_t)d.jetsAK8Puppi.nSubJets[d.jetsAK8Puppi.it]; }, "NSubJet[0to4]", "N_{subjet}=[0to4]", "1-5");
-  sh.AddNewPostfix("JetPtCut",      [&d] { return (size_t)(d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it] >= TOP_PT_CUT); }, "PtBelow400;PtAbove400", "p_{T} < 400;p_{T} >= 400", "2,3");
-  sh.AddNewPostfix("JetMassCut",    [&d] { return (size_t)(d.jetsAK8Puppi.softDropMass[d.jetsAK8Puppi.it] >= TOP_SD_MASS_CUT_LOW && d.jetsAK8Puppi.softDropMass[d.jetsAK8Puppi.it] < TOP_SD_MASS_CUT_HIGH); }, "OutMassWindow;InMassWindow", "M_{Soft-drop} < 110 or M_{Soft-drop} >= 210;110 < M_{Soft-drop} < 210", "2,3");
-  sh.AddNewPostfix("JetTau32Cut",   [&d] { return (size_t)(d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it] < TOP_TAU32_CUT); }, "FailTau32Cut;PassTau32Cut", "Fail #tau_{3}/#tau_{2} cut;Pass #tau_{3}/#tau_{2} cut", "2,3");
-  sh.AddNewPostfix("SubjetBTagCut",    [&d] { return (size_t)passSubjetBTag[d.jetsAK8Puppi.it]; }, "FailBTag;PassBTag", "Fail subjet b-tag;Pass subjet b-tag", "2,3");
+  //sh.AddNewPostfix("NSubJet",       [&d](){ return (size_t)d.jetsAK8Puppi.nSubJets[d.jetsAK8Puppi.it]; }, "NSubJet[0to4]", "N_{subjet}=[0to4]", "1-5");
+  sh.AddNewPostfix("JetPtCut",      [&d](){ return (size_t)(d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it] >= TOP_PT_CUT); }, "PtBelow400;PtAbove400", "p_{T} < 400;p_{T} >= 400", "2,3");
+  sh.AddNewPostfix("JetMassCut",    [&d](){ return (size_t)(d.jetsAK8Puppi.softDropMass[d.jetsAK8Puppi.it] >= TOP_SD_MASS_CUT_LOW && d.jetsAK8Puppi.softDropMass[d.jetsAK8Puppi.it] < TOP_SD_MASS_CUT_HIGH); }, "OutMassWindow;InMassWindow", "M_{Soft-drop} < 110 or M_{Soft-drop} >= 210;110 < M_{Soft-drop} < 210", "2,3");
+  sh.AddNewPostfix("JetTau32Cut",   [&d](){ return (size_t)(d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it] < TOP_TAU32_CUT); }, "FailTau32Cut;PassTau32Cut", "Fail #tau_{3}/#tau_{2} cut;Pass #tau_{3}/#tau_{2} cut", "2,3");
+  sh.AddNewPostfix("SubjetBTagCut",    [&d](){ return (size_t)passSubjetBTag[d.jetsAK8Puppi.it]; }, "FailBTag;PassBTag", "Fail subjet b-tag;Pass subjet b-tag", "2,3");
 
-  sh.AddNewPostfix("JetGenTruth",          [&d] { return (size_t)(d.jetsAK8Puppi.HasNearGenTop[d.jetsAK8Puppi.it]==0 ? 0 : d.jetsAK8Puppi.NearGenTopIsHadronic[d.jetsAK8Puppi.it]!=1 ? 1 : d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it]<0.6&&d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it]<0.6 ? 3 : 2); }, "NotTop;SemiLepTop;NonMergedHadTop;MergedHadTop", "Non-top jet;Semi-leptonic top;Non-Merged hadronic top;Merged hadronic top", "1,601,633,418");
-  sh.AddNewPostfix("JetMatchedGenTopType", [&d] { return (size_t)(d.jetsAK8Puppi.NearGenTopIsHadronic[d.jetsAK8Puppi.it]!=-9999 ? d.jetsAK8Puppi.NearGenTopIsHadronic[d.jetsAK8Puppi.it] : -1); }, "MatchedGenTopLep;MatchedGenHadTop", "Semi-leptonic top;Hadronic top", "4,2");
-  sh.AddNewPostfix("TopSizeCut",             [&d] { return (size_t)(d.jetsAK8Puppi.HasNearGenTop[d.jetsAK8Puppi.it]==1 ? d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it]<0.6&&d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it]<0.6 : -1); }, "TopSizeAbove0p6;TopSizeBelow0p6", "Non-merged top;Merged top", "2,4");
-  sh.AddNewPostfix("JetPassToptag",      [&d] { return (size_t)(passHadTopTag[d.jetsAK8Puppi.it]); }, "FailTopTag;PassTopTag", "Non top-tagged AK8 jet;Top-tagged AK8 jet", "2,3");
-  sh.AddNewPostfix("JetPassSubjetBTag",  [&d] { return passSubjetBTag[d.jetsAK8Puppi.it];          }, "FailSJBTag;PassSJBTag", "No subjet B-tag;Pass subjet B-tag", "2,3");
+  sh.AddNewPostfix("JetGenTruth",          [&d](){ return (size_t)(d.jetsAK8Puppi.HasNearGenTop[d.jetsAK8Puppi.it]==0 ? 0 : d.jetsAK8Puppi.NearGenTopIsHadronic[d.jetsAK8Puppi.it]!=1 ? 1 : d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it]<0.6&&d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it]<0.6 ? 3 : 2); }, "NotTop;SemiLepTop;NonMergedHadTop;MergedHadTop", "Non-top jet;Semi-leptonic top;Non-Merged hadronic top;Merged hadronic top", "1,601,633,418");
+  sh.AddNewPostfix("JetMatchedGenTopType", [&d](){ return (size_t)(d.jetsAK8Puppi.NearGenTopIsHadronic[d.jetsAK8Puppi.it]!=-9999 ? d.jetsAK8Puppi.NearGenTopIsHadronic[d.jetsAK8Puppi.it] : -1); }, "MatchedGenTopLep;MatchedGenHadTop", "Semi-leptonic top;Hadronic top", "4,2");
+  sh.AddNewPostfix("TopSizeCut",             [&d](){ return (size_t)(d.jetsAK8Puppi.HasNearGenTop[d.jetsAK8Puppi.it]==1 ? d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it]<0.6&&d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it]<0.6 : -1); }, "TopSizeAbove0p6;TopSizeBelow0p6", "Non-merged top;Merged top", "2,4");
+  sh.AddNewPostfix("JetPassToptag",      [&d](){ return (size_t)(passHadTopTag[d.jetsAK8Puppi.it]); }, "FailTopTag;PassTopTag", "Non top-tagged AK8 jet;Top-tagged AK8 jet", "2,3");
+  sh.AddNewPostfix("JetPassSubjetBTag",  [&d](){ return passSubjetBTag[d.jetsAK8Puppi.it];          }, "FailSJBTag;PassSJBTag", "No subjet B-tag;Pass subjet B-tag", "2,3");
   
   // Event
-  sh.AddNewPostfix("RBins",          [&d] { return (size_t)((d.evt.R>=0.1)+(d.evt.R>=0.2)+(d.evt.R>=0.4)); }, "R0to0p1;R0p1to0p2;R0p2to0p4;R0p4", "0.0<R<0.1;0.1<R<0.2;0.2<R<0.4;R>=0.4", "1,4,418,633");
-  //sh.AddNewPostfix("AK8ChsRBins",    [&d] { return (size_t)((d.evt.R>=0.1)+(d.evt.R>=0.2)+(d.evt.R>=0.4)); }, "AK8ChsR0to0p1;AK8ChsR0p1to0p2;AK8ChsR0p2to0p4;AK8ChsR0p4", "0.0<R (AK8 CHS)<0.1;0.1<R (AK8 CHS)<0.2;0.2<R (AK8 CHS)<0.4;R (AK8 CHS)>=0.4", "1,4,418,633");
-  //sh.AddNewPostfix("AK4ChsRBins",    [&d] { return (size_t)((d.evt.AK4_R>=0.1)+(d.evt.AK4_R>=0.2)+(d.evt.AK4_R>=0.4)); }, "AK4ChsR0to0p1;AK4ChsR0p1to0p2;AK4ChsR0p2to0p4;AK4ChsR0p4", "0.0<R (AK4 CHS)<0.1;0.1<R (AK4 CHS)<0.2;0.2<R (AK4 CHS)<0.4;R (AK4 CHS)>=0.4", "1,4,418,633");
-  //sh.AddNewPostfix("TTHadMRBins",    [&d] { return (size_t)(d.evt.TTHadMR >= 5000 ? -1 : d.evt.TTHadMR/500); }, "MR[250to4750++500]", "MR_{tt} [250to4750++500]#pm250", "1,4,418,401,807,633,618,1,4,418,401,807,633,618");
+  sh.AddNewPostfix("RBins",          [&d](){ return (size_t)((d.evt.R>=0.1)+(d.evt.R>=0.2)+(d.evt.R>=0.4)); }, "R0to0p1;R0p1to0p2;R0p2to0p4;R0p4", "0.0<R<0.1;0.1<R<0.2;0.2<R<0.4;R>=0.4", "1,4,418,633");
+  //sh.AddNewPostfix("AK8ChsRBins",    [&d](){ return (size_t)((d.evt.R>=0.1)+(d.evt.R>=0.2)+(d.evt.R>=0.4)); }, "AK8ChsR0to0p1;AK8ChsR0p1to0p2;AK8ChsR0p2to0p4;AK8ChsR0p4", "0.0<R (AK8 CHS)<0.1;0.1<R (AK8 CHS)<0.2;0.2<R (AK8 CHS)<0.4;R (AK8 CHS)>=0.4", "1,4,418,633");
+  //sh.AddNewPostfix("AK4ChsRBins",    [&d](){ return (size_t)((d.evt.AK4_R>=0.1)+(d.evt.AK4_R>=0.2)+(d.evt.AK4_R>=0.4)); }, "AK4ChsR0to0p1;AK4ChsR0p1to0p2;AK4ChsR0p2to0p4;AK4ChsR0p4", "0.0<R (AK4 CHS)<0.1;0.1<R (AK4 CHS)<0.2;0.2<R (AK4 CHS)<0.4;R (AK4 CHS)>=0.4", "1,4,418,633");
+  //sh.AddNewPostfix("TTHadMRBins",    [&d](){ return (size_t)(d.evt.TTHadMR >= 5000 ? -1 : d.evt.TTHadMR/500); }, "MR[250to4750++500]", "MR_{tt} [250to4750++500]#pm250", "1,4,418,401,807,633,618,1,4,418,401,807,633,618");
 
-  sh.AddNewPostfix("RBands",         [&d] { return d.evt.R <= R_CUT_LOW ? -1 : d.evt.R >= R_CUT; }, "RBelow0p4;RAbove0p4", "0.2 < R < 0.4;R >= 0.4", "4,2");
-  sh.AddNewPostfix("DPhiBands",      [] { return dPhi >= DPHI_CUT; }, "PassDPhiCut;FailDPhiCut", "Pass #Delta#phi_{t#bar{t}} cut;Fail #Delta#phi_{t#bar{t}} cut", "2,4");
-  sh.AddNewPostfix("Tau32Cuts",  [&d] { return passTau32Cuts==-9999 ? (size_t)-1 : passTau32Cuts; }, "FailAnyTau32Cut;PassTau32Cuts", "Fail any tau_{32} cuts;Pass both tau_{32} cuts", "4,2");
-  //sh.AddNewPostfix("NHadTop",     [&d] { return nHadTopTag; },   "0HadTopTag;1HadTopTag;2HadTopTag;3HadTopTag;4HadTopTag", "N_{top-tag,hadronic}=0;N_{top-tag,hadronic}=1;N_{top-tag,hadronic}=2;N_{top-tag,hadronic}=3;N_{top-tag,hadronic}=4", col5_green_to_red);
-  //sh.AddNewPostfix("NHadTopPreTag",     [&d] { return nHadTopPreTag; },  "0HadTopPreTag;1HadTopPreTag;2HadTopPreTag;3HadTopPreTag;4HadTopPreTag", "N_{top-like,hadronic}=0;N_{top-like,hadronic}=1;N_{top-like,hadronic}=2;N_{top-like,hadronic}=3;N_{top-like,hadronic}=4", col5_green_to_red);
-  sh.AddNewPostfix("NSubjetBTag",   [&d] { return nSubjetBTag>4 ? (size_t)-1 : nSubjetBTag; },   "[0to4]SJBTag", "N_{Subjet B-Tag} = [0to4]", col5_green_to_red);
-  sh.AddNewPostfix("ABCD",           [&d] { return 
+  sh.AddNewPostfix("RBands",         [&d](){ return d.evt.R <= R_CUT_LOW ? -1 : d.evt.R >= R_CUT; }, "RBelow0p4;RAbove0p4", "0.2 < R < 0.4;R >= 0.4", "4,2");
+  sh.AddNewPostfix("DPhiBands",      [](){ return dPhi >= DPHI_CUT; }, "PassDPhiCut;FailDPhiCut", "Pass #Delta#phi_{t#bar{t}} cut;Fail #Delta#phi_{t#bar{t}} cut", "2,4");
+  sh.AddNewPostfix("Tau32Cuts",  [&d](){ return passTau32Cuts==-9999 ? (size_t)-1 : passTau32Cuts; }, "FailAnyTau32Cut;PassTau32Cuts", "Fail any tau_{32} cuts;Pass both tau_{32} cuts", "4,2");
+  //sh.AddNewPostfix("NHadTop",     [&d](){ return nHadTopTag; },   "0HadTopTag;1HadTopTag;2HadTopTag;3HadTopTag;4HadTopTag", "N_{top-tag,hadronic}=0;N_{top-tag,hadronic}=1;N_{top-tag,hadronic}=2;N_{top-tag,hadronic}=3;N_{top-tag,hadronic}=4", col5_green_to_red);
+  //sh.AddNewPostfix("NHadTopPreTag",     [&d](){ return nHadTopPreTag; },  "0HadTopPreTag;1HadTopPreTag;2HadTopPreTag;3HadTopPreTag;4HadTopPreTag", "N_{top-like,hadronic}=0;N_{top-like,hadronic}=1;N_{top-like,hadronic}=2;N_{top-like,hadronic}=3;N_{top-like,hadronic}=4", col5_green_to_red);
+  sh.AddNewPostfix("NSubjetBTag",   [&d](){ return nSubjetBTag>4 ? (size_t)-1 : nSubjetBTag; },   "[0to4]SJBTag", "N_{Subjet B-Tag} = [0to4]", col5_green_to_red);
+  sh.AddNewPostfix("ABCD",           [&d](){ return 
 		       d.jetsAK8Puppi.size<2 ? (size_t)-1 :
 		       d.evt.R<R_CUT_LOW ? (size_t)-1 : // Exclude low R region
 		       (d.evt.R>=R_CUT) + (passTau32Cuts)*2;
 		   }, "A;B;C;D", "A: 0.2<R<0.4, Fail any tau_{32} cut;B: R >= 0.4, Fail any tau_{32} cut;C: 0.2<R<0.4, Pass tau_{32} cuts;D (SR): R >= 0.4, Pass tau_{32} cuts", "858,602,628,634");
 
-  //sh.AddNewPostfix("CutHtAll",        [&d] { return d.evt.HtAll >= 1200; },  "HtAllBelow1200;HtAllAbove1200", "H_{T,all} < 1200;H_{T,all} >= 1200", "4,2"); // Best cut
-  //sh.AddNewPostfix("HtAll1450",       [&d] { return d.evt.HtAll >= 1450; },  "HtAllBelow1450;HtAllAbove1450", "H_{T,all} < 1450;H_{T,all} >= 1450", "4,2"); // Best cut
-  //sh.AddNewPostfix("HtAll1500",       [&d] { return d.evt.HtAll >= 1500; },  "HtAllBelow1500;HtAllAbove1500", "H_{T,all} < 1500;H_{T,all} >= 1500", "4,2");
-  //IMP sh.AddNewPostfix("NGenLepFromTop",  [&d] { return (size_t)d.evt.NGenLepFromTop; }, "FullHad;[1to4]LepTop", "[0to4]l (e/#mu, from top)", "1-5");
+  //sh.AddNewPostfix("CutHtAll",        [&d](){ return d.evt.HtAll >= 1200; },  "HtAllBelow1200;HtAllAbove1200", "H_{T,all} < 1200;H_{T,all} >= 1200", "4,2"); // Best cut
+  //sh.AddNewPostfix("HtAll1450",       [&d](){ return d.evt.HtAll >= 1450; },  "HtAllBelow1450;HtAllAbove1450", "H_{T,all} < 1450;H_{T,all} >= 1450", "4,2"); // Best cut
+  //sh.AddNewPostfix("HtAll1500",       [&d](){ return d.evt.HtAll >= 1500; },  "HtAllBelow1500;HtAllAbove1500", "H_{T,all} < 1500;H_{T,all} >= 1500", "4,2");
+  //IMP sh.AddNewPostfix("NGenLepFromTop",  [&d](){ return (size_t)d.evt.NGenLepFromTop; }, "FullHad;[1to4]LepTop", "[0to4]l (e/#mu, from top)", "1-5");
 
   // Trigger
-  sh.AddNewPostfix("PFHT475",         [&d] { if (d.hlt.PFHT475==-9999) return (size_t)-1; else return (size_t)d.hlt.PFHT475; }, "NoPassHLT_PFHT475;PassHLT_PFHT475", "Do not pass HLT_PFHT475;Pass HLT_PFHT475", "633;418");
+  sh.AddNewPostfix("PFHT475",         [&d](){ if (d.hlt.PFHT475==-9999) return (size_t)-1; else return (size_t)d.hlt.PFHT475; }, "NoPassHLT_PFHT475;PassHLT_PFHT475", "Do not pass HLT_PFHT475;Pass HLT_PFHT475", "633;418");
 
   // Gen Particles
-  sh.AddNewPostfix("GenTopType",      [&d] { return (size_t)(gen_Top_Type[d.gen.it]!=-9999 ? gen_Top_Type[d.gen.it] : -1); }, "GenHadTop;GenTopLep", "Hadronic top;Semi-leptonic top", "2,4");
+  sh.AddNewPostfix("GenTopType",      [&d](){ return (size_t)(gen_Top_Type[d.gen.it]!=-9999 ? gen_Top_Type[d.gen.it] : -1); }, "GenHadTop;GenTopLep", "Hadronic top;Semi-leptonic top", "2,4");
 
   // Sample postfixes
   // Determine them from the directory name the input file is in
@@ -760,11 +759,11 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
 
   // Sample postfixes
   static const PostfixOptions all_samples_opt=get_pf_opts_({data_all, bkg_all, signal_all}, dirname);
-  sh.AddNewPostfix("AllSamples", [] { return all_samples_opt.index; }, all_samples_opt.postfixes, all_samples_opt.legends, all_samples_opt.colors);
+  sh.AddNewPostfix("AllSamples", [](){ return all_samples_opt.index; }, all_samples_opt.postfixes, all_samples_opt.legends, all_samples_opt.colors);
 
   static const PostfixOptions plot_samples_opt=get_pf_opts_({data_selected, signal_selected, bkg_selected}, dirname);
-  sh.AddNewPostfix("PlotSamples", [&d] { 
-		     if (plot_samples_opt.index==1 && (d.evt.SUSY_Gluino_Mass!=1400 || d.evt.SUSY_LSP_Mass != 300)) return (size_t)-1;
+  sh.AddNewPostfix("PlotSamples", [&d](){ 
+		     if (plot_samples_opt.index==1 && (d.evt.SUSY_Gluino_Mass!=1500 || d.evt.SUSY_LSP_Mass != 100)) return (size_t)-1;
 		     return plot_samples_opt.index; 
 		   }, plot_samples_opt.postfixes, plot_samples_opt.legends, plot_samples_opt.colors);
 
@@ -773,28 +772,25 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   for (auto bkg : bkg_selected) for (auto dir : bkg.dirs) background_dirs.push_back(dir);
   background.push_back({ .postfix="Background", .legend="Background", .color="1", .dirs=background_dirs });
   static const PostfixOptions background_opt = get_pf_opts_({background}, dirname);
-  sh.AddNewPostfix("Background",  [] { return background_opt.index; }, background_opt.postfixes, background_opt.legends, background_opt.colors);
-
-  static const PostfixOptions signals_opt = get_pf_opts_({signal_all}, dirname);
-  sh.AddNewPostfix("Signals",  [] { return signals_opt.index; }, signals_opt.postfixes, signals_opt.legends, signals_opt.colors);
+  sh.AddNewPostfix("Background",  [](){ return background_opt.index; }, background_opt.postfixes, background_opt.legends, background_opt.colors);
 
   static const PostfixOptions signals_background_opt = get_pf_opts_({signal_all, background}, dirname);
-  sh.AddNewPostfix("Signals,Background",  [] { return signals_background_opt.index; }, signals_background_opt.postfixes, signals_background_opt.legends, signals_background_opt.colors);
+  sh.AddNewPostfix("Signals,Background",  [](){ return signals_background_opt.index; }, signals_background_opt.postfixes, signals_background_opt.legends, signals_background_opt.colors);
 
   static const PostfixOptions background_signal_opt = get_pf_opts_({background, signal_selected}, dirname);
-  sh.AddNewPostfix("Background,Signal", [&d] { 
+  sh.AddNewPostfix("Background,Signal", [&d](){ 
 		     if (plot_samples_opt.index==1 && (d.evt.SUSY_Gluino_Mass!=1500 || d.evt.SUSY_LSP_Mass != 100)) return (size_t)-1;
 		     return background_signal_opt.index;
 		   }, background_signal_opt.postfixes, background_signal_opt.legends, "633,601");
 
   static const PostfixOptions signals_ttbar_opt = get_pf_opts_({signal_all, bkg_ttbars}, dirname);
-  sh.AddNewPostfix("Signals,TT",  [] { return signals_ttbar_opt.index; }, signals_ttbar_opt.postfixes, signals_ttbar_opt.legends, signals_ttbar_opt.colors);
+  sh.AddNewPostfix("Signals,TT",  [](){ return signals_ttbar_opt.index; }, signals_ttbar_opt.postfixes, signals_ttbar_opt.legends, signals_ttbar_opt.colors);
 
   static const PostfixOptions data_mc_opt = get_pf_opts_({data_selected, background}, dirname);
-  sh.AddNewPostfix("Data,MC",  [] { return data_mc_opt.index; }, data_mc_opt.postfixes, data_mc_opt.legends, "1,633");
+  sh.AddNewPostfix("Data,MC",  [](){ return data_mc_opt.index; }, data_mc_opt.postfixes, data_mc_opt.legends, "1,633");
 
   static const PostfixOptions single_lep_opt = get_pf_opts_({single_ele, single_mu}, dirname);
-  sh.AddNewPostfix("SingleEle,SingleMu", [] { return single_lep_opt.index; }, single_lep_opt.postfixes, single_lep_opt.legends, "1,633");
+  sh.AddNewPostfix("SingleEle,SingleMu", [](){ return single_lep_opt.index; }, single_lep_opt.postfixes, single_lep_opt.legends, "1,633");
 
   //static const PostfixOptions triggers_opt = get_pf_opts_({data_selected, single_ele, single_mu, background}, dirname);
   //sh.AddNewPostfix("Triggers", [&d]()
@@ -866,7 +862,7 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   //                  }, "JetHT;SingleEle;SingleMu;MET;MC", "Data: JetHT;Data: SingleElectron;Data: SingeMuon;Data: MET;MC", "1,402,601,418,633");
 
   static const PostfixOptions abcd_signals_opt = get_pf_opts_({background, signal_all}, dirname);
-  sh.AddNewPostfix("ABCD,Signals", [&d] {
+  sh.AddNewPostfix("ABCD,Signals", [&d](){
                       return 
 			abcd_signals_opt.index == (size_t)-1 ? (size_t)-1 :
 			d.jetsAK8Puppi.size<2 ? (size_t)-1 : // For tau32 cuts
@@ -877,187 +873,174 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // --------------------------------------------------------------------
   //                         Fill Parameters
   // --------------------------------------------------------------------
-  
+
   // Cutflow plots
   std::map<int, std::string> cutflow_bins;
-  cut_index = 0; for (auto cut : analysis_cuts) cutflow_bins[++cut_index] = cut.name;
-  sh.AddNewFillParam("Cutflow",          { .nbin= analysis_cuts.size(), .bins={ 0, (double)analysis_cuts.size() }, .bin_labels=cutflow_bins, .fill=[] { return cut_index; }, .axis_title="Cut Decision"});
+  cut_index = 0; for (auto cut : analysis_cuts) cutflow_bins[cut_index++] = cut.name;
+  sh.AddNewFillParam("Cutflow",          { .nbin= 16, .bins={ 0, 16 }, .bin_labels=cutflow_bins, .fill=[](){ return cut_index; }, .axis_title="Cut Decision"});
 
-  // SUSY
-  sh.AddNewFillParam("MGluino",          { .nbin= 121, .bins={-12.5, 3012.5 }, .fill=[&d] { return d.evt.SUSY_Gluino_Mass; }, .axis_title="M_{#tilde{g}} (GeV)",        .def_range={550,2350}});
-  sh.AddNewFillParam("MStop",            { .nbin=  81, .bins={-12.5, 2012.5 }, .fill=[&d] { return d.evt.SUSY_Stop_Mass;   }, .axis_title="M_{#tilde{s}} (GeV)",        .def_range={  0,1650}});
-  sh.AddNewFillParam("MLSP",             { .nbin=  81, .bins={-12.5, 2012.5 }, .fill=[&d] { return d.evt.SUSY_LSP_Mass;    }, .axis_title="M_{#tilde{#chi}^{0}} (GeV)", .def_range={  0,1650}});
-  
   // Muons
-  sh.AddNewFillParam("MuEnergy",          { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.mu.E[d.mu.it];              }, .axis_title="Muon Energy (GeV)"});
-  sh.AddNewFillParam("MuPt",              { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.mu.Pt[d.mu.it];             }, .axis_title="Muon p_{T} (GeV)"});
-  //IMP sh.AddNewFillParam("MuDRJet",           { .nbin=  60, .bins={   0,      6}, .fill=[&d] { return d.evt.MuDRJet[d.mu.it];    }, .axis_title="#DeltaR (#mu, jet)"});
-  //IMP sh.AddNewFillParam("MuRelPtJet",        { .nbin=  50, .bins={   0,    500}, .fill=[&d] { return d.evt.MuRelPtJet[d.mu.it]; }, .axis_title="p_{T}^{rel} (#mu, jet) (GeV)"});
-  //IMP sh.AddNewFillParam("MuJetCombMass",     { .nbin=  80, .bins={   0,   2000}, .fill=[&d] { return d.evt.MuJetCombMass[d.mu.it]; }, .axis_title="Mass_{#mu+jet comb.} (GeV)"});
+  sh.AddNewFillParam("MuEnergy",          { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.mu.E[d.mu.it];              }, .axis_title="Muon Energy (GeV)"});
+  sh.AddNewFillParam("MuPt",              { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.mu.Pt[d.mu.it];             }, .axis_title="Muon p_{T} (GeV)"});
+  //IMP sh.AddNewFillParam("MuDRJet",           { .nbin=  60, .bins={   0,      6}, .fill=[&d](){ return d.evt.MuDRJet[d.mu.it];    }, .axis_title="#DeltaR (#mu, jet)"});
+  //IMP sh.AddNewFillParam("MuRelPtJet",        { .nbin=  50, .bins={   0,    500}, .fill=[&d](){ return d.evt.MuRelPtJet[d.mu.it]; }, .axis_title="p_{T}^{rel} (#mu, jet) (GeV)"});
+  //IMP sh.AddNewFillParam("MuJetCombMass",     { .nbin=  80, .bins={   0,   2000}, .fill=[&d](){ return d.evt.MuJetCombMass[d.mu.it]; }, .axis_title="Mass_{#mu+jet comb.} (GeV)"});
 
   // Electrons
-  sh.AddNewFillParam("EleEnergy",         { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.ele.E[d.ele.it];              }, .axis_title="Electron Energy (GeV)"});
-  sh.AddNewFillParam("ElePt",             { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.ele.Pt[d.ele.it];             }, .axis_title="Electron p_{T} (GeV)"});
-  //IMP sh.AddNewFillParam("EleDRJet",          { .nbin=  60, .bins={   0,      6}, .fill=[&d] { return d.evt.EleDRJet[d.ele.it];   }, .axis_title="#DeltaR (e, jet)"});
-  //IMP sh.AddNewFillParam("EleRelPtJet",       { .nbin=  50, .bins={   0,    500}, .fill=[&d] { return d.evt.EleRelPtJet[d.ele.it];}, .axis_title="p_{T}^{rel} (e, jet) (GeV)"});
-  //IMP sh.AddNewFillParam("EleJetCombMass",    { .nbin=  80, .bins={   0,   2000}, .fill=[&d] { return d.evt.EleJetCombMass[d.ele.it]; }, .axis_title="Mass_{e+jet comb.} (GeV)"});
+  sh.AddNewFillParam("EleEnergy",         { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.ele.E[d.ele.it];              }, .axis_title="Electron Energy (GeV)"});
+  sh.AddNewFillParam("ElePt",             { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.ele.Pt[d.ele.it];             }, .axis_title="Electron p_{T} (GeV)"});
+  //IMP sh.AddNewFillParam("EleDRJet",          { .nbin=  60, .bins={   0,      6}, .fill=[&d](){ return d.evt.EleDRJet[d.ele.it];   }, .axis_title="#DeltaR (e, jet)"});
+  //IMP sh.AddNewFillParam("EleRelPtJet",       { .nbin=  50, .bins={   0,    500}, .fill=[&d](){ return d.evt.EleRelPtJet[d.ele.it];}, .axis_title="p_{T}^{rel} (e, jet) (GeV)"});
+  //IMP sh.AddNewFillParam("EleJetCombMass",    { .nbin=  80, .bins={   0,   2000}, .fill=[&d](){ return d.evt.EleJetCombMass[d.ele.it]; }, .axis_title="Mass_{e+jet comb.} (GeV)"});
 
   // MET
-  sh.AddNewFillParam("MetPt",             { .nbin= 100, .bins={   0,    2000}, .fill=[&d] { return d.met.Pt[0];  }, .axis_title="MET p_{T} (GeV)"});
-  sh.AddNewFillParam("MinDeltaPhi",       { .nbin=  64, .bins={   0,     3.2}, .fill=[] { return minDeltaPhi;    }, .axis_title="Min(|#Delta#phi(AK4_{1-3}, MET)|"});
+  sh.AddNewFillParam("MetPt",             { .nbin= 100, .bins={   0,    2000}, .fill=[&d](){ return d.met.Pt[0];  }, .axis_title="MET p_{T} (GeV)"});
+  sh.AddNewFillParam("MinDeltaPhi",       { .nbin=  64, .bins={   0,     3.2}, .fill=[](){ return minDeltaPhi;    }, .axis_title="Min(|#Delta#phi(AK4_{1-3}, MET)|"});
 
   // AK4 Jets
-  //sh.AddNewFillParam("AK4JetEnergy",      { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK4.E[d.jetsAK8Puppi.it];          }, .axis_title="AK4-jet Energy (GeV)"});
-  //sh.AddNewFillParam("AK4JetPt",          { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK4.Pt[d.jetsAK8Puppi.it];         }, .axis_title="AK4-jet p_{T} (GeV)"});
-  //sh.AddNewFillParam("AK4JetMass",        { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK4.Mass[d.jetsAK8Puppi.it];       }, .axis_title="AK4-jet Mass (GeV)"});
+  //sh.AddNewFillParam("AK4JetEnergy",      { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK4.E[d.jetsAK8Puppi.it];          }, .axis_title="AK4-jet Energy (GeV)"});
+  //sh.AddNewFillParam("AK4JetPt",          { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK4.Pt[d.jetsAK8Puppi.it];         }, .axis_title="AK4-jet p_{T} (GeV)"});
+  //sh.AddNewFillParam("AK4JetMass",        { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK4.Mass[d.jetsAK8Puppi.it];       }, .axis_title="AK4-jet Mass (GeV)"});
 
   // Jets (AK8)
-  sh.AddNewFillParam("JetEnergy",          { .nbin= 500, .bins={   0,  10000}, .fill=[&d] { return d.jetsAK8Puppi.E[d.jetsAK8Puppi.it];                    }, .axis_title="AK8 (Puppi) jet Energy (GeV)", .def_range={0,3000} });
-  sh.AddNewFillParam("JetPt",              { .nbin= 500, .bins={   0,  10000}, .fill=[&d] { return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it];                   }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)", .def_range={0,3000} });
-  sh.AddNewFillParam("JetPtBins",          { .nbin=  15, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 5000}, .fill=[&d] { return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)", .def_range={0,2000} });
-  sh.AddNewFillParam("JetPtFewBins",       { .nbin=   6, .bins={0, 300, 400, 600, 1000, 2000, 5000}, .fill=[&d] { return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)", .def_range={0,3000} });
-  sh.AddNewFillParam("JetPtOneBin",        { .nbin=   1, .bins={ 400,    5000}, .fill=[&d] { return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)"});
-  sh.AddNewFillParam("JetEta",             { .nbin=  40, .bins={  -4,      4},                  .fill=[&d] { return d.jetsAK8Puppi.Eta[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet #eta"});
-  sh.AddNewFillParam("JetPhi",             { .nbin=  16, .bins={-3.1416, 3.1416}, .fill=[&d] { return d.jetsAK8Puppi.Phi[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet #phi"});
-  //sh.AddNewFillParam("JetNeutralHadronMultiplicity", { .nbin=  20, .bins={0,  20}, .fill=[&d] { return d.jetsAK8Puppi.neutralHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Neutral Hadron Multiplicity"});
-  //sh.AddNewFillParam("JetChargedHadronMultiplicity", { .nbin=  50, .bins={0, 100}, .fill=[&d] { return d.jetsAK8Puppi.ChargedHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Charged Hadron Multiplicity"});
+  sh.AddNewFillParam("JetEnergy",          { .nbin= 500, .bins={   0,  10000}, .fill=[&d](){ return d.jetsAK8Puppi.E[d.jetsAK8Puppi.it];                    }, .axis_title="AK8 (Puppi) jet Energy (GeV)", .def_range={0,3000} });
+  sh.AddNewFillParam("JetPt",              { .nbin= 500, .bins={   0,  10000}, .fill=[&d](){ return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it];                   }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)", .def_range={0,3000} });
+  sh.AddNewFillParam("JetPtBins",          { .nbin=  15, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 5000}, .fill=[&d](){ return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)", .def_range={0,2000} });
+  sh.AddNewFillParam("JetPtFewBins",       { .nbin=   6, .bins={0, 300, 400, 600, 1000, 2000, 5000}, .fill=[&d](){ return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)", .def_range={0,3000} });
+  sh.AddNewFillParam("JetPtOneBin",        { .nbin=   1, .bins={ 400,    5000}, .fill=[&d](){ return d.jetsAK8Puppi.Pt[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet p_{T} (GeV)"});
+  sh.AddNewFillParam("JetEta",             { .nbin=  40, .bins={  -4,      4},                  .fill=[&d](){ return d.jetsAK8Puppi.Eta[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet #eta"});
+  sh.AddNewFillParam("JetPhi",             { .nbin=  16, .bins={-3.1416, 3.1416}, .fill=[&d](){ return d.jetsAK8Puppi.Phi[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet #phi"});
+  //sh.AddNewFillParam("JetNeutralHadronMultiplicity", { .nbin=  20, .bins={0,  20}, .fill=[&d](){ return d.jetsAK8Puppi.neutralHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Neutral Hadron Multiplicity"});
+  //sh.AddNewFillParam("JetChargedHadronMultiplicity", { .nbin=  50, .bins={0, 100}, .fill=[&d](){ return d.jetsAK8Puppi.ChargedHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Charged Hadron Multiplicity"});
 
   std::vector<double> Ebins = { 0, 100, 200, 400, 600, 800, 1000, 1500, 2000, 3000, 5000, 10000};
-  //sh.AddNewFillParam("JetPhotonEnergy",              { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.PhotonEnergy[d.jetsAK8Puppi.it];              }, .axis_title="AK8 (Puppi) jet Photon Energy (GeV)"});
-  //sh.AddNewFillParam("JetElectronEnergy",            { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.ElectronEnergy[d.jetsAK8Puppi.it];            }, .axis_title="AK8 (Puppi) jet Electron Energy (GeV)"});
-  //sh.AddNewFillParam("JetMuonEnergy",                { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.MuonEnergy[d.jetsAK8Puppi.it];                }, .axis_title="AK8 (Puppi) jet Muon Energy (GeV)"});
-  //sh.AddNewFillParam("JetChargedMuEnergy",           { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.ChargeMuEnergy[d.jetsAK8Puppi.it];            }, .axis_title="AK8 (Puppi) jet Charged Mu Energy (GeV)"});
-  //sh.AddNewFillParam("JetChargedEmEnergy",           { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.chargedEmEnergy[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Charged Em Energy (GeV)"});
-  //sh.AddNewFillParam("JetChargedHadronEnergy",       { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.chargedHadronEnergy[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Charged Hadron Energy (GeV)"});
-  //sh.AddNewFillParam("JetNeutralHadronEnergy",       { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.neutralHadronEnergy[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Neutral Hadron Energy (GeV)"});
-  //sh.AddNewFillParam("JetNeutralEmEnergy",           { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.neutralEmEnergy[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Neutral Em Energy (GeV)"});
-  //sh.AddNewFillParam("JetHFHadronEnergy",            { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.HFHadronEnergy[d.jetsAK8Puppi.it];            }, .axis_title="AK8 (Puppi) jet HF Hadron Energy (GeV)"});
-  //sh.AddNewFillParam("JetHFEMEnergy",                { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d] { return d.jetsAK8Puppi.HFEMEnergy[d.jetsAK8Puppi.it];                }, .axis_title="AK8 (Puppi) jet HF EM Energy (GeV)"});
-  //sh.AddNewFillParam("JetNumberOfDaughters",         { .nbin= 120, .bins={    0,   120}, .fill=[&d] { return d.jetsAK8Puppi.numberOfDaughters[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet Number Of Daughters"});
-  //sh.AddNewFillParam("JetPhotonMultiplicity",        { .nbin= 120, .bins={    0,   120}, .fill=[&d] { return d.jetsAK8Puppi.photonMultiplicity[d.jetsAK8Puppi.it];        }, .axis_title="AK8 (Puppi) jet Photon Multiplicity"});
-  //sh.AddNewFillParam("JetElectronMultiplicity",      { .nbin=  10, .bins={    0,    10}, .fill=[&d] { return d.jetsAK8Puppi.electronMultiplicity[d.jetsAK8Puppi.it];      }, .axis_title="AK8 (Puppi) jet Electron Multiplicity"});
-  //sh.AddNewFillParam("JetMuonMultiplicity",          { .nbin=  10, .bins={    0,    10}, .fill=[&d] { return d.jetsAK8Puppi.muonMultiplicity[d.jetsAK8Puppi.it];          }, .axis_title="AK8 (Puppi) jet Muon Multiplicity"});
-  //sh.AddNewFillParam("JetNeutralMultiplicity",       { .nbin= 120, .bins={    0,   120}, .fill=[&d] { return d.jetsAK8Puppi.neutralMultiplicity[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Neutral Multiplicity"});
-  //sh.AddNewFillParam("JetChargedMultiplicity",       { .nbin= 120, .bins={    0,   120}, .fill=[&d] { return d.jetsAK8Puppi.chargedMultiplicity[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Charged Multiplicity"});
-  //sh.AddNewFillParam("JetChargedHadronMultiplicity", { .nbin= 120, .bins={    0,   120}, .fill=[&d] { return d.jetsAK8Puppi.ChargedHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Charged Hadron Multiplicity"});
-  //sh.AddNewFillParam("JetNeutralHadronMultiplicity", { .nbin=  40, .bins={    0,    40}, .fill=[&d] { return d.jetsAK8Puppi.neutralHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Neutral Hadron Multiplicity"});
-  //sh.AddNewFillParam("JetHFHadronMultiplicity",      { .nbin=  80, .bins={    0,    80}, .fill=[&d] { return d.jetsAK8Puppi.HFHadronMultiplicity[d.jetsAK8Puppi.it];      }, .axis_title="AK8 (Puppi) jet HF Hadron Multiplicity"});
-  //sh.AddNewFillParam("JetHFEMMultiplicity",          { .nbin=  50, .bins={    0,    50}, .fill=[&d] { return d.jetsAK8Puppi.HFEMMultiplicity[d.jetsAK8Puppi.it];          }, .axis_title="AK8 (Puppi) jet HF EM Multiplicity"});
+  //sh.AddNewFillParam("JetPhotonEnergy",              { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.PhotonEnergy[d.jetsAK8Puppi.it];              }, .axis_title="AK8 (Puppi) jet Photon Energy (GeV)"});
+  //sh.AddNewFillParam("JetElectronEnergy",            { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.ElectronEnergy[d.jetsAK8Puppi.it];            }, .axis_title="AK8 (Puppi) jet Electron Energy (GeV)"});
+  //sh.AddNewFillParam("JetMuonEnergy",                { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.MuonEnergy[d.jetsAK8Puppi.it];                }, .axis_title="AK8 (Puppi) jet Muon Energy (GeV)"});
+  //sh.AddNewFillParam("JetChargedMuEnergy",           { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.ChargeMuEnergy[d.jetsAK8Puppi.it];            }, .axis_title="AK8 (Puppi) jet Charged Mu Energy (GeV)"});
+  //sh.AddNewFillParam("JetChargedEmEnergy",           { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.chargedEmEnergy[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Charged Em Energy (GeV)"});
+  //sh.AddNewFillParam("JetChargedHadronEnergy",       { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.chargedHadronEnergy[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Charged Hadron Energy (GeV)"});
+  //sh.AddNewFillParam("JetNeutralHadronEnergy",       { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.neutralHadronEnergy[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Neutral Hadron Energy (GeV)"});
+  //sh.AddNewFillParam("JetNeutralEmEnergy",           { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.neutralEmEnergy[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Neutral Em Energy (GeV)"});
+  //sh.AddNewFillParam("JetHFHadronEnergy",            { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.HFHadronEnergy[d.jetsAK8Puppi.it];            }, .axis_title="AK8 (Puppi) jet HF Hadron Energy (GeV)"});
+  //sh.AddNewFillParam("JetHFEMEnergy",                { .nbin= Ebins.size()-1, .bins=Ebins, .fill=[&d](){ return d.jetsAK8Puppi.HFEMEnergy[d.jetsAK8Puppi.it];                }, .axis_title="AK8 (Puppi) jet HF EM Energy (GeV)"});
+  //sh.AddNewFillParam("JetNumberOfDaughters",         { .nbin= 120, .bins={    0,   120}, .fill=[&d](){ return d.jetsAK8Puppi.numberOfDaughters[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet Number Of Daughters"});
+  //sh.AddNewFillParam("JetPhotonMultiplicity",        { .nbin= 120, .bins={    0,   120}, .fill=[&d](){ return d.jetsAK8Puppi.photonMultiplicity[d.jetsAK8Puppi.it];        }, .axis_title="AK8 (Puppi) jet Photon Multiplicity"});
+  //sh.AddNewFillParam("JetElectronMultiplicity",      { .nbin=  10, .bins={    0,    10}, .fill=[&d](){ return d.jetsAK8Puppi.electronMultiplicity[d.jetsAK8Puppi.it];      }, .axis_title="AK8 (Puppi) jet Electron Multiplicity"});
+  //sh.AddNewFillParam("JetMuonMultiplicity",          { .nbin=  10, .bins={    0,    10}, .fill=[&d](){ return d.jetsAK8Puppi.muonMultiplicity[d.jetsAK8Puppi.it];          }, .axis_title="AK8 (Puppi) jet Muon Multiplicity"});
+  //sh.AddNewFillParam("JetNeutralMultiplicity",       { .nbin= 120, .bins={    0,   120}, .fill=[&d](){ return d.jetsAK8Puppi.neutralMultiplicity[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Neutral Multiplicity"});
+  //sh.AddNewFillParam("JetChargedMultiplicity",       { .nbin= 120, .bins={    0,   120}, .fill=[&d](){ return d.jetsAK8Puppi.chargedMultiplicity[d.jetsAK8Puppi.it];       }, .axis_title="AK8 (Puppi) jet Charged Multiplicity"});
+  //sh.AddNewFillParam("JetChargedHadronMultiplicity", { .nbin= 120, .bins={    0,   120}, .fill=[&d](){ return d.jetsAK8Puppi.ChargedHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Charged Hadron Multiplicity"});
+  //sh.AddNewFillParam("JetNeutralHadronMultiplicity", { .nbin=  40, .bins={    0,    40}, .fill=[&d](){ return d.jetsAK8Puppi.neutralHadronMultiplicity[d.jetsAK8Puppi.it]; }, .axis_title="AK8 (Puppi) jet Neutral Hadron Multiplicity"});
+  //sh.AddNewFillParam("JetHFHadronMultiplicity",      { .nbin=  80, .bins={    0,    80}, .fill=[&d](){ return d.jetsAK8Puppi.HFHadronMultiplicity[d.jetsAK8Puppi.it];      }, .axis_title="AK8 (Puppi) jet HF Hadron Multiplicity"});
+  //sh.AddNewFillParam("JetHFEMMultiplicity",          { .nbin=  50, .bins={    0,    50}, .fill=[&d](){ return d.jetsAK8Puppi.HFEMMultiplicity[d.jetsAK8Puppi.it];          }, .axis_title="AK8 (Puppi) jet HF EM Multiplicity"});
   
-  //sh.AddNewFillParam("JetMass",            { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.Mass[d.jetsAK8Puppi.it];                 }, .axis_title="AK8 (Puppi) jet Mass (GeV)"});
-  //sh.AddNewFillParam("JetPrunedMass",      { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.prunedMass[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Pruned Mass (GeV)"});
-  //sh.AddNewFillParam("JetPrunedMassCoarse",{ .nbin= 200, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.prunedMass[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Pruned Mass (GeV)"});
-  //sh.AddNewFillParam("JetFilteredMass",    { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.filteredMass[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet Filtered Mass (GeV)"});
-  //sh.AddNewFillParam("JetTrimmedMass",     { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.trimmedMass[d.jetsAK8Puppi.it];          }, .axis_title="AK8 (Puppi) jet Trimmed Mass (GeV)"});
-  sh.AddNewFillParam("JetSoftDropMass",    { .nbin= 200, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.softDropMass[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet Soft-drop Mass (GeV)"});
-  //sh.AddNewFillParam("JetTopMass",         { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.topMass[d.jetsAK8Puppi.it];              }, .axis_title="AK8 (Puppi) jet Top Mass (GeV)"});
-  //sh.AddNewFillParam("JetMinMass",         { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.minmass[d.jetsAK8Puppi.it];              }, .axis_title="AK8 (Puppi) jet Min. Subjet-pair Mass (GeV)"});
-  //sh.AddNewFillParam("JetNSubJets",        { .nbin=  11, .bins={-0.5,   10.5}, .fill=[&d] { return d.jetsAK8Puppi.nSubJets[d.jetsAK8Puppi.it];             }, .axis_title="AK8 (Puppi) jet N_{subjet}"});
-  sh.AddNewFillParam("JetTau1",            { .nbin= 100, .bins={   0,      1}, .fill=[&d] { return d.jetsAK8Puppi.tau1[d.jetsAK8Puppi.it];                 }, .axis_title="#tau_{1}"});
-  sh.AddNewFillParam("JetTau2",            { .nbin= 100, .bins={   0,      1}, .fill=[&d] { return d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it];                 }, .axis_title="#tau_{2}"});
-  sh.AddNewFillParam("JetTau3",            { .nbin= 100, .bins={   0,      1}, .fill=[&d] { return d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it];                 }, .axis_title="#tau_{3}"});
-  sh.AddNewFillParam("JetTau21",           { .nbin=  50, .bins={   0,      1}, .fill=[&d] { return d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau1[d.jetsAK8Puppi.it];   }, .axis_title="#tau_{2}/#tau_{1}"});
-  sh.AddNewFillParam("JetTau31",           { .nbin=  50, .bins={   0,      1}, .fill=[&d] { return d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau1[d.jetsAK8Puppi.it];   }, .axis_title="#tau_{3}/#tau_{1}"});
-  sh.AddNewFillParam("JetTau32",           { .nbin=  50, .bins={   0,      1}, .fill=[&d] { return d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it];   }, .axis_title="#tau_{3}/#tau_{2}"});
-  //IMP sh.AddNewFillParam("JetDRLep",           { .nbin=  60, .bins={   0,      6}, .fill=[&d] { return d.evt.DRJetLep[d.jetsAK8Puppi.it];         }, .axis_title="#DeltaR (lepton, jet)"});
-  //IMP sh.AddNewFillParam("JetRelPtLep",        { .nbin= 100, .bins={   0,    500}, .fill=[&d] { return d.evt.RelPtJetLep[d.jetsAK8Puppi.it];      }, .axis_title="p_{T}^{rel} (lepton, jet) (GeV)"});
-  sh.AddNewFillParam("JetBTagCSV",         { .nbin= 101, .bins={   0,   1.01},  .fill=[&d] { return subjetBTagDiscr[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet - Max subjet CSV"});
+  //sh.AddNewFillParam("JetMass",            { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.Mass[d.jetsAK8Puppi.it];                 }, .axis_title="AK8 (Puppi) jet Mass (GeV)"});
+  //sh.AddNewFillParam("JetPrunedMass",      { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.prunedMass[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Pruned Mass (GeV)"});
+  //sh.AddNewFillParam("JetPrunedMassCoarse",{ .nbin= 200, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.prunedMass[d.jetsAK8Puppi.it];           }, .axis_title="AK8 (Puppi) jet Pruned Mass (GeV)"});
+  //sh.AddNewFillParam("JetFilteredMass",    { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.filteredMass[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet Filtered Mass (GeV)"});
+  //sh.AddNewFillParam("JetTrimmedMass",     { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.trimmedMass[d.jetsAK8Puppi.it];          }, .axis_title="AK8 (Puppi) jet Trimmed Mass (GeV)"});
+  sh.AddNewFillParam("JetSoftDropMass",    { .nbin= 200, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.softDropMass[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet Soft-drop Mass (GeV)"});
+  //sh.AddNewFillParam("JetTopMass",         { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.topMass[d.jetsAK8Puppi.it];              }, .axis_title="AK8 (Puppi) jet Top Mass (GeV)"});
+  //sh.AddNewFillParam("JetMinMass",         { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.minmass[d.jetsAK8Puppi.it];              }, .axis_title="AK8 (Puppi) jet Min. Subjet-pair Mass (GeV)"});
+  //sh.AddNewFillParam("JetNSubJets",        { .nbin=  11, .bins={-0.5,   10.5}, .fill=[&d](){ return d.jetsAK8Puppi.nSubJets[d.jetsAK8Puppi.it];             }, .axis_title="AK8 (Puppi) jet N_{subjet}"});
+  sh.AddNewFillParam("JetTau1",            { .nbin= 100, .bins={   0,      1}, .fill=[&d](){ return d.jetsAK8Puppi.tau1[d.jetsAK8Puppi.it];                 }, .axis_title="#tau_{1}"});
+  sh.AddNewFillParam("JetTau2",            { .nbin= 100, .bins={   0,      1}, .fill=[&d](){ return d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it];                 }, .axis_title="#tau_{2}"});
+  sh.AddNewFillParam("JetTau3",            { .nbin= 100, .bins={   0,      1}, .fill=[&d](){ return d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it];                 }, .axis_title="#tau_{3}"});
+  sh.AddNewFillParam("JetTau21",           { .nbin=  50, .bins={   0,      1}, .fill=[&d](){ return d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau1[d.jetsAK8Puppi.it];   }, .axis_title="#tau_{2}/#tau_{1}"});
+  sh.AddNewFillParam("JetTau31",           { .nbin=  50, .bins={   0,      1}, .fill=[&d](){ return d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau1[d.jetsAK8Puppi.it];   }, .axis_title="#tau_{3}/#tau_{1}"});
+  sh.AddNewFillParam("JetTau32",           { .nbin=  50, .bins={   0,      1}, .fill=[&d](){ return d.jetsAK8Puppi.tau3[d.jetsAK8Puppi.it]/d.jetsAK8Puppi.tau2[d.jetsAK8Puppi.it];   }, .axis_title="#tau_{3}/#tau_{2}"});
+  //IMP sh.AddNewFillParam("JetDRLep",           { .nbin=  60, .bins={   0,      6}, .fill=[&d](){ return d.evt.DRJetLep[d.jetsAK8Puppi.it];         }, .axis_title="#DeltaR (lepton, jet)"});
+  //IMP sh.AddNewFillParam("JetRelPtLep",        { .nbin= 100, .bins={   0,    500}, .fill=[&d](){ return d.evt.RelPtJetLep[d.jetsAK8Puppi.it];      }, .axis_title="p_{T}^{rel} (lepton, jet) (GeV)"});
+  sh.AddNewFillParam("SubJetBDisc",        { .nbin= 101, .bins={   0,   1.01}, .fill=[&d](){ return subjetBTagDiscr[d.jetsAK8Puppi.it];         }, .axis_title="AK8 (Puppi) jet - Max subjet B discr."});
 
-  sh.AddNewFillParam("JetMatchedGenTopPt",        { .nbin= 400, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.PtNearGenTop[d.jetsAK8Puppi.it];         }, .axis_title="Gen. top p_{T} (GeV)"});
-  sh.AddNewFillParam("JetMatchedGenTopPtCoarse",  { .nbin= 100, .bins={   0,   2000}, .fill=[&d] { return d.jetsAK8Puppi.PtNearGenTop[d.jetsAK8Puppi.it];         }, .axis_title="Gen. top p_{T} (GeV)"});
-  sh.AddNewFillParam("JetMatchedGenTopPtBins",    { .nbin=  14, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000}, .fill=[&d] { return d.jetsAK8Puppi.PtNearGenTop[d.jetsAK8Puppi.it]; }, .axis_title="Gen. top p_{T} (GeV)"});
-  sh.AddNewFillParam("JetMatchedGenTopJetDR",     { .nbin=  50, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenTop[d.jetsAK8Puppi.it];      }, .axis_title="#DeltaR (Gen. top, jet)"});
-  sh.AddNewFillParam("JetMatchedGenTopJetDRFine", { .nbin= 600, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenTop[d.jetsAK8Puppi.it];      }, .axis_title="#DeltaR (Gen. top, jet)"});
-  sh.AddNewFillParam("GenBJetDR",          { .nbin=  60, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. b, jet)"});
-  sh.AddNewFillParam("GenBJetDRFine",      { .nbin= 600, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. b, jet)"});
-  sh.AddNewFillParam("GenWJetDR",          { .nbin=  60, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. W, jet)"});
-  sh.AddNewFillParam("GenWJetDRFine",      { .nbin= 600, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. W, jet)"});
-  sh.AddNewFillParam("GenLepJetDR",        { .nbin=  60, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenLepFromSLTop[d.jetsAK8Puppi.it];    }, .axis_title="#DeltaR (Gen. lep, jet)"});
-  sh.AddNewFillParam("GenLepJetDRFine",    { .nbin= 600, .bins={   0,      6}, .fill=[&d] { return d.jetsAK8Puppi.DRNearGenLepFromSLTop[d.jetsAK8Puppi.it];    }, .axis_title="#DeltaR (Gen. lep, jet)"});
+  sh.AddNewFillParam("JetMatchedGenTopPt",        { .nbin= 400, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.PtNearGenTop[d.jetsAK8Puppi.it];         }, .axis_title="Gen. top p_{T} (GeV)"});
+  sh.AddNewFillParam("JetMatchedGenTopPtCoarse",  { .nbin= 100, .bins={   0,   2000}, .fill=[&d](){ return d.jetsAK8Puppi.PtNearGenTop[d.jetsAK8Puppi.it];         }, .axis_title="Gen. top p_{T} (GeV)"});
+  sh.AddNewFillParam("JetMatchedGenTopPtBins",    { .nbin=  14, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000}, .fill=[&d](){ return d.jetsAK8Puppi.PtNearGenTop[d.jetsAK8Puppi.it]; }, .axis_title="Gen. top p_{T} (GeV)"});
+  sh.AddNewFillParam("JetMatchedGenTopJetDR",     { .nbin=  50, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenTop[d.jetsAK8Puppi.it];      }, .axis_title="#DeltaR (Gen. top, jet)"});
+  sh.AddNewFillParam("JetMatchedGenTopJetDRFine", { .nbin= 600, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenTop[d.jetsAK8Puppi.it];      }, .axis_title="#DeltaR (Gen. top, jet)"});
+  sh.AddNewFillParam("GenBJetDR",          { .nbin=  60, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. b, jet)"});
+  sh.AddNewFillParam("GenBJetDRFine",      { .nbin= 600, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenBFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. b, jet)"});
+  sh.AddNewFillParam("GenWJetDR",          { .nbin=  60, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. W, jet)"});
+  sh.AddNewFillParam("GenWJetDRFine",      { .nbin= 600, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenWFromTop[d.jetsAK8Puppi.it];        }, .axis_title="#DeltaR (Gen. W, jet)"});
+  sh.AddNewFillParam("GenLepJetDR",        { .nbin=  60, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenLepFromSLTop[d.jetsAK8Puppi.it];    }, .axis_title="#DeltaR (Gen. lep, jet)"});
+  sh.AddNewFillParam("GenLepJetDRFine",    { .nbin= 600, .bins={   0,      6}, .fill=[&d](){ return d.jetsAK8Puppi.DRNearGenLepFromSLTop[d.jetsAK8Puppi.it];    }, .axis_title="#DeltaR (Gen. lep, jet)"});
   
-  //IMP sh.AddNewFillParam("MaxSubJetCSV",       { .nbin=  9, .bins={ 0, 0.05, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0 }, .fill=[&d] { return d.evt.maxSubjetCSV[d.jetsAK8Puppi.it]; }, .axis_title="Maximum Subjet CSV"});
+  //IMP sh.AddNewFillParam("MaxSubJetCSV",       { .nbin=  9, .bins={ 0, 0.05, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0 }, .fill=[&d](){ return d.evt.maxSubjetCSV[d.jetsAK8Puppi.it]; }, .axis_title="Maximum Subjet CSV"});
   
   // Event variables
-  sh.AddNewFillParam("Jet1Pt",              { .nbin=  15, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 5000}, .fill=[&d] { return (d.jetsAK8Puppi.size<1) ? -9999. : d.jetsAK8Puppi.Pt[0]; }, .axis_title="Leading AK8 (Puppi) jet p_{T} (GeV)", .def_range={0, 2000}});
-  sh.AddNewFillParam("Jet2Pt",              { .nbin=  15, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 5000}, .fill=[&d] { return (d.jetsAK8Puppi.size<2) ? -9999. : d.jetsAK8Puppi.Pt[1]; }, .axis_title="Subleading AK8 (Puppi) jet p_{T} (GeV)", .def_range={0, 2000}});
-  sh.AddNewFillParam("Jet1Eta",             { .nbin=  80, .bins={  -4,      4}, .fill=[&d] { return (d.jetsAK8Puppi.size<1) ? -9999. : d.jetsAK8Puppi.Eta[0]; }, .axis_title="Leading AK8 (Puppi) jet #eta", .def_range={-3, 3}});
-  sh.AddNewFillParam("Jet2Eta",             { .nbin=  80, .bins={  -4,      4}, .fill=[&d] { return (d.jetsAK8Puppi.size<2) ? -9999. : d.jetsAK8Puppi.Eta[1]; }, .axis_title="Subleading AK8 (Puppi) jet #eta", .def_range={-3, 3}});
-  sh.AddNewFillParam("Jet1Mass",            { .nbin=  17, .bins={0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 150, 200, 300, 500, 1000}, .fill=[&d] { return (d.jetsAK8Puppi.size<1) ? -9999. : d.jetsAK8Puppi.softDropMass[0]; }, .axis_title="Leading AK8 (Puppi) jet M_{Soft-Drop} (GeV)"});
-  sh.AddNewFillParam("Jet2Mass",            { .nbin=  17, .bins={0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 150, 200, 300, 500, 1000}, .fill=[&d] { return (d.jetsAK8Puppi.size<2) ? -9999. : d.jetsAK8Puppi.softDropMass[1]; }, .axis_title="Subleading AK8 (Puppi) jet M_{Soft-Drop} (GeV)"});
-  sh.AddNewFillParam("Jet1Tau32",           { .nbin=  50, .bins={   0,      1}, .fill=[&d] { return (d.jetsAK8Puppi.size<1) ? -9999. : d.jetsAK8Puppi.tau3[0]/d.jetsAK8Puppi.tau2[0]; }, .axis_title="Leading AK8 (Puppi) jet #tau_{32}"});
-  sh.AddNewFillParam("Jet2Tau32",           { .nbin=  50, .bins={   0,      1}, .fill=[&d] { return (d.jetsAK8Puppi.size<2) ? -9999. : d.jetsAK8Puppi.tau3[1]/d.jetsAK8Puppi.tau2[1]; }, .axis_title="Subleading AK8 (Puppi) jet #tau_{32}"});
-  sh.AddNewFillParam("Jet1BTagCSV",         { .nbin= 101, .bins={   0,   1.01}, .fill=[&d] { return (d.jetsAK8Puppi.size<1) ? -9999. : subjetBTagDiscr[0]; }, .axis_title="Max subjet CSV - Leading AK8 (Puppi) jet"});
-  sh.AddNewFillParam("Jet2BTagCSV",         { .nbin= 101, .bins={   0,   1.01}, .fill=[&d] { return (d.jetsAK8Puppi.size<2) ? -9999. : subjetBTagDiscr[1]; }, .axis_title="Max subjet CSV - Subleading AK8 (Puppi) jet"});
-  sh.AddNewFillParam("SumPt",               { .nbin=  10, .bins={ 400, 600, 700, 750, 800, 850, 900, 1000, 1200, 2000, 10000}, .fill=[&d] { if (d.jetsAK8Puppi.size<2) return -9999.; return double(d.jetsAK8Puppi.Pt[0]+d.jetsAK8Puppi.Pt[1]); }, .axis_title="Sum of leading + subleding jet p_{T} (GeV)", .def_range={400,2000} });
-  sh.AddNewFillParam("SumPtOneBin",         { .nbin=   1, .bins={ 800,   10000}, .fill=[&d] { if (d.jetsAK8Puppi.size<2) return -9999.; return double(d.jetsAK8Puppi.Pt[0]+d.jetsAK8Puppi.Pt[1]); }, .axis_title="Sum of leading + subleding jet p_{T} (GeV)"});
+  sh.AddNewFillParam("NVertices",           { .nbin= 101, .bins={-0.5,   100.5}, .fill=[&d](){ return d.evt.NGoodVtx;                  }, .axis_title="N_{Vertices}"});
+  //sh.AddNewFillParam("NJet",                { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d](){ return d.jetsAK8Puppi.size;                  }, .axis_title="N_{AK8 (Puppi) jet}"});
+  sh.AddNewFillParam("NJet",                { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d](){ return nLooseJet;                            }, .axis_title="N_{AK8 (Puppi) jet, loose ID}"});
+  sh.AddNewFillParam("NHadTopTag",          { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d](){ return nHadTopTag;                           }, .axis_title="N_{had. top tag}", .def_range={0,5} });
+  //sh.AddNewFillParam("NJetSelected",        { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d](){ return nHadTopTag+d.evt.NTopLep;     }, .axis_title="N_{Hadronic AK8 (Puppi) jet}"});
+  //sh.AddNewFillParam("NJetHadronic",        { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d](){ return nHadTopTag;                   }, .axis_title="N_{Hadronic AK8 (Puppi) jet}"});
+  //sh.AddNewFillParam("NJetLeptonic",        { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d](){ return d.evt.NTopLep;                   }, .axis_title="N_{Leptonic AK8 (Puppi) jet}"});
+  //sh.AddNewFillParam("NLep",                { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.NLep;                      }, .axis_title="N_{lepton}"});
+  //IMP sh.AddNewFillParam("NLepTight",           { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.neletight+d.evt.nmu;       }, .axis_title="N_{lepton}"});
+  //IMP sh.AddNewFillParam("NMu",                 { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.nmu;                       }, .axis_title="N_{muon}"});
+  //IMP sh.AddNewFillParam("NEle",                { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.nele;                      }, .axis_title="N_{electron}"});
+  //IMP sh.AddNewFillParam("NEleTight",           { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.neletight;                 }, .axis_title="N_{electron}"});
+  //IMP sh.AddNewFillParam("NLepVeto",            { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.neleveto+d.evt.nmuveto;    }, .axis_title="N_{lepton}"});
+  //IMP sh.AddNewFillParam("NMuVeto",             { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.nmuveto;                   }, .axis_title="N_{muon}"});
+  //IMP sh.AddNewFillParam("NEleVeto",            { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.neleveto;                  }, .axis_title="N_{electron}"});
+  sh.AddNewFillParam("NHadTopPreTag",       { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return nHadTopPreTag;               }, .axis_title="N_{jet} (p_{T}>=400, pass Mass cut)"});
+  //sh.AddNewFillParam("NTopLep",             { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d](){ return d.evt.NTopLep;                   }, .axis_title="N_{top, leptonic}"});
+  //sh.AddNewFillParam("TTHadMR",             { .nbin= 100, .bins={   0,   10000}, .fill=[&d](){ return d.evt.TTHadMR;                   }, .axis_title="M_{R,t#bar{t}} (GeV)"});
+  //sh.AddNewFillParam("TTHadMRCoarse",       { .nbin=  20, .bins={   0,    5000}, .fill=[&d](){ return d.evt.TTHadMR;                   }, .axis_title="M_{R,t#bar{t}} (GeV)"});
+  //sh.AddNewFillParam("TTHadMTR",            { .nbin=  50, .bins={   0,    5000}, .fill=[&d](){ return d.evt.TTHadMTR;                  }, .axis_title="M_{T,t#bar{t}}^{R} (GeV)"});
+  sh.AddNewFillParam("DPhiFine",            { .nbin=  64, .bins={   0,     3.2}, .fill=[](){ return dPhi;           }, .axis_title="|#Delta#phi_{t#bar{t}}|"});
+  sh.AddNewFillParam("DPhiBins",            { .nbin=   9, .bins={ 0, 0.5, 1.0, 1.5, 1.8, 2.1, 2.4, 2.7, 3.0, 3.15 }, .fill=[](){ return dPhi; }, .axis_title="|#Delta#phi_{t#bar{t}}|"});
+  sh.AddNewFillParam("DPhi",                { .nbin=  16, .bins={   0,     3.2}, .fill=[](){ return dPhi;           }, .axis_title="|#Delta#phi_{t#bar{t}}|"});
+  sh.AddNewFillParam("DEta",                { .nbin=  20, .bins={   0,     5.0}, .fill=[](){ return dEta;           }, .axis_title="|#Delta#eta_{t#bar{t}}|"});
+  sh.AddNewFillParam("DR",                  { .nbin=  24, .bins={   0,     6.0}, .fill=[](){ return dR;             }, .axis_title="|#DeltaR_{t#bar{t}}|"});
+  sh.AddNewFillParam("Jet1Pt",              { .nbin=  15, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 5000}, .fill=[&d](){ return (d.jetsAK8Puppi.size<1) ? -9999. : d.jetsAK8Puppi.Pt[0]; }, .axis_title="Leading AK8 (Puppi) jet p_{T} (GeV)"});
+  sh.AddNewFillParam("Jet2Pt",              { .nbin=  15, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 5000}, .fill=[&d](){ return (d.jetsAK8Puppi.size<2) ? -9999. : d.jetsAK8Puppi.Pt[1]; }, .axis_title="Subleading AK8 (Puppi) jet p_{T} (GeV)"});
+  sh.AddNewFillParam("Jet1Mass",            { .nbin=  17, .bins={0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 150, 200, 300, 500, 1000}, .fill=[&d](){ return (d.jetsAK8Puppi.size<1) ? -9999. : d.jetsAK8Puppi.softDropMass[0]; }, .axis_title="Leading AK8 (Puppi) jet M_{Soft-Drop} (GeV)"});
+  sh.AddNewFillParam("Jet2Mass",            { .nbin=  17, .bins={0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 150, 200, 300, 500, 1000}, .fill=[&d](){ return (d.jetsAK8Puppi.size<2) ? -9999. : d.jetsAK8Puppi.softDropMass[1]; }, .axis_title="Subleading AK8 (Puppi) jet M_{Soft-Drop} (GeV)"});
+  sh.AddNewFillParam("SumPt",               { .nbin=  10, .bins={ 400, 600, 700, 750, 800, 850, 900, 1000, 1200, 2000, 10000}, .fill=[&d](){ if (d.jetsAK8Puppi.size<2) return -9999.; return double(d.jetsAK8Puppi.Pt[0]+d.jetsAK8Puppi.Pt[1]); }, .axis_title="Sum of leading + subleding jet p_{T} (GeV)", .def_range={400,2000} });
+  sh.AddNewFillParam("SumPtOneBin",         { .nbin=   1, .bins={ 800,   10000}, .fill=[&d](){ if (d.jetsAK8Puppi.size<2) return -9999.; return double(d.jetsAK8Puppi.Pt[0]+d.jetsAK8Puppi.Pt[1]); }, .axis_title="Sum of leading + subleding jet p_{T} (GeV)"});
+  //sh.AddNewFillParam("TTHadSumPt",          { .nbin=  10, .bins={ 400, 600, 700, 750, 800, 850, 900, 1000, 1200, 2000, 10000}, .fill=[&d](){ return d.evt.TTHadSumPt; }, .axis_title="p_{T}^{Top1}+p_{T}^{Top2} (GeV)", .def_range={400,2000} });
+  //sh.AddNewFillParam("TTHadSumPtOneBin",    { .nbin=   1, .bins={ 800,   10000}, .fill=[&d](){ return d.evt.TTHadSumPt;                }, .axis_title="p_{T}^{Top1}+p_{T}^{Top2} (GeV)"});
+  //sh.AddNewFillParam("TTHadDEta",           { .nbin=  50, .bins={   0,       5}, .fill=[&d](){ return d.evt.TTHadDEta;                 }, .axis_title="#Delta#eta_{t#bar{t}}"});
+  //sh.AddNewFillParam("TTHadDR",             { .nbin=  60, .bins={   0,       6}, .fill=[&d](){ return d.evt.TTHadDR;                   }, .axis_title="#DeltaR_{t#bar{t}}"});
+  //sh.AddNewFillParam("TTHadPz",             { .nbin= 100, .bins={   0,    5000}, .fill=[&d](){ return d.evt.TTHadPz;                   }, .axis_title="p_{z,t#bar{t}} (GeV)"});
+  //sh.AddNewFillParam("TTHadDPz",            { .nbin= 100, .bins={   0,    5000}, .fill=[&d](){ return d.evt.TTHadDPz;                  }, .axis_title="#Deltap_{z,t#bar{t}} (GeV)"});
+  //sh.AddNewFillParam("TTHadHz",             { .nbin= 100, .bins={   0,    5000}, .fill=[&d](){ return d.evt.TTHadHz;                   }, .axis_title="H_{z,t#bar{t}} (GeV)"});
+  //sh.AddNewFillParam("TTHadMass",           { .nbin= 100, .bins={   0,    5000}, .fill=[&d](){ return d.evt.TTHadMass;                 }, .axis_title="M_{t#bar{t}} (GeV)"});
+  //sh.AddNewFillParam("TTHadR",              { .nbin=  24, .bins={   0,     1.2}, .fill=[&d](){ return d.evt.TTHadR;                    }, .axis_title="R_{t#bar{t}}"});
+  //sh.AddNewFillParam("TTHadRFine",          { .nbin= 120, .bins={   0,     1.2}, .fill=[&d](){ return d.evt.TTHadR;                    }, .axis_title="R_{t#bar{t}}"});
+  //sh.AddNewFillParam("TTHadR2",             { .nbin=  20, .bins={   0,       1}, .fill=[&d](){ return d.evt.TTHadR2;                   }, .axis_title="R_{t#bar{t}}^{2}"});
+  sh.AddNewFillParam("R",                   { .nbin=  24, .bins={   0,    1.20}, .fill=[&d](){ return d.evt.R;                         }, .axis_title="R (AK8 Puppi)"});
+  sh.AddNewFillParam("RFine",               { .nbin= 120, .bins={   0,    1.20}, .fill=[&d](){ return d.evt.R;                         }, .axis_title="R (AK8 Puppi)"});
+  sh.AddNewFillParam("RBins",               { .nbin=  14, .bins={ 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.6, 0.7, 0.8, 1.0, 1.2, 2.0 }, .fill=[&d](){ return d.evt.R; }, .axis_title="R (AK8 Puppi)"});
+  sh.AddNewFillParam("R2",                  { .nbin=  32, .bins={   0,     1.6}, .fill=[&d](){ return d.evt.R2;                        }, .axis_title="R^{2} (AK8 Puppi)"});
+  sh.AddNewFillParam("MR",                  { .nbin= 100, .bins={   0,   10000}, .fill=[&d](){ return d.evt.MR;                        }, .axis_title="M_{R} (AK8 Puppi) (GeV)"});
+  sh.AddNewFillParam("MTR",                 { .nbin= 100, .bins={   0,    2000}, .fill=[&d](){ return d.evt.MTR;                       }, .axis_title="M_{T}^{R} (AK8 Puppi) (GeV)"});
+  //sh.AddNewFillParam("HtTopFraction",       { .nbin=  20, .bins={   0,       1}, .fill=[&d](){ return d.evt.HtTopFr;                   }, .axis_title="H_{T,tops}/(H_{T}+H_{T,leptonic}+#slash{p}_{T}) (GeV)"});
+  //sh.AddNewFillParam("HtExFraction",        { .nbin=  20, .bins={   0,       1}, .fill=[&d](){ return d.evt.HtExFr;                    }, .axis_title="H_{T,extra}/(H_{T}+H_{T,leptonic}+#slash{p}_{T}) (GeV)"});
+  sh.AddNewFillParam("GenHt",               { .nbin= 100, .bins={   0,   10000}, .fill=[&d](){ return d.evt.Gen_Ht;                    }, .axis_title="H_{T}^{Gen} (GeV)",              .def_range={0, 6000} });
+  sh.AddNewFillParam("AK8PuppiHt",          { .nbin= 100, .bins={   0,   10000}, .fill=[&d](){ return AK8Puppi_Ht;                     }, .axis_title="H_{T}^{AK8 (Puppi) jets} (GeV)", .def_range={0, 6000} });
+  sh.AddNewFillParam("AK4PuppiHt",          { .nbin= 100, .bins={   0,   10000}, .fill=[&d](){ return AK4Puppi_Ht;                     }, .axis_title="H_{T}^{AK4 (Puppi) jets} (GeV)", .def_range={0, 6000} });
+  //sh.AddNewFillParam("AK8HtBins",           { .nbin=20,   .bins={ 0, 200, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 1000, 1500, 2000, 3000, 6000, 10000}, .fill=[&d](){ return d.evt.Ht; }, .axis_title="H_{T}^{AK8 (Puppi) jets} (GeV)", .def_range={0, 6000} });
+  //sh.AddNewFillParam("AK8HtOneBin",            { .nbin=   1, .bins={800, 10000}, .fill=[&d](){ return d.evt.Ht;                        }, .axis_title="H_{T}^{AK8 (Puppi) jets} (GeV)"});
+  //sh.AddNewFillParam("HtAllCoarse",         { .nbin=  50, .bins={   0,   10000}, .fill=[&d](){ return d.evt.HtAll;                     }, .axis_title="H_{T}^{AK8 (Puppi) jets}+H_{T}^{leptons}+#slash{p}_{T} (GeV)"});
+  //sh.AddNewFillParam("HtAll",               { .nbin=  50, .bins={   0,   10000}, .fill=[&d](){ return d.evt.HtAll;                     }, .axis_title="H_{T}^{AK8 (Puppi) jets}+H_{T}^{leptons}+#slash{p}_{T} (GeV)"});
+  //sh.AddNewFillParam("HtTop",               { .nbin=  25, .bins={   0,    5000}, .fill=[&d](){ return d.evt.HtTop;                     }, .axis_title="H_{T}^{tops} (GeV)"});
+  //sh.AddNewFillParam("HtEx",                { .nbin=  50, .bins={   0,   10000}, .fill=[&d](){ return d.evt.HtEx;                      }, .axis_title="H_{T}^{extra} (GeV)"});
   
-  sh.AddNewFillParam("NVertices",           { .nbin= 101, .bins={-0.5,   100.5}, .fill=[&d] { return d.evt.NGoodVtx;                  }, .axis_title="N_{Vertices}"});
-  //sh.AddNewFillParam("NJet",                { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d] { return d.jetsAK8Puppi.size;                  }, .axis_title="N_{AK8 (Puppi) jet}"});
-  sh.AddNewFillParam("NJet",                { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d] { return nLooseJet;                            }, .axis_title="N_{AK8 (Puppi) jet, loose ID}"});
-  sh.AddNewFillParam("NHadTopTag",          { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d] { return nHadTopTag;                           }, .axis_title="N_{had. top tag}", .def_range={0,5} });
-  //sh.AddNewFillParam("NJetSelected",        { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d] { return nHadTopTag+d.evt.NTopLep;     }, .axis_title="N_{Hadronic AK8 (Puppi) jet}"});
-  //sh.AddNewFillParam("NJetHadronic",        { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d] { return nHadTopTag;                   }, .axis_title="N_{Hadronic AK8 (Puppi) jet}"});
-  //sh.AddNewFillParam("NJetLeptonic",        { .nbin=  21, .bins={-0.5,    20.5}, .fill=[&d] { return d.evt.NTopLep;                   }, .axis_title="N_{Leptonic AK8 (Puppi) jet}"});
-  //sh.AddNewFillParam("NLep",                { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.NLep;                      }, .axis_title="N_{lepton}"});
-  //IMP sh.AddNewFillParam("NLepTight",           { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.neletight+d.evt.nmu;       }, .axis_title="N_{lepton}"});
-  //IMP sh.AddNewFillParam("NMu",                 { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.nmu;                       }, .axis_title="N_{muon}"});
-  //IMP sh.AddNewFillParam("NEle",                { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.nele;                      }, .axis_title="N_{electron}"});
-  //IMP sh.AddNewFillParam("NEleTight",           { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.neletight;                 }, .axis_title="N_{electron}"});
-  //IMP sh.AddNewFillParam("NLepVeto",            { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.neleveto+d.evt.nmuveto;    }, .axis_title="N_{lepton}"});
-  //IMP sh.AddNewFillParam("NMuVeto",             { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.nmuveto;                   }, .axis_title="N_{muon}"});
-  //IMP sh.AddNewFillParam("NEleVeto",            { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.neleveto;                  }, .axis_title="N_{electron}"});
-  sh.AddNewFillParam("NHadTopPreTag",       { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return nHadTopPreTag;               }, .axis_title="N_{jet} (p_{T}>=400, pass Mass cut)"});
-  //sh.AddNewFillParam("NTopLep",             { .nbin=   6, .bins={-0.5,     5.5}, .fill=[&d] { return d.evt.NTopLep;                   }, .axis_title="N_{top, leptonic}"});
-  //sh.AddNewFillParam("TTHadMR",             { .nbin= 100, .bins={   0,   10000}, .fill=[&d] { return d.evt.TTHadMR;                   }, .axis_title="M_{R,t#bar{t}} (GeV)"});
-  //sh.AddNewFillParam("TTHadMRCoarse",       { .nbin=  20, .bins={   0,    5000}, .fill=[&d] { return d.evt.TTHadMR;                   }, .axis_title="M_{R,t#bar{t}} (GeV)"});
-  //sh.AddNewFillParam("TTHadMTR",            { .nbin=  50, .bins={   0,    5000}, .fill=[&d] { return d.evt.TTHadMTR;                  }, .axis_title="M_{T,t#bar{t}}^{R} (GeV)"});
-  sh.AddNewFillParam("DPhiFine",            { .nbin=  64, .bins={   0,     3.2}, .fill=[] { return dPhi;           }, .axis_title="|#Delta#phi_{t#bar{t}}|"});
-  sh.AddNewFillParam("DPhiBins",            { .nbin=   9, .bins={ 0, 0.5, 1.0, 1.5, 1.8, 2.1, 2.4, 2.7, 3.0, 3.15 }, .fill=[] { return dPhi; }, .axis_title="|#Delta#phi_{t#bar{t}}|"});
-  sh.AddNewFillParam("DPhi",                { .nbin=  16, .bins={   0,     3.2}, .fill=[] { return dPhi;           }, .axis_title="|#Delta#phi_{t#bar{t}}|"});
-  sh.AddNewFillParam("DEta",                { .nbin=  20, .bins={   0,     5.0}, .fill=[] { return dEta;           }, .axis_title="|#Delta#eta_{t#bar{t}}|"});
-  sh.AddNewFillParam("DR",                  { .nbin=  24, .bins={   0,     6.0}, .fill=[] { return dR;             }, .axis_title="|#DeltaR_{t#bar{t}}|"});
-  
-  //sh.AddNewFillParam("TTHadSumPt",          { .nbin=  10, .bins={ 400, 600, 700, 750, 800, 850, 900, 1000, 1200, 2000, 10000}, .fill=[&d] { return d.evt.TTHadSumPt; }, .axis_title="p_{T}^{Top1}+p_{T}^{Top2} (GeV)", .def_range={400,2000} });
-  //sh.AddNewFillParam("TTHadSumPtOneBin",    { .nbin=   1, .bins={ 800,   10000}, .fill=[&d] { return d.evt.TTHadSumPt;                }, .axis_title="p_{T}^{Top1}+p_{T}^{Top2} (GeV)"});
-  //sh.AddNewFillParam("TTHadDEta",           { .nbin=  50, .bins={   0,       5}, .fill=[&d] { return d.evt.TTHadDEta;                 }, .axis_title="#Delta#eta_{t#bar{t}}"});
-  //sh.AddNewFillParam("TTHadDR",             { .nbin=  60, .bins={   0,       6}, .fill=[&d] { return d.evt.TTHadDR;                   }, .axis_title="#DeltaR_{t#bar{t}}"});
-  //sh.AddNewFillParam("TTHadPz",             { .nbin= 100, .bins={   0,    5000}, .fill=[&d] { return d.evt.TTHadPz;                   }, .axis_title="p_{z,t#bar{t}} (GeV)"});
-  //sh.AddNewFillParam("TTHadDPz",            { .nbin= 100, .bins={   0,    5000}, .fill=[&d] { return d.evt.TTHadDPz;                  }, .axis_title="#Deltap_{z,t#bar{t}} (GeV)"});
-  //sh.AddNewFillParam("TTHadHz",             { .nbin= 100, .bins={   0,    5000}, .fill=[&d] { return d.evt.TTHadHz;                   }, .axis_title="H_{z,t#bar{t}} (GeV)"});
-  //sh.AddNewFillParam("TTHadMass",           { .nbin= 100, .bins={   0,    5000}, .fill=[&d] { return d.evt.TTHadMass;                 }, .axis_title="M_{t#bar{t}} (GeV)"});
-  //sh.AddNewFillParam("TTHadR",              { .nbin=  24, .bins={   0,     1.2}, .fill=[&d] { return d.evt.TTHadR;                    }, .axis_title="R_{t#bar{t}}"});
-  //sh.AddNewFillParam("TTHadRFine",          { .nbin= 120, .bins={   0,     1.2}, .fill=[&d] { return d.evt.TTHadR;                    }, .axis_title="R_{t#bar{t}}"});
-  //sh.AddNewFillParam("TTHadR2",             { .nbin=  20, .bins={   0,       1}, .fill=[&d] { return d.evt.TTHadR2;                   }, .axis_title="R_{t#bar{t}}^{2}"});
-  sh.AddNewFillParam("R",                   { .nbin=  24, .bins={   0,    1.20}, .fill=[&d] { return d.evt.R;                         }, .axis_title="R (AK8 Puppi)"});
-  sh.AddNewFillParam("RFine",               { .nbin= 120, .bins={   0,    1.20}, .fill=[&d] { return d.evt.R;                         }, .axis_title="R (AK8 Puppi)"});
-  sh.AddNewFillParam("RBins",               { .nbin=  14, .bins={ 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.6, 0.7, 0.8, 1.0, 1.2, 2.0 }, .fill=[&d] { return d.evt.R; }, .axis_title="R (AK8 Puppi)"});
-  sh.AddNewFillParam("R2",                  { .nbin=  32, .bins={   0,     1.6}, .fill=[&d] { return d.evt.R2;                        }, .axis_title="R^{2} (AK8 Puppi)"});
-  sh.AddNewFillParam("MR",                  { .nbin= 100, .bins={   0,   10000}, .fill=[&d] { return d.evt.MR;                        }, .axis_title="M_{R} (AK8 Puppi) (GeV)"});
-  sh.AddNewFillParam("MTR",                 { .nbin= 100, .bins={   0,    2000}, .fill=[&d] { return d.evt.MTR;                       }, .axis_title="M_{T}^{R} (AK8 Puppi) (GeV)"});
-  //sh.AddNewFillParam("HtTopFraction",       { .nbin=  20, .bins={   0,       1}, .fill=[&d] { return d.evt.HtTopFr;                   }, .axis_title="H_{T,tops}/(H_{T}+H_{T,leptonic}+#slash{p}_{T}) (GeV)"});
-  //sh.AddNewFillParam("HtExFraction",        { .nbin=  20, .bins={   0,       1}, .fill=[&d] { return d.evt.HtExFr;                    }, .axis_title="H_{T,extra}/(H_{T}+H_{T,leptonic}+#slash{p}_{T}) (GeV)"});
-  sh.AddNewFillParam("GenHt",               { .nbin= 100, .bins={   0,   10000}, .fill=[&d] { return d.evt.Gen_Ht;                    }, .axis_title="H_{T}^{Gen} (GeV)",              .def_range={0, 6000} });
-  sh.AddNewFillParam("AK8PuppiHt",          { .nbin= 100, .bins={   0,   10000}, .fill=[&d] { return AK8Puppi_Ht;                     }, .axis_title="H_{T}^{AK8 (Puppi) jets} (GeV)", .def_range={0, 6000} });
-  sh.AddNewFillParam("AK4PuppiHt",          { .nbin= 100, .bins={   0,   10000}, .fill=[&d] { return AK4Puppi_Ht;                     }, .axis_title="H_{T}^{AK4 (Puppi) jets} (GeV)", .def_range={0, 6000} });
-  //sh.AddNewFillParam("AK8HtBins",           { .nbin=20,   .bins={ 0, 200, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 1000, 1500, 2000, 3000, 6000, 10000}, .fill=[&d] { return d.evt.Ht; }, .axis_title="H_{T}^{AK8 (Puppi) jets} (GeV)", .def_range={0, 6000} });
-  //sh.AddNewFillParam("AK8HtOneBin",            { .nbin=   1, .bins={800, 10000}, .fill=[&d] { return d.evt.Ht;                        }, .axis_title="H_{T}^{AK8 (Puppi) jets} (GeV)"});
-  //sh.AddNewFillParam("HtAllCoarse",         { .nbin=  50, .bins={   0,   10000}, .fill=[&d] { return d.evt.HtAll;                     }, .axis_title="H_{T}^{AK8 (Puppi) jets}+H_{T}^{leptons}+#slash{p}_{T} (GeV)"});
-  //sh.AddNewFillParam("HtAll",               { .nbin=  50, .bins={   0,   10000}, .fill=[&d] { return d.evt.HtAll;                     }, .axis_title="H_{T}^{AK8 (Puppi) jets}+H_{T}^{leptons}+#slash{p}_{T} (GeV)"});
-  //sh.AddNewFillParam("HtTop",               { .nbin=  25, .bins={   0,    5000}, .fill=[&d] { return d.evt.HtTop;                     }, .axis_title="H_{T}^{tops} (GeV)"});
-  //sh.AddNewFillParam("HtEx",                { .nbin=  50, .bins={   0,   10000}, .fill=[&d] { return d.evt.HtEx;                      }, .axis_title="H_{T}^{extra} (GeV)"});
-  
-  sh.AddNewFillParam("FlaggoodVertices",                       { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.goodVertices;                       }, .axis_title="goodVertices"});
-  sh.AddNewFillParam("FlageeBadScFilter",                      { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.eeBadScFilter;                      }, .axis_title="eeBadScFilter"});
-  sh.AddNewFillParam("FlagEcalDeadCellTriggerPrimitiveFilter", { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.EcalDeadCellTriggerPrimitiveFilter; }, .axis_title="EcalDeadCellTriggerPrimitiveFilter"});
-  sh.AddNewFillParam("FlagHBHENoiseFilter",                    { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.HBHENoiseFilter;                    }, .axis_title="HBHENoiseFilter"});
-  sh.AddNewFillParam("FlagHBHENoiseIsoFilter",                 { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.HBHENoiseIsoFilter;                 }, .axis_title="HBHENoiseIsoFilter"});
-  sh.AddNewFillParam("FlagCSCTightHalo2015Filter",             { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.CSCTightHalo2015Filter;             }, .axis_title="CSCTightHalo2015Filter"});
-  sh.AddNewFillParam("FlagmuonBadTrackFilter",                 { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.muonBadTrackFilter;                 }, .axis_title="muonBadTrackFilter"});
-  sh.AddNewFillParam("FlagchargedHadronTrackResolutionFilter", { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d] { return d.filter.chargedHadronTrackResolutionFilter; }, .axis_title="chargedHadronTrackResolutionFilter"});
+  sh.AddNewFillParam("FlaggoodVertices",                       { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.goodVertices;                       }, .axis_title="goodVertices"});
+  sh.AddNewFillParam("FlageeBadScFilter",                      { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.eeBadScFilter;                      }, .axis_title="eeBadScFilter"});
+  sh.AddNewFillParam("FlagEcalDeadCellTriggerPrimitiveFilter", { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.EcalDeadCellTriggerPrimitiveFilter; }, .axis_title="EcalDeadCellTriggerPrimitiveFilter"});
+  sh.AddNewFillParam("FlagHBHENoiseFilter",                    { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.HBHENoiseFilter;                    }, .axis_title="HBHENoiseFilter"});
+  sh.AddNewFillParam("FlagHBHENoiseIsoFilter",                 { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.HBHENoiseIsoFilter;                 }, .axis_title="HBHENoiseIsoFilter"});
+  sh.AddNewFillParam("FlagCSCTightHalo2015Filter",             { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.CSCTightHalo2015Filter;             }, .axis_title="CSCTightHalo2015Filter"});
+  sh.AddNewFillParam("FlagmuonBadTrackFilter",                 { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.muonBadTrackFilter;                 }, .axis_title="muonBadTrackFilter"});
+  sh.AddNewFillParam("FlagchargedHadronTrackResolutionFilter", { .nbin=  2, .bins={-0.5,      1.5}, .fill=[&d](){ return d.filter.chargedHadronTrackResolutionFilter; }, .axis_title="chargedHadronTrackResolutionFilter"});
   
   // Gen Particles
-  sh.AddNewFillParam("GenTopPtBins",      { .nbin=  14, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000}, .fill=[&d] { return is_Gen_Top[d.gen.it] ? d.gen.Pt[d.gen.it] : -9999; }, .axis_title="Gen. top p_{T} (GeV)"});
-  sh.AddNewFillParam("GenTopPtFewBins",   { .nbin=  4, .bins={0, 300, 400, 800, 2000}, .fill=[&d] { return is_Gen_Top[d.gen.it] ? d.gen.Pt[d.gen.it] : -9999; }, .axis_title="Gen. top p_{T} (GeV)"});
+  sh.AddNewFillParam("GenTopPtBins",      { .nbin=  14, .bins={0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000}, .fill=[&d](){ return is_Gen_Top[d.gen.it] ? d.gen.Pt[d.gen.it] : -9999; }, .axis_title="Gen. top p_{T} (GeV)"});
+  sh.AddNewFillParam("GenTopPtFewBins",   { .nbin=  4, .bins={0, 300, 400, 800, 2000}, .fill=[&d](){ return is_Gen_Top[d.gen.it] ? d.gen.Pt[d.gen.it] : -9999; }, .axis_title="Gen. top p_{T} (GeV)"});
 
   // Special Y/Z axis parameters:
   sh.AddSpecial({ .name="MergedTopFraction",         .name_plus_1d="IsGenTopMerged",          .axis="Fraction of Merged Tops",             .axis_plus_1d="Gen. b and W Merged in R<0.8 (bool)"});
@@ -1076,20 +1059,20 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   //sh.AddSpecial({ .name="HLTEff_PFHT900",            .name_plus_1d="HLTPFHT900",              .axis="HLT_PFHT900",                         .axis_plus_1d="#epsilon_{HLT_PFHT900}"});
   sh.AddSpecial({ .name="Counts",                    .name_plus_1d="Syst",                    .axis="Counts (Incl Syst Unc)",              .axis_plus_1d="Systematics variation index"});
 
-  sh.AddNewFillParam("MergedTopFraction",         { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return top_Children_Within_Cone[d.jetsAK8Puppi.it]; }, .axis_title="Fraction of Merged Tops" });
-  sh.AddNewFillParam("JetFindingEfficiency",      { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return has_Matched_Jet[d.gen.it]; }, .axis_title="Jet finding Efficiency" });
-  sh.AddNewFillParam("TopFindingEfficiency",      { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return has_Matched_Tagged_Jet[d.gen.it]; }, .axis_title="Top finding Efficiency" });
-  sh.AddNewFillParam("TopTagEfficiency",          { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return passHadTopTag[d.jetsAK8Puppi.it]; }, .axis_title="Top-tagging Efficiency" });
-  sh.AddNewFillParam("HLTEff_AK8PFJet360",        { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.AK8PFJet360_TrimMass30;          }, .axis_title="#epsilon_{HLT_AK8PFJet360_TrimMass30}" });
-  sh.AddNewFillParam("HLTEff_PFJet450",           { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.PFJet450;                        }, .axis_title="#epsilon_{HLT_PFJet450}" });
-  //sh.AddNewFillParam("HLTEff_DiPFJetAve500",      { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.DiPFJetAve500;                   }, .axis_title="#epsilon_{HLT_DiPFJetAve500}" });
-  sh.AddNewFillParam("HLTEff_AK8PFHT650",         { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.AK8PFHT650_TrimR0p1PT0p03Mass50; }, .axis_title="#epsilon_{HLT_AK8PFHT650_TrimR0p1PT0p03Mass50}" });
-  sh.AddNewFillParam("HLTEff_AK8PFHT700",         { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.AK8PFHT700_TrimR0p1PT0p03Mass50; }, .axis_title="#epsilon_{HLT_AK8PFHT700_TrimR0p1PT0p03Mass50}" });
-  sh.AddNewFillParam("HLTEff_PFHT750_4JetPt50",   { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.PFHT750_4JetPt50;                }, .axis_title="#epsilon_{HLT_PFHT750_4JetPt50}" });
-  sh.AddNewFillParam("HLTEff_PFHT800",            { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.PFHT800;                         }, .axis_title="#epsilon_{HLT_PFHT800}" });
-  //sh.AddNewFillParam("HLTEff_PFHT350",            { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.PFHT350;                         }, .axis_title="#epsilon_{HLT_PFHT350}" });
-  //sh.AddNewFillParam("HLTEff_PFHT900",            { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d] { return d.hlt.PFHT900;                         }, .axis_title="#epsilon_{HLT_PFHT900}" });
-  sh.AddNewFillParam("Counts",                    { .nbin= 1+syst_nSyst, .bins={-0.5, syst_nSyst+0.5}, .fill=[&syst_index] { return syst_index; }, .axis_title="Counts (Incl Syst Unc)"});
+  sh.AddNewFillParam("MergedTopFraction",         { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return top_Children_Within_Cone[d.jetsAK8Puppi.it]; }, .axis_title="Fraction of Merged Tops" });
+  sh.AddNewFillParam("JetFindingEfficiency",      { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return has_Matched_Jet[d.gen.it]; }, .axis_title="Jet finding Efficiency" });
+  sh.AddNewFillParam("TopFindingEfficiency",      { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return has_Matched_Tagged_Jet[d.gen.it]; }, .axis_title="Top finding Efficiency" });
+  sh.AddNewFillParam("TopTagEfficiency",          { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return passHadTopTag[d.jetsAK8Puppi.it]; }, .axis_title="Top-tagging Efficiency" });
+  sh.AddNewFillParam("HLTEff_AK8PFJet360",        { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.AK8PFJet360_TrimMass30;          }, .axis_title="#epsilon_{HLT_AK8PFJet360_TrimMass30}" });
+  sh.AddNewFillParam("HLTEff_PFJet450",           { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.PFJet450;                        }, .axis_title="#epsilon_{HLT_PFJet450}" });
+  //sh.AddNewFillParam("HLTEff_DiPFJetAve500",      { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.DiPFJetAve500;                   }, .axis_title="#epsilon_{HLT_DiPFJetAve500}" });
+  sh.AddNewFillParam("HLTEff_AK8PFHT650",         { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.AK8PFHT650_TrimR0p1PT0p03Mass50; }, .axis_title="#epsilon_{HLT_AK8PFHT650_TrimR0p1PT0p03Mass50}" });
+  sh.AddNewFillParam("HLTEff_AK8PFHT700",         { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.AK8PFHT700_TrimR0p1PT0p03Mass50; }, .axis_title="#epsilon_{HLT_AK8PFHT700_TrimR0p1PT0p03Mass50}" });
+  sh.AddNewFillParam("HLTEff_PFHT750_4JetPt50",   { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.PFHT750_4JetPt50;                }, .axis_title="#epsilon_{HLT_PFHT750_4JetPt50}" });
+  sh.AddNewFillParam("HLTEff_PFHT800",            { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.PFHT800;                         }, .axis_title="#epsilon_{HLT_PFHT800}" });
+  //sh.AddNewFillParam("HLTEff_PFHT350",            { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.PFHT350;                         }, .axis_title="#epsilon_{HLT_PFHT350}" });
+  //sh.AddNewFillParam("HLTEff_PFHT900",            { .nbin=  2, .bins={ -0.5, 1.5}, .fill=[&d](){ return d.hlt.PFHT900;                         }, .axis_title="#epsilon_{HLT_PFHT900}" });
+  sh.AddNewFillParam("Counts",                    { .nbin= 1+syst_nSyst, .bins={-0.5, syst_nSyst+0.5}, .fill=[&syst_index](){ return syst_index; }, .axis_title="Counts (Incl Syst Unc)"});
 
 }
 
@@ -1168,7 +1151,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     //sh.AddHistos("jetsAK8Puppi", { .fill="JetSoftDropMass", .pfs={"CutFlow","PassHLTCut","PtOrderedJets","Data,MC"}, .cuts={},  .draw="HISTE1", .opt="Sumw2Stack0KeepOrder", .ranges={0,0,      1.01e-3,1e7, 0.55,0.9} });
 
     // Data-MC Comparison - background composition
-    for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+    for (size_t i=0; i<=16; ++i) { 
       std::stringstream cut; cut<<"Pass"<<i<<"Cuts";
       // Jet quantities
       sh.AddHistos("all events",        { .fill="NJet",            .pfs={"PlotSamples",cut.str(),"PassHLTCut"},                     .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
@@ -1188,28 +1171,14 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
       sh.AddHistos("jetsAK8Puppi",      { .fill="JetPt",           .pfs={"PlotSamples","NSubjetBTag",cut.str(),"PassHLTCut","PtOrderedJets"},       .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
       sh.AddHistos("jetsAK8Puppi",      { .fill="JetPt",           .pfs={"PlotSamples",cut.str(),"PassHLTCut","JetPassSubjetBTag"},                 .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
       sh.AddHistos("jetsAK8Puppi",      { .fill="JetPt",           .pfs={"PlotSamples",cut.str(),"PassHLTCut","JetPassSubjetBTag","PtOrderedJets"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-      sh.AddHistos("jetsAK8Puppi",      { .fill="JetBTagCSV",      .pfs={"PlotSamples",cut.str(),"PassHLTCut"},                                     .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-      sh.AddHistos("jetsAK8Puppi",      { .fill="JetBTagCSV",      .pfs={"PlotSamples",cut.str(),"PassHLTCut","PtOrderedJets"},                     .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
+      sh.AddHistos("jetsAK8Puppi",      { .fill="SubJetBDisc",     .pfs={"PlotSamples",cut.str(),"PassHLTCut"},                                     .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
+      sh.AddHistos("jetsAK8Puppi",      { .fill="SubJetBDisc",     .pfs={"PlotSamples",cut.str(),"PassHLTCut","PtOrderedJets"},                     .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
       
       // Cutflow
       sh.AddHistos("cutflow", { .fill="Cutflow", .pfs={"PlotSamples",cut.str(),"PassHLTCut"}, .cuts={"PassAnaSelection"}, .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 0,0} });
       sh.AddHistos("cutflow", { .fill="Cutflow", .pfs={"Background", cut.str(),"PassHLTCut"}, .cuts={"PassAnaSelection"}, .draw="HISTE1", .opt="Sumw2Log",     .ranges={0,0, 0,0} });
     }
-    
-    // N-1 plots
-    sh.AddHistos("all events", { .fill="Jet1Eta",     .pfs={"PlotSamples","AllCutsExclJet1Eta",   "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet2Eta",     .pfs={"PlotSamples","AllCutsExclJet2Eta",   "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet1Pt",      .pfs={"PlotSamples","AllCutsExclJet1Pt",    "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet2Pt",      .pfs={"PlotSamples","AllCutsExclJet2Pt",    "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet1Mass",    .pfs={"PlotSamples","AllCutsExclJet1Mass",  "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet2Mass",    .pfs={"PlotSamples","AllCutsExclJet2Mass",  "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet1BTagCSV", .pfs={"PlotSamples","AllCutsExclJet1BTag",  "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet2BTagCSV", .pfs={"PlotSamples","AllCutsExclJet2BTag",  "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet1Tau32",   .pfs={"PlotSamples","AllCutsExclJet1Tau32", "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="Jet2Tau32",   .pfs={"PlotSamples","AllCutsExclJet2Tau32", "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="DPhi",        .pfs={"PlotSamples","AllCutsExclDeltaPhi",  "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    sh.AddHistos("all events", { .fill="R",           .pfs={"PlotSamples","AllCutsExclR",         "PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-    
+  
     // --------------------------------------
     //             Other variables
     //       (energies, multiplicities)
@@ -1255,7 +1224,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     //sh.AddHistos("all events", { .fill="AK4PuppiHt",      .pfs={"CutFlow","Data,MC","PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt="Sumw2Stack0KeepOrder", .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
 
     // Event composition - under different cuts
-    for (size_t i=1; i<=analysis_cuts.size(); ++i) {
+    for (size_t i=1; i<=16; ++i) {
       std::stringstream cut; cut<<"Pass"<<i<<"Cuts";
       sh.AddHistos("all events", { .fill="SumPt",      .pfs={"PlotSamples",cut.str()},              .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
       sh.AddHistos("all events", { .fill="SumPt",      .pfs={"PlotSamples",cut.str(),"PassHLTCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
@@ -1276,9 +1245,6 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("all events",   { .fill="SumPt",      .pfs={"PlotSamples","Pass12Cuts","PassHLTCut","PassDPhiCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
     sh.AddHistos("all events",   { .fill="AK8PuppiHt", .pfs={"PlotSamples","Pass12Cuts","PassHLTCut","PassDPhiCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
     sh.AddHistos("all events",   { .fill="AK4PuppiHt", .pfs={"PlotSamples","Pass12Cuts","PassHLTCut","PassDPhiCut"}, .cuts={},  .draw="HISTE1", .opt=stack_plot_opt, .ranges={0,0, 1.01e-3,1e7, 0.55,0.9} });
-
-    // N-1 plot for all cuts
-    
 
     // --------------------------------------
     //               Efficiencies
@@ -1572,9 +1538,6 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     //sh.AddHistos("baseline events syst",   { .fill="Counts_vs_DPhiBins",  .pfs={"RBins",    "Tau32Cuts","Background"}, .cuts={}, .draw="HISTE1", .opt="Sumw2Log", .ranges={0,0, 1e-3,1e5} }); // Method 0
     //sh.AddHistos("baseline events syst",   { .fill="Counts_vs_R",         .pfs={"Tau32Cuts","DPhiBands","AllSamples"}, .cuts={}, .draw="HISTE1", .opt="Sumw2Log", .ranges={0,0, 1e-3,1e5} }); // Method 1/3
     //sh.AddHistos("baseline events syst",   { .fill="Counts_vs_R",         .pfs={"Tau32Cuts","DPhiBands","Background"}, .cuts={}, .draw="HISTE1", .opt="Sumw2Log", .ranges={0,0, 1e-3,1e5} }); // Method 2
-
-    // Signal specific plots
-    sh.AddHistos("baseline events",   { .fill="MLSP_vs_MGluino", .pfs={"DPhiBands","Tau32Cuts","RBands","Signals"}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={} });
   } // End all plots
 
   // --------------------------------------------------------------------------
@@ -1629,13 +1592,13 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     //while(data.gen.Loop()) sh.Fill("gen");
     while(data.jetsAK8Puppi.Loop()) sh.Fill("jetsAK8Puppi");
     sh.Fill("all events");
-    if (_apply_ncut(analysis_cuts.size()-4)) sh.Fill("baseline notrigger");
-    if (_apply_ncut(analysis_cuts.size()-4 /*-3*/)) sh.Fill("baseline events");
+    if (_apply_ncut(12)) sh.Fill("baseline notrigger");
+    if (_apply_ncut(/*13*/ 12)) sh.Fill("baseline events");
     cut_index = -1; while(++cut_index<analysis_cuts.size()) sh.Fill("cutflow");
   }
   sh.Fill("all events syst");
   while(data.jetsAK8Puppi.Loop()) sh.Fill("jetsAK8Puppi syst");
-  if (_apply_ncut(analysis_cuts.size()-4 /*-3*/)) sh.Fill("baseline events syst");
+  if (_apply_ncut(/*13*/ 12)) sh.Fill("baseline events syst");
 
 }
 

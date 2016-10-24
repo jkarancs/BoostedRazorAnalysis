@@ -4,10 +4,11 @@ Run II Search for Supersymmetry using Razor variables in the boosted regime
 ## Checkout recipe
 
 ```Shell
-setenv SCRAM_ARCH slc6_amd64_gcc493
-cmsrel CMSSW_7_6_3_patch2
-cd CMSSW_7_6_3_patch2/src
+export SCRAM_ARCH=slc6_amd64_gcc530
+cmsrel CMSSW_8_0_20
+cd CMSSW_8_0_20/src
 cmsenv
+git cms-addpkg RecoLuminosity/LumiDB
 git clone https://github.com/jkarancs/BoostedRazorAnalysis
 scram b -j 20
 ```
