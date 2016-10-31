@@ -9,24 +9,28 @@ struct settings {
   // -- Constants
   //-----------------------------------------------------------------------------
   settings() :
-    runOnSkim                ( true ),
-    saveSkimmedNtuple        ( false ),
-    doPileupReweighting      ( true ),
-    applyHadTopTagSF         ( false ),
+    runOnSkim                ( false ),
+    saveSkimmedNtuple        ( true  ),
+    doPileupReweighting      ( true  ),
+    applyWTagSF              ( false ),
+    applyBTagSF              ( false ),
+    //applyHadTopTagSF         ( false ),
     scaleQCD                 ( false ),
     doHTReweighting          ( false ),
     varySystematics          ( false ),
-    systematicsFileName      ( "systematics/2016_06_24_noPdf.txt" ),
+    systematicsFileName      ( "systematics/2016_10_31_1SigmaUpDown_NoPdf.txt" ),
     treeName                 ( runOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( runOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName        ( runOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple
     useJSON                  ( false ), // Default is not appliying any JSON, but Golden JSON (tighter selection) can be applied on top of the Default Silver JSON
-    jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/Cert_271036-276811_13TeV_PromptReco_Collisions16_JSON_NoL1T.txt" ),
-    pileupDir                ( "pileup/ICHEP16_Golden_JSON/" ),
-    intLumi                  ( 12891.528  /* brilcalc - ICHEP16 Golden JSON */ ), // Tot int lumi in (pb^-1),
+    jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/Cert_271036-280385_13TeV_PromptReco_Collisions16_JSON.txt" ),
+    pileupDir                ( "pileup/Oct21_Golden_JSON/" ),
+    intLumi                  ( 27655.802 /* brilcalc - Oct21 Golden JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.062 ),
-    triggerEffScaleFactor    ( 1.0 ),
-    triggerEffUncertainty    ( 0.01 )
+    useXSecFileForBkg        ( false ), // true: use file below, false: use value in the ntuple (evt_XSec)
+    xSecFileName             ( "common/BackGroundXSec.txt" ),
+    triggerEffScaleFactor    (  1.00 ),
+    triggerEffUncertainty    (  0.01 )
   {
     if (runOnSkim) {
       totWeightHistoNamesSignal.push_back("totweight_T1tttt"); // lsp mass vs gluino mass scan, also used for T5ttcc and T5tttt
@@ -41,7 +45,9 @@ struct settings {
   const bool runOnSkim;
   const bool saveSkimmedNtuple;
   const bool doPileupReweighting;
-  const bool applyHadTopTagSF;
+  const bool applyWTagSF;
+  const bool applyBTagSF;
+  //const bool applyHadTopTagSF;
   const bool scaleQCD;
   const bool doHTReweighting;
   const bool varySystematics;
@@ -54,6 +60,8 @@ struct settings {
   const std::string pileupDir;
   const double intLumi;
   const double lumiUncertainty;
+  const bool useXSecFileForBkg;
+  const std::string xSecFileName;
   const double triggerEffScaleFactor;
   const double triggerEffUncertainty;
   std::vector<std::string> totWeightHistoNamesSignal;
@@ -77,10 +85,10 @@ struct settings {
     stream.select("evt_MTR", data.evt.MTR);
     stream.select("evt_R", data.evt.R);
     stream.select("evt_R2", data.evt.R2);
-    stream.select("evt_AK4_MR", data.evt.AK4_MR);
-    stream.select("evt_AK4_MTR", data.evt.AK4_MTR);
-    stream.select("evt_AK4_R", data.evt.AK4_R);
-    stream.select("evt_AK4_R2", data.evt.AK4_R2);
+    stream.select("evt_AK8_MR", data.evt.AK8_MR);
+    stream.select("evt_AK8_MTR", data.evt.AK8_MTR);
+    stream.select("evt_AK8_R", data.evt.AK8_R);
+    stream.select("evt_AK8_R2", data.evt.AK8_R2);
     stream.select("evt_XSec", data.evt.XSec);
     stream.select("evt_Gen_Weight", data.evt.Gen_Weight);
     stream.select("evt_Gen_Ht", data.evt.Gen_Ht);
@@ -103,11 +111,8 @@ struct settings {
     stream.select("alphas_size", data.syst_alphas.size);
     stream.select("alphas_Weights", data.syst_alphas.Weights);
     
-    stream.select("Flag_HBHEIsoNoiseFilterResult", data.filter.HBHEIsoNoiseFilterResult);
-    stream.select("Flag_HBHENoiseFilterResult", data.filter.HBHENoiseFilterResult);
-    stream.select("Flag_HBHENoiseFilterResultRun1", data.filter.HBHENoiseFilterResultRun1);
-    stream.select("Flag_HBHENoiseFilterResultRun2Loose", data.filter.HBHENoiseFilterResultRun2Loose);
-    stream.select("Flag_HBHENoiseFilterResultRun2Tight", data.filter.HBHENoiseFilterResultRun2Tight);
+    stream.select("Flag_BadPFMuonFilter", data.filter.BadPFMuonFilter);
+    stream.select("Flag_BadChargedCandidateFilter", data.filter.BadChargedCandidateFilter);
     stream.select("Flag_HBHENoiseFilter", data.filter.HBHENoiseFilter);
     stream.select("Flag_HBHENoiseIsoFilter", data.filter.HBHENoiseIsoFilter);
     stream.select("Flag_CSCTightHaloFilter", data.filter.CSCTightHaloFilter);
@@ -130,8 +135,6 @@ struct settings {
     stream.select("Flag_trkPOG_logErrorTooManyClusters", data.filter.trkPOG_logErrorTooManyClusters);
     stream.select("Flag_METFilters", data.filter.METFilters);
     
-    stream.select("HLT_AK8PFJet360_TrimMass30", data.hlt.AK8PFJet360_TrimMass30);
-    stream.select("HLT_AK8PFJet360_TrimMass30_prescale", data.hlt.AK8PFJet360_TrimMass30_prescale);
     stream.select("HLT_PFJet200", data.hlt.PFJet200);
     stream.select("HLT_PFJet200_prescale", data.hlt.PFJet200_prescale);
     stream.select("HLT_PFJet260", data.hlt.PFJet260);
@@ -144,6 +147,8 @@ struct settings {
     stream.select("HLT_PFJet450_prescale", data.hlt.PFJet450_prescale);
     stream.select("HLT_PFJet500", data.hlt.PFJet500);
     stream.select("HLT_PFJet500_prescale", data.hlt.PFJet500_prescale);
+    stream.select("HLT_AK8PFJet360_TrimMass30", data.hlt.AK8PFJet360_TrimMass30);
+    stream.select("HLT_AK8PFJet360_TrimMass30_prescale", data.hlt.AK8PFJet360_TrimMass30_prescale);
     stream.select("HLT_AK8PFJet40", data.hlt.AK8PFJet40);
     stream.select("HLT_AK8PFJet40_prescale", data.hlt.AK8PFJet40_prescale);
     stream.select("HLT_AK8PFJet60", data.hlt.AK8PFJet60);
@@ -168,10 +173,10 @@ struct settings {
     stream.select("HLT_AK8DiPFJet250_200_TrimMass30_prescale", data.hlt.AK8DiPFJet250_200_TrimMass30_prescale);
     stream.select("HLT_AK8DiPFJet280_200_TrimMass30", data.hlt.AK8DiPFJet280_200_TrimMass30);
     stream.select("HLT_AK8DiPFJet280_200_TrimMass30_prescale", data.hlt.AK8DiPFJet280_200_TrimMass30_prescale);
-    stream.select("HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV_p20", data.hlt.AK8DiPFJet280_200_TrimMass30_BTagCSV_p20);
-    stream.select("HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale", data.hlt.AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale);
     stream.select("HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV_p20", data.hlt.AK8DiPFJet250_200_TrimMass30_BTagCSV_p20);
     stream.select("HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV_p20_prescale", data.hlt.AK8DiPFJet250_200_TrimMass30_BTagCSV_p20_prescale);
+    stream.select("HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV_p20", data.hlt.AK8DiPFJet280_200_TrimMass30_BTagCSV_p20);
+    stream.select("HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale", data.hlt.AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale);
     stream.select("HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV0p45", data.hlt.AK8DiPFJet250_200_TrimMass30_BTagCSV0p45);
     stream.select("HLT_AK8DiPFJet250_200_TrimMass30_BTagCSV0p45_prescale", data.hlt.AK8DiPFJet250_200_TrimMass30_BTagCSV0p45_prescale);
     stream.select("HLT_AK8DiPFJet280_200_TrimMass30_BTagCSV0p45", data.hlt.AK8DiPFJet280_200_TrimMass30_BTagCSV0p45);
@@ -391,27 +396,27 @@ struct settings {
     stream.select("el_Iso03", data.ele.Iso03);
     //stream.select("el_Iso03db", data.ele.Iso03db);
     stream.select("el_MiniIso", data.ele.MiniIso);
-    //stream.select("el_vidVeto", data.ele.vidVeto);
-    //stream.select("el_vidLoose", data.ele.vidLoose);
-    //stream.select("el_vidTight", data.ele.vidTight);
-    //stream.select("el_vidMedium", data.ele.vidMedium);
+    stream.select("el_Dxy", data.ele.Dxy);
+    stream.select("el_Dz", data.ele.Dz);
+    stream.select("el_DB", data.ele.DB);
+    stream.select("el_DBerr", data.ele.DBerr);
+    stream.select("el_vidVeto", data.ele.vidVeto);
+    stream.select("el_vidLoose", data.ele.vidLoose);
+    stream.select("el_vidMedium", data.ele.vidMedium);
+    stream.select("el_vidTight", data.ele.vidTight);
     stream.select("el_vidHEEP", data.ele.vidHEEP);
+    stream.select("el_vidVetonoiso", data.ele.vidVetonoiso);
+    stream.select("el_vidLoosenoiso", data.ele.vidLoosenoiso);
+    stream.select("el_vidMediumnoiso", data.ele.vidMediumnoiso);
+    stream.select("el_vidTightnoiso", data.ele.vidTightnoiso);
     stream.select("el_vidHEEPnoiso", data.ele.vidHEEPnoiso);
     stream.select("el_IsPartOfNearAK4Jet", data.ele.IsPartOfNearAK4Jet);
     stream.select("el_IsPartOfNearAK8Jet", data.ele.IsPartOfNearAK8Jet);
     stream.select("el_IsPartOfNearSubjet", data.ele.IsPartOfNearSubjet);
-    stream.select("el_IDVeto_NoIso", data.ele.IDVeto_NoIso);
-    stream.select("el_IDLoose_NoIso", data.ele.IDLoose_NoIso);
-    stream.select("el_IDMedium_NoIso", data.ele.IDMedium_NoIso);
-    stream.select("el_IDTight_NoIso", data.ele.IDTight_NoIso);
     stream.select("el_IsoVeto", data.ele.IsoVeto);
     stream.select("el_IsoLoose", data.ele.IsoLoose);
     stream.select("el_IsoMedium", data.ele.IsoMedium);
     stream.select("el_IsoTight", data.ele.IsoTight);
-    stream.select("el_IDVeto", data.ele.IDVeto);
-    stream.select("el_IDLoose", data.ele.IDLoose);
-    stream.select("el_IDMedium", data.ele.IDMedium);
-    stream.select("el_IDTight", data.ele.IDTight);
     stream.select("el_DRNearGenEleFromSLTop", data.ele.DRNearGenEleFromSLTop);
     stream.select("el_PtNearGenEleFromSLTop", data.ele.PtNearGenEleFromSLTop);
     stream.select("el_PtNearGenTop", data.ele.PtNearGenTop);
@@ -449,6 +454,10 @@ struct settings {
     //stream.select("mu_Key", data.mu.Key);
     stream.select("mu_Iso04", data.mu.Iso04);
     stream.select("mu_MiniIso", data.mu.MiniIso);
+    stream.select("mu_Dxy", data.mu.Dxy);
+    stream.select("mu_Dz", data.mu.Dz);
+    stream.select("mu_DB", data.mu.DB);
+    stream.select("mu_DBerr", data.mu.DBerr);
     stream.select("mu_IsSoftMuon", data.mu.IsSoftMuon);
     stream.select("mu_IsLooseMuon", data.mu.IsLooseMuon);
     stream.select("mu_IsMediumMuon", data.mu.IsMediumMuon);
@@ -493,6 +502,8 @@ struct settings {
     //stream.select("jetAK4Puppi_Charge", data.jetsAK4Puppi.Charge);
     stream.select("jetAK4Puppi_CSVv2", data.jetsAK4Puppi.CSVv2);
     stream.select("jetAK4Puppi_CMVAv2", data.jetsAK4Puppi.CMVAv2);
+    //stream.select("jetAK4Puppi_CvsL", data.jetsAK4Puppi.CvsL);
+    //stream.select("jetAK4Puppi_CvsB", data.jetsAK4Puppi.CvsB);
     stream.select("jetAK4Puppi_GenPartonEta", data.jetsAK4Puppi.GenPartonEta);
     stream.select("jetAK4Puppi_GenPartonPhi", data.jetsAK4Puppi.GenPartonPhi);
     stream.select("jetAK4Puppi_GenPartonPt", data.jetsAK4Puppi.GenPartonPt);
@@ -507,9 +518,9 @@ struct settings {
     stream.select("jetAK4Puppi_GenJetCharge", data.jetsAK4Puppi.GenJetCharge);
     stream.select("jetAK4Puppi_jecFactor0", data.jetsAK4Puppi.jecFactor0);
     stream.select("jetAK4Puppi_jecUncertainty", data.jetsAK4Puppi.jecUncertainty);
-    //stream.select("jetAK4Puppi_JERSF", data.jetsAK4Puppi.JERSF);
-    //stream.select("jetAK4Puppi_JERSFUp", data.jetsAK4Puppi.JERSFUp);
-    //stream.select("jetAK4Puppi_JERSFDown", data.jetsAK4Puppi.JERSFDown);
+    stream.select("jetAK4Puppi_JERSF", data.jetsAK4Puppi.JERSF);
+    stream.select("jetAK4Puppi_JERSFUp", data.jetsAK4Puppi.JERSFUp);
+    stream.select("jetAK4Puppi_JERSFDown", data.jetsAK4Puppi.JERSFDown);
     stream.select("jetAK4Puppi_SmearedPt", data.jetsAK4Puppi.SmearedPt);
     //stream.select("jetAK4Puppi_Keys", data.jetsAK4Puppi.Keys);
     stream.select("jetAK4Puppi_looseJetID", data.jetsAK4Puppi.looseJetID);
@@ -524,6 +535,8 @@ struct settings {
     //stream.select("jetAK8Puppi_Charge", data.jetsAK8Puppi.Charge);
     stream.select("jetAK8Puppi_CSVv2", data.jetsAK8Puppi.CSVv2);
     stream.select("jetAK8Puppi_CMVAv2", data.jetsAK8Puppi.CMVAv2);
+    //stream.select("jetAK8Puppi_CvsL", data.jetsAK8Puppi.CvsL);
+    //stream.select("jetAK8Puppi_CvsB", data.jetsAK8Puppi.CvsB);
     stream.select("jetAK8Puppi_GenPartonEta", data.jetsAK8Puppi.GenPartonEta);
     stream.select("jetAK8Puppi_GenPartonPhi", data.jetsAK8Puppi.GenPartonPhi);
     stream.select("jetAK8Puppi_GenPartonPt", data.jetsAK8Puppi.GenPartonPt);
@@ -538,10 +551,12 @@ struct settings {
     stream.select("jetAK8Puppi_GenJetCharge", data.jetsAK8Puppi.GenJetCharge);
     stream.select("jetAK8Puppi_jecFactor0", data.jetsAK8Puppi.jecFactor0);
     stream.select("jetAK8Puppi_jecUncertainty", data.jetsAK8Puppi.jecUncertainty);
-    //stream.select("jetAK8Puppi_JERSF", data.jetsAK8Puppi.JERSF);
+    stream.select("jetAK8Puppi_JERSF", data.jetsAK8Puppi.JERSF);
     //stream.select("jetAK8Puppi_JERSFUp", data.jetsAK8Puppi.JERSFUp);
     //stream.select("jetAK8Puppi_JERSFDown", data.jetsAK8Puppi.JERSFDown);
     stream.select("jetAK8Puppi_SmearedPt", data.jetsAK8Puppi.SmearedPt);
+    //stream.select("jetAK8Puppi_DoubleBAK8", data.jetsAK8Puppi.DoubleBAK8);
+    //stream.select("jetAK8Puppi_DoubleBCA15", data.jetsAK8Puppi.DoubleBCA15);
     stream.select("jetAK8Puppi_vSubjetIndex0", data.jetsAK8Puppi.vSubjetIndex0);
     stream.select("jetAK8Puppi_vSubjetIndex1", data.jetsAK8Puppi.vSubjetIndex1);
     stream.select("jetAK8Puppi_tau1", data.jetsAK8Puppi.tau1);
@@ -569,15 +584,16 @@ struct settings {
     stream.select("jetAK8Puppi_PtNearGenLepFromSLTop", data.jetsAK8Puppi.PtNearGenLepFromSLTop);
     stream.select("jetAK8Puppi_PtNearGenNuFromSLTop", data.jetsAK8Puppi.PtNearGenNuFromSLTop);
     
-    
     stream.select("subjetAK8Puppi_size", data.subjetsAK8Puppi.size);
     stream.select("subjetAK8Puppi_Pt", data.subjetsAK8Puppi.Pt);
     stream.select("subjetAK8Puppi_Eta", data.subjetsAK8Puppi.Eta);
     stream.select("subjetAK8Puppi_Phi", data.subjetsAK8Puppi.Phi);
-    //stream.select("subjetAK8Puppi_E", data.subjetsAK8Puppi.E);
+    stream.select("subjetAK8Puppi_E", data.subjetsAK8Puppi.E);
     //stream.select("subjetAK8Puppi_Charge", data.subjetsAK8Puppi.Charge);
     stream.select("subjetAK8Puppi_CSVv2", data.subjetsAK8Puppi.CSVv2);
     stream.select("subjetAK8Puppi_CMVAv2", data.subjetsAK8Puppi.CMVAv2);
+    //stream.select("subjetAK8Puppi_CvsL", data.subjetsAK8Puppi.CvsL);
+    //stream.select("subjetAK8Puppi_CvsB", data.subjetsAK8Puppi.CvsB);
     //stream.select("subjetAK8Puppi_GenPartonEta", data.subjetsAK8Puppi.GenPartonEta);
     //stream.select("subjetAK8Puppi_GenPartonPhi", data.subjetsAK8Puppi.GenPartonPhi);
     //stream.select("subjetAK8Puppi_GenPartonPt", data.subjetsAK8Puppi.GenPartonPt);
@@ -596,12 +612,14 @@ struct settings {
     //stream.select("subjetAK8Puppi_tightJetID", data.subjetsAK8Puppi.tightJetID);
     //stream.select("subjetAK8Puppi_tightLepVetoJetID", data.subjetsAK8Puppi.tightLepVetoJetID);
     
-    stream.select("genjetAK8SD_size", data.genjetsAK8.size);
-    stream.select("genjetAK8SD_Pt", data.genjetsAK8.Pt);
-    stream.select("genjetAK8SD_Eta", data.genjetsAK8.Eta);
-    stream.select("genjetAK8SD_Phi", data.genjetsAK8.Phi);
-    stream.select("genjetAK8SD_E", data.genjetsAK8.E);
-    //stream.select("genjetAK8SD_Charge", data.genjetsAK8.Charge);    
+    //stream.select("genjetAK8SD_size", data.genjetsAK8.size);
+    //stream.select("genjetAK8SD_Pt", data.genjetsAK8.Pt);
+    //stream.select("genjetAK8SD_Eta", data.genjetsAK8.Eta);
+    //stream.select("genjetAK8SD_Phi", data.genjetsAK8.Phi);
+    //stream.select("genjetAK8SD_E", data.genjetsAK8.E);
+    //stream.select("genjetAK8SD_Charge", data.genjetsAK8.Charge);
+    
   }
+
 
 } settings;

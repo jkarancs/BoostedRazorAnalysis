@@ -8,8 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "common/utils.h"   // Helper functions
-#include "settings_Janos.h" // Define all Analysis specific settings here
+#include "settings_Viktor.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -116,7 +115,9 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaPU          = std::vector<double>(1,0);
     std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaJEC         = std::vector<double>(1,0);
-    std::vector<double> nSigmaHadTopTagSF = std::vector<double>(1,0);
+    std::vector<double> nSigmaWTagSF      = std::vector<double>(1,0);
+    std::vector<double> nSigmaBTagSF      = std::vector<double>(1,0);
+    //std::vector<double> nSigmaHadTopTagSF = std::vector<double>(1,0);
     std::vector<double> nSigmaHT          = std::vector<double>(1,0);
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
@@ -143,7 +144,9 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaPU.push_back(dbl);
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJEC.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaHadTopTagSF.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaWTagSF.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaBTagSF.push_back(dbl);
+      //nth_line>>dbl; syst.nSigmaHadTopTagSF.push_back(dbl);
       nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
@@ -254,9 +257,18 @@ int main(int argc, char** argv) {
   if ( cmdline.isBkg ) {
     cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
-    double xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName, cmdline.dirname); // treename given in settings.h
+    cout << "useXSecFileForBkg (settings): " << ( settings.useXSecFileForBkg ? "true" : "false" ) << endl; // given in settings.h
+
+    double xsec = 0;
+    if (settings.useXSecFileForBkg) {
+      cout << "xSecFileName (settings): " << settings.xSecFileName << endl; // given in settings.h
+      xsec = ana.get_xsec_from_txt_file(settings.xSecFileName, cmdline.dirname); // xSecFileName given in settings.h
+      cout << "xsec (txt file): " << xsec << endl;      
+    } else {
+      xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
+      cout << "xsec (ntuple): " << xsec << endl;
+    }
     if ( xsec==0 ) return 1;
-    cout << "xsec (ntuple): " << xsec << endl;
 
     double totweight = ana.get_totweight_from_ntuple(cmdline.fileNames, settings.totWeightHistoName); // weight histo name given in settings.h
     cout << "totweight (ntuple): " << totweight << endl;
@@ -286,8 +298,10 @@ int main(int argc, char** argv) {
     ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.fileNames);
   } else cout << "doPileupReweighting (settings): false" << endl;
 
-  // Hadronic top tagging scale factors
-  cout << "applyHadTopTagSF (settings): " << ( settings.applyHadTopTagSF ? "true" : "false" ) << endl;
+  // Scale factors
+  cout << "applyWTagSF (settings): " << ( settings.applyWTagSF ? "true" : "false" ) << endl;
+  cout << "applyBTagSF (settings): " << ( settings.applyBTagSF ? "true" : "false" ) << endl;
+  //cout << "applyHadTopTagSF (settings): " << ( settings.applyHadTopTagSF ? "true" : "false" ) << endl;
 
   // Scale QCD to match data in a QCD dominated region
   cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
@@ -301,7 +315,7 @@ int main(int argc, char** argv) {
 
   // Define cuts that are common in all analyses
   // Given in common/AnalysisBase.h
-  ana.define_preselections(data);
+  ana.define_preselections(data, cmdline.isData, cmdline.isSignal);
 
   // Define cuts that specific to this analysis
   // Given in [Name]_Analysis.h specified in setting.h
@@ -355,6 +369,11 @@ int main(int argc, char** argv) {
 	for (auto cut : ana.baseline_cuts) if (pass_all_cuts)
 	  if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
 
+	// If option (saveSkimmedNtuple) is specified save all 
+	// skimmed events selected by the analysis to the output file
+	// tree is copied and current weight is saved as "eventWeight"
+	if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
+
 	// _______________________________________________________
 	//                  BLINDING DATA
 
@@ -377,18 +396,11 @@ int main(int argc, char** argv) {
 
 	if (DATA_BLINDED) {
 
-	  // If option (saveSkimmedNtuple) is specified save all 
-	  // skimmed events selected by the analysis to the output file
-	  // tree is copied and current weight is saved as "eventWeight"
-	  if ( settings.saveSkimmedNtuple ) if (ana.pass_skimming(data)) ofile->addEvent(w);
-
 	  // Apply analysis cuts and fill histograms
 	  // These are all defined in [Name]_Analysis.cc (included from settings.h)
 	  // You specify there also which cut is applied for each histo
 	  // But all common baseline cuts are alreay applied above
-	  if (!cmdline.noPlots) {
-	    if ( pass_all_cuts ) ana.fill_analysis_histos(data, syst.index, w);
-	  }
+	  if (!cmdline.noPlots  && pass_all_cuts) ana.fill_analysis_histos(data, syst.index, w);
 
 	  // Save counts for the analysis cuts
 	  for (auto cut : ana.analysis_cuts) if (pass_all_cuts)
@@ -433,9 +445,15 @@ int main(int argc, char** argv) {
 	// Rescale jet 4-momenta
 	ana.rescale_jets(data, syst.index, syst.nSigmaJEC[syst.index]);
 
-	// Hadronic top-tagging scale factor
-	if (settings.applyHadTopTagSF)
-	  w *= ana.get_top_tagging_sf(data, syst.nSigmaHadTopTagSF[syst.index]);
+	// Scale factors
+	if (settings.applyWTagSF)
+	  w *= ana.get_w_tagging_sf(data, syst.nSigmaWTagSF[syst.index]);
+
+	if (settings.applyBTagSF)
+	  w *= ana.get_b_tagging_sf(data, syst.nSigmaBTagSF[syst.index]);
+
+	//if (settings.applyHadTopTagSF)
+	//  w *= ana.get_top_tagging_sf(data, syst.nSigmaHadTopTagSF[syst.index]);
 
 	// Scale QCD to match data in QCD dominated region
 	if (TString(cmdline.dirname).Contains("QCD")) {
@@ -486,6 +504,8 @@ int main(int argc, char** argv) {
 	bool pass_all_cuts = true;
 	if (syst.index == 0) ofile->count("NoCuts", w);
 
+	// Cuts that are likely to be implemented in all analyses
+	// eg. MET filters, baseline event selections etc.
 	for (auto cut : ana.baseline_cuts) if (pass_all_cuts) {
 	  pass_all_cuts = cut.func();
 	  if (pass_all_cuts && syst.index==0) ofile->count(cut.name, w);
@@ -500,13 +520,14 @@ int main(int argc, char** argv) {
 	// These are all defined in [Name]_Analysis.cc (included from settings.h)
 	// You specify there also which cut is applied for each histo
 	// But all common baseline cuts will be already applied above
-	if (!cmdline.noPlots && pass_all_cuts ) ana.fill_analysis_histos(data, syst.index, w);
+	if (!cmdline.noPlots && pass_all_cuts) ana.fill_analysis_histos(data, syst.index, w);
 
 	// Save counts after each analysis cut
 	for (auto cut : ana.analysis_cuts) if (pass_all_cuts) {
 	  pass_all_cuts = cut.func();
 	  if (pass_all_cuts && syst.index==0) ofile->count(cut.name, w);
 	}
+
 	// Count remaining signal events
 	if ( pass_all_cuts && syst.index==0 && ana.signal_selection(data) ) ofile->count("Signal", w);
 

@@ -254,11 +254,11 @@ namespace utils {
 	    else error(std::string("argument ")+arg+" is not a root file or a list (.txt file)!");
 	    // Check if filename is data or signal
 	    bool found = false;
-	    for (auto data : vname_data) if (std::string(arg).find(data)!=std::string::npos) { 
+	    for (auto data : vname_data) if (!found&&std::string(arg).find(data)!=std::string::npos) { 
 	      n_data_arg++;
 	      found=1;
 	    }
-	    for (auto signal : vname_signal) if (std::string(arg).find(signal)!=std::string::npos) { 
+	    for (auto signal : vname_signal) if (!found&&std::string(arg).find(signal)!=std::string::npos) { 
 	      n_signal_arg++;
 	      cl.signalName = signal;
 	      found=1; 

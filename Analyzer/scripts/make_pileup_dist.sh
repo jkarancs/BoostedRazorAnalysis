@@ -16,16 +16,20 @@
 #XSec_MB_up=72450.0    # +5% xsec
 
 
-
 # 2016
 CERT_dir=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV
 PU_file=$CERT_dir/PileUp/pileup_latest.txt
 
 # ICHEP16 Golden JSON
-JSON=$CERT_dir/Cert_271036-276811_13TeV_PromptReco_Collisions16_JSON_NoL1T.txt
-OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/ICHEP16_Golden_JSON
+#JSON=$CERT_dir/Cert_271036-276811_13TeV_PromptReco_Collisions16_JSON_NoL1T.txt
+#OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/ICHEP16_Golden_JSON
+# Oct21 Golden JSON
+JSON=$CERT_dir/Cert_271036-280385_13TeV_PromptReco_Collisions16_JSON.txt
+OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/Oct21_Golden_JSON
 
 # 2016 MB XSec
+# https://hypernews.cern.ch/HyperNews/CMS/get/b2g/883/1.html
+# --> https://hypernews.cern.ch/HyperNews/CMS/get/luminosity/613/2/1/1/1.html
 XSec_MB_down=66016.8  # -4.6% xsec
 XSec_MB_nom=69200.0   # nominal xsec
 XSec_MB_up=72383.2    # +4.6% xsec
@@ -35,7 +39,7 @@ cmsenv
 cd $CMSSW_BASE/src
 
 if [ ! -d RecoLuminosity ]; then
-    mkdir ../tmp
+    mkdir -p ../tmp
     mv * ../tmp/
     git cms-addpkg RecoLuminosity/LumiDB
     mv ../tmp/* .

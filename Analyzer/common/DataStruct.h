@@ -30,10 +30,10 @@ public:
     float MTR;
     float R;
     float R2;
-    float AK4_MR;
-    float AK4_MTR;
-    float AK4_R;
-    float AK4_R2;
+    float AK8_MR;
+    float AK8_MTR;
+    float AK8_R;
+    float AK8_R2;
     float XSec;
     float Gen_Weight;
     float Gen_Ht;
@@ -51,10 +51,10 @@ public:
       MTR=NOVAL_F;
       R=NOVAL_F;
       R2=NOVAL_F;
-      AK4_MR=NOVAL_F;
-      AK4_MTR=NOVAL_F;
-      AK4_R=NOVAL_F;
-      AK4_R2=NOVAL_F;
+      AK8_MR=NOVAL_F;
+      AK8_MTR=NOVAL_F;
+      AK8_R=NOVAL_F;
+      AK8_R2=NOVAL_F;
       XSec=NOVAL_F;
       Gen_Weight=NOVAL_F;
       Gen_Ht=NOVAL_F;
@@ -188,11 +188,8 @@ public:
   public:
     FilterData() { init(); };
     
-    int HBHEIsoNoiseFilterResult;
-    int HBHENoiseFilterResult;
-    int HBHENoiseFilterResultRun1;
-    int HBHENoiseFilterResultRun2Loose;
-    int HBHENoiseFilterResultRun2Tight;
+    int BadPFMuonFilter;
+    int BadChargedCandidateFilter;
     int HBHENoiseFilter;
     int HBHENoiseIsoFilter;
     int CSCTightHaloFilter;
@@ -216,11 +213,8 @@ public:
     int METFilters;
     
     void init() {
-      HBHEIsoNoiseFilterResult=NOVAL_I;
-      HBHENoiseFilterResult=NOVAL_I;
-      HBHENoiseFilterResultRun1=NOVAL_I;
-      HBHENoiseFilterResultRun2Loose=NOVAL_I;
-      HBHENoiseFilterResultRun2Tight=NOVAL_I;
+      BadPFMuonFilter=NOVAL_I;
+      BadChargedCandidateFilter=NOVAL_I;
       HBHENoiseFilter=NOVAL_I;
       HBHENoiseIsoFilter=NOVAL_I;
       CSCTightHaloFilter=NOVAL_I;
@@ -250,8 +244,6 @@ public:
   public:
     HLTData() { init(); };
     
-    int AK8PFJet360_TrimMass30;
-    int AK8PFJet360_TrimMass30_prescale;
     int PFJet200;
     int PFJet200_prescale;
     int PFJet260;
@@ -264,6 +256,8 @@ public:
     int PFJet450_prescale;
     int PFJet500;
     int PFJet500_prescale;
+    int AK8PFJet360_TrimMass30;
+    int AK8PFJet360_TrimMass30_prescale;
     int AK8PFJet40;
     int AK8PFJet40_prescale;
     int AK8PFJet60;
@@ -288,10 +282,10 @@ public:
     int AK8DiPFJet250_200_TrimMass30_prescale;
     int AK8DiPFJet280_200_TrimMass30;
     int AK8DiPFJet280_200_TrimMass30_prescale;
-    int AK8DiPFJet280_200_TrimMass30_BTagCSV_p20;
-    int AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale;
     int AK8DiPFJet250_200_TrimMass30_BTagCSV_p20;
     int AK8DiPFJet250_200_TrimMass30_BTagCSV_p20_prescale;
+    int AK8DiPFJet280_200_TrimMass30_BTagCSV_p20;
+    int AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale;
     int AK8DiPFJet250_200_TrimMass30_BTagCSV0p45;
     int AK8DiPFJet250_200_TrimMass30_BTagCSV0p45_prescale;
     int AK8DiPFJet280_200_TrimMass30_BTagCSV0p45;
@@ -484,8 +478,6 @@ public:
     int Ele32_eta2p1_WPTight_Gsf_prescale;
     
     void init() {
-      AK8PFJet360_TrimMass30=NOVAL_I;
-      AK8PFJet360_TrimMass30_prescale=NOVAL_I;
       PFJet200=NOVAL_I;
       PFJet200_prescale=NOVAL_I;
       PFJet260=NOVAL_I;
@@ -498,6 +490,8 @@ public:
       PFJet450_prescale=NOVAL_I;
       PFJet500=NOVAL_I;
       PFJet500_prescale=NOVAL_I;
+      AK8PFJet360_TrimMass30=NOVAL_I;
+      AK8PFJet360_TrimMass30_prescale=NOVAL_I;
       AK8PFJet40=NOVAL_I;
       AK8PFJet40_prescale=NOVAL_I;
       AK8PFJet60=NOVAL_I;
@@ -522,10 +516,10 @@ public:
       AK8DiPFJet250_200_TrimMass30_prescale=NOVAL_I;
       AK8DiPFJet280_200_TrimMass30=NOVAL_I;
       AK8DiPFJet280_200_TrimMass30_prescale=NOVAL_I;
-      AK8DiPFJet280_200_TrimMass30_BTagCSV_p20=NOVAL_I;
-      AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale=NOVAL_I;
       AK8DiPFJet250_200_TrimMass30_BTagCSV_p20=NOVAL_I;
       AK8DiPFJet250_200_TrimMass30_BTagCSV_p20_prescale=NOVAL_I;
+      AK8DiPFJet280_200_TrimMass30_BTagCSV_p20=NOVAL_I;
+      AK8DiPFJet280_200_TrimMass30_BTagCSV_p20_prescale=NOVAL_I;
       AK8DiPFJet250_200_TrimMass30_BTagCSV0p45=NOVAL_I;
       AK8DiPFJet250_200_TrimMass30_BTagCSV0p45_prescale=NOVAL_I;
       AK8DiPFJet280_200_TrimMass30_BTagCSV0p45=NOVAL_I;
@@ -791,27 +785,27 @@ public:
     std::vector<float> Iso03;
     std::vector<float> Iso03db;
     std::vector<float> MiniIso;
+    std::vector<float> Dxy;
+    std::vector<float> Dz;
+    std::vector<float> DB;
+    std::vector<float> DBerr;
     std::vector<float> vidVeto;
     std::vector<float> vidLoose;
-    std::vector<float> vidTight;
     std::vector<float> vidMedium;
+    std::vector<float> vidTight;
     std::vector<float> vidHEEP;
+    std::vector<float> vidVetonoiso;
+    std::vector<float> vidLoosenoiso;
+    std::vector<float> vidMediumnoiso;
+    std::vector<float> vidTightnoiso;
     std::vector<float> vidHEEPnoiso;
     std::vector<int> IsPartOfNearAK4Jet;
     std::vector<int> IsPartOfNearAK8Jet;
     std::vector<int> IsPartOfNearSubjet;
-    std::vector<int> IDVeto_NoIso;
-    std::vector<int> IDLoose_NoIso;
-    std::vector<int> IDMedium_NoIso;
-    std::vector<int> IDTight_NoIso;
     std::vector<int> IsoVeto;
     std::vector<int> IsoLoose;
     std::vector<int> IsoMedium;
     std::vector<int> IsoTight;
-    std::vector<int> IDVeto;
-    std::vector<int> IDLoose;
-    std::vector<int> IDMedium;
-    std::vector<int> IDTight;
     std::vector<float> DRNearGenEleFromSLTop;
     std::vector<float> PtNearGenEleFromSLTop;
     std::vector<float> PtNearGenTop;
@@ -854,27 +848,27 @@ public:
       init_vec(Iso03);
       init_vec(Iso03db);
       init_vec(MiniIso);
+      init_vec(Dxy);
+      init_vec(Dz);
+      init_vec(DB);
+      init_vec(DBerr);
       init_vec(vidVeto);
       init_vec(vidLoose);
-      init_vec(vidTight);
       init_vec(vidMedium);
+      init_vec(vidTight);
       init_vec(vidHEEP);
+      init_vec(vidVetonoiso);
+      init_vec(vidLoosenoiso);
+      init_vec(vidMediumnoiso);
+      init_vec(vidTightnoiso);
       init_vec(vidHEEPnoiso);
       init_vec(IsPartOfNearAK4Jet);
       init_vec(IsPartOfNearAK8Jet);
       init_vec(IsPartOfNearSubjet);
-      init_vec(IDVeto_NoIso);
-      init_vec(IDLoose_NoIso);
-      init_vec(IDMedium_NoIso);
-      init_vec(IDTight_NoIso);
       init_vec(IsoVeto);
       init_vec(IsoLoose);
       init_vec(IsoMedium);
       init_vec(IsoTight);
-      init_vec(IDVeto);
-      init_vec(IDLoose);
-      init_vec(IDMedium);
-      init_vec(IDTight);
       init_vec(DRNearGenEleFromSLTop);
       init_vec(PtNearGenEleFromSLTop);
       init_vec(PtNearGenTop);
@@ -929,6 +923,10 @@ public:
     std::vector<float> Key;
     std::vector<float> Iso04;
     std::vector<float> MiniIso;
+    std::vector<float> Dxy;
+    std::vector<float> Dz;
+    std::vector<float> DB;
+    std::vector<float> DBerr;
     std::vector<float> IsSoftMuon;
     std::vector<float> IsLooseMuon;
     std::vector<float> IsMediumMuon;
@@ -978,6 +976,10 @@ public:
       init_vec(Key);
       init_vec(Iso04);
       init_vec(MiniIso);
+      init_vec(Dxy);
+      init_vec(Dz);
+      init_vec(DB);
+      init_vec(DBerr);
       init_vec(IsSoftMuon);
       init_vec(IsLooseMuon);
       init_vec(IsMediumMuon);
@@ -1039,6 +1041,8 @@ public:
     std::vector<float> Charge;
     std::vector<float> CSVv2;
     std::vector<float> CMVAv2;
+    std::vector<float> CvsL;
+    std::vector<float> CvsB;
     std::vector<float> GenPartonEta;
     std::vector<float> GenPartonPhi;
     std::vector<float> GenPartonPt;
@@ -1074,6 +1078,8 @@ public:
       init_vec(Charge);
       init_vec(CSVv2);
       init_vec(CMVAv2);
+      init_vec(CvsL);
+      init_vec(CvsB);
       init_vec(GenPartonEta);
       init_vec(GenPartonPhi);
       init_vec(GenPartonPt);
@@ -1122,6 +1128,8 @@ public:
     std::vector<float> Charge;
     std::vector<float> CSVv2;
     std::vector<float> CMVAv2;
+    std::vector<float> CvsL;
+    std::vector<float> CvsB;
     std::vector<float> GenPartonEta;
     std::vector<float> GenPartonPhi;
     std::vector<float> GenPartonPt;
@@ -1140,6 +1148,8 @@ public:
     std::vector<float> JERSFUp;
     std::vector<float> JERSFDown;
     std::vector<float> SmearedPt;
+    std::vector<float> DoubleBAK8;
+    std::vector<float> DoubleBCA15;
     std::vector<float> vSubjetIndex0;
     std::vector<float> vSubjetIndex1;
     std::vector<float> tau1;
@@ -1179,6 +1189,8 @@ public:
       init_vec(Charge);
       init_vec(CSVv2);
       init_vec(CMVAv2);
+      init_vec(CvsL);
+      init_vec(CvsB);
       init_vec(GenPartonEta);
       init_vec(GenPartonPhi);
       init_vec(GenPartonPt);
@@ -1197,6 +1209,8 @@ public:
       init_vec(JERSFUp);
       init_vec(JERSFDown);
       init_vec(SmearedPt);
+      init_vec(DoubleBAK8);
+      init_vec(DoubleBCA15);
       init_vec(vSubjetIndex0);
       init_vec(vSubjetIndex1);
       init_vec(tau1);
@@ -1249,6 +1263,8 @@ public:
     std::vector<float> Charge;
     std::vector<float> CSVv2;
     std::vector<float> CMVAv2;
+    std::vector<float> CvsL;
+    std::vector<float> CvsB;
     std::vector<float> GenPartonEta;
     std::vector<float> GenPartonPhi;
     std::vector<float> GenPartonPt;
@@ -1279,6 +1295,8 @@ public:
       init_vec(Charge);
       init_vec(CSVv2);
       init_vec(CMVAv2);
+      init_vec(CvsL);
+      init_vec(CvsB);
       init_vec(GenPartonEta);
       init_vec(GenPartonPhi);
       init_vec(GenPartonPt);

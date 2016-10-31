@@ -1162,7 +1162,7 @@ public:
   // Fill Histograms using the std::function<double()>
   void Fill(const bool debug = 0) {
     if (debug) {
-    //if (debug&&name_=="AvgOnCluSize_vs_InstLumi") {
+    //if (debug&&name_=="HitEfficiency_vs_InstLumi") {
       std::cout<<name_;
       std::cout<<" pass_cuts: "<<pass_cuts_();
       if (npf_) {

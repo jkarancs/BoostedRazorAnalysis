@@ -6,6 +6,7 @@
 #include "TFile.h"
 #include "TH1.h"
 
+#include "utils.h"
 #include "DataStruct.h"
 #include "GluinoXSec.h"
 #include "StopXSec.h"
@@ -23,13 +24,15 @@ public:
   std::vector<Cut> baseline_cuts;
 
   // Functions used by the Analyzer
-  void define_preselections(const DataStruct&);
+  void define_preselections(const DataStruct&, const bool&, const bool&);
 
   void calculate_common_variables(DataStruct&, const unsigned int&);
 
   void init_common_histos();
 
-  double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&, const std::string&);
+  double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
+
+  double get_xsec_from_txt_file(const std::string&, const std::string&);
 
   double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
 
@@ -41,6 +44,10 @@ public:
   double get_pileup_weight(const int&, const double&);
 
   void rescale_jets(DataStruct&, const unsigned int&, const double&);
+
+  double get_w_tagging_sf(DataStruct&, const double&);
+
+  double get_b_tagging_sf(DataStruct&, const double&);
 
   double get_top_tagging_sf(DataStruct&, const double&);
 
@@ -109,7 +116,7 @@ AnalysisBase::~AnalysisBase() { }
 //_______________________________________________________
 //                 Define baseline cuts
 void
-AnalysisBase::define_preselections(const DataStruct& data)
+AnalysisBase::define_preselections(const DataStruct& data, const bool& isData, const bool& isSignal)
 { 
   // Apply the same cuts as it is in the ntuple - Only for check
   // cut is an std::function, which we can define easily with a lambda function
@@ -122,23 +129,25 @@ AnalysisBase::define_preselections(const DataStruct& data)
   //      		      return 1;
   //      		    } });
   
-  // Recommended event filters by MET group - Updated for 76X!
-  // https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#MiniAOD_76X_v2_produced_with_the
+  // Recommended event filters by MET group - Updated to 80X Recommendations
+  // https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2?rev=101#Analysis_Recommendations_for_ana
   // 
   // Select at least one good vertex (z<24, rho<2, ndof>=4)
   // NGoodVtx defined in:
-  // https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L272-L275
-  // baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data](){ return data.evt.NGoodVtx>0; } });
-  baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data](){ return data.filter.goodVertices; } }); // Now works in 76X MiniAOD
+  // https://github.com/jkarancs/B2GTTrees/blob/v8.0.x_v2.1_Oct24/plugins/B2GEdmExtraVarProducer.cc#L528-L531
+  // baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data] { return data.evt.NGoodVtx>0; } });
+  baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data] { return data.filter.goodVertices; } });
   
-  // Other filters (From MiniAOD)
-  baseline_cuts.push_back({ .name="met_filter_EE_Bad_Sc",         .func = [&data](){ return data.filter.eeBadScFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_Ecal_Dead_Cell_TP", .func = [&data](){ return data.filter.EcalDeadCellTriggerPrimitiveFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_HBHE_Noise",        .func = [&data](){ return data.filter.HBHENoiseFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_HBHE_IsoNoise",     .func = [&data](){ return data.filter.HBHENoiseIsoFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_CSC_Halo_Tight",    .func = [&data](){ return data.filter.CSCTightHalo2015Filter; } });
-  //baseline_cuts.push_back({ .name="met_filter_Muon_Bad_Track",    .func = [&data](){ return data.filter.muonBadTrackFilter; } });
-  //baseline_cuts.push_back({ .name="met_filter_CH_Track_Resol",    .func = [&data](){ return data.filter.chargedHadronTrackResolutionFilter; } });
+  // Other filters (in 80X MiniAODv2)
+  // https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2?rev=101#What_is_available_in_MiniAOD
+  baseline_cuts.push_back({ .name="met_filter_CSC_Halo_Tight",    .func = [&data,isSignal] { return isSignal ? 1 : data.filter.globalTightHalo2016Filter; } });
+  baseline_cuts.push_back({ .name="met_filter_HBHE_Noise",        .func = [&data] { return data.filter.HBHENoiseFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_HBHE_IsoNoise",     .func = [&data] { return data.filter.HBHENoiseIsoFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_Ecal_Dead_Cell_TP", .func = [&data] { return data.filter.EcalDeadCellTriggerPrimitiveFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_EE_Bad_Sc",         .func = [&data,isData] { return isData ? data.filter.eeBadScFilter : 1; } });
+  // Not in MiniAODv2 (producer added)
+  baseline_cuts.push_back({ .name="met_filter_Bad_Muon",          .func = [&data] { return data.filter.eeBadScFilter; } });
+  baseline_cuts.push_back({ .name="met_filter_Bad_Charged",       .func = [&data] { return data.filter.eeBadScFilter; } });
 }
 
 //_______________________________________________________
@@ -148,25 +157,93 @@ AnalysisBase::define_preselections(const DataStruct& data)
   Jet ID:
   https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetID#Recommendations_for_13_TeV_data
 
-  Choose:
+  For AK4 Jet Selection Choose:
   - Loose jet ID
+  - pt > 30
+  - |eta| < 2.4
+
+  For AK4 Jet Selection Choose:
+  - Tight jet ID
+  - pt > 170 (Added in B2G ntuple level)
+  - |eta| < 2.4
+
 */
+#define JET_AK4_PT_CUT  30
+#define JET_AK4_ETA_CUT 2.4
+#define JET_AK8_PT_CUT  170 // Same as in B2G ntuple
+#define JET_AK8_ETA_CUT 2.4
 
 /*
-   Top Tagging working points:
-   https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging#13_TeV_working_points
+  B tagging working points:
+  https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation80X
 
-   Latest WPs/SFs not yet on twiki (Angela Mc Lean, Mareike Meyer, Svenja Schumann):
-   https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868103/TopTaggingWp_v5.pdf
-   https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868207/TopTaggingSF_76X.pdf
-   
-   !! Warning, Scale factor to be updated for Puppi jets !!
+  Latest WPs/SFs:
+  https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation80X?rev=18#Supported_Algorithms_and_Operati
+
+  Choose:
+  - CombinedSecondaryVertex v2
+  - CSVv2 >= 0.46 (Loose - for Veto)
+  - CSVv2 >= 0.8  (Medium - for Tag)
+
+*/
+#define B_SUBJET_CSV_LOOSE_CUT 0.460
+#define B_CSV_LOOSE_CUT        0.460
+#define B_CSV_MEDIUM_CUT       0.800
+#define B_CSV_TIGHT_CUT        0.935
+
+/* 
+   W tagging working points:
+   https://twiki.cern.ch/twiki/bin/view/CMS/JetWtagging?rev=36#Working_points_and_scale_factors
+
+   Latest WPs/SFs:
+   https://indico.cern.ch/event/559594/contributions/2258668/attachments/1317079/1973381/JMAR_Meeting_Gelli.pdf
 
    Choose:
-   - Loose selection: e(S) = 51.2%, e(B) = 3% WP
+   - Tight jet ID
+   Tight Tag selection e(S) = 66.5%:
    - AK8 Puppi jets
-   - 105 < SD Mass < 200
-   - tau32 < 0.67
+   - pt > 200
+   - eta < 2.4
+   - 65 <= SD Mass < 105
+   - tau21 < 0.45
+
+*/
+
+#define W_PT_CUT            200
+#define W_ETA_CUT           2.4
+#define W_SD_MASS_CUT_LOW   65
+#define W_SD_MASS_CUT_HIGH  105
+#define W_TAU21_LOOSE_CUT   0.6
+#define W_TAU21_TIGHT_CUT   0.45
+
+/*
+  Top Tagging working points (No subjet B tag):
+  https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging#13_TeV_working_points
+  
+  Latest WPs/SFs not yet on twiki (Angela Mc Lean, Mareike Meyer, Svenja Schumann):
+  https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868103/TopTaggingWp_v5.pdf
+  https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868207/TopTaggingSF_76X.pdf
+  
+  !! Warning, Scale factor to be updated for Puppi jets !!
+  
+  Choose:
+  - Loose selection: e(S) = 51.2%, e(B) = 3% WP
+  - AK8 Puppi jets
+  - 105 < SD Mass < 200
+  - tau32 < 0.67
+*/
+/*
+  Top Tagging working point (With subjet B tag, 2015 Data)
+  
+  Latest WPs/SFs -  JME-16-003 PAS:
+  http://cms.cern.ch/iCMS/analysisadmin/viewanalysis?id=1694&field=id&value=1694
+  
+  Choose:
+  - Loose selection: e(S) ~= 55%, e(B) = 3.0% WP
+  - AK8 Puppi jets
+  - 105 <= SD Mass < 210
+  - tau32 < 0.8
+  - max subjet BTag CSV > 0.46
 */
 
 #define USE_BTAG 1
@@ -183,20 +260,6 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define TOP_TAG_SF_HIGH      0.99
 #define TOP_TAG_SF_HIGH_ERR  0.18
 
-/*
-  Latest TOP Tagging working point (2015 Data)
-
-   Latest WPs/SFs -  JME-16-003 PAS:
-   http://cms.cern.ch/iCMS/analysisadmin/viewanalysis?id=1694&field=id&value=1694
-   
-   Choose:
-   - Loose selection: e(S) ~= 55%, e(B) = 3.0% WP
-   - AK8 Puppi jets
-   - 105 <= SD Mass < 210
-   - tau32 < 0.8
-   - max subjet BTag CSV > 0.46
-*/
-
 #else
 #define TOP_PT_CUT            400
 #define TOP_SD_MASS_CUT_LOW   105
@@ -210,218 +273,414 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define TOP_TAG_SF_HIGH_ERR  0.26
 #endif
 
-/* 
-   W tagging working points:
-   https://twiki.cern.ch/twiki/bin/view/CMS/JetWtagging
-
-   Latest WPs/SFs not yet on twiki (Thea Aarrestad, slide 77):
-   https://indico.cern.ch/event/530683/contributions/2164853/attachments/1271780/1884879/WtagSF_JMAR_TAarrestad.pdf
-
-   Choose:
-   - Very loose selection e(S) = 93.3%
-   - AK8 Puppi jets
-   - 65 < SD Mass < 105
-   - tau21 <= 0.56
-*/
-
-#define W_PT_CUT            200
-#define W_SD_MASS_CUT_LOW    65
-#define W_SD_MASS_CUT_HIGH  105
-#define W_TAU21_CUT        0.56
-
-// Further analysis cuts
-#define R_CUT             0.4
-#define R_CUT_LOW         0.2
-#define DPHI_CUT          2.7
-
-// AK8 jets
-std::vector<int> passSubjetBTag;
-std::vector<int> passHadTopTag;
-std::vector<int> passHadTopPreTag;
-std::vector<int> passHadWTag;
-std::vector<double> subjetBTagDiscr;
-
-// Event - Jets
-unsigned int nLooseJet;
-unsigned int nSubjetBTag;
-unsigned int nHadTopTag;
-unsigned int nHadTopPreTag;
-unsigned int nHadWTag;
-double AK4Puppi_Ht, AK8Puppi_Ht;
-
 /*
-  Electron Veto ID:
-  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2
+  Latest Electron IDs (Veto/Tight):
+  [1] POG Veto/Tight - https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2?rev=38#Working_points_for_2016_data_for
 
-  ID used in AugXX/SepXX ntuple production:
-  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#Spring15_selection_25ns
+  Latest Isolation WPs:
+  [2] SUSY MiniIso Tight - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=166#ID_IP_ISO_AN1
 
-  Latest ID (upcoming production):
-  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#Working_points_for_2016_data_for
+  Latest Impact Point Cut (Loose/Tight):
+  [3] SUSY Loose/Tight - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=166#ID_IP_ISO
+  [4] POG  Tight - https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2?rev=38#Offline_selection_criteria
 
-  Choose:
+  For Veto Choose:
   - Cut based Veto ID without relIso (EA) cut
-  - Mini-Isolation (EA)/pt < 0.1
-  - pt >= 5
+  - Mini-Isolation (EA)/pt < 0.1 (tight WP [2])
+  - pt >= 10    (Added in B2G ntuple level - I can loosen it if needed in the next production)
   - |eta| < 2.5
+  - |d0| < 0.2, |dz| < 0.5 (Loose IP cut Recommended by SUSY Group [3])
 
--------------------------------
+  For Selection Choose:
+  - Cut based Tight ID without relIso (EA) cut
+  - Mini-Isolation (EA)/pt < 0.1 (tight WP [2])
+  - pt >= 10
+  - |eta| < 2.5
+  - |d0| < 0.05 (0.1), |dz| < 0.1 (0.2) (Tight IP cut Recommended by EGamma POG [4])
+
+*/
+/*
+  Latest Muon IDs (Loose/Tight):
+  [1] POG Loose/Tight - https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2?rev=26#Muon_Identification
+
+  Latest Isolation WPs:
+  [2] SUSY MiniISo Tight - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=166#ID_IP_ISO
+
+  Latest Impact Point Cut (Loose/Tight):
+  [3] SUSY Loose/Tight - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=166#ID_IP_ISO
+  [4] POG Tight  - https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2?rev=38#Offline_selection_criteria
   
-  Muon Loose ID:
-  https://twiki.cern.ch/twiki/bin/viewauth/CMS/SWGuideMuonIdRun2
-  
-  Latest ID used:
-  https://twiki.cern.ch/twiki/bin/viewauth/CMS/SWGuideMuonIdRun2#Loose_Muon
-  
-  Choose:
-  - POG recommended Loose ID
-  - Mini-Isolation (EA)/pt < 0.2
+  For Veto Choose:
+  - POG recommended Loose ID (No Iso/IP)
+  - Mini-Isolation (EA)/pt < 0.2 (tight WP [2])
   - pt >= 5
   - |eta| < 2.4
+  - |d0| < 0.2, |dz| < 0.5 (Loose IP cut Recommended by SUSY Group [3])
+
+  For Selection Choose:
+  - POG recommended Tight ID (No Iso, Loose IP)
+  - Mini-Isolation (EA)/pt < 0.2 (tight WP [2])
+  - pt >= 5
+  - |eta| < 2.4
+  - |d0| < 0.05, |dz| < 0.1 (Tight IP cut Recommended by EGamma POG [4])
 
   Not (yet) used - variable needs to be added for next production:
   - Impact point: |d0| < 0.2, |dz| < 0.5
 
 */
 
-#define ELE_PT_CUT 10 // Cut in B2G ntuples
-#define ELE_ABSETA_CUT 2.5
-#define ELE_MINIISO_CUT 0.1
-#define MU_PT_CUT 5
-#define MU_ABSETA_CUT 2.4
-#define MU_MINIISO_CUT 0.2
-//#define MU_ABSD0_CUT 0.2
-//#define MU_ABSDZ_CUT 0.5
+#define ELE_VETO_PT_CUT        10  // Same cut as in B2G ntuples
+#define ELE_VETO_ETA_CUT       2.5
+#define ELE_VETO_MINIISO_CUT   0.1
+#define ELE_VETO_IP_D0_CUT     0.2
+#define ELE_VETO_IP_DZ_CUT     0.5
+
+#define ELE_TIGHT_PT_CUT       10  // Same cut as in B2G ntuples
+#define ELE_TIGHT_ETA_CUT      2.5
+#define ELE_TIGHT_MINIISO_CUT  0.1
+#define ELE_TIGHT_IP_EB_D0_CUT 0.05
+#define ELE_TIGHT_IP_EB_DZ_CUT 0.1
+#define ELE_TIGHT_IP_EE_D0_CUT 0.1
+#define ELE_TIGHT_IP_EE_DZ_CUT 0.2
+
+#define MU_VETO_PT_CUT         5
+#define MU_VETO_ETA_CUT        2.4
+#define MU_VETO_MINIISO_CUT    0.2
+#define MU_VETO_IP_D0_CUT      0.2
+#define MU_VETO_IP_DZ_CUT      0.5
+
+#define MU_TIGHT_PT_CUT        10
+#define MU_TIGHT_ETA_CUT       2.4
+#define MU_TIGHT_MINIISO_CUT   0.2
+#define MU_TIGHT_IP_D0_CUT     0.2
+#define MU_TIGHT_IP_DZ_CUT     0.5
+
+// AK4 jets
+/*
+  convention:
+
+  iObject  -  gives the index of the nth selected object in the original collection
+
+  example:
+  for (size_t i=0; i<nJet; ++i) h_pt->Fill( data.jetsAK4Puppi.Pt[iJet[i]] );  
+  or
+  if (nJet>0) vh_pt[0] -> Fill( data.jetsAK4Puppi.Pt[iJet[0]] );
+  if (nJet>1) vh_pt[1] -> Fill( data.jetsAK4Puppi.Pt[iJet[1]] );
+
+
+  itObject  -  gives the index in the selected collection
+
+  example:
+  for (size_t it=0; it<data.jetsAK4Puppi.size; ++it)
+    if (passLooseJet[it]) vh_pt[itJet[it]]->Fill( data.jetsAK4Puppi.Pt[it] );
+
+*/
+std::vector<size_t > iJet;
+std::vector<size_t > iLooseBTag;
+std::vector<size_t > iMediumBTag;
+std::vector<size_t > iTightBTag;
+std::vector<size_t > itJet;
+std::vector<size_t > itLooseBTag;
+std::vector<size_t > itMediumBTag;
+std::vector<size_t > itTightBTag;
+std::vector<bool> passLooseJet;
+std::vector<bool> passLooseBTag;
+std::vector<bool> passMediumBTag;
+std::vector<bool> passTightBTag;
+unsigned int nJet;
+unsigned int nLooseBTag;
+unsigned int nMediumBTag;
+unsigned int nTightBTag;
+double AK4Puppi_Ht;
+double minDeltaPhi; // Min(DeltaPhi(Jet_i, MET)), i=1,2,3
+
+// AK8 jets
+std::vector<size_t > iJetAK8;
+std::vector<size_t > iWPreTag;
+std::vector<size_t > iLooseWTag;
+std::vector<size_t > iTightWTag;
+std::vector<size_t > itJetAK8;
+std::vector<size_t > itWPreTag;
+std::vector<size_t > itLooseWTag;
+std::vector<size_t > itTightWTag;
+std::vector<double> tau21;
+std::vector<double> tau31;
+std::vector<double> tau32;
+std::vector<double> maxSubjetCSV;
+std::vector<bool> passSubjetBTag;
+std::vector<bool> passTightJetAK8;
+std::vector<bool> passWPreTag;
+std::vector<bool> passLooseWTag;
+std::vector<bool> passTightWTag;
+std::vector<bool> passHadTopPreTag;
+std::vector<bool> passHadTopTag;
+unsigned int nJetAK8;
+unsigned int nWPreTag;
+unsigned int nLooseWTag;
+unsigned int nTightWTag;
+unsigned int nSubjetBTag;
+unsigned int nHadTopTag;
+unsigned int nHadTopPreTag;
+double AK8Puppi_Ht;
 
 // Event Letpons
+std::vector<bool> passEleVeto;
+std::vector<bool> passMuVeto;
+std::vector<bool> passEleTight;
+std::vector<bool> passMuTight;
 unsigned int nEleVeto;
-unsigned int nMuLoose;
-
-// Min(DeltaPhi(Jet_i, MET)), i=1,2,3
-double minDeltaPhi;
+unsigned int nEleTight;
+unsigned int nMuVeto;
+unsigned int nMuTight;
+unsigned int nLepVeto;
+unsigned int nLepTight;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
   // It only makes sense to calculate certain variables only once if they don't depend on jet energy
   if (syst_index == 0) {
-    nLooseJet = 0;
-    nSubjetBTag = 0;
-    passSubjetBTag.clear();
-    subjetBTagDiscr.clear();
 
     // Loop on AK8 Puppi jets
+    tau21         .assign(data.jetsAK8Puppi.size, 9999);
+    tau31         .assign(data.jetsAK8Puppi.size, 9999);
+    tau32         .assign(data.jetsAK8Puppi.size, 9999);
+    maxSubjetCSV  .assign(data.jetsAK8Puppi.size, 0);
+    passSubjetBTag.assign(data.jetsAK8Puppi.size, 0);
+    nSubjetBTag = 0;
     while(data.jetsAK8Puppi.Loop()) {
-      if (data.jetsAK8Puppi.looseJetID[data.jetsAK8Puppi.it]) nLooseJet++;
-
+      size_t i = data.jetsAK8Puppi.it;
+      // N-subjettiness
+      if (data.jetsAK8Puppi.tau1[i]>0) tau21[i] = data.jetsAK8Puppi.tau2[i]/data.jetsAK8Puppi.tau1[i];
+      if (data.jetsAK8Puppi.tau1[i]>0) tau31[i] = data.jetsAK8Puppi.tau3[i]/data.jetsAK8Puppi.tau1[i];
+      if (data.jetsAK8Puppi.tau2[i]>0) tau32[i] = data.jetsAK8Puppi.tau3[i]/data.jetsAK8Puppi.tau2[i];
       // Maximum Subjet btag discriminator
-      // Puppi jets doesn't store them correctly, get them from CHS jets for now
-      double max_subjet_btag_discr = -9999;
-      int subjet0_index = data.jetsAK8Puppi.vSubjetIndex0[data.jetsAK8Puppi.it], subjet1_index = data.jetsAK8Puppi.vSubjetIndex1[data.jetsAK8Puppi.it];
-      if (subjet0_index != -1) if (data.subjetsAK8Puppi.CSVv2[subjet0_index] > max_subjet_btag_discr) max_subjet_btag_discr = data.subjetsAK8Puppi.CSVv2[subjet0_index];
-      if (subjet1_index != -1) if (data.subjetsAK8Puppi.CSVv2[subjet1_index] > max_subjet_btag_discr) max_subjet_btag_discr = data.subjetsAK8Puppi.CSVv2[subjet1_index];
+      maxSubjetCSV[i] = -9999;
+      int i_sj0 = data.jetsAK8Puppi.vSubjetIndex0[i], i_sj1 = data.jetsAK8Puppi.vSubjetIndex1[i];
+      if (i_sj0 != -1) if (data.subjetsAK8Puppi.CSVv2[i_sj0] > maxSubjetCSV[i]) maxSubjetCSV[i] = data.subjetsAK8Puppi.CSVv2[i_sj0];
+      if (i_sj1 != -1) if (data.subjetsAK8Puppi.CSVv2[i_sj1] > maxSubjetCSV[i]) maxSubjetCSV[i] = data.subjetsAK8Puppi.CSVv2[i_sj1];
 #if USE_BTAG == 1
-      passSubjetBTag.push_back((max_subjet_btag_discr > TOP_BTAG_CSV));
-      if (max_subjet_btag_discr > TOP_BTAG_CSV) ++nSubjetBTag;
+      if (passSubjetBTag[i] = (maxSubjetCSV[i] >= TOP_BTAG_CSV) ) nSubjetBTag++;
 #else
-      passSubjetBTag.push_back((max_subjet_btag_discr> 0.46));
-      if (max_subjet_btag_discr > 0.46) ++nSubjetBTag;
+      if (passSubjetBTag[i] = (maxSubjetCSV[i] >= B_SUBJET_CSV_LOOSE_CUT) ) nSubjetBTag++;
 #endif
-      subjetBTagDiscr.push_back(max_subjet_btag_discr);
     }
 
-    // AK4 Puppi jets
-    minDeltaPhi = 9999;
-    while(data.jetsAK4Puppi.Loop()) {
-      // minDeltaPhi
-      if (data.jetsAK4Puppi.it<3) {
-	double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4Puppi.Phi[data.jetsAK4Puppi.it]));
-	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
-      }
-    }
-
-    // Number of Veto Electrons
-    nEleVeto = 0;
+    // Event Letpons
+    passEleVeto .assign(data.ele.size, 0);
+    passEleTight.assign(data.ele.size, 0);
+    nEleVeto = nEleTight = 0;
     while(data.ele.Loop()) {
-      if (data.ele.Pt[data.ele.it] < ELE_PT_CUT) continue;
-      if (fabs(data.ele.Eta[data.ele.it]) >= ELE_ABSETA_CUT) continue;
-      if (!data.ele.IDVeto_NoIso[data.ele.it]) continue;
-      if (data.ele.MiniIso[data.ele.it]/data.ele.Pt[data.ele.it] >= ELE_MINIISO_CUT) continue;
-      ++nEleVeto;
+      size_t i = data.ele.it;
+      float pt = data.ele.Pt[i];
+      float abseta = fabs(data.ele.Eta[i]);
+      float miniIso = data.ele.MiniIso[i]/data.ele.Pt[i];
+      float absd0 = fabs(data.ele.Dxy[i]);
+      float absdz = fabs(data.ele.Dz[i]);
+      bool id_veto = (data.ele.vidVetonoiso[i] == 1.0);
+      bool id_tight = (data.ele.vidTightnoiso[i] == 1.0);
+      // Veto
+      if (passEleVeto[i] = 
+	  ( id_veto &&
+	    pt      >= ELE_VETO_PT_CUT &&
+	    abseta  <  ELE_VETO_ETA_CUT &&
+	    miniIso <  ELE_VETO_MINIISO_CUT &&
+	    absd0   <  ELE_VETO_IP_D0_CUT &&
+	    absdz   <  ELE_VETO_IP_DZ_CUT) )
+	nEleVeto++;
+      // Tight
+      if (passEleTight[i] = 
+	  ( id_tight &&
+	    pt        >= ELE_TIGHT_PT_CUT &&
+	    abseta    <  ELE_TIGHT_ETA_CUT &&
+	    miniIso   <  ELE_TIGHT_MINIISO_CUT &&
+	    (abseta<1.479 ?
+	     (absd0   <  ELE_TIGHT_IP_EB_D0_CUT &&
+	      absdz   <  ELE_TIGHT_IP_EB_DZ_CUT) :
+	     (absd0   <  ELE_TIGHT_IP_EE_D0_CUT &&
+	      absdz   <  ELE_TIGHT_IP_EE_DZ_CUT) ) ) )
+	nEleTight++;
     }
 
-    // Number of Loose Muons
-    nMuLoose = 0;
+    // Number of Veto/Tight Muons
+    passMuVeto  .assign(data.mu.size,  0);
+    passMuTight .assign(data.mu.size,  0);
+    nMuVeto = nMuTight = 0;
     while(data.mu.Loop()) {
-      if (data.mu.Pt[data.mu.it] < MU_PT_CUT) continue;
-      if (fabs(data.mu.Eta[data.mu.it]) >= MU_ABSETA_CUT) continue;
-      if (!data.mu.IsLooseMuon[data.mu.it]) continue;
-      if (data.mu.MiniIso[data.mu.it]/data.mu.Pt[data.mu.it] >= MU_MINIISO_CUT) continue;
-      //if (fabs(data.mu.Dxy[data.mu.it]) >= MU_ABSD0_CUT) continue;
-      //if (fabs(data.mu.Dz[data.mu.it]) >= MU_ABSDZ_CUT) continue;
-      ++nMuLoose;
+      size_t i = data.mu.it;
+      float pt = data.mu.Pt[i];
+      float abseta = fabs(data.mu.Eta[i]);
+      float miniIso = data.mu.MiniIso[i]/data.mu.Pt[i];
+      float absd0 = fabs(data.mu.Dxy[i]);
+      float absdz = fabs(data.mu.Dz[i]);
+      bool id_veto = (data.mu.IsLooseMuon[i] == 1.0);
+      bool id_tight = (data.mu.IsTightMuon[i] == 1.0);
+      // Veto
+      if (passMuVeto[i] =
+	  (id_veto &&
+	   pt      >= MU_VETO_PT_CUT &&
+	   abseta  <  MU_VETO_ETA_CUT &&
+	   miniIso <  MU_VETO_MINIISO_CUT &&
+	   absd0   <  MU_VETO_IP_D0_CUT &&
+	   absdz   <  MU_VETO_IP_DZ_CUT) )
+	nMuVeto++;
+      // Tight
+      if (passMuTight[i] =
+	  ( id_tight &&
+	    pt      >= MU_TIGHT_PT_CUT &&
+	    abseta  <  MU_TIGHT_ETA_CUT &&
+	    miniIso <  MU_TIGHT_MINIISO_CUT &&
+	    absd0   <  MU_TIGHT_IP_D0_CUT &&
+	    absdz   <  MU_TIGHT_IP_DZ_CUT) )
+	nMuTight++;
     }
+
+    nLepVeto  = nEleVeto  + nMuVeto;
+    nLepTight = nEleTight + nMuTight;
   }
 
   // Rest of the vairables need to be recalculated each time the jet energy is changed
-  // eg. top/W tags and HT (obviously) depends on jet pt
+  // eg. Jet selection, W/top tags, HT (obviously), etc. that depends on jet pt
+
+  // AK4 Puppi jets
+  iJet       .clear();
+  iLooseBTag .clear();
+  iMediumBTag.clear();
+  iTightBTag .clear();
+  itJet         .assign(data.jetsAK4Puppi.size, (size_t)-1);
+  itLooseBTag   .assign(data.jetsAK4Puppi.size, (size_t)-1);
+  itMediumBTag  .assign(data.jetsAK4Puppi.size, (size_t)-1);
+  itTightBTag   .assign(data.jetsAK4Puppi.size, (size_t)-1);
+  passLooseJet  .assign(data.jetsAK4Puppi.size, 0);
+  passLooseBTag .assign(data.jetsAK4Puppi.size, 0);
+  passMediumBTag.assign(data.jetsAK4Puppi.size, 0);
+  passTightBTag .assign(data.jetsAK4Puppi.size, 0);
+  nJet = 0;
+  nLooseBTag  = 0;
+  nMediumBTag = 0;
+  nTightBTag  = 0;
   AK4Puppi_Ht = 0;
-  while(data.jetsAK4Puppi.Loop()) AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
+  minDeltaPhi = 9999;
+  while(data.jetsAK4Puppi.Loop()) {
+    size_t i = data.jetsAK4Puppi.it;
+    // Jet ID
+    if ( passLooseJet[i] = 
+	 ( data.jetsAK4Puppi.looseJetID[i] == 1 &&
+	   data.jetsAK4Puppi.Pt[i]         >= JET_AK4_PT_CUT &&
+	   fabs(data.jetsAK4Puppi.Eta[i])  <  JET_AK4_ETA_CUT ) ) {
+      iJet.push_back(i);
+      itJet[i] = nJet++;
 
-  AK8Puppi_Ht = 0;
-  nHadTopTag = nHadTopPreTag = nHadWTag = 0;
-  passHadTopTag.clear();
-  passHadTopPreTag.clear();
-  passHadWTag.clear();
+      // B tagging
+      if (passLooseBTag[i]  = (data.jetsAK4Puppi.CSVv2[i] >= B_CSV_LOOSE_CUT ) ) {
+	iLooseBTag.push_back(i);
+	itLooseBTag[i] = nLooseBTag++;
+      }
+      if (passMediumBTag[i] = (data.jetsAK4Puppi.CSVv2[i] >= B_CSV_MEDIUM_CUT) ) {
+	iMediumBTag.push_back(i);
+	itMediumBTag[i] = nMediumBTag++;
+      }
+      if (passTightBTag[i]  = (data.jetsAK4Puppi.CSVv2[i] >= B_CSV_TIGHT_CUT ) ) {
+	iTightBTag.push_back(i);
+	itTightBTag[i] = nTightBTag++;
+      }
 
-  // Loop on AK8 Puppi jets
+      // Ht
+      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
+
+      // minDeltaPhi
+      if (nJet<=3) {
+	double dphi = fabs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4Puppi.Phi[i]));
+	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
+      }      
+
+    } // End Jet Selection
+  } // End AK4 Jet Loop
+  
+  // AK8 Puppi jets
+  iJetAK8   .clear();
+  iWPreTag  .clear();
+  iLooseWTag.clear();
+  iTightWTag.clear();
+  itJetAK8   .assign(data.jetsAK4Puppi.size, (size_t)-1);
+  itWPreTag  .assign(data.jetsAK4Puppi.size, (size_t)-1);
+  itLooseWTag.assign(data.jetsAK4Puppi.size, (size_t)-1);
+  itTightWTag.assign(data.jetsAK4Puppi.size, (size_t)-1);
+  passTightJetAK8 .assign(data.jetsAK8Puppi.size, 0);
+  passWPreTag     .assign(data.jetsAK8Puppi.size, 0);
+  passLooseWTag   .assign(data.jetsAK8Puppi.size, 0);
+  passTightWTag   .assign(data.jetsAK8Puppi.size, 0);
+  passHadTopPreTag.assign(data.jetsAK8Puppi.size, 0);
+  passHadTopTag   .assign(data.jetsAK8Puppi.size, 0);
+  nJetAK8       = 0;
+  nWPreTag      = 0;
+  nLooseWTag    = 0;
+  nTightWTag    = 0;
+  nSubjetBTag   = 0;
+  nHadTopTag    = 0;
+  nHadTopPreTag = 0;
+  AK8Puppi_Ht   = 0;
   while(data.jetsAK8Puppi.Loop()) {
-    AK8Puppi_Ht += data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
+    size_t i = data.jetsAK8Puppi.it;
+    // Jet ID
+    if ( passTightJetAK8[i] = 
+	 ( data.jetsAK8Puppi.tightJetID[i] == 1 &&
+	   data.jetsAK8Puppi.Pt[i]         >= JET_AK8_PT_CUT &&
+	   fabs(data.jetsAK8Puppi.Eta[i])  <  JET_AK8_ETA_CUT ) ) {
+      iJetAK8.push_back(i);
+      itJetAK8[i] = nJetAK8++;
 
-    // _______________________________________________________
-    //                  Boosted Objects
+      // Tagging Variables
+      double pt      = data.jetsAK8Puppi.Pt[i];
+      double abseta  = data.jetsAK8Puppi.Eta[i];
+      double sd_mass = data.jetsAK8Puppi.softDropMass[i];
+      double tau_21 = tau21[i];
+      double tau_32 = tau32[i];
 
-    double pt = data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
-    double sd_mass = data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it];
-    double tau21 = data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
-    if (data.jetsAK8Puppi.tau1[data.jetsAK8Puppi.it]!=0) tau21 /= data.jetsAK8Puppi.tau1[data.jetsAK8Puppi.it];
-    else tau21 = 9999;
-    double tau32 = data.jetsAK8Puppi.tau3[data.jetsAK8Puppi.it];
-    if (data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it]!=0) tau32 /= data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
-    else tau32 = 9999;
-    
-    // _______________________________________________________
-    //                  Hadronic Top Tag definition
-    
-    passHadTopTag.push_back(0);
-    passHadTopPreTag.push_back(0);
-    // New hadronic top tag
-    if (pt >= TOP_PT_CUT && sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH) {
-      passHadTopPreTag[data.jetsAK8Puppi.it] = 1;
-      ++nHadTopPreTag;
-      if (tau32 < TOP_TAU32_CUT) {
+      // _______________________________________________________
+      //                   Hadronic W Tag definition
+
+      if (passWPreTag[i] = 
+	  ( pt      >= W_PT_CUT &&
+	    abseta  <  W_ETA_CUT &&
+	    sd_mass >= W_SD_MASS_CUT_LOW && 
+	    sd_mass <  W_SD_MASS_CUT_HIGH) ) {
+	iWPreTag.push_back(i);
+	itWPreTag[i] = nWPreTag++;
+	// Loose/Tight W Tag Working points
+	if (passLooseWTag[i] = (tau_21 < W_TAU21_LOOSE_CUT) ) {
+	  iLooseWTag.push_back(i);
+	  itLooseWTag[i] = nLooseWTag++;
+	}
+	if (passTightWTag[i] = (tau_21 < W_TAU21_TIGHT_CUT) ) {
+	  iTightWTag.push_back(i);
+	  itTightWTag[i] = nTightWTag++;
+	}
+      }
+
+      // _______________________________________________________
+      //                  Hadronic Top Tag definition
+
+      // New hadronic top tag
+      if (passHadTopPreTag[i] = 
+	  ( pt      >= TOP_PT_CUT && 
+	    sd_mass >= TOP_SD_MASS_CUT_LOW &&
+	    sd_mass <  TOP_SD_MASS_CUT_HIGH) ) {
 #if USE_BTAG == 1
-	if (passSubjetBTag[data.jetsAK8Puppi.it]) {
+	if (passHadTopPreTag[i] = passSubjetBTag[i]) {
 #endif
-	  passHadTopTag[data.jetsAK8Puppi.it] = 1;
-	  ++nHadTopTag;
+	  nHadTopPreTag++;
+	  if (passHadTopTag[i] = (tau_32 < TOP_TAU32_CUT) ) nHadTopTag++;
 #if USE_BTAG == 1
 	}
 #endif
       }
-    }
 
-    // _______________________________________________________
-    //                  Hadronic W Tag definition
-    passHadWTag.push_back(0);
-    // New hadronic top tag
-    if (pt >= W_PT_CUT && sd_mass>=W_SD_MASS_CUT_LOW && sd_mass<W_SD_MASS_CUT_HIGH) {
-      if (tau21 < W_TAU21_CUT) {
-	passHadWTag[data.jetsAK8Puppi.it] = 1;
-	++nHadWTag;
-      }
-    }
-  } // end of AK8 (Puppi) jet loop
+      // Ht
+      AK8Puppi_Ht += data.jetsAK8Puppi.Pt[i];
+
+    } // End Jet Selection
+  } // End AK4 Jet Loop
 }
 
 
@@ -472,11 +731,8 @@ AnalysisBase::init_common_histos()
 //_______________________________________________________
 //           Read cross-section from ntuple
 double
-AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const std::string& treename, const std::string& dirname)
+AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const std::string& treename)
 {
-  /*
-    Aug17 ntuple production did not correctly fill cross-sections
-
   float evt_XSec=0, prev_XSec=0;
   for (auto filename : filenames) {
     TFile *f = TFile::Open(filename.c_str());
@@ -485,19 +741,25 @@ AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, co
     tree->GetEntry(0);
     f->Close();
     if (prev_XSec!=0&&prev_XSec!=evt_XSec) {
-      cout << "!! Error !! Analysis - Files added with different cross-sections. Please, add them separately!" << endl;
+      utils::error("AnalysisBase - Files added with different cross-sections. Please, add them separately!");
       return 0;
     }
     prev_XSec = evt_XSec;
   }
-  */
+  return evt_XSec;
+}
 
-  // Temporarily read cross-sections from txt file
+//_______________________________________________________
+//           Read cross-section from txt file
+double
+AnalysisBase::get_xsec_from_txt_file(const std::string& txt_file, const std::string& dirname)
+{
   double evt_XSec = 0;
-  std::ifstream xsecFile("common/BackGroundXSec.txt");
+  std::ifstream xsecFile(txt_file.c_str());
   if ( !xsecFile.good() ) {
     return -9999.0;
-    std::cout<<"Unable to open cross-section file: common/BackGroundXSec.txt"<<std::endl;
+    std::cout<<"Unable to open cross-section file: "<<txt_file<<std::endl;
+    utils::error("Please provide the correct txt file for Cross-sections in settings.h!");
   } else {
 
     // Read all nSigmas, nums
@@ -511,11 +773,12 @@ AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, co
       nth_line>>shortname;
       nth_line>>primary_dataset;
       nth_line>>xsec;
-      if (dirname==shortname) {
-	evt_XSec = xsec;
-	std::cout<<"( TEMPORARY FIX: Cross section successfully read from common/BackGroundXSec.txt )"<<std::endl;
-      }
+      if (dirname==shortname) evt_XSec = xsec;
     }
+  }
+  if (evt_XSec == 0) {
+    std::cout<<"No crossection found for "<<dirname<<" in cross section file: "<<txt_file<<std::endl;
+    utils::error("Please fix the cross-section file in settings.h!");
   }
 
   return evt_XSec;
@@ -692,48 +955,65 @@ AnalysisBase::rescale_jets(DataStruct& data, const unsigned int& syst_index, con
     // AK4 Puppi jets
     AK4Puppi_Ht = 0;
     while(data.jetsAK4Puppi.Loop()) {
-      double scale = get_syst_weight(1.0, data.jetsAK4Puppi.jecUncertainty[data.jetsAK4Puppi.it], nSigmaJEC);
-      data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it] = AK4Puppi_Pt[data.jetsAK4Puppi.it] * scale;
-      data.jetsAK4Puppi.E[data.jetsAK4Puppi.it]  = AK4Puppi_E[data.jetsAK4Puppi.it]  * scale;
-      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
+      size_t i = data.jetsAK4Puppi.it;
+      double scale = get_syst_weight(1.0, data.jetsAK4Puppi.jecUncertainty[i], nSigmaJEC);
+      data.jetsAK4Puppi.Pt[i] = AK4Puppi_Pt[i] * scale;
+      data.jetsAK4Puppi.E[i]  = AK4Puppi_E[i]  * scale;
+      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[i];    
     }
     // AK8 Puppi jets
     AK8Puppi_Ht = 0;
     while(data.jetsAK8Puppi.Loop()) {
-      double scale = get_syst_weight(1.0, data.jetsAK8Puppi.jecUncertainty[data.jetsAK8Puppi.it], nSigmaJEC);
-      data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it]           = AK8Puppi_Pt[data.jetsAK8Puppi.it]           * scale;
-      data.jetsAK8Puppi.E[data.jetsAK8Puppi.it]            = AK8Puppi_E[data.jetsAK8Puppi.it]            * scale;
-      data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it] = AK8Puppi_softDropMass[data.jetsAK8Puppi.it] * scale;
-      //data.jetsAK8Puppi.trimmedMass[data.jetsAK8Puppi.it]  = AK8Puppi_trimmedMass[data.jetsAK8Puppi.it]  * scale;
-      //data.jetsAK8Puppi.prunedMass[data.jetsAK8Puppi.it]   = AK8Puppi_prunedMass[data.jetsAK8Puppi.it]   * scale;
-      //data.jetsAK8Puppi.filteredMass[data.jetsAK8Puppi.it] = AK8Puppi_filteredMass[data.jetsAK8Puppi.it] * scale;
-      AK8Puppi_Ht += data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
+      size_t i = data.jetsAK4Puppi.it;
+      double scale = get_syst_weight(1.0, data.jetsAK8Puppi.jecUncertainty[i], nSigmaJEC);
+      data.jetsAK8Puppi.Pt[i]           = AK8Puppi_Pt[i]           * scale;
+      data.jetsAK8Puppi.E[i]            = AK8Puppi_E[i]            * scale;
+      data.jetsAK8Puppi.softDropMass[i] = AK8Puppi_softDropMass[i] * scale;
+      //data.jetsAK8Puppi.trimmedMass[i]  = AK8Puppi_trimmedMass[i]  * scale;
+      //data.jetsAK8Puppi.prunedMass[i]   = AK8Puppi_prunedMass[i]   * scale;
+      //data.jetsAK8Puppi.filteredMass[i] = AK8Puppi_filteredMass[i] * scale;
+      AK8Puppi_Ht += data.jetsAK8Puppi.Pt[i];
     }
   }
 }
 
 
 //____________________________________________________
-//               Top-Tagging Scale factor
+//                  Scale factors
+
+double
+AnalysisBase::get_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF)
+{
+  double w = 1.0;
+  return w;
+}
+
+double
+AnalysisBase::get_b_tagging_sf(DataStruct& data, const double& nSigmaBTagSF)
+{
+  double w = 1.0;
+  return w;
+}
+
 double
 AnalysisBase::get_top_tagging_sf(DataStruct& data, const double& nSigmaHadTopTagSF)
 {
   double w = 1.0;
 
   while(data.jetsAK8Puppi.Loop()) {
-    double pt = data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it];
-    double sd_mass = data.jetsAK8Puppi.softDropMass[data.jetsAK8Puppi.it];
-    double tau32 = data.jetsAK8Puppi.tau3[data.jetsAK8Puppi.it];
-    if (data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it]!=0) tau32 /= data.jetsAK8Puppi.tau2[data.jetsAK8Puppi.it];
-    else tau32 = 9999;
+    size_t i = data.jetsAK8Puppi.it;
+    double pt = data.jetsAK8Puppi.Pt[i];
+    double sd_mass = data.jetsAK8Puppi.softDropMass[i];
+    double tau32 = 9999;
+    if (data.jetsAK8Puppi.tau2[i]>0) tau32 = data.jetsAK8Puppi.tau3[i]/data.jetsAK8Puppi.tau2[i];
     if (pt >= TOP_PT_CUT && sd_mass>=TOP_SD_MASS_CUT_LOW && sd_mass<TOP_SD_MASS_CUT_HIGH && tau32 < TOP_TAU32_CUT) {
 #if USE_BTAG == 1
-      if (passSubjetBTag[data.jetsAK8Puppi.it]) {
+      if (passSubjetBTag[i]) {
 #endif
 	// Top-tagged AK8 jets
-	if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 400 && data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] < 550)
+	if (data.jetsAK8Puppi.Pt[i] >= 400 && data.jetsAK8Puppi.Pt[i] < 550)
 	  w *= get_syst_weight(TOP_TAG_SF_LOW, TOP_TAG_SF_LOW_ERR, nSigmaHadTopTagSF);
-	else if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it] >= 550)
+	else if (data.jetsAK8Puppi.Pt[i] >= 550)
 	  w *= get_syst_weight(TOP_TAG_SF_HIGH, TOP_TAG_SF_HIGH_ERR, nSigmaHadTopTagSF);
 #if USE_BTAG == 1
       }
