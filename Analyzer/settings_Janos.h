@@ -10,7 +10,7 @@ struct settings {
   //-----------------------------------------------------------------------------
   settings() :
     runOnSkim                ( false ),
-    saveSkimmedNtuple        ( true  ),
+    saveSkimmedNtuple        ( false ),
     doPileupReweighting      ( true  ),
     applyWTagSF              ( false ),
     applyBTagSF              ( false ),

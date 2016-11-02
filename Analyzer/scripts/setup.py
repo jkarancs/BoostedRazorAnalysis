@@ -21,8 +21,8 @@ import os, re, sys, glob, socket, subprocess
 LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
-#LATEST_NTUPLE_GRID18="Oct24"
-LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
+LATEST_NTUPLE_GRID18="Oct24"
+#LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'

@@ -32,7 +32,7 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 
   // Calculate decision of each individual cut
   cutbits = 0;
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) if (analysis_cuts[i].func()) cutbits += 1<<i;
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) if (analysis_cuts["S"][i].func()) cutbits += 1<<i;
 }
 
 //_______________________________________________________
@@ -46,196 +46,79 @@ Analysis::get_analysis_weight(DataStruct& data)
 }
 
 //_______________________________________________________
-//          Define Analysis event selection cuts
+//                Define Skimming cuts
+//   (Not needed, unless you want to skim the ntuple)
 
 bool
 Analysis::pass_skimming(DataStruct& data)
 {
-  if (!(nJet>=2)) return 0;
   if (!(nJetAK8>=1)) return 0;
+  if (!(nJet>=2)) return 0;
   return 1;
 
   // Signal skim
-  //return _apply_ncut(analysis_cuts.size());
+  //return signal_selection(data);
 }
+
+//_______________________________________________________
+//          Define Analysis event selection cuts
+//     Can define all sorts of Signal/Control regions
 
 void
 Analysis::define_selections(const DataStruct& d)
 {
   analysis_cuts.clear();
 
+  // Define here cuts that are common in all Signal/Control regions
   // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
-  analysis_cuts.push_back({ .name="2Jet",     .func = []    { return nJet>=2;                       }});
-  analysis_cuts.push_back({ .name="3Jet",     .func = []    { return nJet>=3;                       }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts.push_back({ .name="1JetAK8",  .func = []    { return nJetAK8>=1;                    }}); // Similar to pt>200, one AK8 jet has pt>170
-  analysis_cuts.push_back({ .name="MR_R2",    .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
-  analysis_cuts.push_back({ .name="0Ele",     .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts.push_back({ .name="0Mu",      .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts.push_back({ .name="0TauTrk",  .func = []   { return;  }});
-  analysis_cuts.push_back({ .name="1b",       .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts.push_back({ .name="1W",       .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts.push_back({ .name="mDPhiHat", .func = []   { return;  }});
-  analysis_cuts.push_back({ .name="mDPhi",    .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
+  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                    }}); // Similar to pt>200, one AK8 jet has pt>170
+  baseline_cuts.push_back({ .name="Skim_2Jet",       .func = []    { return nJet>=2;                       }});
+  baseline_cuts.push_back({ .name="Baseline_3Jet",   .func = []    { return nJet>=3;                       }}); // Separate cut, so one can exclude (N-1)
+  baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
   
-  /*
-  // cut1: njet >= 2
-  analysis_cuts.push_back({ .name="2Jet",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0;
-			      return 1;
-			    } });
-
-  // cut2: jet 1 pass loose jet id
-  analysis_cuts.push_back({ .name="Jet1ID",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      return data.jetsAK8Puppi.looseJetID[0];
-			    } });
-
-  // cut3: jet 2 pass loose jet id
-  analysis_cuts.push_back({ .name="Jet2ID",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      return data.jetsAK8Puppi.looseJetID[1];
-			    } });
-
-  // cut4: jet 1 eta < 2.4
-  analysis_cuts.push_back({ .name="Jet1Eta",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      if (fabs(data.jetsAK8Puppi.Eta[0])>=2.4) return 0;
-			      return 1;
-			    } });
-
-  // cut5: jet 2 eta < 2.4
-  analysis_cuts.push_back({ .name="Jet2Eta",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      if (fabs(data.jetsAK8Puppi.Eta[1])>=2.4) return 0;
-			      return 1;
-			    } });
-
-  // cut6: jet 1 pt >= 400
-  analysis_cuts.push_back({ .name="Jet1Pt",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      if (data.jetsAK8Puppi.Pt[0]<TOP_PT_CUT) return 0;
-			      return 1;
-			    } });
-
-  // cut7: jet 2 pt >= 400
-  analysis_cuts.push_back({ .name="Jet2Pt",   .func = [&data] { 
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      if (data.jetsAK8Puppi.Pt[1]<TOP_PT_CUT) return 0;
-			      return 1;
-			    } });
-
-  // cut8: 105 <= jet 1 mass (softdrop) < 210
-  analysis_cuts.push_back({ .name="Jet1Mass", .func = [&data] { 
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      if (data.jetsAK8Puppi.softDropMass[0]<TOP_SD_MASS_CUT_LOW) return 0;
-			      if (data.jetsAK8Puppi.softDropMass[0]>=TOP_SD_MASS_CUT_HIGH) return 0;
-			      return 1;
-			    } });
-
-  // cut9: 105 <= jet 2 mass (softdrop) < 210
-  analysis_cuts.push_back({ .name="Jet2Mass", .func = [&data] { 
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      if (data.jetsAK8Puppi.softDropMass[1]<TOP_SD_MASS_CUT_LOW) return 0;
-			      if (data.jetsAK8Puppi.softDropMass[1]>=TOP_SD_MASS_CUT_HIGH) return 0;
-			      return 1;
-			    } });
-
-  // cut10: jet 1 pass subjet b-tag requirement ( CVS > 0.46 )
-  analysis_cuts.push_back({ .name="Jet1BTag", .func = [&data] { 
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      return passSubjetBTag[0];
-			    } });
-
-  // cut11: jet 2 pass subjet b-tag requirement ( CVS > 0.46 )
-  analysis_cuts.push_back({ .name="Jet2BTag", .func = [&data] { 
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      return passSubjetBTag[1];
-			    } });
-
-  // cutN: Full-hadronic trigger
-  analysis_cuts.push_back({ .name="hlt_ak8ht700_mass50", .func = [&data] {
-                              // Define cut function here:
-                              return data.hlt.AK8PFHT700_TrimR0p1PT0p03Mass50==1; 
-                            } });
-
-  // cut12: lepton Veto
-  analysis_cuts.push_back({ .name="LepVeto", .func = [&data] { 
-			      // Define cut function here:
-			      if (nEleVeto>0) return 0;
-			      if (nMuLoose>0) return 0;
-			      return 1;
-			    } });
+  // S: Signal region
+  analysis_cuts["S"].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
+  analysis_cuts["S"].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
+  //analysis_cuts["S"].push_back({ .name="0TauTrk",    .func = []    { return;  }});
+  analysis_cuts["S"].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
+  analysis_cuts["S"].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
+  //analysis_cuts["S"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts["S"].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
   
-
-  // cut13: | DeltaPhi | < DPHI_CUT
-  analysis_cuts.push_back({ .name="DeltaPhi", .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      if (dPhi>=DPHI_CUT) return 0;
-			      return 1;
-			    } });
-
-  // cut14: jet 1 tau32 < TOP_TAU32_CUT
-  analysis_cuts.push_back({ .name="Jet1Tau32",   .func = [&data] {
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<1) return 0; // for safety
-			      double tau32 = data.jetsAK8Puppi.tau3[0];
-			      if (data.jetsAK8Puppi.tau2[0]!=0) tau32 /= data.jetsAK8Puppi.tau2[0];
-			      else tau32 = 9999;
-			      if (tau32>=TOP_TAU32_CUT) return 0;
-			      return 1;
-			    } });
-
-  // cut15: jet 2 tau32 < TOP_TAU32_CUT
-  analysis_cuts.push_back({ .name="Jet2Tau32",   .func = [&data] { 
-			      // Define cut function here:
-			      if (data.jetsAK8Puppi.size<2) return 0; // for safety
-			      double tau32 = data.jetsAK8Puppi.tau3[1];
-			      if (data.jetsAK8Puppi.tau2[1]!=0) tau32 /= data.jetsAK8Puppi.tau2[1];
-			      else tau32 = 9999;
-			      if (tau32>=TOP_TAU32_CUT) return 0;
-			      return 1;
-			    } });
-
-  // cut16: R >= R_CUT
-  analysis_cuts.push_back({ .name="R", .func = [&data] {
-			      // Define cut function here:
-			      return data.evt.R>=R_CUT;
-			    } });
-  */
+  // W: W enriched control sample
+  analysis_cuts["W"].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
+  analysis_cuts["W"].push_back({ .name="0b",         .func = []    { return nLooseBTag==1;                 }});
+  analysis_cuts["W"].push_back({ .name="1Wpre",      .func = []    { return nWPreTag>=1;                   }});
+  //analysis_cuts["W"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts["W"].push_back({ .name="mDPhi>=0p4",  .func = []   { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
+  analysis_cuts["W"].push_back({ .name="30<=MT<100",  .func = []   { return MT>=30 && MT<100;              }});
+  
+  // T: Top enriched control sample
+  analysis_cuts["T"].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
+  analysis_cuts["T"].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
+  analysis_cuts["T"].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
+  //analysis_cuts["T"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts["T"].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
+  analysis_cuts["T"].push_back({ .name="MT<100",     .func = []    { return MT<100;                        }});
+  
+  // Q: QCD enriched control sample
+  analysis_cuts["Q"].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
+  analysis_cuts["Q"].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
+  //analysis_cuts["Q"].push_back({ .name="0TauTrk",    .func = []    { return;  }});
+  analysis_cuts["Q"].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                 }});
+  analysis_cuts["Q"].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
+  //analysis_cuts["Q"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts["Q"].push_back({ .name="mDPhi<0.25", .func = []    { return minDeltaPhi<0.25;              }}); // Decreased it to 0.25 (from 0.3)
+  
 }
-
-bool
-Analysis::_apply_cut(std::string cut_name) {
-  for (auto cut : analysis_cuts) if (cut_name == cut.name) return cut.func();
-  return 0;
-}
-
-bool
-Analysis::_apply_ncut(size_t ncut) {
-  if (ncut>analysis_cuts.size()) return 0;
-  for (size_t i=0; i<ncut; ++i) if ( ! analysis_cuts[i].func() ) return 0;
-  return 1;
-}
-
 
 //_______________________________________________________
 //                 Signal Region
 //     Must define it, because we blind it in data!
+
 bool
 Analysis::signal_selection(const DataStruct& data) {
-  return _apply_ncut(analysis_cuts.size());
+  return apply_all_cuts("S");
 }
 
 //_______________________________________________________
@@ -297,7 +180,7 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // --------------------------------------------------------------------
 
   // Pass each cut
-  sh.AddNewCut("PassAnaSelection",    [this] { return analysis_cuts[cut_index].func(); });
+  sh.AddNewCut("PassAnaSelection",    [this] { return analysis_cuts["S"][cut_index].func(); });
 
   //__________________________________
   //            Postfixes
@@ -509,20 +392,20 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // Cut Postfixes
   sh.AddNewPostfix("Pass0Cuts", [] { return 0; }, "Pass0Cuts", "No cuts", "1");
   std::string cutflow_str = "";
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) {
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) {
     // Cuts in order 1-N: "PassNCuts"
-    sh.AddNewPostfix("Pass"+std::to_string(i+1)+"Cuts", [this,i] { return _apply_ncut(i) ? 0 : (size_t)-1; },
-		     "Pass"+std::to_string(i+1)+"Cuts", "Cuts up to "+analysis_cuts[i].name, "1");
-    cutflow_str += analysis_cuts[i].name;
+    sh.AddNewPostfix("Pass"+std::to_string(i+1)+"Cuts", [this,i] { return apply_ncut("S", i) ? 0 : (size_t)-1; },
+		     "Pass"+std::to_string(i+1)+"Cuts", "Cuts up to "+analysis_cuts["S"][i].name, "1");
+    cutflow_str += analysis_cuts["S"][i].name;
     cutflow_str += ";";
     // N-1 Cuts: "AllCutsExcl[CutName]"
-    sh.AddNewPostfix("AllCutsExcl"+analysis_cuts[i].name, [this,i] { 
-		       unsigned int mask = (1<<analysis_cuts.size())-1 - (1<<i); 
+    sh.AddNewPostfix("AllCutsExcl"+analysis_cuts["S"][i].name, [this,i] { 
+		       unsigned int mask = (1<<analysis_cuts["S"].size())-1 - (1<<i); 
 		       return ((cutbits & mask) == mask) ? 0 : (size_t)-1; }, 
-		     "AllCutsExcl"+analysis_cuts[i].name, analysis_cuts[i].name+" (N-1)", "1");
+		     "AllCutsExcl"+analysis_cuts["S"][i].name, analysis_cuts["S"][i].name+" (N-1)", "1");
   }
   // Stackable Cut Histos: "CutFlow"
-  sh.AddNewPostfix("CutFlow",       [this] { for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) if (!analysis_cuts[i].func()) return i; return analysis_cuts.size(); }, cutflow_str+"PassAll", cutflow_str+"pass all", col10+col10);
+  sh.AddNewPostfix("CutFlow",       [this] { for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) if (!analysis_cuts["S"][i].func()) return i; return analysis_cuts["S"].size(); }, cutflow_str+"PassAll", cutflow_str+"pass all", col10+col10);
   // Individual Cuts implemented as Postfixes
   // Triggers
   sh.AddNewPostfix("PassHLT",      [this,&dirname,&d] { 
@@ -659,8 +542,8 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // Event
   // Cuts
   std::map<int, std::string> cutflow_bins;
-  cut_index = 0; for (auto cut : analysis_cuts) cutflow_bins[++cut_index] = cut.name;
-  sh.AddNewFillParam("Cutflow",              { .nbin= analysis_cuts.size(), .bins={ 0, (double)analysis_cuts.size() }, .bin_labels=cutflow_bins, .fill=[] { return cut_index; }, .axis_title="Cut Decision"});
+  cut_index = 0; for (auto cut : analysis_cuts["S"]) cutflow_bins[++cut_index] = cut.name;
+  sh.AddNewFillParam("Cutflow",              { .nbin= analysis_cuts["S"].size(), .bins={ 0, (double)analysis_cuts["S"].size() }, .bin_labels=cutflow_bins, .fill=[] { return cut_index; }, .axis_title="Cut Decision"});
   // Object counts
   sh.AddNewFillParam("NVtx",                 { .nbin= 100, .bins={    0,     100}, .fill=[&d] { return d.evt.NGoodVtx;          }, .axis_title="N_{Vertices}",         .def_range={0,50}});
   sh.AddNewFillParam("NJet",                 { .nbin=  50, .bins={    0,      50}, .fill=[&d] { return nJet;                    }, .axis_title="N_{Jet}",              .def_range={0,10}});
@@ -810,13 +693,13 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                              Selected AK4 Jets
 
   // Event
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("evt",  { .fill="NJet",               .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   }
 
   // All jets
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("AK4",  { .fill="JetPtBins",          .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     sh.AddHistos("AK4",  { .fill="JetPt",              .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -836,13 +719,13 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                                 Selected bs
 
   // Event
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("evt",  { .fill="NBTag",              .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   }
 
   // b jets (cut applied)
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("b",    { .fill="BJetPtBins",         .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     sh.AddHistos("b",    { .fill="BJetPt",             .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -860,13 +743,13 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                              Selected AK8 Jets
 
   // Event
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("evt",  { .fill="NJetAK8",            .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   }
 
   // All jets
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("AK8",  { .fill="JetAK8PtBins",       .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     sh.AddHistos("AK8",  { .fill="JetAK8Pt",           .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -892,13 +775,13 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                              Selected W Pretags
 
   // Event
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("evt",  { .fill="NWPreTag",           .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   }
 
   // W pre-tags (cut applied)
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("Wpre", { .fill="WPreTagPtBins",      .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     sh.AddHistos("Wpre", { .fill="WPreTagPt",          .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -918,13 +801,13 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                                 Selected Ws
 
   // Event
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("evt",  { .fill="NWTag",              .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   }
 
   // W tags (cut applied)
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("W",    { .fill="WTagPtBins",         .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     sh.AddHistos("W",    { .fill="WTagPt",             .pfs={Stack,cut,"PassHLT"},            .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -942,7 +825,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                                  Leptons
 
   // Event
-  for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+  for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
     std::string cut = "Pass"+std::to_string(i)+"Cuts";
     sh.AddHistos("evt",  { .fill="NEleVeto",           .pfs={Stack,cut,"PassHLT"},           .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     sh.AddHistos("evt",  { .fill="NMuVeto",            .pfs={Stack,cut,"PassHLT"},           .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -984,7 +867,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   if (!Systematics_Only) {
 
     // Data-MC Comparison - background composition
-    for (size_t i=0, n=analysis_cuts.size(); i<n; ++i) { 
+    for (size_t i=0, n=analysis_cuts["S"].size(); i<n; ++i) { 
       std::string cut = "Pass"+std::to_string(i)+"Cuts";
       // Jet quantities
       sh.AddHistos("evt",        { .fill="NJet",            .pfs={Stack,cut,"PassHLT"},                     .cuts={},  .draw=d, .opt=o_stk, .ranges=r_stk });
@@ -1038,7 +921,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("evt", { .fill="GenHt",      .pfs={"AllSamples","Pass12Cuts","PassHLT"},  .cuts={},  .draw=d, .opt="Sumw2Norm", .ranges={0,0, 0,0, 0.55,0.9} });
 
     // Event composition - under different cuts
-    for (size_t i=1; i<=analysis_cuts.size(); ++i) {
+    for (size_t i=1; i<=analysis_cuts["S"].size(); ++i) {
       std::string cut = "Pass"+std::to_string(i)+"Cuts";
       sh.AddHistos("evt", { .fill="SumPt",      .pfs={Stack,cut},              .cuts={},  .draw=d, .opt=o_stk, .ranges=r_stk });
       sh.AddHistos("evt", { .fill="SumPt",      .pfs={Stack,cut,"PassHLT"}, .cuts={},  .draw=d, .opt=o_stk, .ranges=r_stk });

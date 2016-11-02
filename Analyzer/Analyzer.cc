@@ -330,14 +330,12 @@ int main(int argc, char** argv) {
     ofile->count(cut.name, 0);
     cout << "  "<<cut.name << endl;
   }
-  cout << endl;  
+  cout << endl;
   cout << "- Analysis specific cuts:\n";
-  for (auto cut : ana.analysis_cuts) {
-    ofile->count(cut.name, 0);
-    cout << "  "<<cut.name << endl;
+  for (auto search_region : ana.analysis_cuts) for (auto cut : search_region.second) {
+    ofile->count(search_region.first+"_"+cut.name, 0);
+    cout << "  " << search_region.first+"_"+cut.name << endl;
   }
-
-  ofile->count("Signal", 0); // Dont worry, we blind data ;)
 
   //---------------------------------------------------------------------------
   // Loop over events
@@ -363,11 +361,13 @@ int main(int argc, char** argv) {
 	ana.calculate_common_variables(data, syst.index);
 	ana.calculate_variables(data, syst.index);
 
-	// Save counts (after each cuts)
+	// Save counts (after each baseline cuts)
 	ofile->count("NoCuts", w);
-	bool pass_all_cuts = true;
-	for (auto cut : ana.baseline_cuts) if (pass_all_cuts)
-	  if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
+	bool pass_all_baseline_cuts = true;
+	for (auto cut : ana.baseline_cuts) {
+	  if ( !(pass_all_baseline_cuts = cut.func()) ) break;
+	  ofile->count(cut.name, w);
+	}
 
 	// If option (saveSkimmedNtuple) is specified save all 
 	// skimmed events selected by the analysis to the output file
@@ -394,20 +394,22 @@ int main(int argc, char** argv) {
 	//________________________________________________________
 	//
 
-	if (DATA_BLINDED) {
+	if (pass_all_baseline_cuts && DATA_BLINDED) {
 
 	  // Apply analysis cuts and fill histograms
 	  // These are all defined in [Name]_Analysis.cc (included from settings.h)
 	  // You specify there also which cut is applied for each histo
 	  // But all common baseline cuts are alreay applied above
-	  if (!cmdline.noPlots  && pass_all_cuts) ana.fill_analysis_histos(data, syst.index, w);
+	  if (!cmdline.noPlots) ana.fill_analysis_histos(data, syst.index, w);
 
-	  // Save counts for the analysis cuts
-	  for (auto cut : ana.analysis_cuts) if (pass_all_cuts)
-	    if ( ( pass_all_cuts = cut.func() ) ) ofile->count(cut.name, w);
-
-	  // Count Signal events
-	  if ( pass_all_cuts && ana.signal_selection(data) ) ofile->count("Signal", w);
+	  // Save counts for the analysis cuts in each search region (signal/control)
+	  for (auto search_region : ana.analysis_cuts) {
+	    bool pass_all_regional_cuts = true;
+	    for (auto cut : search_region.second) {
+	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
+	      ofile->count(search_region.first+"_"+cut.name, w);
+	    }
+	  }
 
 	} // end Blinding
 
@@ -501,14 +503,15 @@ int main(int argc, char** argv) {
 	ana.calculate_variables(data, syst.index);
 
 	// Save counts (after each cuts)
-	bool pass_all_cuts = true;
-	if (syst.index == 0) ofile->count("NoCuts", w);
-
-	// Cuts that are likely to be implemented in all analyses
-	// eg. MET filters, baseline event selections etc.
-	for (auto cut : ana.baseline_cuts) if (pass_all_cuts) {
-	  pass_all_cuts = cut.func();
-	  if (pass_all_cuts && syst.index==0) ofile->count(cut.name, w);
+	// First cuts that are likely to be implemented in all analyses
+	// eg. MET filters, baseline event selection etc.
+	bool pass_all_baseline_cuts = true;
+	if (syst.index == 0) {
+	  ofile->count("NoCuts", w);
+	  for (auto cut : ana.baseline_cuts) {
+	    if ( !(pass_all_baseline_cuts = cut.func()) ) break; 
+	    ofile->count(cut.name, w);
+	  }
 	}
 
 	// If option (saveSkimmedNtuple) is specified save all 
@@ -516,21 +519,23 @@ int main(int argc, char** argv) {
 	// tree is copied and current weight is saved as "eventWeight"
 	if ( settings.saveSkimmedNtuple && syst.index==0 ) if (ana.pass_skimming(data)) ofile->addEvent(w);
 
-	// Apply analysis cuts and fill histograms
-	// These are all defined in [Name]_Analysis.cc (included from settings.h)
-	// You specify there also which cut is applied for each histo
-	// But all common baseline cuts will be already applied above
-	if (!cmdline.noPlots && pass_all_cuts) ana.fill_analysis_histos(data, syst.index, w);
+	if (pass_all_baseline_cuts) {
+	  // Apply analysis cuts and fill histograms
+	  // These are all defined in [Name]_Analysis.cc (included from settings.h)
+	  // You specify there also which cut is applied for each histo
+	  // But all common baseline cuts will be already applied above
+	  if (!cmdline.noPlots) ana.fill_analysis_histos(data, syst.index, w);
 
-	// Save counts after each analysis cut
-	for (auto cut : ana.analysis_cuts) if (pass_all_cuts) {
-	  pass_all_cuts = cut.func();
-	  if (pass_all_cuts && syst.index==0) ofile->count(cut.name, w);
+	  // Save counts for the analysis cuts in each search region (signal/control)
+	  if (syst.index==0) for (auto search_region : ana.analysis_cuts) {
+	    bool pass_all_regional_cuts = true;
+	    for (auto cut : search_region.second) {
+	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
+	      ofile->count(search_region.first+"_"+cut.name, w);
+	    }
+	  }
+
 	}
-
-	// Count remaining signal events
-	if ( pass_all_cuts && syst.index==0 && ana.signal_selection(data) ) ofile->count("Signal", w);
-
       } // end systematics loop
     } // end Background/Signal MC
 

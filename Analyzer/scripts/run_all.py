@@ -7,10 +7,10 @@ options = cmdargs[1:]
 # ----------------------  Settings -----------------------
 DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
 OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
-SKIMNAME="Skim_Oct31_3Jet_1JetAK8"
-SPLIT_SKIM_NFILE = 0
+SKIMNAME="Skim_Oct31_2Jet_1JetAK8"
+SPLIT_SKIM_NFILE = 10
 EOSDIR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
-NPROC = 3 # Number of processors to use for Analyzer jobs
+NPROC = 4 # Number of processors to use for Analyzer jobs
 EXEC_PATH = os.getcwd()
 
 if "--skim" in options:

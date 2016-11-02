@@ -92,11 +92,14 @@ public:
 
   void save_analysis_histos(bool);
 
-  std::vector<Cut> analysis_cuts;
+  std::map<std::string, std::vector<Cut> > analysis_cuts;
 
 private:
-  bool _apply_cut(std::string);
-  bool _apply_ncut(size_t);
+  bool apply_cut(std::string, std::string);
+  bool apply_ncut(std::string, size_t);
+  bool apply_all_cuts(std::string);
+  bool apply_all_cuts_except(std::string, std::string);
+  bool apply_all_cuts_except(std::string, std::vector<std::string>);
 
   typedef struct Sample { std::string postfix; std::string legend; std::string color; std::vector<std::string> dirs; } Sample;
   typedef struct PostfixOptions { size_t index; std::string postfixes; std::string legends; std::string colors; } PostfixOptions;
@@ -136,18 +139,18 @@ AnalysisBase::define_preselections(const DataStruct& data, const bool& isData, c
   // NGoodVtx defined in:
   // https://github.com/jkarancs/B2GTTrees/blob/v8.0.x_v2.1_Oct24/plugins/B2GEdmExtraVarProducer.cc#L528-L531
   // baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data] { return data.evt.NGoodVtx>0; } });
-  baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data] { return data.filter.goodVertices; } });
+  baseline_cuts.push_back({ .name="Clean_NGoodVtx",          .func = [&data] { return data.filter.goodVertices; } });
   
   // Other filters (in 80X MiniAODv2)
   // https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2?rev=101#What_is_available_in_MiniAOD
-  baseline_cuts.push_back({ .name="met_filter_CSC_Halo_Tight",    .func = [&data,isSignal] { return isSignal ? 1 : data.filter.globalTightHalo2016Filter; } });
-  baseline_cuts.push_back({ .name="met_filter_HBHE_Noise",        .func = [&data] { return data.filter.HBHENoiseFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_HBHE_IsoNoise",     .func = [&data] { return data.filter.HBHENoiseIsoFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_Ecal_Dead_Cell_TP", .func = [&data] { return data.filter.EcalDeadCellTriggerPrimitiveFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_EE_Bad_Sc",         .func = [&data,isData] { return isData ? data.filter.eeBadScFilter : 1; } });
+  baseline_cuts.push_back({ .name="Clean_CSC_Halo_Tight",    .func = [&data,isSignal] { return isSignal ? 1 : data.filter.globalTightHalo2016Filter; } });
+  baseline_cuts.push_back({ .name="Clean_HBHE_Noise",        .func = [&data] { return data.filter.HBHENoiseFilter; } });
+  baseline_cuts.push_back({ .name="Clean_HBHE_IsoNoise",     .func = [&data] { return data.filter.HBHENoiseIsoFilter; } });
+  baseline_cuts.push_back({ .name="Clean_Ecal_Dead_Cell_TP", .func = [&data] { return data.filter.EcalDeadCellTriggerPrimitiveFilter; } });
+  baseline_cuts.push_back({ .name="Clean_EE_Bad_Sc",         .func = [&data,isData] { return isData ? data.filter.eeBadScFilter : 1; } });
   // Not in MiniAODv2 (producer added)
-  baseline_cuts.push_back({ .name="met_filter_Bad_Muon",          .func = [&data] { return data.filter.eeBadScFilter; } });
-  baseline_cuts.push_back({ .name="met_filter_Bad_Charged",       .func = [&data] { return data.filter.eeBadScFilter; } });
+  baseline_cuts.push_back({ .name="Clean_Bad_Muon",          .func = [&data] { return data.filter.eeBadScFilter; } });
+  baseline_cuts.push_back({ .name="Clean_Bad_Charged",       .func = [&data] { return data.filter.eeBadScFilter; } });
 }
 
 //_______________________________________________________
@@ -424,6 +427,10 @@ unsigned int nHadTopPreTag;
 double AK8Puppi_Ht;
 
 // Event Letpons
+std::vector<size_t > iEleTight;
+std::vector<size_t > iMuTight;
+std::vector<size_t > itEleTight;
+std::vector<size_t > itMuTight;
 std::vector<bool> passEleVeto;
 std::vector<bool> passMuVeto;
 std::vector<bool> passEleTight;
@@ -434,6 +441,7 @@ unsigned int nMuVeto;
 unsigned int nMuTight;
 unsigned int nLepVeto;
 unsigned int nLepTight;
+double MT;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
@@ -467,6 +475,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
 
     // Event Letpons
+    iEleTight   .clear();
+    itEleTight  .assign(data.ele.size, (size_t)-1);
     passEleVeto .assign(data.ele.size, 0);
     passEleTight.assign(data.ele.size, 0);
     nEleVeto = nEleTight = 0;
@@ -498,11 +508,15 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	     (absd0   <  ELE_TIGHT_IP_EB_D0_CUT &&
 	      absdz   <  ELE_TIGHT_IP_EB_DZ_CUT) :
 	     (absd0   <  ELE_TIGHT_IP_EE_D0_CUT &&
-	      absdz   <  ELE_TIGHT_IP_EE_DZ_CUT) ) ) )
-	nEleTight++;
+	      absdz   <  ELE_TIGHT_IP_EE_DZ_CUT) ) ) ) {
+	iEleTight.push_back(i);
+	itEleTight[i] = nEleTight++;
+      }
     }
 
     // Number of Veto/Tight Muons
+    iMuTight    .clear();
+    itMuTight   .assign(data.mu.size,  (size_t)-1);
     passMuVeto  .assign(data.mu.size,  0);
     passMuTight .assign(data.mu.size,  0);
     nMuVeto = nMuTight = 0;
@@ -531,12 +545,24 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    abseta  <  MU_TIGHT_ETA_CUT &&
 	    miniIso <  MU_TIGHT_MINIISO_CUT &&
 	    absd0   <  MU_TIGHT_IP_D0_CUT &&
-	    absdz   <  MU_TIGHT_IP_DZ_CUT) )
-	nMuTight++;
+	    absdz   <  MU_TIGHT_IP_DZ_CUT) ) {
+	iMuTight.push_back(i);
+	itMuTight[i] = nMuTight++;
+      }
     }
 
     nLepVeto  = nEleVeto  + nMuVeto;
     nLepTight = nEleTight + nMuTight;
+
+    // MT
+    MT = 9999;
+    if (nLepTight==1) {
+      if (nEleTight==1) {
+	MT = sqrt( 2*data.ele.Pt[iEleTight[0]]*data.met.Pt[0] * (1 - std::cos(data.met.Phi[0]-data.ele.Phi[iEleTight[0]])) );
+      } else if (nMuTight==1) {
+	MT = sqrt( 2*data.mu.Pt[iMuTight[0]]*data.met.Pt[0] * (1 - std::cos(data.met.Phi[0]-data.mu.Phi[iMuTight[0]])) );
+      }
+    }
   }
 
   // Rest of the vairables need to be recalculated each time the jet energy is changed
@@ -592,7 +618,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if (nJet<=3) {
 	double dphi = fabs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4Puppi.Phi[i]));
 	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
-      }      
+      }
+
+
 
     } // End Jet Selection
   } // End AK4 Jet Loop
@@ -1143,4 +1171,67 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
   }
   w_scale = get_syst_weight(w_scale, w_scale_up, w_scale_down, nSigmaScale);
   return w_scale;
+}
+
+//_______________________________________________________
+//    Apply analysis cuts in the specified search region
+
+bool
+Analysis::apply_cut(std::string region, std::string cut_name) {
+  for (auto cut : analysis_cuts[region]) if (cut_name == cut.name) return cut.func();
+  return 0;
+}
+
+bool
+Analysis::apply_ncut(std::string region, size_t ncut) {
+  if (ncut>analysis_cuts[region].size()) return 0;
+  for (size_t i=0; i<ncut; ++i) if ( ! analysis_cuts[region][i].func() ) return 0;
+  return 1;
+}
+
+bool
+Analysis::apply_all_cuts(std::string region) {
+  return apply_ncut(region, analysis_cuts[region].size());
+}
+
+bool
+Analysis::apply_all_cuts_except(std::string region, std::string cut_to_skip) {
+  bool result = true, found = false;
+  for (auto cut : analysis_cuts[region]) {
+    if (cut.name == cut_to_skip) { 
+      found = true;
+      continue;
+    }
+    if (!cut.func()) result = false;
+  }
+  // If a certain cut meant to be skipped (N-1) is not found for some reason
+  // eg. mistyped, then end the job with ar error
+  // This is for safety: We do not want to fill histograms wrongly by mistake
+  if (!found) {
+    std::cout<<"No cut to be skipped exsists in seaerch region \""<<region<<"\" with name: \""<<cut_to_skip<<"\""<<std::endl;
+    utils::error("Analysis - the second argument for apply_all_cuts_except() is a non-sensical cut");
+  }
+  return result;
+}
+
+bool
+Analysis::apply_all_cuts_except(std::string region, std::vector<std::string> cuts_to_skip) {
+  bool result = true;
+  size_t found = 0;
+  for (auto cut : analysis_cuts[region]) {
+    for (auto cut_to_skip : cuts_to_skip) if (cut.name==cut_to_skip) { 
+      ++found;
+      continue;
+    }
+    if (!cut.func()) result = false;
+  }
+  // If a certain cut meant to be skipped is not found for some reason
+  // eg. mistyped, then end the job with ar error
+  // This is for safety: We do not want to fill histograms wrongly by mistake
+  if (found!=cuts_to_skip.size()) {
+    std::cout<<"A cut to be skipped does not exsist in seaerch region \""<<region<<"\" with names: ";
+    for (auto cut : cuts_to_skip) std::cout<<cut<<", "; std::cout<<std::endl;
+    utils::error("Analysis - the second argument for apply_all_cuts_except() contains at least one non-sensical cut");
+  }
+  return result;
 }
