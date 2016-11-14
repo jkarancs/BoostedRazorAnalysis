@@ -21,8 +21,8 @@ import os, re, sys, glob, socket, subprocess
 LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
-LATEST_NTUPLE_GRID18="Oct24"
-#LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
+#LATEST_NTUPLE_GRID18="Oct24"
+LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
@@ -30,19 +30,38 @@ DIR = ANA_BASE+'/ntuple/Latest'
 
 if 'lxplus' in socket.gethostname():
     print 'Running on lxplus'
-    print 'Mounting EOS ... ',
     if not os.path.exists(ANA_BASE+'/eos_mount_dir'):
         os.makedirs(ANA_BASE+'/eos_mount_dir')
         os.chmod(ANA_BASE+'/eos_mount_dir', 0444)
     if os.listdir(ANA_BASE+'/eos_mount_dir') == []:
+        print 'Mounting EOS ... ',
         subprocess.call(['/afs/cern.ch/project/eos/installation/cms/bin/eos.select', '-b', 'fuse', 'mount', 'eos_mount_dir'])
-    print 'Done.'
+        print 'Done.'
     if os.path.lexists(ANA_BASE+'/ntuple/Latest'):
-        print 'Remaking symlinks to latest ntuple location: '+os.path.realpath(ANA_BASE+'/ntuple/eos/'+LATEST_NTUPLE_EOS)+' ... ',
-        os.remove(ANA_BASE+'/ntuple/Latest')
-    else:
-        print 'Making symlinks to latest ntuple location: '+os.path.realpath(ANA_BASE+'/ntuple/eos/'+LATEST_NTUPLE_EOS)+' ... ',
-    os.symlink('eos/'+LATEST_NTUPLE_EOS, os.path.realpath(ANA_BASE+'/ntuple/Latest'))
+        if os.path.islink(ANA_BASE+'/ntuple/Latest'):
+            print 'Removing soft-link directory (used by previous version): '+ANA_BASE+'/ntuple/Latest'
+            os.remove(ANA_BASE+'/ntuple/Latest')
+        elif os.path.isdir(ANA_BASE+'/ntuple/Latest'):
+            print 'Removing previous soft-links (if any) within: '+ANA_BASE+'/ntuple/Latest'
+            for subdir in os.listdir(ANA_BASE+'/ntuple/Latest'):
+                if os.path.islink(ANA_BASE+'/ntuple/Latest/'+subdir):
+                    os.remove(ANA_BASE+'/ntuple/Latest/'+subdir)
+    if not os.path.exists(ANA_BASE+'/ntuple/Latest'):
+        print "Making directory for latest ntuple symlinks: "+ANA_BASE+'/ntuple/Latest'
+        os.makedirs(ANA_BASE+'/ntuple/Latest')
+    print 'Creating symlinks to the latest ntuples in Viktor\'s EOS folder: ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/ ... ',
+    for viktor_subdir in os.listdir(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS):
+        if os.path.isdir(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir):
+            source = os.path.realpath(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir)
+            target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+            os.symlink(source, target)
+    print 'Done.'
+    print 'Creating symlinks to the latest ntuples in Janos\' EOS folder: ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/ ... ',
+    for janos_subdir in os.listdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):
+        if os.path.isdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir):
+            source = os.path.realpath(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir)
+            target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+            os.symlink(source, target)
     print 'Done.'
 elif 'grid18.kfki.hu' in socket.gethostname():
     print 'Running on grid18 (Budapest)'

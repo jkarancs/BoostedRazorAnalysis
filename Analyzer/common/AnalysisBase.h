@@ -97,6 +97,7 @@ public:
 private:
   bool apply_cut(std::string, std::string);
   bool apply_ncut(std::string, size_t);
+  bool apply_cuts(std::string, std::vector<std::string>);
   bool apply_all_cuts(std::string);
   bool apply_all_cuts_except(std::string, std::string);
   bool apply_all_cuts_except(std::string, std::vector<std::string>);
@@ -135,7 +136,7 @@ AnalysisBase::define_preselections(const DataStruct& data, const bool& isData, c
   // Recommended event filters by MET group - Updated to 80X Recommendations
   // https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2?rev=101#Analysis_Recommendations_for_ana
   // 
-  // Select at least one good vertex (z<24, rho<2, ndof>=4)
+  // Select at least one good vertex (|z|<24, |rho|<2, ndof>=4)
   // NGoodVtx defined in:
   // https://github.com/jkarancs/B2GTTrees/blob/v8.0.x_v2.1_Oct24/plugins/B2GEdmExtraVarProducer.cc#L528-L531
   // baseline_cuts.push_back({ .name="met_filter_NGoodVtx",          .func = [&data] { return data.evt.NGoodVtx>0; } });
@@ -149,8 +150,8 @@ AnalysisBase::define_preselections(const DataStruct& data, const bool& isData, c
   baseline_cuts.push_back({ .name="Clean_Ecal_Dead_Cell_TP", .func = [&data] { return data.filter.EcalDeadCellTriggerPrimitiveFilter; } });
   baseline_cuts.push_back({ .name="Clean_EE_Bad_Sc",         .func = [&data,isData] { return isData ? data.filter.eeBadScFilter : 1; } });
   // Not in MiniAODv2 (producer added)
-  baseline_cuts.push_back({ .name="Clean_Bad_Muon",          .func = [&data] { return data.filter.eeBadScFilter; } });
-  baseline_cuts.push_back({ .name="Clean_Bad_Charged",       .func = [&data] { return data.filter.eeBadScFilter; } });
+  baseline_cuts.push_back({ .name="Clean_Bad_Muon",          .func = [&data] { return data.filter.BadPFMuonFilter; } });
+  baseline_cuts.push_back({ .name="Clean_Bad_Charged",       .func = [&data] { return data.filter.BadChargedCandidateFilter; } });
 }
 
 //_______________________________________________________
@@ -167,13 +168,13 @@ AnalysisBase::define_preselections(const DataStruct& data, const bool& isData, c
 
   For AK4 Jet Selection Choose:
   - Tight jet ID
-  - pt > 170 (Added in B2G ntuple level)
+  - pt > 200
   - |eta| < 2.4
 
 */
 #define JET_AK4_PT_CUT  30
 #define JET_AK4_ETA_CUT 2.4
-#define JET_AK8_PT_CUT  170 // Same as in B2G ntuple
+#define JET_AK8_PT_CUT  200
 #define JET_AK8_ETA_CUT 2.4
 
 /*
@@ -1190,6 +1191,13 @@ Analysis::apply_ncut(std::string region, size_t ncut) {
 }
 
 bool
+Analysis::apply_cuts(std::string region, std::vector<std::string> cuts) {
+  for (const auto& cut_in_region : analysis_cuts[region]) for (const auto& cut : cuts) 
+    if (cut == cut_in_region.name) if (!cut_in_region.func()) return 0;
+  return 1;
+}
+
+bool
 Analysis::apply_all_cuts(std::string region) {
   return apply_ncut(region, analysis_cuts[region].size());
 }
@@ -1235,3 +1243,4 @@ Analysis::apply_all_cuts_except(std::string region, std::vector<std::string> cut
   }
   return result;
 }
+
