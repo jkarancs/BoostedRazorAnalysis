@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "settings_Viktor.h" // Define all Analysis specific settings here
+#include "settings_Janos.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
   cout << "Number of events: " << nevents << endl;
 
   if (cmdline.quickTest) {
-    cout << "quickTest (cmdline): true"<< endl;
-    cout << "--> Doing a quick test on 1/100 statitics"<< endl;
-    nevents /= 100;
+    cout << "quickTest (cmdline): "<<cmdline.quickTest<< endl;
+    cout << "--> Doing a quick test on 1/"<<cmdline.quickTest<<" statitics"<< endl;
+    nevents /= cmdline.quickTest;
   }
 
   // Select variables to be read
@@ -270,7 +270,7 @@ int main(int argc, char** argv) {
     }
     if ( xsec==0 ) return 1;
 
-    double totweight = ana.get_totweight_from_ntuple(cmdline.fileNames, settings.totWeightHistoName); // weight histo name given in settings.h
+    double totweight = ana.get_totweight_from_ntuple(cmdline.allFileNames, settings.totWeightHistoName); // weight histo name given in settings.h
     cout << "totweight (ntuple): " << totweight << endl;
 
     weightnorm = (settings.intLumi*xsec)/totweight;
@@ -279,7 +279,7 @@ int main(int argc, char** argv) {
     cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
     cout << "Normalization variables:" << endl;
-    ana.calc_weightnorm_histo_from_ntuple(cmdline.fileNames, settings.intLumi, vname_signal,
+    ana.calc_weightnorm_histo_from_ntuple(cmdline.allFileNames, settings.intLumi, vname_signal,
 					  settings.totWeightHistoNamesSignal); // histo names given in settings.h
 
     // Find the index of the current signal
@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
   // Pile-up reweighting
   if ( !cmdline.isData && settings.doPileupReweighting ) {
     cout << "doPileupReweighting (settings): true" << endl;
-    ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.fileNames);
+    ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.allFileNames);
   } else cout << "doPileupReweighting (settings): false" << endl;
 
   // Scale factors
@@ -326,15 +326,15 @@ int main(int argc, char** argv) {
   cout << endl;
   cout << "Number of events counted after applying" << endl;
   cout << "- Baseline cuts (common for all analysis):" << endl;
-  for (auto cut : ana.baseline_cuts) {
+  for (const auto& cut : ana.baseline_cuts) {
     ofile->count(cut.name, 0);
     cout << "  "<<cut.name << endl;
   }
   cout << endl;
   cout << "- Analysis specific cuts:\n";
-  for (auto search_region : ana.analysis_cuts) for (auto cut : search_region.second) {
-    ofile->count(search_region.first+"_"+cut.name, 0);
-    cout << "  " << search_region.first+"_"+cut.name << endl;
+  for (const auto& search_region : ana.analysis_cuts) for (const auto& cut : search_region.second) {
+    ofile->count(std::string(1,search_region.first)+"_"+cut.name, 0);
+    cout << "  " << std::string(1,search_region.first)+"_"+cut.name << endl;
   }
 
   //---------------------------------------------------------------------------
@@ -403,7 +403,7 @@ int main(int argc, char** argv) {
 	  if (!cmdline.noPlots) ana.fill_analysis_histos(data, syst.index, w);
 
 	  // Save counts for the analysis cuts in each search region (signal/control)
-	  for (auto search_region : ana.analysis_cuts) {
+	  for (const auto& search_region : ana.analysis_cuts) {
 	    bool pass_all_regional_cuts = true;
 	    for (auto cut : search_region.second) {
 	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
@@ -527,7 +527,7 @@ int main(int argc, char** argv) {
 	  if (!cmdline.noPlots) ana.fill_analysis_histos(data, syst.index, w);
 
 	  // Save counts for the analysis cuts in each search region (signal/control)
-	  if (syst.index==0) for (auto search_region : ana.analysis_cuts) {
+	  if (syst.index==0) for (const auto& search_region : ana.analysis_cuts) {
 	    bool pass_all_regional_cuts = true;
 	    for (auto cut : search_region.second) {
 	      if ( !(pass_all_regional_cuts = cut.func()) ) break;

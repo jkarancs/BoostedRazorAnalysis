@@ -92,15 +92,20 @@ public:
 
   void save_analysis_histos(bool);
 
-  std::map<std::string, std::vector<Cut> > analysis_cuts;
+  std::map<char, std::vector<Cut> > analysis_cuts;
 
 private:
-  bool apply_cut(std::string, std::string);
-  bool apply_ncut(std::string, size_t);
-  bool apply_cuts(std::string, std::vector<std::string>);
-  bool apply_all_cuts(std::string);
-  bool apply_all_cuts_except(std::string, std::string);
-  bool apply_all_cuts_except(std::string, std::vector<std::string>);
+  bool apply_cut(char, std::string);
+  bool apply_cut(char, unsigned int);
+  bool apply_ncut(char, std::string);
+  bool apply_ncut(char, unsigned int);
+  bool apply_cuts(char, std::vector<std::string>);
+  bool apply_cuts(char, std::vector<unsigned int>);
+  bool apply_all_cuts(char);
+  bool apply_all_cuts_except(char, std::string);
+  bool apply_all_cuts_except(char, unsigned int);
+  bool apply_all_cuts_except(char, std::vector<std::string>);
+  bool apply_all_cuts_except(char, std::vector<unsigned int>);
 
   typedef struct Sample { std::string postfix; std::string legend; std::string color; std::vector<std::string> dirs; } Sample;
   typedef struct PostfixOptions { size_t index; std::string postfixes; std::string legends; std::string colors; } PostfixOptions;
@@ -763,7 +768,7 @@ double
 AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const std::string& treename)
 {
   float evt_XSec=0, prev_XSec=0;
-  for (auto filename : filenames) {
+  for (const auto& filename : filenames) {
     TFile *f = TFile::Open(filename.c_str());
     TTree* tree = (TTree*)f->Get(treename.c_str());
     tree->GetBranch("evt_XSec")->SetAddress(&evt_XSec);
@@ -1178,34 +1183,35 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
 //    Apply analysis cuts in the specified search region
 
 bool
-Analysis::apply_cut(std::string region, std::string cut_name) {
-  for (auto cut : analysis_cuts[region]) if (cut_name == cut.name) return cut.func();
+Analysis::apply_all_cuts(char region) {
+  return apply_ncut(region, analysis_cuts[region].size());
+}
+
+bool
+Analysis::apply_ncut(char region, unsigned int ncut) {
+  if (ncut>analysis_cuts[region].size()) return 0;
+  for (unsigned int i=0; i<ncut; ++i) if ( ! analysis_cuts[region][i].func() ) return 0;
+  return 1;
+}
+
+// Cuts to apply/exclude by cut name
+bool
+Analysis::apply_cut(char region, std::string cut_name) {
+  for (const auto& cut : analysis_cuts[region]) if (cut_name == cut.name) return cut.func();
   return 0;
 }
 
 bool
-Analysis::apply_ncut(std::string region, size_t ncut) {
-  if (ncut>analysis_cuts[region].size()) return 0;
-  for (size_t i=0; i<ncut; ++i) if ( ! analysis_cuts[region][i].func() ) return 0;
-  return 1;
-}
-
-bool
-Analysis::apply_cuts(std::string region, std::vector<std::string> cuts) {
+Analysis::apply_cuts(char region, std::vector<std::string> cuts) {
   for (const auto& cut_in_region : analysis_cuts[region]) for (const auto& cut : cuts) 
     if (cut == cut_in_region.name) if (!cut_in_region.func()) return 0;
   return 1;
 }
 
 bool
-Analysis::apply_all_cuts(std::string region) {
-  return apply_ncut(region, analysis_cuts[region].size());
-}
-
-bool
-Analysis::apply_all_cuts_except(std::string region, std::string cut_to_skip) {
+Analysis::apply_all_cuts_except(char region, std::string cut_to_skip) {
   bool result = true, found = false;
-  for (auto cut : analysis_cuts[region]) {
+  for (const auto& cut : analysis_cuts[region]) {
     if (cut.name == cut_to_skip) { 
       found = true;
       continue;
@@ -1223,11 +1229,11 @@ Analysis::apply_all_cuts_except(std::string region, std::string cut_to_skip) {
 }
 
 bool
-Analysis::apply_all_cuts_except(std::string region, std::vector<std::string> cuts_to_skip) {
+Analysis::apply_all_cuts_except(char region, std::vector<std::string> cuts_to_skip) {
   bool result = true;
-  size_t found = 0;
-  for (auto cut : analysis_cuts[region]) {
-    for (auto cut_to_skip : cuts_to_skip) if (cut.name==cut_to_skip) { 
+  unsigned int found = 0;
+  for (const auto& cut : analysis_cuts[region]) {
+    for (const auto& cut_to_skip : cuts_to_skip) if (cut.name==cut_to_skip) { 
       ++found;
       continue;
     }
@@ -1244,3 +1250,35 @@ Analysis::apply_all_cuts_except(std::string region, std::vector<std::string> cut
   return result;
 }
 
+
+// Same functions but with cut index which is faster (can use an enum, to make it nicer)
+bool
+Analysis::apply_cut(char region, unsigned int cut_index) { return analysis_cuts[region][cut_index].func(); }
+
+bool
+Analysis::apply_cuts(char region, std::vector<unsigned int> cuts) {
+  for (const unsigned int& cut : cuts) if ( ! analysis_cuts[region][cut].func() ) return 0;
+  return 1;
+}
+
+bool
+Analysis::apply_all_cuts_except(char region, unsigned int cut_to_skip) {
+  if (cut_to_skip>=analysis_cuts[region].size()) {
+    std::cout<<"Index ("<<cut_to_skip<<") is too high for the cut to be skipped in search region '"<<region<<"'"<<std::endl;
+    utils::error("Analysis::apply_all_cuts_except(char region, unsigned int cut_to_skip)");
+  }
+  for (unsigned int i=0, n=analysis_cuts[region].size(); i<n; ++i) {
+    if (i==cut_to_skip) continue;
+    if ( ! analysis_cuts[region][i].func() ) return 0;
+  }
+  return 1;
+}
+
+bool
+Analysis::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_skip) {
+  for (unsigned int i=0, n=analysis_cuts[region].size(); i<n; ++i) {
+    for (const unsigned int& cut_to_skip : cuts_to_skip) if (i!=cut_to_skip) 
+      if ( ! analysis_cuts[region][i].func() ) return 0;
+  }
+  return 1;
+}

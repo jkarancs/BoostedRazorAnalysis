@@ -1,153 +1,169 @@
 import os, sys, glob, time, logging, multiprocessing, subprocess
+from optparse import OptionParser
 
-# Parse command line arguments
-cmdargs = sys.argv
-options = cmdargs[1:]
+# ---------------------- Cmd Line  -----------------------
+
+# Read options from command line
+usage = "Usage: python %prog filelists [options]"
+parser = OptionParser(usage=usage)
+parser.add_option("--run",     dest="run",     action="store_true", default=False, help="Without this option, script only prints cmds it would otherwise excecute")
+parser.add_option("--full",    dest="full",    action="store_true", default=False, help="Run on all datasets found in filelists directory")
+parser.add_option("--test",    dest="test",    action="store_true", default=False, help="Run only on some test files (jetht, ttbar, qcd, T5ttcc)")
+parser.add_option("--batch",   dest="batch",   action="store_true", default=False, help="Send the jobs to batch")
+parser.add_option("--queue",   dest="QUEUE",   type="string",       default="1nh", help="Specify which batch queue to use (Default=1nh)")
+parser.add_option("--quick",   dest="NQUICK",  type="int",          default=0,     help="Run only on a subset of events (1/NQUICK)")
+parser.add_option("--nfile",   dest="NFILE",   type="int",          default=-1,    help="Tells how many input files to run in a single job (Default=-1 all)")
+parser.add_option("--nproc",   dest="NPROC",   type="int",          default=3,     help="Tells how many CPUs to use interactively (Default=3)")
+parser.add_option("--outdir",  dest="OUTDIR",  type="string",       default="",    help="Output directory (Default: results/run_[DATE])")
+parser.add_option("--skimout", dest="SKIMOUT", type="string",       default="",    help="Output directory for skimming")
+parser.add_option("--skim",    dest="skim",    action="store_true", default=False, help="Skim output to --skimout directory (change in script)")
+parser.add_option("--mirror",  dest="mirror",  action="store_true", default=False, help="Also copy skim output to EOS")
+parser.add_option("--plot",    dest="plot",    action="store_true", default=False, help="Make plots after running using Plotter (Janos)")
+parser.add_option("--replot",  dest="replot",  action="store_true", default=False, help="Remake latest set of plots using Plotter (Janos)")
+(opt,args) = parser.parse_args()
 
 # ----------------------  Settings -----------------------
+# Some further (usually) fixed settings, should edit them in this file
+
+# Output directories/files
 DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
-OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
-SKIMNAME="Skim_Oct31_2Jet_1JetAK8"
-SPLIT_SKIM_NFILE = 10
-EOSDIR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
-NPROC = 4 # Number of processors to use for Analyzer jobs
-EXEC_PATH = os.getcwd()
+if opt.OUTDIR == "" and not opt.skim:
+    opt.OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
 
-if "--skim" in options:
-    OUTDIR = OUTDIR.replace("run_", "skim_")
+if opt.skim:
+    if opt.OUTDIR == "":
+        opt.OUTDIR = "results/skim_"+DATE # log files, backup files, output files for non-skims
+    # Mirror also here
+    if opt.SKIMOUT == "":
+        print "ERROR: Give a suitable --skimout argument, eg. --skimout ntuple/grid18/Skim_Oct31_2Jet_1JetAK8"
+        sys.exit()
+    if opt.NFILE == -1:
+        print "ERROR: Give a suitable --nfile argument, otherwise output might be too large!"
+        sys.exit()
+    if opt.NQUICK>1:
+        if opt.mirror:
+            print "ERROR: Please, don't mirror stuff to EOS, when testing!"
+            sys.exit()
+    else:
+        if opt.mirror:
+            # --mirror copies here
+            EOS_JANOS  = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
+        else:
+            # If not, then makes a script for Viktor
+            EOS_VIKTOR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/veszpv/B2GTTreeNtuple/"
+            COPYSCRIPT = opt.SKIMOUT.replace(opt.SKIMOUT.split("/")[-1],"")+"mirror_to_Viktors_EOS_"+opt.SKIMOUT.split("/")[-1]+".sh"
+            print "Warning: Don't you want to mirror to EOS? Add: --mirror option!"
+            print "         If not, ignore this message!"
+            print "         Creating a copy script for Viktor: "+COPYSCRIPT
+if opt.plot:
+    #PLOTTER_IN automatic
+    PLOTTER_OUT = "results/Plotter_test.root" if opt.test else "results/Plotter_out_"+DATE+".root"
+if opt.replot:
+    if opt.OUTDIR == "":
+        # Find last working directory automatically and find output files there
+        opt.OUTDIR = max( glob.glob("results/run_*"), key=os.path.getmtime )
+        PLOTTER_IN = max(glob.glob("results/Plotter_out_*.root"), key=os.path.getmtime).replace("_replot","")
+        PLOTTER_OUT = PLOTTER_IN.replace(".root","_replot.root")
+        PLOTTER_INT = [PLOTTER_IN]
+    else:
+        PLOTTER_IN = glob.glob(opt.OUTDIR+"/*.root")
+        PLOTTER_OUT = opt.OUTDIR.replace("run_", "Plotter_out_")+"_replot.root"
 
-# Analyzer:
+# Working directory, during running we cd here and back
+if opt.test:
+    EXEC_PATH = os.getcwd()
+elif opt.replot:
+    EXEC_PATH = opt.OUTDIR+"/backup_replot"
+elif not opt.test:
+    EXEC_PATH = opt.OUTDIR+"/backup"
+
+# Print some options for logging
+if not opt.run:
+    print "--run option not specified, doing a dry run (only printing out commands)"
+
+if opt.full:
+    print "Running with option: --full"
+elif opt.skim:
+    print "Running with option: --skim"
+elif opt.replot:
+    print "Running with option: --replot"
+    opt.plot = 0 # for safety
+elif opt.test:
+    print "Running with option: --test (few files)"
+
+if opt.plot:
+    print "Running with option: --plot (will produce plots with Plotter)"
+
+if opt.NQUICK>1:
+    print "Running with option: --quick "+str(opt.NQUICK)+" (1/"+str(opt.NQUICK)+" statistics)"
+
+# Some automatic filelists
+if (opt.full):
+    input_filelists  = glob.glob("filelists/data/*.txt")
+    input_filelists += glob.glob("filelists/backgrounds/*.txt")
+    input_filelists += glob.glob("filelists/signals/*.txt")
+elif opt.test:
+    input_filelists  = glob.glob("filelists/data/JetHT*.txt")
+    input_filelists += glob.glob("filelists/backgrounds/QCD_HT*.txt")
+    input_filelists += glob.glob("filelists/backgrounds/TT_powheg-pythia8_ext4*.txt")
+    input_filelists += glob.glob("filelists/signals/FastSim_SMS-T5ttcc*.txt")
+elif not opt.replot and len(args) < 1:
+    print "Always tell me what filelists to run over (except when using --full or --test options)!"
+    print "For more help, run as python %s -h" % (sys.argv[0])
+    sys.exit()
+else:
+    input_filelists = args
+
+# ----------------- Analyzer Arguments -------------------
+# Analyzer (see below in functions):
 # Each element supplies 3 arguments for each Analyzer job:
 # [output filename, input file list, output log]
 # For skimming/full running, all datasets are used
 # for testing a selected few
 
-ana_arguments_full = []
-ana_arguments_skim = []
-for input_list in glob.glob("filelists/data/*.txt") + glob.glob("filelists/backgrounds/*.txt") + glob.glob("filelists/signals/*.txt"):
-    output_file = OUTDIR+"/"+input_list.split("/")[-1].replace("txt", "root")
-    skim_output_file = "ntuple/grid18/"+SKIMNAME+"/"+input_list.split("/")[-1].replace(".txt","/Skim.root")
-    log_file = OUTDIR+"/log/"+input_list.split("/")[-1].replace("txt", "log")
-    ana_arguments_full.append([output_file, [input_list], log_file])
-    if SPLIT_SKIM_NFILE == 0:
-        ana_arguments_skim.append([skim_output_file, [input_list], log_file])
+ana_arguments = []
+# Loop over all filelists
+for filelist in input_filelists:
+    # Will put all files into the OUTDIR and its subdirectories
+    log_file = opt.OUTDIR+"/log/"+filelist.split("/")[-1].replace("txt", "log")
+    if opt.skim:
+        # Except for skim, where we send the large output files to a different directory
+        # keeping subdirectory structure (suitable for a future input )
+        output_file = opt.SKIMOUT+"/"+filelist.split("/")[-1].replace(".txt","/Skim.root")
     else:
-        with open(input_list) as f:
+        output_file = opt.OUTDIR +"/"+filelist.split("/")[-1].replace("txt", "root")
+    # Now let's make the argument list for the Analyzer jobs
+    options = []
+    if opt.NQUICK>1: options.append("quickTest="+str(opt.NQUICK))
+    if opt.skim and not opt.plot: options.append("noPlots=1")
+    if opt.NFILE == -1:
+        # In case of a single job/dataset
+        ana_arguments.append([output_file, [filelist], options, log_file])
+    else:
+        # SPLIT MODE: Each jobs runs on max NFILE
+        options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize
+        with open(filelist) as f:
             lines = f.read().splitlines()
-            for n in range(1, len(lines)/SPLIT_SKIM_NFILE+2):
+            for n in range(1, len(lines)/opt.NFILE+2):
                 input_files = []
-                for i in range((n-1)*SPLIT_SKIM_NFILE, min(n*SPLIT_SKIM_NFILE,len(lines))):
+                for i in range((n-1)*opt.NFILE, min(n*opt.NFILE,len(lines))):
                     input_files.append(os.path.realpath(lines[i]))
-                args = [skim_output_file.replace(".root","_"+str(n)+".root"), input_files, log_file.replace(".log","_"+str(n)+".log")]
-                ana_arguments_skim.append(args)
-
-def subset(list, match):
-    result = []
-    for i in range(0, len(list)):
-        if match in list[i][0]: result.append(list[i])
-    return result
-
-#ana_arguments_skim = subset(ana_arguments_skim, "QCD_GenJets5_HT700to1000") +subset(ana_arguments_skim, "TT_powheg_pythia8/")
-
-
-jetht                = subset(ana_arguments_full, "JetHT")
-met                  = subset(ana_arguments_full, "MET")
-single_ele           = subset(ana_arguments_full, "SingleElectron")
-single_mu            = subset(ana_arguments_full, "SingleMuon")
-dy                   = subset(ana_arguments_full, "DYJets")
-z                    = subset(ana_arguments_full, "ZJets")
-w                    = subset(ana_arguments_full, "WJets")
-qcd                  = subset(ana_arguments_full, "QCD_HT")
-top                  = subset(ana_arguments_full, "ST")
-ttx                  = subset(ana_arguments_full, "TTG")
-ttx                 += subset(ana_arguments_full, "TTW")
-ttx                 += subset(ana_arguments_full, "TTZ")
-ttx                 += subset(ana_arguments_full, "TTTT")
-tt_madgraph_ht       = subset(ana_arguments_full, "TTJets_HT")
-tt_madgraph          = subset(ana_arguments_full, "TTJets_madgraphMLM-pythia8")
-tt_madgraph_FS       = subset(ana_arguments_full, "TTJets_madgraphMLM_FastSim")
-tt_mcatnloFXFX       = subset(ana_arguments_full, "TTJets_amcatnloFXFX-pythia8")
-tt_mcatnlo_py8       = subset(ana_arguments_full, "TT_amcatnlo-pythia8")
-tt_powheg_her        = subset(ana_arguments_full, "TT_powheg-herwigpp")
-tt_powheg_py8        = subset(ana_arguments_full, "TT_powheg-pythia8_ext4")
-diboson              = subset(ana_arguments_full, "WW")
-diboson             += subset(ana_arguments_full, "WZ")
-diboson             += subset(ana_arguments_full, "ZZ")
-diboson             += subset(ana_arguments_full, "ZH")
-triboson             = subset(ana_arguments_full, "WWW")
-triboson            += subset(ana_arguments_full, "WWZ")
-triboson            += subset(ana_arguments_full, "WZZ")
-triboson            += subset(ana_arguments_full, "ZZZ")
-T1tttt               = subset(ana_arguments_full, "FastSim_SMS-T1tttt")
-T5ttcc               = subset(ana_arguments_full, "FastSim_SMS-T5ttcc")
-T5tttt               = subset(ana_arguments_full, "FastSim_SMS-T5tttt")
-
-#ana_arguments_test = jetht + tt_mcatnlo + qcd
-ana_arguments_test = jetht + tt_powheg_py8 + qcd + T5ttcc
-
-#ana_arguments_skim = tt_powheg_py8 + wjets + dy_z + qcd + singletop + ttx + diboson + T1tttt
-#ana_arguments_skim = tt_powheg_py8_ext
-
-#ana_arguments_test = [
-#    ["results/Analyzer_test_data.root",  "filelists/data/JetHT_25ns_2015C.txt",           "results/Analyzer_test_data.log"],
-#    ["results/Analyzer_test_ttbar.root", "filelists/backgrounds/TTJets_amcatnloFXFX.txt", "results/Analyzer_test_ttbar.log"],
-#    ["results/Analyzer_test_qcd.root",   "filelists/backgrounds/QCD_HT700to1000.txt",     "results/Analyzer_test_qcd.log"],
-#]
-
-# Plotter:
-# It gets input automatically from the output of Analyzer, output will be on screen
-plotter_output_file = "results/Plotter_out_"+DATE+".root"
-
-# ---------------------- Cmd Line  -----------------------
-
-opt_dry = int(not "--run" in options)
-opt_plot = int("--plot" in options)
-opt_quick = 0
-opt_test = 0
-opt_skim = 0
-if (opt_dry): print "--run option not specified, doing a dry run (only printing out commands)"
-
-if "--full" in options:
-    print "Running with option: --full"
-    ana_arguments = ana_arguments_full
-elif "--skim" in options:
-    print "Running with option: --skim"
-    ana_arguments = ana_arguments_skim
-    opt_skim = 1
-elif "--replot" in options:
-    print "Running with option: --replot"
-    ORIGOUTDIR = max(glob.glob(OUTDIR.replace(DATE,"*")), key=os.path.getmtime)
-elif "--test" in options:
-    opt_test = 1
-else:
-    opt_test = 1
-    opt_quick = 1
-if "--quick" in options:
-    opt_quick = 1
-
-if opt_test:
-    print "Running with option: --test (few files)"
-    ana_arguments = ana_arguments_test
-    plotter_output_file = "results/Plotter_test.root"
-if opt_quick:
-    print "Running with option: --quick (1/100 statistics)"
-if opt_plot:
-    print "Running with option: --plot (will produce plots)"
-
+                args = [output_file.replace(".root","_"+str(n)+".root"), input_files, options, log_file.replace(".log","_"+str(n)+".log")]
+                ana_arguments.append(args)
 
 # --------------------- Functions ------------------------
 # Show and run command with stdout on screen
 icommand=0
 def special_call(cmd, verbose=1):
-    global icommand, opt_dry
+    global icommand, opt
     if verbose:
-        if opt_dry:
+        if not opt.run:
             print("[dry] "),
         else:
             print("[%d] " % icommand),
         for i in xrange(len(cmd)): print cmd[i]+" ",
         print ""
-    if not opt_dry:
+    if opt.run:
         if subprocess.call(cmd):
             print "Process failed, exiting ..."
             sys.exit()
@@ -157,10 +173,10 @@ def special_call(cmd, verbose=1):
 
 # Run command with stdout/stderr saved to logfile
 def logged_call(cmd, logfile):
-    global opt_dry
+    global opt
     if not os.path.exists(os.path.dirname(logfile)):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
-    if opt_dry:
+    if not opt.run:
         subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
     else:
         logger = logging.getLogger(logfile)
@@ -178,15 +194,15 @@ def logged_call(cmd, logfile):
 
 # Compile programs
 def compile(Ana = 1, Plotter = 1):
-    global opt_dry, EXEC_PATH
+    global opt, EXEC_PATH
     print "Compiling ..."
     print
     saved_path = os.getcwd()
-    if not opt_dry: os.chdir(EXEC_PATH)
+    if opt.run: os.chdir(EXEC_PATH)
     special_call(["make", "clean"])
     if Ana: special_call(["make", "Analyzer"])
     if Plotter: special_call(["make", "Plotter"])
-    if not opt_dry: os.chdir(saved_path)
+    if opt.run: os.chdir(saved_path)
     print "Compilation successful."
     print
 
@@ -199,31 +215,48 @@ def backup_files(backup_dir):
     print
 
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
-def analyzer_job((output_file, input_list, output_log)):
-    global opt_dry, opt_quick, opt_plot, opt_skim, EXEC_PATH
-    if not opt_dry:
-        print "Start Analyzing: "+output_file
+def analyzer_job((output_file, input_list, options, output_log)):
+    global opt, EXEC_PATH, COPYSCRIPT
+    if opt.run:
+        print "Start Analyzing, output: "+output_file
     if not os.path.exists(os.path.dirname(output_file)):
         special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
-    cmd = [EXEC_PATH+"/Analyzer", output_file] + input_list
-    if opt_skim and not opt_plot: cmd.append("noPlots=1")
-    if opt_quick: cmd.append("quickTest=1")
+    cmd = [EXEC_PATH+"/Analyzer", output_file] + options + input_list
     logged_call(cmd, output_log)
-    if opt_skim:
+    # Mirror output (copy to EOS)
+    if opt.skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
-        logged_call(["lcg-cp", "-v", output_file, EOSDIR+outpath], output_log)
+        if opt.mirror: logged_call(["lcg-cp", "-v", output_file, EOS_JANOS+outpath], output_log)
+        elif opt.run:
+            with open(COPYSCRIPT, "a") as myfile:
+                myfile.write('lcg-cp -v '+output_file+' '+EOS_VIKTOR+outpath+'\n')
+                #myfile.write('srm-set-permissions -type=CHANGE -group=RW '+EOS_VIKTOR+outpath+'\n')
+    time.sleep(1)
+    return output_file
+
+def batch_job((output_file, input_list, options, output_log)):
+    global opt, EXEC_PATH
+    if opt.run:
+        print "Sending job to batch on queue "+opt.QUEUE+", output: "+output_file
+    if not os.path.exists(os.path.dirname(output_file)):
+        special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
+    #cmd = [EXEC_PATH+"/Analyzer", output_file] + options + input_list    
     time.sleep(1)
     return output_file
 
 # Run all Analyzer jobs in parallel
 def analysis(ana_arguments, nproc):
+    global opt
     njob = len(ana_arguments)
     if njob<nproc: nproc = njob
     print "Running "+str(njob)+" instances of Analyzer jobs:"
     print
     saved_path = os.getcwd()
     workers = multiprocessing.Pool(processes=nproc)
-    output_files = workers.map(analyzer_job, ana_arguments, chunksize=1)
+    if opt.batch:
+        output_files = workers.map(batch_job,    ana_arguments, chunksize=1)
+    else:
+        output_files = workers.map(analyzer_job, ana_arguments, chunksize=1)
     workers.close()
     workers.join()
     print "All Analyzer jobs finished."
@@ -232,13 +265,10 @@ def analysis(ana_arguments, nproc):
 
 # Run Plotter, output of Analyzer is input for this code
 def plotter(input_files, output_file):
-    global opt_dry, EXEC_PATH
+    global opt, EXEC_PATH
     print "Start plotting from output files"
     print
-    saved_path = os.getcwd()
-    if not opt_dry: os.chdir(EXEC_PATH)
     special_call([EXEC_PATH+"/Plotter", output_file] + input_files)
-    if not opt_dry: os.chdir(saved_path)
     print "Plotting finished."
     print
 
@@ -249,23 +279,18 @@ def show_result(plotter_out):
 
 # ---------------------- Running -------------------------
 
-if "--replot" in options:
-    EXEC_PATH = ORIGOUTDIR+"/backup_replot"
+if opt.replot:
     backup_files(EXEC_PATH)
     compile(0)
-    #plotter_input_files = glob.glob(ORIGOUTDIR+"/*.root")
-    plotter_input_file = max(glob.glob("results/Plotter_out_*.root"), key=os.path.getmtime).replace("_replot","")
-    plotter_output_file = plotter_input_file.replace(".root","_replot.root")
-    plotter([plotter_input_file], plotter_output_file)
-    show_result(plotter_output_file)
+    plotter(PLOTTER_IN, PLOTTER_OUT)
+    show_result(PLOTTER_OUT)
 else:
-    if not opt_test:
-        EXEC_PATH = OUTDIR+"/backup"
+    if not opt.test:
         backup_files(EXEC_PATH)
-    compile(1, "--plot" in options)
-    plotter_input_files = analysis(ana_arguments, NPROC)
-    if "--plot" in options:
-        plotter(plotter_input_files, plotter_output_file)
-        show_result(plotter_output_file)
+    compile(1, opt.plot)
+    plotter_input_files = analysis(ana_arguments, opt.NPROC)
+    if opt.plot:
+        plotter(plotter_input_files, PLOTTER_OUT)
+        show_result(PLOTTER_OUT)
 
 print "Done."

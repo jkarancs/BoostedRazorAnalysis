@@ -170,15 +170,16 @@ namespace utils {
   struct commandLine
   {
     std::string progName;
-    std::string outputFileName;         // first non option argument
-    std::vector<std::string> fileNames; // second and rest non optional arguments
-    std::string dirname;                // extracted from the 1st filename
-    bool isData;                        // determined automatically from input file names
-    bool isBkg;                         // determined automatically from input file names
-    bool isSignal;                      // determined automatically from input file names
-    std::string signalName;             // determined automatically from input file names
-    bool quickTest;                     // Do a quick test on 1/100th of events
-    bool noPlots;                       // Do not make analysis histos (for skimming)
+    std::string outputFileName;            // first non option argument
+    std::vector<std::string> fileNames;    // second and rest non optional arguments
+    std::vector<std::string> allFileNames; // Needed when splitting to separate jobs
+    std::string dirname;                   // extracted from the 1st filename
+    bool isData;                           // determined automatically from input file names
+    bool isBkg;                            // determined automatically from input file names
+    bool isSignal;                         // determined automatically from input file names
+    std::string signalName;                // determined automatically from input file names
+    int  quickTest;                        // Do a quick test on 1/100th of events
+    bool noPlots;                          // Do not make analysis histos (for skimming)
   };
   
   // Read ntuple fileNames from file list
@@ -218,7 +219,7 @@ namespace utils {
     int n_input = 0;
 
     // Do a quick test on 1/100 statistics
-    cl.quickTest = false;
+    cl.quickTest = 0;
 
     // Do a quick test on 1/100 statistics
     cl.noPlots = false;
@@ -234,6 +235,12 @@ namespace utils {
 	// reading option
 	if (option=="quickTest") value>>cl.quickTest;
 	if (option=="noPlots") value>>cl.noPlots;
+	if (option=="fullFileList") {
+	  std::string fullFileList;
+	  value>>fullFileList;
+	  std::vector<std::string> list = getFilenames(fullFileList);
+	  cl.allFileNames.insert(cl.allFileNames.end(), list.begin(), list.end());
+	}
       } else {
 	if (cl.outputFileName=="") {
 	  // 1st non-optional (i.e xxx=yyy) command line argument is output ifle
@@ -269,6 +276,9 @@ namespace utils {
 	}
       }
     }
+    // This list needed to get total weight when splitting jobs
+    if (!cl.allFileNames.size())
+      cl.allFileNames.insert(cl.allFileNames.end(), cl.fileNames.begin(), cl.fileNames.end());
 
     // Get the directory name from the first file (used for plotting)
     if (cl.fileNames.size()>0) {

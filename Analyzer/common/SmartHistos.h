@@ -2220,6 +2220,7 @@ public:
 	    histo_name = std::string(histo_name).replace(histo_name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]);
 	    if (debug) std::cout<<histo_name<<std::endl;
 	    // Replace secondary histo (+1 dimensional) axis title
+	    if (debug) std::cout<<"axis_title: "<<axis_title<<" spec: "<<spec_[s][2]<<" find: "<<axis_title.find(spec_[s][2])<<std::endl;
 	    axis_title.replace(axis_title.find(spec_[s][2]), spec_[s][2].size(), spec_[s][3]);
 	    if (debug) std::cout<<axis_title<<std::endl;
 	  } 
