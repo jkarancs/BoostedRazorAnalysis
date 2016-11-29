@@ -41,24 +41,17 @@ eg:
 ./Analyzer Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
 ```
 
-There is a py script to run the Analyzer and use the results to create plots all in once
-on a few datasets (--test option) and fewer events (--quick option)
+There is a py script to run the Analyzer to run on filelists of datasets
+with lot of options to use
 ```Shell
-python scripts/run_all.py --quick --test --run
+python scripts/run_all.py --help
 ```
 
-Or run a full analysis on all samples (--run option) and similarly create plots in the end
+Run a full analysis on all samples (not using --run option prints commands)
 ```Shell
-python scripts/run_all.py --full --plot --run
+python scripts/run_all.py --full --run
+python scripts/run_all.py --full --run --batch --nevt=2000000
 ```
-
-All options:
-   * --run: without specifying this iption, the script does nothing (dry run, prints commands to be run only)
-   * --test: run a test with a few datasets: TTbar, QCD, small JetHT dataset
-   * --quick: run a quick test with 1/100 events
-   * --full: run on all datasets
-   * --plot: after the Analyses, use the Plotter to produce plots in the output root files (also uses the Analysis methods)
-   * --skim: Make a skimmed ntuple in the directory specified inside the script
 
 Run systematics (first, set varySystematics = true in settings.h)  
 when running systematics, make sure you define one histogram for each variation

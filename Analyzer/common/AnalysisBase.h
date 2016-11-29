@@ -5,6 +5,9 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TStopwatch.h"
+#include <thread>
+#include <chrono>
 
 #include "utils.h"
 #include "DataStruct.h"
@@ -61,6 +64,14 @@ public:
 
   double get_syst_weight(const double&, const double&, const double&);
 
+  void benchmarking(const int&, const int&, const bool);
+
+private:
+
+  TStopwatch *sw_1k_, *sw_10k_, *sw_job_;
+
+  void moderate_(TH1D* h, double, int, int);
+
 };
 
 // _____________________________________________________________
@@ -114,12 +125,20 @@ private:
 
 //_______________________________________________________
 //                       Constructor
-AnalysisBase::AnalysisBase() { }
+AnalysisBase::AnalysisBase() {
+  sw_1k_  = new TStopwatch;
+  sw_10k_ = new TStopwatch;
+  sw_job_ = new TStopwatch;
+}
 
 
 //_______________________________________________________
 //                       Destructor
-AnalysisBase::~AnalysisBase() { }
+AnalysisBase::~AnalysisBase() {
+  delete sw_1k_;
+  delete sw_10k_;
+  delete sw_job_;
+}
 
 
 //_______________________________________________________
@@ -734,6 +753,10 @@ TH1D* h_pileup_weight_down;
 TH1D* h_pileup_weight_up;
 TH1D* h_nvtx;
 TH1D* h_nvtx_rw;
+TH1D* h_read_speed_1k;
+TH1D* h_read_speed_10k;
+TH1D* h_read_speed_job;
+TH2D* h_read_speed_vs_time_10k;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -759,8 +782,12 @@ AnalysisBase::init_common_histos()
   h_pileup_weight_up           = new TH1D("pileup_weight_up",   "Pile-up weights - MB X-sec down 5% (65.55 mb);Pile-up;Weight", 100,0,100);
   h_nvtx                       = new TH1D("nvtx",               "Number of vertices - Nominal;N_{Vertices}",                      100,0,100);
   h_nvtx_rw                    = new TH1D("nvtx_rw",            "Number of vertices - Pile-up reweighted (MC only);N_{Vertices}", 100,0,100);
+  // benchmarking histos
+  h_read_speed_1k              = new TH1D("read_speed_1k",          ";Read speed (Events/s);Measurement/1k Event",  1000,0,10000);
+  h_read_speed_10k             = new TH1D("read_speed_10k",         ";Read speed (Events/s);Measurement/10k Event", 1000,0,10000);
+  h_read_speed_job             = new TH1D("read_speed_job",         ";Read speed (Events/s);Measurement/Job",       1000,0,10000);
+  h_read_speed_vs_time_10k     = new TH2D("read_speed_vs_time_10k", ";Entry;Read speed (Events/s)/10k Event;Entry", 100,0,10000000, 200,0,10000);
 }
-
 
 //_______________________________________________________
 //           Read cross-section from ntuple
@@ -1281,4 +1308,58 @@ Analysis::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_s
       if ( ! analysis_cuts[region][i].func() ) return 0;
   }
   return 1;
+}
+
+
+//_______________________________________________________
+//                Benchmarking (batch) jobs
+
+void
+AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool moderate=0)
+{
+  if (entry==0) {
+    sw_1k_ ->Start(kFALSE);
+    sw_10k_->Start(kFALSE);
+    sw_job_->Start(kFALSE);
+  } else {
+    if (entry%1000==0) {
+      sw_1k_->Stop();
+      double meas_1k = 1000/sw_1k_->RealTime();
+      h_read_speed_1k->Fill(meas_1k);
+      if (moderate) moderate_(h_read_speed_1k, meas_1k, 2, 1);
+      sw_1k_->Reset();
+      sw_1k_->Start(kFALSE);
+      //std::cout<<"Meas  1k: "<<meas_1k<<std::endl;
+    }
+    if (entry%10000==0) {
+      sw_10k_->Stop();
+      double meas_10k = 10000/sw_10k_->RealTime();
+      h_read_speed_10k->Fill(meas_10k);
+      h_read_speed_vs_time_10k->Fill(entry, meas_10k);
+      if (moderate) moderate_(h_read_speed_10k, meas_10k, 2, 10);
+      sw_10k_->Reset();
+      sw_10k_->Start(kFALSE);
+      //std::cout<<"Meas 10k: "<<meas_10k<<std::endl;
+    }
+    if (entry+1==nevents) {
+      sw_job_->Stop();
+      double meas_job = nevents/sw_job_->RealTime();
+      h_read_speed_job->Fill(meas_job);
+    }
+  }
+}
+
+void
+AnalysisBase::moderate_(TH1D* h, double speed, int nrms_threshold, int sleep_s) {
+  // Median - 2 sigma
+  int n = h->GetXaxis()->GetNbins(); 
+  std::vector<double> x(n);
+  h->GetXaxis()->GetCenter(&x[0]);
+  const double * y = h->GetArray();
+  double median = TMath::Median(n, &x[0], &y[1]);
+  //double mean = h->GetMean();
+  //double threshold = mean -nrms_threshold*h->GetRMS();
+  double threshold = median -nrms_threshold*h->GetRMS();
+  if (speed<threshold) std::this_thread::sleep_for (std::chrono::seconds(sleep_s));
+  //std::cout<<"- Moderating for "<<sleep_s<<" sec, median: "<<median<<" rms: "<<h->GetRMS()<<" threshold"<<threshold<<" speed: "<<speed<<std::endl;
 }

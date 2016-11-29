@@ -40,12 +40,14 @@ int main(int argc, char** argv) {
 
   // Get number of events to be read
   int nevents = stream.size();
-  cout << "Number of events: " << nevents << endl;
 
   if (cmdline.quickTest) {
     cout << "quickTest (cmdline): "<<cmdline.quickTest<< endl;
     cout << "--> Doing a quick test on 1/"<<cmdline.quickTest<<" statitics"<< endl;
     nevents /= cmdline.quickTest;
+    cout << "Number of events (1/" << cmdline.quickTest << "): " << nevents << endl;
+  } else {
+    cout << "Number of events: " << nevents << endl;
   }
 
   // Select variables to be read
@@ -407,7 +409,7 @@ int main(int argc, char** argv) {
 	    bool pass_all_regional_cuts = true;
 	    for (auto cut : search_region.second) {
 	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
-	      ofile->count(search_region.first+"_"+cut.name, w);
+	      ofile->count(std::string(1,search_region.first)+"_"+cut.name, w);
 	    }
 	  }
 
@@ -531,13 +533,16 @@ int main(int argc, char** argv) {
 	    bool pass_all_regional_cuts = true;
 	    for (auto cut : search_region.second) {
 	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
-	      ofile->count(search_region.first+"_"+cut.name, w);
+	      ofile->count(std::string(1,search_region.first)+"_"+cut.name, w);
 	    }
 	  }
 
 	}
       } // end systematics loop
     } // end Background/Signal MC
+
+    // Measure speed (useful info for batch/parallel jobs)
+    ana.benchmarking(entry, nevents);
 
   } // end event loop
 

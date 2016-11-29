@@ -42,12 +42,12 @@
 //                      directly.
 //          22-Nov-2010 HBP allow reading of multiple trees
 //          22-Nov-2011 HBP handle reading/storing of strings
-//$Revision: 1.5 $
+//$Revision: 1.7 $
 //----------------------------------------------------------------------------
 #ifdef PROJECT_NAME
 #include <boost/regex.hpp>
-#endif
 #include <glob.h>
+#endif
 
 #include <map>
 #include <vector>
@@ -79,13 +79,7 @@
 #include "treestream.h"
 #endif
 //----------------------------------------------------------------------------
-
-#ifdef __WITH_CINT__
-ClassImp(itreestream)
-  ClassImp(otreestream)
-#endif
-
-  using namespace std;
+using namespace std;
 
 // Status codes
 
@@ -160,7 +154,7 @@ namespace
       {
         assert(index >= 0);
         FieldBuffer<T>* d = dynamic_cast<FieldBuffer<T>*>(field);
-        if ( d == 0 ) fatal("getinvalue - dynamic_cast failed " + 
+        if ( d == 0 ) fatal("invalue - dynamic_cast failed " + 
                             string(field->branch->GetName()));
         assert(index < (int)d->value.size());
         return d->value[index];
@@ -173,127 +167,135 @@ namespace
   insize(Field* field)
   {
     FieldBuffer<T>* d = dynamic_cast<FieldBuffer<T>*>(field);
-    if ( d == 0 ) fatal("getinvalue - dynamic_cast failed " + 
+    if ( d == 0 ) fatal("invalue - dynamic_cast failed " + 
                         string(field->branch->GetName()));
     return (int)d->value.size();
   }
 
 
-  // For debug only
-  //double
-  //getinvalue(Field* field, int index=0, int which=0)
-  //{
-  //  if ( which == 0 )
-  //    return field->leaf->GetValue(index);
-  //  else
-  //    {
-  //      double val = 0;
-  //      switch(field->iotype)
-  //        {
-  //        case 'D':
-  //          val = invalue<double>(field, index, 1);
-  //          break;
-  //          
-  //        case 'F':
-  //          val = static_cast<double>(invalue<float>(field, index, 1));
-  //          break;
-  //            
-  //        case 'L':
-  //          val = static_cast<double>(invalue<long>(field, index, 1));
-  //          break;
-  //
-  //        case 'I':
-  //          val = static_cast<double>(invalue<int>(field, index, 1));
-  //          break;
-  //
-  //        case 'S':
-  //          val = static_cast<double>(invalue<short>(field, index, 1));
-  //          break;
-  //          
-  //        case 'B':
-  //          val = static_cast<double>(invalue<char>(field, index, 1));
-  //          break;
-  //
-  //        case 'l':
-  //          val = static_cast<double>(invalue<unsigned long>(field, index, 1));
-  //          break;
-  //          
-  //        case 'i':
-  //          val = static_cast<double>(invalue<unsigned int>(field, index, 1));
-  //          break;
-  //
-  //        case 's':
-  //          val=static_cast<double>(invalue<unsigned short>(field, index, 1));
-  //          break;
-  //
-  //        case 'b':
-  //          val = static_cast<double>(invalue<unsigned char>(field, index, 1));
-  //          break;
-  //
-  //        default:
-  //          val = invalue<double>(field, index, 1);
-  //          break;
-  //        }
-  //      return val;
-  //    }
-  //}
-  //
-  //int
-  //getinsize(Field* field)
-  //{
-  //  int size = 0;
-  //  switch(field->iotype)
-  //    {
-  //    case 'D':
-  //      size = insize<double>(field);
-  //      break;
-  //      
-  //    case 'F':
-  //      size = insize<float>(field);
-  //      break;
-  //      
-  //    case 'L':
-  //      size = insize<long>(field);
-  //      break;
-  //
-  //    case 'I':
-  //      size = insize<int>(field);
-  //      break;
-  //
-  //    case 'S':
-  //      size = insize<short>(field);
-  //      break;
-  //
-  //    case 'B':
-  //      size = insize<char>(field);
-  //      break;
-  //
-  //    case 'C':
-  //      size = insize<string>(field);
-  //      break;
-  //
-  //    case 'l':
-  //      size = insize<unsigned long>(field);
-  //      break;
-  //      
-  //    case 'i':
-  //      size = insize<unsigned int>(field);
-  //      break;
-  //
-  //    case 's':
-  //      size = insize<unsigned short>(field);
-  //      break;
-  //
-  //    case 'b':
-  //      size = insize<unsigned char>(field);
-  //      break;
-  //
-  //    default:
-  //      size = insize<double>(field);
-  //      break;
-  //    }
-  //  return size;
-  //}
+  // // For debug only
+  // double
+  // getinvalue(Field* field, int index=0, int which=0)
+  // {
+  //   if ( which == 0 )
+  //     return field->leaf->GetValue(index);
+  //   else
+  //     {
+  //       double val = 0;
+  //       switch(field->iotype)
+  //         {
+  //         case 'D':
+  //           val = invalue<double>(field, index, 1);
+  //           break;
+	    
+  //         case 'F':
+  //           val = static_cast<double>(invalue<float>(field, index, 1));
+  //           break;
+	      
+  //         case 'L':
+  //           val = static_cast<double>(invalue<long>(field, index, 1));
+  //           break;
+
+  //         case 'I':
+  //           val = static_cast<double>(invalue<int>(field, index, 1));
+  //           break;
+
+  //         case 'S':
+  //           val = static_cast<double>(invalue<short>(field, index, 1));
+  //           break;
+	    
+  //         case 'B':
+  //           val = static_cast<double>(invalue<char>(field, index, 1));
+  //           break;
+
+  //         case 'O':
+  //           val = static_cast<double>(invalue<bool>(field, index, 1));
+  //           break;
+
+  //         case 'l':
+  //           val = static_cast<double>(invalue<unsigned long>(field, index, 1));
+  //           break;
+	    
+  //         case 'i':
+  //           val = static_cast<double>(invalue<unsigned int>(field, index, 1));
+  //           break;
+
+  //         case 's':
+  //           val=static_cast<double>(invalue<unsigned short>(field, index, 1));
+  //           break;
+
+  //         case 'b':
+  //           val = static_cast<double>(invalue<unsigned char>(field, index, 1));
+  //           break;
+
+  //         default:
+  //           val = invalue<double>(field, index, 1);
+  //           break;
+  //         }
+  //       return val;
+  //     }
+  // }
+
+  // int
+  // getinsize(Field* field)
+  // {
+  //   int size = 0;
+  //   switch(field->iotype)
+  //     {
+  //     case 'D':
+  //       size = insize<double>(field);
+  //       break;
+        
+  //     case 'F':
+  //       size = insize<float>(field);
+  //       break;
+        
+  //     case 'L':
+  //       size = insize<long>(field);
+  //       break;
+
+  //     case 'I':
+  //       size = insize<int>(field);
+  //       break;
+
+  //     case 'S':
+  //       size = insize<short>(field);
+  //       break;
+
+  //     case 'B':
+  //       size = insize<char>(field);
+  //       break;
+
+  //     case 'O':
+  //       size = insize<bool>(field);
+  //       break;
+
+  //     case 'C':
+  //       size = insize<string>(field);
+  //       break;
+
+  //     case 'l':
+  //       size = insize<unsigned long>(field);
+  //       break;
+        
+  //     case 'i':
+  //       size = insize<unsigned int>(field);
+  //       break;
+
+  //     case 's':
+  //       size = insize<unsigned short>(field);
+  //       break;
+
+  //     case 'b':
+  //       size = insize<unsigned char>(field);
+  //       break;
+
+  //     default:
+  //       size = insize<double>(field);
+  //       break;
+  //     }
+  //   return size;
+  // }
 
   // ----------------------------------------------------------------------
   // return value of given external buffer
@@ -390,6 +392,10 @@ namespace
       case 'B':
         d = static_cast<double>(exvalue<char>(field, index));
         break;
+
+      case 'O':
+        d = static_cast<double>(exvalue<bool>(field, index));
+        break;
        
       case 'l':
         d = static_cast<double>(exvalue<unsigned long>(field, index));
@@ -436,6 +442,9 @@ namespace
      
       case 'B':
         size = exsize<char>(field);
+
+      case 'O':
+        size = exsize<bool>(field);
 
       case 'C':
         size = exsize<string>(field);
@@ -520,6 +529,11 @@ namespace
           d->value[i] = static_cast<T>(exvalue<char>(field, i));
         break;
 
+      case 'O':
+        for(int i=0; i < count; i++)
+          d->value[i] = static_cast<T>(exvalue<bool>(field, i));
+        break;
+
       case 'l':
         for(int i=0; i < count; i++)
           d->value[i] = static_cast<T>(exvalue<unsigned long>(field, i));
@@ -545,7 +559,8 @@ namespace
     if ( DEBUGLEVEL > 0 )
       {
         cout << "\tinternal value = " << d->value[0] << endl;
-        cout << "\taddress        = " << &d->value[0] << endl;
+        //cout << "\taddress        = " << &(d->value[0])
+        //     << endl;
         cout << "END fromexternal" << endl;
       }
   }
@@ -744,6 +759,8 @@ namespace
 
     DBUG("\tcreatebranch: " + v->branchname + "\t" + format);
 
+    // IMPORTANT: need address of first element of vector, not of the
+    // vector itself
     void* address = &(v->value[0]);
     tree->Branch(v->branchname.c_str(), address, format);
 
@@ -871,6 +888,10 @@ namespace
 
       case 'B':
         toexternal<char>(field);
+        break;
+
+      case 'O':
+        toexternal<bool>(field);
         break;
 
       case 'C':
@@ -1040,11 +1061,11 @@ itreestream::_open(vector<string>& fname, vector<string>& tname)
           globfree(&g);
         }
 #else
-      for (unsigned int j=0; j < fname.size(); ++j){
-	filepath.push_back(fname[j]);
-      }
-      //filepath.push_back(fname[0]);
-      std::cout << "filepath size: " << filepath.size() << endl;  
+     for (unsigned int j=0; j < fname.size(); ++j){
+       filepath.push_back(fname[j]);
+     }
+     //filepath.push_back(fname[0]);
+     //std::cout << "filepath size: " << filepath.size() << endl;  
 #endif
       //DBUG("itreestream::ctor - new TFile ", 2);
       DBUG("itreestream::ctor - TFile::Open ", 2);
@@ -1068,27 +1089,10 @@ itreestream::_open(vector<string>& fname, vector<string>& tname)
           // ----------------------------------------
           _tree = 0; // make sure to zero
           
-          TIter nextkey(file_->GetListOfKeys());
-          
-          while ( TKey* key = (TKey*)nextkey() )
-            {
-              TObject* o = key->ReadObj();
-              if ( o->IsA()->InheritsFrom("TTree") )
-                {
-                  if ( _tree == 0 ) _tree = (TTree*)o; // Record first tree
-                  
-                  if ( string(_tree->GetName()) == "Events" )
-                    {
-                      // Found a tree called Events, so use it
-                      _tree = (TTree*)o;
-                      break;
-                    }
-                }
-            }
+	  treename = _gettree(file_);
+
           if ( ! _tree )
             fatal("itreestream - NO tree found in file " + filepath[0]);
-          
-          treename = string(_tree->GetName());
           
           cout << endl << "** NB. itreestream - using tree: " 
                << treename << endl << endl;
@@ -1207,6 +1211,37 @@ itreestream::~itreestream()
   close();
 }
 
+string
+itreestream::_gettree(TDirectory* dir, string treename, int depth)
+{
+  depth += 1;
+  if ( depth > 5 ) return treename;
+
+  TIter nextkey(dir->GetListOfKeys());          
+  while ( TKey* key = (TKey*)nextkey() )
+    {
+      TObject* o = key->ReadObj();
+      if ( o->IsA()->InheritsFrom("TTree") )
+	{
+	  if ( _tree == 0 ) _tree = (TTree*)o; // Record first tree
+	  string tname = string(_tree->GetName());
+          treename += tname;
+
+	  if ( tname == "Events" )
+	    {
+	      // Found a tree called Events, so use it
+	      _tree = (TTree*)o;
+	      break;
+	    }
+	}
+      else if ( o->IsA()->InheritsFrom("TDirectory") )
+	{
+	  treename += string(o->GetName())+"/";
+	  treename = _gettree((TDirectory*)o, treename, depth);
+	}
+    }
+  return treename;
+}
 // ------------------------------------------------------------------------
 // Get all branches from the root-file, recursively. Create a
 // Field for each branch/leaf. By doing this recursively we do not have 
@@ -1364,6 +1399,12 @@ itreestream::select(string namen, short& d)
 }
 
 void 
+itreestream::select(string namen, bool& d)
+{
+  _select(namen, &d, 1, 'O');
+}
+
+void 
 itreestream::select(string namen, string& d)
 {
   _select(namen, &d, 1, 'C');
@@ -1424,6 +1465,12 @@ void
 itreestream::select(string namen, vector<char>& d)
 {
   _select(namen, &d, d.size(), 'B', true);
+}
+
+void 
+itreestream::select(string namen, vector<bool>& d)
+{
+  _select(namen, &d, d.size(), 'O', true);
 }
 
 void 
@@ -1599,16 +1646,10 @@ itreestream::str() const
       string lfsym("");
       if (field.iscounter) lfsym = string(" *");
 
-      char record[512];
+      char record[8192];
       if ( leafcounter != 0 )
         {
           // This variable has a leaf counter
-	  //          sprintf(record, "%5d %s \t/ %s (%d) [%s]\n",
-	  //                   count,
-	  //                   field.fullname.c_str(),
-	  //                   field.leaf->GetTypeName(),
-	  //                   leafcounter->GetMaximum(),
-	  //                   leafcounter->GetName());
           sprintf(record, "%5d %s \t/ %s (%d)\n",
                   count,
                   field.fullname.c_str(),
@@ -1828,7 +1869,7 @@ itreestream::_update()
       if ( field->iotype == 'v')
         {
           _chain->SetBranchAddress(field->branchname.c_str(), 
-                                   field->address, 
+                                   &field->address, 
                                    &field->branch);
         }
       else if ( field->maxsize < 1 )
@@ -2029,6 +2070,18 @@ otreestream::add(string namen, short& datum)
 }
 
 void
+otreestream::add(string namen, char& datum)
+{
+  _add(namen, &datum, 1, 'B', 'B');
+}
+
+void
+otreestream::add(string namen, bool& datum)
+{
+  _add(namen, &datum, 1, 'O', 'O');
+}
+
+void
 otreestream::add(string namen, string& datum)
 {
   _add(namen, &datum, 1, 'C', 'C');
@@ -2088,6 +2141,12 @@ void
 otreestream::add(string namen, vector<char>& d)
 {
   _add(namen, &d, d.size(), 'B', 'B', true);
+}
+
+void 
+otreestream::add(string namen, vector<bool>& d)
+{
+  _add(namen, &d, d.size(), 'O', 'O', true);
 }
 
 void 
@@ -2205,6 +2264,10 @@ otreestream::store()
 
         case 'B':
           fromexternal<char> (field, count);
+          break;
+
+        case 'O':
+          fromexternal<bool> (field, count);
           break;
 
         case 'C':
@@ -2370,6 +2433,10 @@ otreestream::_add(string namen, void* address, int maxsize,
 
         case 'B':
           createbranch<char> (_tree, &field, format, selecteddata);
+          break;
+
+        case 'O':
+          createbranch<int>  (_tree, &field, format, selecteddata);
           break;
 
         case 'C':

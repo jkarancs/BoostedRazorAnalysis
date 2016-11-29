@@ -21,8 +21,8 @@ import os, re, sys, glob, socket, subprocess
 LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
-LATEST_NTUPLE_GRID18="Oct24"
-#LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
+#LATEST_NTUPLE_GRID18="Oct24"
+LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
@@ -65,12 +65,25 @@ if 'lxplus' in socket.gethostname():
     print 'Done.'
 elif 'grid18.kfki.hu' in socket.gethostname():
     print 'Running on grid18 (Budapest)'
+
     if os.path.lexists(ANA_BASE+'/ntuple/Latest'):
-        print 'Remaking symlinks to latest ntuple location: '+os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18)+' ... ',
-        os.remove(ANA_BASE+'/ntuple/Latest')
-    else:
-        print 'Making symlinks to latest ntuple location: '+os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18)+' ... ',
-    os.symlink('grid18/'+LATEST_NTUPLE_GRID18, os.path.realpath(ANA_BASE+'/ntuple/Latest'))
+        if os.path.islink(ANA_BASE+'/ntuple/Latest'):
+            print 'Removing soft-link directory (used by previous version): '+ANA_BASE+'/ntuple/Latest'
+            os.remove(ANA_BASE+'/ntuple/Latest')
+        elif os.path.isdir(ANA_BASE+'/ntuple/Latest'):
+            print 'Removing previous soft-links (if any) within: '+ANA_BASE+'/ntuple/Latest'
+            for subdir in os.listdir(ANA_BASE+'/ntuple/Latest'):
+                if os.path.islink(ANA_BASE+'/ntuple/Latest/'+subdir):
+                    os.remove(ANA_BASE+'/ntuple/Latest/'+subdir)
+    if not os.path.exists(ANA_BASE+'/ntuple/Latest'):
+        print "Making directory for latest ntuple symlinks: "+ANA_BASE+'/ntuple/Latest'
+        os.makedirs(ANA_BASE+'/ntuple/Latest')
+    print 'Creating symlinks to the latest ntuples in ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/ ... ',
+    for grid18_subdir in os.listdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_EOS):
+        if os.path.isdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_EOS+'/'+grid18_subdir):
+            source = os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_EOS+'/'+grid18_subdir)
+            target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+            os.symlink(source, target)
     print 'Done.'
 else:
     print "Error: not on lxplus or grid18 (Budapest)"
@@ -91,18 +104,26 @@ for directory in os.listdir(DIR):
                 flist = open(ANA_BASE+'/filelists/data/'+directory+'.txt', 'w')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
+                    if 'lxplus' in socket.gethostname(): filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
             # Signals
             elif re.compile('.*T[1-9][t,b,c,q][t,b,c,q].*').match(directory):
                 flist = open(ANA_BASE+'/filelists/signals/'+directory+'.txt', 'w')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
+                    if 'lxplus' in socket.gethostname(): filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
             # Backgrounds
             else:
                 flist = open(ANA_BASE+'/filelists/backgrounds/'+directory+'.txt', 'w')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
+                    if 'lxplus' in socket.gethostname(): filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
+
+print "Creating temp file list directories (for batch and split jobs) ... ",
+if not os.path.exists(ANA_BASE+'/filelists_tmp/data'): os.makedirs(ANA_BASE+'/filelists_tmp/data')
+if not os.path.exists(ANA_BASE+'/filelists_tmp/signals'): os.makedirs(ANA_BASE+'/filelists_tmp/signals')
+if not os.path.exists(ANA_BASE+'/filelists_tmp/backgrounds'): os.makedirs(ANA_BASE+'/filelists_tmp/backgrounds')
 
 print 'Done.'
