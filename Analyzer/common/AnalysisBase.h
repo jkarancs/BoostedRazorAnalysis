@@ -1322,7 +1322,7 @@ Analysis::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_s
 //                Benchmarking (batch) jobs
 
 void
-AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool moderate=1)
+AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool moderate=0)
 {
   if (entry==0) {
     sw_1k_ ->Start(kFALSE);
