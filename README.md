@@ -35,22 +35,43 @@ More info about Analyzer:
 
 Run your anaylsis code with
 ```Shell
-make
+make clean; make Analyzer
 ./Analyzer <output filename> <filelist.txt or root file(s) ... >
 eg:
 ./Analyzer Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
 ```
 
 There is a py script to run the Analyzer to run on filelists of datasets
-with lot of options to use
+with lot of options to use (use option --help)
 ```Shell
 python scripts/run_all.py --help
 ```
 
-Run a full analysis on all samples (not using --run option prints commands)
+Run a quick (1/Nth events) interactive test, using 4 cpus on all/selected samples
 ```Shell
-python scripts/run_all.py --full --run
-python scripts/run_all.py --full --run --batch --nevt=2000000
+python scripts/run_all.py --full --nproc=4 --quick=100 --run
+python scripts/run_all.py --full --nproc=4 --quick=100 --run filelists/data/*.txt
+```
+
+Run a full analysis on all/selected samples in parallel interactive jobs, using 4 processors
+```Shell
+python scripts/run_all.py --full --nproc=4 --run
+python scripts/run_all.py --full --nproc=4 --run filelists/data/*.txt
+```
+
+If you are on lxplus, it is highly recommended to run full analysis on the batch
+First a quick test on a faster queue
+N.B: you need to generate a temp filelist for split jobs, this is a bit slow, so next time you can reuse previous list
+```Shell
+python scripts/run_all.py --batch --queue=8nm --quick=100 --sleep=0 --nevt=6000000 filelists/backgrounds/TT_powheg-pythia8_ext3_reHLT.txt
+python scripts/run_all.py --batch --queue=8nm --quick=100 --sleep=1 --useprev --run filelists/backgrounds/TT_powheg-pythia8_ext3_reHLT.txt
+```
+
+Then, do a full analysis on the recommended default 1nh queue, default 3s sleep between submits
+```Shell
+python scripts/run_all.py --full --batch --sleep=0 --nevt=2000000
+python scripts/run_all.py --full --batch --useprev --run
+python scripts/run_all.py --full --batch --useprev --run filelists/data/*.txt
 ```
 
 Run systematics (first, set varySystematics = true in settings.h)  

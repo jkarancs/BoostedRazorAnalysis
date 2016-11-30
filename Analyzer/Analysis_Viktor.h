@@ -40,7 +40,7 @@ Analysis::pass_skimming(DataStruct& data)
   return 1;
 
   // Signal skim
-  //return apply_all_cuts("S");
+  //return apply_all_cuts('S');
 }
 
 //_______________________________________________________
@@ -60,38 +60,38 @@ Analysis::define_selections(const DataStruct& d)
   baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
   
   // S: Signal region
-  analysis_cuts["S"].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts["S"].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts["S"].push_back({ .name="0TauTrk",    .func = []    { return;  }});
-  analysis_cuts["S"].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts["S"].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts["S"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts["S"].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
+  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
+  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
+  //analysis_cuts['S'].push_back({ .name="0TauTrk",    .func = []    { return;  }});
+  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
+  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
+  //analysis_cuts['S'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts['S'].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
   
   // W: W enriched control sample
-  analysis_cuts["W"].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
-  analysis_cuts["W"].push_back({ .name="0b",         .func = []    { return nLooseBTag==1;                 }});
-  analysis_cuts["W"].push_back({ .name="1Wpre",      .func = []    { return nWPreTag>=1;                   }});
-  //analysis_cuts["W"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts["W"].push_back({ .name="mDPhi>=0p4",  .func = []   { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  analysis_cuts["W"].push_back({ .name="30<=MT<100",  .func = []   { return MT>=30 && MT<100;              }});
+  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
+  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==1;                 }});
+  analysis_cuts['W'].push_back({ .name="1Wpre",      .func = []    { return nWPreTag>=1;                   }});
+  //analysis_cuts['W'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts['W'].push_back({ .name="mDPhi>=0p4",  .func = []   { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
+  analysis_cuts['W'].push_back({ .name="30<=MT<100",  .func = []   { return MT>=30 && MT<100;              }});
   
   // T: Top enriched control sample
-  analysis_cuts["T"].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
-  analysis_cuts["T"].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts["T"].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts["T"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts["T"].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  analysis_cuts["T"].push_back({ .name="MT<100",     .func = []    { return MT<100;                        }});
+  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
+  analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
+  analysis_cuts['T'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
+  //analysis_cuts['T'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts['T'].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
+  analysis_cuts['T'].push_back({ .name="MT<100",     .func = []    { return MT<100;                        }});
   
   // Q: QCD enriched control sample
-  analysis_cuts["Q"].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts["Q"].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts["Q"].push_back({ .name="0TauTrk",    .func = []    { return;  }});
-  analysis_cuts["Q"].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                 }});
-  analysis_cuts["Q"].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts["Q"].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts["Q"].push_back({ .name="mDPhi<0.25", .func = []    { return minDeltaPhi<0.25;              }}); // Decreased it to 0.25 (from 0.3)
+  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
+  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
+  //analysis_cuts['Q'].push_back({ .name="0TauTrk",    .func = []    { return;  }});
+  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                 }});
+  analysis_cuts['Q'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
+  //analysis_cuts['Q'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
+  analysis_cuts['Q'].push_back({ .name="mDPhi<0.25", .func = []    { return minDeltaPhi<0.25;              }}); // Decreased it to 0.25 (from 0.3)
   
 }
 
@@ -101,7 +101,7 @@ Analysis::define_selections(const DataStruct& d)
 
 bool
 Analysis::signal_selection(const DataStruct& data) {
-  return apply_all_cuts("S");
+  return apply_all_cuts('S');
 }
 
 //_______________________________________________________
@@ -167,7 +167,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     
     // For example this applies the first three cuts in signal region
     // ele/mu veto
-    if (apply_ncut("S", 2)) {
+    if (apply_ncut('S', 2)) {
       h_jet1_pt->Fill(data.jetsAK4Puppi.Pt[iJet[0]], weight);
       h_jet2_pt->Fill(data.jetsAK4Puppi.Pt[iJet[1]], weight);
       h_jet3_pt->Fill(data.jetsAK4Puppi.Pt[iJet[2]], weight);
@@ -175,11 +175,11 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     /*
       Other examples to use analysis_cuts object
 
-      if (apply_cut("S","1W"))                          --> 1 Cut from S region
-      if (apply_cut("W","1Wpre"))                       --> 1 Cut from W region
-      if (apply_all_cuts("T"))                          --> All cuts in T region
-      if (apply_all_cuts_except("Q", "mDPhi<0.25"))     --> N-1 cut
-      if (apply_all_cuts_except("S", {"0Ele", "0Mu" })) --> S without Lep veto
+      if (apply_cut('S',"1W"))                          --> 1 Cut from S region
+      if (apply_cut('W',"1Wpre"))                       --> 1 Cut from W region
+      if (apply_all_cuts('T'))                          --> All cuts in T region
+      if (apply_all_cuts_except('Q', "mDPhi<0.25"))     --> N-1 cut
+      if (apply_all_cuts_except('S', {"0Ele", "0Mu" })) --> S without Lep veto
 
       But be aware: Whatever is defined in the baseline_cuts will apply to all histograms
       Also if you use skimmed ntuples (very likely) then those cuts are already applied
@@ -189,7 +189,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
   
   // Vary systematics and save each variation into a different historgam
   // Switch on settings.varySystematics to be effective
-  if (apply_all_cuts("S")) vh_jet1_pt[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[0]], weight);
+  if (apply_all_cuts('S')) vh_jet1_pt[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[0]], weight);
 }
 
 // Methods used by SmartHistos (Plotter)

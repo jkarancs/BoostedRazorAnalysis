@@ -70,7 +70,7 @@ private:
 
   TStopwatch *sw_1k_, *sw_10k_, *sw_job_;
 
-  void moderate_(TH1D* h, double, int, int);
+  void moderate_job_(TH1D* h, double, int, int);
 
 };
 
@@ -756,7 +756,11 @@ TH1D* h_nvtx_rw;
 TH1D* h_read_speed_1k;
 TH1D* h_read_speed_10k;
 TH1D* h_read_speed_job;
-TH2D* h_read_speed_vs_time_10k;
+TH2D* h_read_speed_vs_nevt_10k;
+TH2D* h_read_speed_vs_nevt_job;
+TH1D* h_runtime_job;
+TH2D* h_runtime_vs_nevt_10k;
+TH2D* h_runtime_vs_nevt_job;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -786,7 +790,10 @@ AnalysisBase::init_common_histos()
   h_read_speed_1k              = new TH1D("read_speed_1k",          ";Read speed (Events/s);Measurement/1k Event",  1000,0,10000);
   h_read_speed_10k             = new TH1D("read_speed_10k",         ";Read speed (Events/s);Measurement/10k Event", 1000,0,10000);
   h_read_speed_job             = new TH1D("read_speed_job",         ";Read speed (Events/s);Measurement/Job",       1000,0,10000);
-  h_read_speed_vs_time_10k     = new TH2D("read_speed_vs_time_10k", ";Entry;Read speed (Events/s)/10k Event;Entry", 100,0,10000000, 200,0,10000);
+  h_read_speed_vs_nevt_10k     = new TH2D("read_speed_vs_nevt_10k", ";Entry;Read speed (Events/s)/10k Event",       100,0,10000000, 200,0,10000);
+  h_read_speed_vs_nevt_job     = new TH2D("read_speed_vs_nevt_job", ";Total Entries;Read speed (Events/s)/Job",     100,0,10000000, 200,0,10000);
+  h_runtime_job                = new TH1D("runtime_job",            ";Total job run-time (min)",                    600,0,600);
+  h_runtime_vs_nevt_job        = new TH2D("runtime_vs_nevt_job",    ";Total Entries;Total job run-time (min)",      100,0,10000000, 600,0,600);
 }
 
 //_______________________________________________________
@@ -1315,7 +1322,7 @@ Analysis::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_s
 //                Benchmarking (batch) jobs
 
 void
-AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool moderate=0)
+AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool moderate=1)
 {
   if (entry==0) {
     sw_1k_ ->Start(kFALSE);
@@ -1323,20 +1330,18 @@ AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool mode
     sw_job_->Start(kFALSE);
   } else {
     if (entry%1000==0) {
-      sw_1k_->Stop();
       double meas_1k = 1000/sw_1k_->RealTime();
       h_read_speed_1k->Fill(meas_1k);
-      if (moderate) moderate_(h_read_speed_1k, meas_1k, 2, 1);
+      if (moderate) moderate_job_(h_read_speed_1k, meas_1k, 2, 5);
       sw_1k_->Reset();
       sw_1k_->Start(kFALSE);
       //std::cout<<"Meas  1k: "<<meas_1k<<std::endl;
     }
     if (entry%10000==0) {
-      sw_10k_->Stop();
       double meas_10k = 10000/sw_10k_->RealTime();
       h_read_speed_10k->Fill(meas_10k);
-      h_read_speed_vs_time_10k->Fill(entry, meas_10k);
-      if (moderate) moderate_(h_read_speed_10k, meas_10k, 2, 10);
+      h_read_speed_vs_nevt_10k->Fill(entry, meas_10k);
+      if (moderate) moderate_job_(h_read_speed_10k, meas_10k, 2, 10);
       sw_10k_->Reset();
       sw_10k_->Start(kFALSE);
       //std::cout<<"Meas 10k: "<<meas_10k<<std::endl;
@@ -1345,12 +1350,15 @@ AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool mode
       sw_job_->Stop();
       double meas_job = nevents/sw_job_->RealTime();
       h_read_speed_job->Fill(meas_job);
+      h_read_speed_vs_nevt_job->Fill(nevents, meas_job);
+      h_runtime_job->Fill(sw_job_->RealTime()/60.);
+      h_runtime_vs_nevt_job->Fill(nevents, sw_job_->RealTime()/60.);
     }
   }
 }
 
 void
-AnalysisBase::moderate_(TH1D* h, double speed, int nrms_threshold, int sleep_s) {
+AnalysisBase::moderate_job_(TH1D* h, double speed, int nrms_threshold, int sleep_s) {
   // Median - 2 sigma
   int n = h->GetXaxis()->GetNbins(); 
   std::vector<double> x(n);
@@ -1360,6 +1368,10 @@ AnalysisBase::moderate_(TH1D* h, double speed, int nrms_threshold, int sleep_s) 
   //double mean = h->GetMean();
   //double threshold = mean -nrms_threshold*h->GetRMS();
   double threshold = median -nrms_threshold*h->GetRMS();
-  if (speed<threshold) std::this_thread::sleep_for (std::chrono::seconds(sleep_s));
+  if (speed<threshold) {
+    sw_1k_->Stop(); sw_10k_->Stop();
+    std::this_thread::sleep_for (std::chrono::seconds(sleep_s));
+    sw_1k_->Continue(); sw_10k_->Continue();
+  }
   //std::cout<<"- Moderating for "<<sleep_s<<" sec, median: "<<median<<" rms: "<<h->GetRMS()<<" threshold"<<threshold<<" speed: "<<speed<<std::endl;
 }

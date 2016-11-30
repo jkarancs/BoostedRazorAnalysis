@@ -30,7 +30,7 @@ parser.add_option("--replot",  dest="replot",  action="store_true", default=Fals
 
 # Output directories/files
 DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
-if opt.OUTDIR == "" and not opt.skim:
+if opt.OUTDIR == "" and not opt.skim and not opt.replot:
     opt.OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
 
 if opt.skim:
@@ -69,12 +69,12 @@ if opt.plot:
 if opt.replot:
     if opt.OUTDIR == "":
         # Find last working directory automatically and find output files there
-        opt.OUTDIR = max( glob.glob("results/run_*"), key=os.path.getmtime )
-        PLOTTER_IN = max(glob.glob("results/Plotter_out_*.root"), key=os.path.getmtime).replace("_replot","")
+        opt.OUTDIR  = max(glob.glob("results/run_*"), key=os.path.getmtime)
+        PLOTTER_IN  = max(glob.glob("results/Plotter_out_*.root"), key=os.path.getmtime).replace("_replot","")
         PLOTTER_OUT = PLOTTER_IN.replace(".root","_replot.root")
-        PLOTTER_INT = [PLOTTER_IN]
+        PLOTTER_IN  = [PLOTTER_IN]
     else:
-        PLOTTER_IN = glob.glob(opt.OUTDIR+"/*.root")
+        PLOTTER_IN  = glob.glob(opt.OUTDIR+"/*.root")
         PLOTTER_OUT = opt.OUTDIR.replace("run_", "Plotter_out_")+"_replot.root"
 
 # Working directory, during running we cd here and back
@@ -180,7 +180,7 @@ for filelist in input_filelists:
                     totalevt = 0
                 totalevt += nevt
                 with open(tmp_filelist, "a") as job_filelist:
-                    job_filelist.write(os.path.realpath(files[i])+'\n')
+                    print>>job_filelist, files[i]
         print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created"
     elif opt.NFILE != -1:
         # SPLIT MODE: Each jobs runs on max opt.NFILE
@@ -191,7 +191,7 @@ for filelist in input_filelists:
                 tmp_filelist = filelist.replace("filelists","filelists_tmp").replace(".txt","_"+str(n)+".txt")
                 with open(tmp_filelist, "w") as job_filelist:
                     for i in range((n-1)*opt.NFILE, min(n*opt.NFILE,len(lines))):
-                        job_filelist.write(os.path.realpath(lines[i])+'\n')
+                        print>>job_filelist, files[i]
                 args = [output_file.replace(".root","_"+str(n)+".root"), [tmp_filelist], options, log_file.replace(".log","_"+str(n)+".log")]
                 ana_arguments.append(args)
     else:
@@ -208,16 +208,16 @@ def special_call(cmd, verbose=1):
     global icommand, opt
     if verbose:
         if opt.run:
-            print("[%d] " % icommand),
+            print("[%d]" % icommand),
         else:
-            print("[dry] "),
-        for i in xrange(len(cmd)): print cmd[i]+" ",
+            print("[dry]"),
+        for i in xrange(len(cmd)): print cmd[i],
         print ""
     if opt.run:
         if subprocess.call(cmd):
             print "ERROR: Problem executing command:"
-            print("[%d] " % icommand)
-            for i in xrange(len(cmd)): print cmd[i]+" ",
+            print("[%d]" % icommand)
+            for i in xrange(len(cmd)): print cmd[i],
             print ""
             print "exiting."
             sys.exit()
@@ -228,7 +228,8 @@ def special_call(cmd, verbose=1):
 # Run command with stdout/stderr saved to logfile
 def logged_call(cmd, logfile):
     global opt
-    if not os.path.exists(os.path.dirname(logfile)):
+    dirname = os.path.dirname(logfile)
+    if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
     if opt.run:
         logger = logging.getLogger(logfile)
@@ -272,7 +273,7 @@ def backup_files(backup_dir):
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
 #def analyzer_job((output_file, input_list, options, output_log)):
 #    global opt, EXEC_PATH, COPYSCRIPT
-def analyzer_job(jobindex):
+def analyzer_job((jobindex)):
     global ana_arguments, opt, EXEC_PATH, COPYSCRIPT
     output_file = ana_arguments[jobindex][0]
     input_list  = ana_arguments[jobindex][1]
@@ -287,10 +288,12 @@ def analyzer_job(jobindex):
         special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
     cmd = [EXEC_PATH+"/Analyzer", output_file] + options + input_list
     if opt.batch:
-        #cmd = shlex.split('bsub -q '+opt.QUEUE+' -o '+output_log.replace(".log","_batch.log")+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
+        #cmd = shlex.split('bsub -q '+opt.QUEUE+' -oo '+output_log.replace(".log","_batch.log")+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
         #logged_call(cmd, output_log)
-        cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE.split("_")[-1].split("m")[0]+'_'+str(jobindex)+' -o '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
-        special_call(cmd, 0)
+        logdirname = os.path.dirname(output_log)
+        if logdirname != "" and not os.path.exists(logdirname): special_call(["mkdir", "-p", logdirname], 0)
+        cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
+        special_call(cmd, not opt.run)
     else:
         logged_call(cmd, output_log)
     # Mirror output (copy to EOS)
@@ -299,10 +302,11 @@ def analyzer_job(jobindex):
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
         if opt.mirror: logged_call(["lcg-cp", "-v", output_file, EOS_JANOS+outpath], output_log)
         elif opt.run:
-            with open(COPYSCRIPT, "a") as myfile:
-                myfile.write('lcg-cp -v '+output_file+' '+EOS_VIKTOR+outpath+'\n')
-                #myfile.write('srm-set-permissions -type=CHANGE -group=RW '+EOS_VIKTOR+outpath+'\n')
+            with open(COPYSCRIPT, "a") as script:
+                print>>script, 'lcg-cp -v '+output_file+' '+EOS_VIKTOR+outpath
+                #print>>script, 'srm-set-permissions -type=CHANGE -group=RW '+EOS_VIKTOR+outpath
     return output_file
+
 
 # Run all Analyzer jobs in parallel
 def analysis(ana_arguments, nproc):
@@ -313,30 +317,59 @@ def analysis(ana_arguments, nproc):
     print
     saved_path = os.getcwd()
     if opt.batch:
-        # First send all jobs to batch
+        # Running on the batch and babysitting all jobs until completion
         output_files = []
-        for i in range(0, len(ana_arguments)):
-            output_files.append(analyzer_job(ana_arguments[i]))
-        # Then, wait for all output files to appear
+        njob = len(ana_arguments)
         if opt.run:
-            output_missing = True
-            while output_missing:
+            last_known_status = [-1] * njob # -1: start, 0: finished, time(): last submit/status check
+            finished = 0
+            # Loop until all jobs are finished
+            while finished != njob:
+                if finished != 0: time.sleep(30)
                 finished = 0
-                for output_file in output_files:
-                    if os.path.isfile(output_file):
-                        # Check size to be large enough, so it is not the first opened state
-                        if (os.path.getsize(output_file) > 1000):
+                for jobindex in range(0, njob):
+                    if last_known_status[jobindex] == -1:
+                        # Submit jobs
+                        analyzer_job(jobindex)
+                        last_known_status[jobindex] = time.time()
+                    elif last_known_status[jobindex] == 0:
+                        finished += 1
+                    else:
+                        # Firt check if output file exists
+                        output_file = ana_arguments[jobindex][0]
+                        output_log  = ana_arguments[jobindex][3]
+                        if os.path.isfile(output_file):
                             finished += 1
-                output_missing = (finished != len(output_files))
-                print "Analyzer jobs on batch (Done/All): "+str(finished)+"/"+str(len(output_files))+"   \r",
+                            output_files.append(output_file)
+                            last_known_status[jobindex] = 0
+                        # If the last submission/check is older than 5 minutes check job status with bjobs
+                        elif time.time() - last_known_status[jobindex] > (300 if opt.NQUICK<2 else 300/opt.NQUICK):
+                            jobname = DATE+'_'+str(jobindex)
+                            logged_call(shlex.split('bjobs -J '+jobname), 'jobstatus_'+jobname+'.txt')
+                            with open('jobstatus_'+jobname+'.txt') as jobstatus:
+                                lines = jobstatus.readlines()
+                                if 'Job <'+jobname+'> is not found' in lines[0]:
+                                    # Job is missing, so resubmit
+                                    print "Job "+jobname+" is missing, resubmitting ...         "
+                                    analyzer_job(jobindex)
+                                #else:
+                                #    status = lines[1].split()[2]
+                                #    if status == 'PEND' or status == 'RUN':
+                                #        print "Job "+jobname+" is pending/running"
+                            os.remove('jobstatus_'+jobname+'.txt')
+                            last_known_status[jobindex] = time.time()
+                # Finally print status
+                print "Analyzer jobs on batch (Done/All): "+str(finished)+"/"+str(njob)+"   \r",
                 sys.stdout.flush()
-                if output_missing: time.sleep(30)
-                else: print "\nAll batch jobs finished."
+            print "\nAll batch jobs finished."
+        else:
+            for jobindex in range(0, njob):
+                output_files.append(analyzer_job(jobindex))
     else:
         # Use the N CPUs in parallel on the current computer to analyze all jobs
         workers = multiprocessing.Pool(processes=nproc)
-        njob = ana
-        output_files = workers.map(analyzer_job, ana_arguments, chunksize=1)
+        njob = len(ana_arguments)
+        output_files = workers.map(analyzer_job, range(njob), chunksize=1)
         workers.close()
         workers.join()
         print "All Analyzer jobs finished."

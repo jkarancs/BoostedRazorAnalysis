@@ -1,8 +1,8 @@
 #!/bin/bash
 cwd=$1
-to_run=${@:2}
-
-
+out=$3
+out_tmp=$PWD/`basename $3`
+to_run=`echo ${@:2} | sed "s;$out;$out_tmp;1"`
 
 echo -e "------------------- START --------------------"
 echo -e "---------------- Environments ----------------"
@@ -20,6 +20,9 @@ echo -e "\n------------------ Analyzer ------------------"
 
 echo -e "\n[3] $to_run"
 $to_run
+
+echo -e "\n[4] cp -p $out_tmp $out"
+mv $out_tmp $cwd/$out
 
 echo -e "\n"
 echo -e "-------------------- END ---------------------\n"

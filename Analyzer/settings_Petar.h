@@ -27,7 +27,7 @@ struct settings {
     pileupDir                ( "pileup/Oct21_Golden_JSON/" ),
     intLumi                  ( 27655.802 /* brilcalc - Oct21 Golden JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.062 ),
-    useXSecFileForBkg        ( false ), // true: use file below, false: use value in the ntuple (evt_XSec)
+    useXSecFileForBkg        ( true  ), // true: use file below, false: use value in the ntuple (evt_XSec)
     xSecFileName             ( "common/BackGroundXSec.txt" ),
     triggerEffScaleFactor    (  1.00 ),
     triggerEffUncertainty    (  0.01 )

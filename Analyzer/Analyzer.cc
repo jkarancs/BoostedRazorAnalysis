@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "settings_Janos.h" // Define all Analysis specific settings here
+#include "settings_Viktor.h" // Define all Analysis specific settings here
 
 using namespace std;
 
