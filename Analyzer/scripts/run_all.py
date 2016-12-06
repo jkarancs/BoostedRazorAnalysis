@@ -154,6 +154,7 @@ for filelist in input_filelists:
     # Temporary filelists
     if opt.useprev:
         # Use previously created lists
+        options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize weights
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
         for jobnum in range(1, len(prev_lists)+1):
             tmp_filelist = prev_lists[jobnum-1]
