@@ -26,6 +26,7 @@ LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
+USE_EOS_MOUNT=0
 
 
 if 'lxplus' in socket.gethostname():
@@ -104,21 +105,24 @@ for directory in os.listdir(DIR):
                 flist = open(ANA_BASE+'/filelists/data/'+directory+'.txt', 'w')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
-                    if 'lxplus' in socket.gethostname(): filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                    if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
+                        filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
             # Signals
             elif re.compile('.*T[1-9][t,b,c,q][t,b,c,q].*').match(directory):
                 flist = open(ANA_BASE+'/filelists/signals/'+directory+'.txt', 'w')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
-                    if 'lxplus' in socket.gethostname(): filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                    if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
+                        filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
             # Backgrounds
             else:
                 flist = open(ANA_BASE+'/filelists/backgrounds/'+directory+'.txt', 'w')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
-                    if 'lxplus' in socket.gethostname(): filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                    if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
+                        filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
 
 print "Creating temp file list directories (for batch and split jobs) ... ",

@@ -221,7 +221,7 @@ namespace utils {
     // Do a quick test on 1/100 statistics
     cl.quickTest = 0;
 
-    // Do a quick test on 1/100 statistics
+    // Don't fill any histos (useful for skimmin jobs)
     cl.noPlots = false;
 
     for (int iarg=1; iarg<argc; ++iarg) {
@@ -252,9 +252,9 @@ namespace utils {
 	    // if txt file, read it's contents
 	    std::vector<std::string> list = getFilenames(arg);
 	    cl.fileNames.insert(cl.fileNames.end(), list.begin(), list.end());
-	    if (arg.find("filelists/data")!=std::string::npos) n_data_arg++;
-	    else if (arg.find("filelists/signals")!=std::string::npos) n_signal_arg++;
-	    else if (arg.find("filelists/backgrounds")!=std::string::npos) n_bkg_arg++;
+	    if (arg.find("/data/")!=std::string::npos) n_data_arg++;
+	    else if (arg.find("/signals/")!=std::string::npos) n_signal_arg++;
+	    else if (arg.find("/backgrounds/")!=std::string::npos) n_bkg_arg++;
 	  } else {
 	    // Otherwise add all root files to input file list
 	    if (std::string(arg).find(".root")!=std::string::npos) cl.fileNames.push_back(arg);

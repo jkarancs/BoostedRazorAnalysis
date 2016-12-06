@@ -1,4 +1,4 @@
-import os, sys, glob, time, logging, multiprocessing, subprocess, shlex, ROOT
+import os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, ROOT
 from optparse import OptionParser
 
 # ---------------------- Cmd Line  -----------------------
@@ -23,6 +23,7 @@ parser.add_option("--skim",    dest="skim",    action="store_true", default=Fals
 parser.add_option("--mirror",  dest="mirror",  action="store_true", default=False,   help="Also copy skim output to EOS")
 parser.add_option("--plot",    dest="plot",    action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
 parser.add_option("--replot",  dest="replot",  action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
+parser.add_option("--recover", dest="recover", action="store_true", default=False,   help="Recover stopped task (eg. due to some error)")
 (opt,args) = parser.parse_args()
 
 # ----------------------  Settings -----------------------
@@ -153,7 +154,7 @@ for filelist in input_filelists:
     # Temporary filelists
     if opt.useprev:
         # Use previously created lists
-        prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt"))
+        prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
         for jobnum in range(1, len(prev_lists)+1):
             tmp_filelist = prev_lists[jobnum-1]
             args = [output_file.replace(".root","_"+str(jobnum)+".root"), [tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
@@ -232,21 +233,22 @@ def logged_call(cmd, logfile):
     if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
     if opt.run:
-        logger = logging.getLogger(logfile)
-        hdlr = logging.FileHandler(logfile)
-        logger.addHandler(hdlr)
-        logger.setLevel(logging.INFO)
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = proc.communicate()
-        if stdout:
-            logger.info(stdout)
-        if stderr:
-            logger.error(stderr)
-        proc.wait()
-        return proc
+        #logger = logging.getLogger(logfile)
+        #hdlr = logging.FileHandler(logfile)
+        #logger.addHandler(hdlr)
+        #logger.setLevel(logging.INFO)
+        #proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        #stdout, stderr = proc.communicate()
+        #if stdout:
+        #    logger.info(stdout)
+        #if stderr:
+        #    logger.error(stderr)
+        #proc.wait()
+        with open(logfile, "w") as log:
+            proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
+            proc.wait()
     else:
         proc = subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
-        return proc
 
 # Compile programs
 def compile(Ana = 1, Plotter = 1):
@@ -271,8 +273,6 @@ def backup_files(backup_dir):
     print
 
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
-#def analyzer_job((output_file, input_list, options, output_log)):
-#    global opt, EXEC_PATH, COPYSCRIPT
 def analyzer_job((jobindex)):
     global ana_arguments, opt, EXEC_PATH, COPYSCRIPT
     output_file = ana_arguments[jobindex][0]
@@ -288,13 +288,12 @@ def analyzer_job((jobindex)):
         special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
     cmd = [EXEC_PATH+"/Analyzer", output_file] + options + input_list
     if opt.batch:
-        #cmd = shlex.split('bsub -q '+opt.QUEUE+' -oo '+output_log.replace(".log","_batch.log")+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
-        #logged_call(cmd, output_log)
         logdirname = os.path.dirname(output_log)
         if logdirname != "" and not os.path.exists(logdirname): special_call(["mkdir", "-p", logdirname], 0)
         cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
         special_call(cmd, not opt.run)
     else:
+        if opt.NPROC>3: cmd = ['nice']+cmd
         logged_call(cmd, output_log)
     # Mirror output (copy to EOS)
     if opt.batch: time.sleep(opt.SLEEP)
@@ -328,16 +327,21 @@ def analysis(ana_arguments, nproc):
                 if finished != 0: time.sleep(30)
                 finished = 0
                 for jobindex in range(0, njob):
+                    output_file = ana_arguments[jobindex][0]
+                    #output_log  = ana_arguments[jobindex][3]
                     if last_known_status[jobindex] == -1:
-                        # Submit jobs
-                        analyzer_job(jobindex)
-                        last_known_status[jobindex] = time.time()
+                        if opt.recover and os.path.isfile(output_file):
+                            finished += 1
+                            output_files.append(output_file)
+                            last_known_status[jobindex] = 0
+                        else:
+                            # Submit all jobs
+                            analyzer_job(jobindex)
+                            last_known_status[jobindex] = time.time()
                     elif last_known_status[jobindex] == 0:
                         finished += 1
                     else:
-                        # Firt check if output file exists
-                        output_file = ana_arguments[jobindex][0]
-                        output_log  = ana_arguments[jobindex][3]
+                        # First check if output file exists
                         if os.path.isfile(output_file):
                             finished += 1
                             output_files.append(output_file)
@@ -392,18 +396,25 @@ def show_result(plotter_out):
 
 # ---------------------- Running -------------------------
 
+# renew token before running
+special_call(["aklog", "CERN.CH"])
+
 if opt.replot:
-    backup_files(EXEC_PATH)
-    compile(0)
-    plotter(PLOTTER_IN, PLOTTER_OUT)
-    show_result(PLOTTER_OUT)
-else:
-    if not opt.test:
+    if not opt.recover:
         backup_files(EXEC_PATH)
-    compile(1, opt.plot)
+        compile(0)
+    plotter(PLOTTER_IN, PLOTTER_OUT)
+    if not 'lxplus' in socket.gethostname():
+        show_result(PLOTTER_OUT)
+else:
+    if not opt.recover:
+        if not opt.test:
+            backup_files(EXEC_PATH)
+        compile(1, opt.plot)
     plotter_input_files = analysis(ana_arguments, opt.NPROC)
     if opt.plot:
         plotter(plotter_input_files, PLOTTER_OUT)
-        show_result(PLOTTER_OUT)
+        if not 'lxplus' in socket.gethostname():
+            show_result(PLOTTER_OUT)
 
 print "Done."

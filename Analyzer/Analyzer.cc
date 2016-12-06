@@ -542,7 +542,7 @@ int main(int argc, char** argv) {
     } // end Background/Signal MC
 
     // Measure speed (useful info for batch/parallel jobs)
-    ana.benchmarking(entry, nevents);
+    ana.job_monitoring(entry, nevents, stream.filename());
 
   } // end event loop
 

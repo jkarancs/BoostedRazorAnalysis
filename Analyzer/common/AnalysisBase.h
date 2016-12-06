@@ -6,8 +6,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TStopwatch.h"
-#include <thread>
-#include <chrono>
+#include <unistd.h>
 
 #include "utils.h"
 #include "DataStruct.h"
@@ -64,14 +63,12 @@ public:
 
   double get_syst_weight(const double&, const double&, const double&);
 
-  void benchmarking(const int&, const int&, const bool);
+  void job_monitoring(const int&, const int&, const std::string&, const float);
 
 private:
 
-  TStopwatch *sw_1k_, *sw_10k_, *sw_job_;
-
-  void moderate_job_(TH1D* h, double, int, int);
-
+  TStopwatch *sw_1_, *sw_1k_, *sw_10k_, *sw_job_;
+  std::map<std::string, int> bad_files;
 };
 
 // _____________________________________________________________
@@ -126,6 +123,7 @@ private:
 //_______________________________________________________
 //                       Constructor
 AnalysisBase::AnalysisBase() {
+  sw_1_  = new TStopwatch;
   sw_1k_  = new TStopwatch;
   sw_10k_ = new TStopwatch;
   sw_job_ = new TStopwatch;
@@ -135,6 +133,7 @@ AnalysisBase::AnalysisBase() {
 //_______________________________________________________
 //                       Destructor
 AnalysisBase::~AnalysisBase() {
+  delete sw_1_;
   delete sw_1k_;
   delete sw_10k_;
   delete sw_job_;
@@ -460,17 +459,24 @@ std::vector<bool> passEleVeto;
 std::vector<bool> passMuVeto;
 std::vector<bool> passEleTight;
 std::vector<bool> passMuTight;
+unsigned int nEleVetoNoIso;
 unsigned int nEleVeto;
 unsigned int nEleTight;
+unsigned int nMuVetoNoIso;
 unsigned int nMuVeto;
 unsigned int nMuTight;
+unsigned int nLepVetoNoIso;
 unsigned int nLepVeto;
 unsigned int nLepTight;
 double MT;
+bool isLepIsolated;
+bool allVetoLepIsolated;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
+  std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons;
+
   // It only makes sense to calculate certain variables only once if they don't depend on jet energy
   if (syst_index == 0) {
 
@@ -504,9 +510,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     itEleTight  .assign(data.ele.size, (size_t)-1);
     passEleVeto .assign(data.ele.size, 0);
     passEleTight.assign(data.ele.size, 0);
-    nEleVeto = nEleTight = 0;
+    nEleVetoNoIso = nEleVeto = nEleTight = 0;
     while(data.ele.Loop()) {
       size_t i = data.ele.it;
+      TLorentzVector ele_v4; ele_v4.SetPtEtaPhiE(data.ele.Pt[i], data.ele.Eta[i], data.ele.Phi[i], data.ele.E[i]);
       float pt = data.ele.Pt[i];
       float abseta = fabs(data.ele.Eta[i]);
       float miniIso = data.ele.MiniIso[i]/data.ele.Pt[i];
@@ -514,15 +521,22 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float absdz = fabs(data.ele.Dz[i]);
       bool id_veto = (data.ele.vidVetonoiso[i] == 1.0);
       bool id_tight = (data.ele.vidTightnoiso[i] == 1.0);
+      //bool id_veto = (data.ele.vidVeto[i] == 1.0);
+      //bool id_tight = (data.ele.vidTight[i] == 1.0);
       // Veto
       if (passEleVeto[i] = 
 	  ( id_veto &&
 	    pt      >= ELE_VETO_PT_CUT &&
 	    abseta  <  ELE_VETO_ETA_CUT &&
-	    miniIso <  ELE_VETO_MINIISO_CUT &&
 	    absd0   <  ELE_VETO_IP_D0_CUT &&
-	    absdz   <  ELE_VETO_IP_DZ_CUT) )
-	nEleVeto++;
+	    absdz   <  ELE_VETO_IP_DZ_CUT) ) {
+	veto_leptons_noiso.push_back(ele_v4);
+	nEleVetoNoIso++;
+	if (miniIso <  ELE_VETO_MINIISO_CUT) {
+	  nEleVeto++;
+	  veto_leptons.push_back(ele_v4);
+	}
+      }
       // Tight
       if (passEleTight[i] = 
 	  ( id_tight &&
@@ -534,6 +548,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	      absdz   <  ELE_TIGHT_IP_EB_DZ_CUT) :
 	     (absd0   <  ELE_TIGHT_IP_EE_D0_CUT &&
 	      absdz   <  ELE_TIGHT_IP_EE_DZ_CUT) ) ) ) {
+	selected_leptons.push_back(ele_v4);
 	iEleTight.push_back(i);
 	itEleTight[i] = nEleTight++;
       }
@@ -544,9 +559,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     itMuTight   .assign(data.mu.size,  (size_t)-1);
     passMuVeto  .assign(data.mu.size,  0);
     passMuTight .assign(data.mu.size,  0);
-    nMuVeto = nMuTight = 0;
+    nMuVetoNoIso = nMuVeto = nMuTight = 0;
     while(data.mu.Loop()) {
       size_t i = data.mu.it;
+      TLorentzVector mu_v4; mu_v4.SetPtEtaPhiE(data.mu.Pt[i], data.mu.Eta[i], data.mu.Phi[i], data.mu.E[i]);
       float pt = data.mu.Pt[i];
       float abseta = fabs(data.mu.Eta[i]);
       float miniIso = data.mu.MiniIso[i]/data.mu.Pt[i];
@@ -559,10 +575,15 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  (id_veto &&
 	   pt      >= MU_VETO_PT_CUT &&
 	   abseta  <  MU_VETO_ETA_CUT &&
-	   miniIso <  MU_VETO_MINIISO_CUT &&
 	   absd0   <  MU_VETO_IP_D0_CUT &&
-	   absdz   <  MU_VETO_IP_DZ_CUT) )
-	nMuVeto++;
+	   absdz   <  MU_VETO_IP_DZ_CUT) ) {
+	veto_leptons_noiso.push_back(mu_v4);
+	nMuVetoNoIso++;
+	if (miniIso <  MU_VETO_MINIISO_CUT) {
+	  nMuVeto++;
+	  veto_leptons.push_back(mu_v4);
+	}
+      }
       // Tight
       if (passMuTight[i] =
 	  ( id_tight &&
@@ -571,13 +592,15 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    miniIso <  MU_TIGHT_MINIISO_CUT &&
 	    absd0   <  MU_TIGHT_IP_D0_CUT &&
 	    absdz   <  MU_TIGHT_IP_DZ_CUT) ) {
+	selected_leptons.push_back(mu_v4);
 	iMuTight.push_back(i);
 	itMuTight[i] = nMuTight++;
       }
     }
 
-    nLepVeto  = nEleVeto  + nMuVeto;
-    nLepTight = nEleTight + nMuTight;
+    nLepVetoNoIso = nEleVetoNoIso + nMuVetoNoIso;
+    nLepVeto      = nEleVeto  + nMuVeto;
+    nLepTight     = nEleTight + nMuTight;
 
     // MT
     MT = 9999;
@@ -612,8 +635,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   nTightBTag  = 0;
   AK4Puppi_Ht = 0;
   minDeltaPhi = 9999;
+  isLepIsolated = 1;
+  allVetoLepIsolated = 1;
   while(data.jetsAK4Puppi.Loop()) {
     size_t i = data.jetsAK4Puppi.it;
+    TLorentzVector jet_v4; jet_v4.SetPtEtaPhiE(data.jetsAK4Puppi.Pt[i], data.jetsAK4Puppi.Eta[i], data.jetsAK4Puppi.Phi[i], data.jetsAK4Puppi.E[i]);
     // Jet ID
     if ( passLooseJet[i] = 
 	 ( data.jetsAK4Puppi.looseJetID[i] == 1 &&
@@ -636,16 +662,28 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	itTightBTag[i] = nTightBTag++;
       }
 
-      // Ht
-      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];    
-
       // minDeltaPhi
       if (nJet<=3) {
 	double dphi = fabs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4Puppi.Phi[i]));
 	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
       }
 
-
+      // HT
+      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];
+      
+      // Lepton (complete) isolation from jet
+      float minDR_lep = 9999;
+      for (const auto& lep_v4 : selected_leptons) {
+        float dR_lep = jet_v4.DeltaR(lep_v4);
+        if (dR_lep < minDR_lep) minDR_lep = dR_lep;
+      }
+      if (minDR_lep<0.4) isLepIsolated = 0;
+      minDR_lep = 9999;
+      for (const auto& lep_v4 : veto_leptons_noiso) {
+        float dR_lep = jet_v4.DeltaR(lep_v4);
+        if (dR_lep < minDR_lep) minDR_lep = dR_lep;
+      }
+      if (minDR_lep<0.4) allVetoLepIsolated = 0;
 
     } // End Jet Selection
   } // End AK4 Jet Loop
@@ -733,7 +771,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       AK8Puppi_Ht += data.jetsAK8Puppi.Pt[i];
 
     } // End Jet Selection
-  } // End AK4 Jet Loop
+  } // End AK8 Jet Loop
 }
 
 
@@ -786,7 +824,7 @@ AnalysisBase::init_common_histos()
   h_pileup_weight_up           = new TH1D("pileup_weight_up",   "Pile-up weights - MB X-sec down 5% (65.55 mb);Pile-up;Weight", 100,0,100);
   h_nvtx                       = new TH1D("nvtx",               "Number of vertices - Nominal;N_{Vertices}",                      100,0,100);
   h_nvtx_rw                    = new TH1D("nvtx_rw",            "Number of vertices - Pile-up reweighted (MC only);N_{Vertices}", 100,0,100);
-  // benchmarking histos
+  // job_monitoring histos
   h_read_speed_1k              = new TH1D("read_speed_1k",          ";Read speed (Events/s);Measurement/1k Event",  1000,0,10000);
   h_read_speed_10k             = new TH1D("read_speed_10k",         ";Read speed (Events/s);Measurement/10k Event", 1000,0,10000);
   h_read_speed_job             = new TH1D("read_speed_job",         ";Read speed (Events/s);Measurement/Job",       1000,0,10000);
@@ -1322,17 +1360,29 @@ Analysis::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_s
 //                Benchmarking (batch) jobs
 
 void
-AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool moderate=0)
+AnalysisBase::job_monitoring(const int& entry, const int& nevents, const std::string& curr_file, const float threshold=5)
 {
   if (entry==0) {
     sw_1k_ ->Start(kFALSE);
     sw_10k_->Start(kFALSE);
     sw_job_->Start(kFALSE);
   } else {
+    double time_1 = sw_1_->RealTime();
+    sw_1_->Reset(); sw_1_->Start(kFALSE);
+    if (time_1>threshold&&entry!=1) {
+      ++bad_files[curr_file];
+      //std::cout<<"Bad read - time threshold: "<<threshold<<"s, unresponsive time: "<<time_1<<" s, entry: "<<entry<<" occurence: "<<bad_files[curr_file]<<std::endl;
+      //if(bad_files[curr_file]==5) {
+      //  std::cout<<"Badly readable file found: "<<curr_file<<std::endl;
+      //  if (crash_job) {
+      //    std::cout<<"Reached "<<threshold<<" occurences, exiting the job and requesting new EOS copy"<<std::endl;
+      //    exit(1);
+      //  }
+      //}
+    }
     if (entry%1000==0) {
       double meas_1k = 1000/sw_1k_->RealTime();
       h_read_speed_1k->Fill(meas_1k);
-      if (moderate) moderate_job_(h_read_speed_1k, meas_1k, 2, 5);
       sw_1k_->Reset();
       sw_1k_->Start(kFALSE);
       //std::cout<<"Meas  1k: "<<meas_1k<<std::endl;
@@ -1341,7 +1391,6 @@ AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool mode
       double meas_10k = 10000/sw_10k_->RealTime();
       h_read_speed_10k->Fill(meas_10k);
       h_read_speed_vs_nevt_10k->Fill(entry, meas_10k);
-      if (moderate) moderate_job_(h_read_speed_10k, meas_10k, 2, 10);
       sw_10k_->Reset();
       sw_10k_->Start(kFALSE);
       //std::cout<<"Meas 10k: "<<meas_10k<<std::endl;
@@ -1353,25 +1402,8 @@ AnalysisBase::benchmarking(const int& entry, const int& nevents, const bool mode
       h_read_speed_vs_nevt_job->Fill(nevents, meas_job);
       h_runtime_job->Fill(sw_job_->RealTime()/60.);
       h_runtime_vs_nevt_job->Fill(nevents, sw_job_->RealTime()/60.);
+      for (const auto& bad_file : bad_files)
+	std::cout<<"Badly readable file found: "<<bad_file.first<<" N_occurence: "<<bad_file.second<<std::endl;
     }
   }
-}
-
-void
-AnalysisBase::moderate_job_(TH1D* h, double speed, int nrms_threshold, int sleep_s) {
-  // Median - 2 sigma
-  int n = h->GetXaxis()->GetNbins(); 
-  std::vector<double> x(n);
-  h->GetXaxis()->GetCenter(&x[0]);
-  const double * y = h->GetArray();
-  double median = TMath::Median(n, &x[0], &y[1]);
-  //double mean = h->GetMean();
-  //double threshold = mean -nrms_threshold*h->GetRMS();
-  double threshold = median -nrms_threshold*h->GetRMS();
-  if (speed<threshold) {
-    sw_1k_->Stop(); sw_10k_->Stop();
-    std::this_thread::sleep_for (std::chrono::seconds(sleep_s));
-    sw_1k_->Continue(); sw_10k_->Continue();
-  }
-  //std::cout<<"- Moderating for "<<sleep_s<<" sec, median: "<<median<<" rms: "<<h->GetRMS()<<" threshold"<<threshold<<" speed: "<<speed<<std::endl;
 }
