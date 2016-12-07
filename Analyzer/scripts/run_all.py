@@ -66,7 +66,10 @@ if opt.batch and opt.NEVT == -1 and not opt.useprev:
     sys.exit()
 if opt.plot:
     #PLOTTER_IN automatic
-    PLOTTER_OUT = "results/Plotter_test.root" if opt.test else "results/Plotter_out_"+DATE+".root"
+    if opt.test:
+        PLOTTER_OUT = "results/Plotter_test.root"
+    else:
+        PLOTTER_OUT = opt.OUTDIR.replace("run_","Plotter_out_")+".root"
 if opt.replot:
     if opt.OUTDIR == "":
         # Find last working directory automatically and find output files there
@@ -76,7 +79,7 @@ if opt.replot:
         PLOTTER_IN  = [PLOTTER_IN]
     else:
         PLOTTER_IN  = glob.glob(opt.OUTDIR+"/*.root")
-        PLOTTER_OUT = opt.OUTDIR.replace("run_", "Plotter_out_")+"_replot.root"
+        PLOTTER_OUT = opt.OUTDIR.replace("run_","Plotter_out_")+"_replot.root"
 
 # Working directory, during running we cd here and back
 if opt.test:
@@ -188,11 +191,11 @@ for filelist in input_filelists:
         # SPLIT MODE: Each jobs runs on max opt.NFILE
         options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize
         with open(filelist) as f:
-            lines = f.read().splitlines()
-            for n in range(1, len(lines)/opt.NFILE+2):
+            files = f.read().splitlines()
+            for n in range(1, (len(files)-1)/opt.NFILE+2):
                 tmp_filelist = filelist.replace("filelists","filelists_tmp").replace(".txt","_"+str(n)+".txt")
                 with open(tmp_filelist, "w") as job_filelist:
-                    for i in range((n-1)*opt.NFILE, min(n*opt.NFILE,len(lines))):
+                    for i in range((n-1)*opt.NFILE, min(n*opt.NFILE,len(files))):
                         print>>job_filelist, files[i]
                 args = [output_file.replace(".root","_"+str(n)+".root"), [tmp_filelist], options, log_file.replace(".log","_"+str(n)+".log")]
                 ana_arguments.append(args)
@@ -234,17 +237,6 @@ def logged_call(cmd, logfile):
     if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
     if opt.run:
-        #logger = logging.getLogger(logfile)
-        #hdlr = logging.FileHandler(logfile)
-        #logger.addHandler(hdlr)
-        #logger.setLevel(logging.INFO)
-        #proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        #stdout, stderr = proc.communicate()
-        #if stdout:
-        #    logger.info(stdout)
-        #if stderr:
-        #    logger.error(stderr)
-        #proc.wait()
         with open(logfile, "w") as log:
             proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
             proc.wait()
@@ -347,8 +339,8 @@ def analysis(ana_arguments, nproc):
                             finished += 1
                             output_files.append(output_file)
                             last_known_status[jobindex] = 0
-                        # If the last submission/check is older than 5 minutes check job status with bjobs
-                        elif time.time() - last_known_status[jobindex] > (300 if opt.NQUICK<2 else 300/opt.NQUICK):
+                        # If the last submission/check is older than 10 minutes check job status with bjobs
+                        elif time.time() - last_known_status[jobindex] > (600 if opt.NQUICK<2 else 600/opt.NQUICK):
                             jobname = DATE+'_'+str(jobindex)
                             logged_call(shlex.split('bjobs -J '+jobname), 'jobstatus_'+jobname+'.txt')
                             with open('jobstatus_'+jobname+'.txt') as jobstatus:
@@ -398,8 +390,6 @@ def show_result(plotter_out):
 # ---------------------- Running -------------------------
 
 # renew token before running
-special_call(["aklog", "CERN.CH"])
-
 if opt.replot:
     if not opt.recover:
         backup_files(EXEC_PATH)

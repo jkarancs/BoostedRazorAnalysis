@@ -469,13 +469,12 @@ unsigned int nLepVetoNoIso;
 unsigned int nLepVeto;
 unsigned int nLepTight;
 double MT;
-bool isLepIsolated;
-bool allVetoLepIsolated;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
   std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons;
+  //std::vector<bool> veto_lep_in_jet;
 
   // It only makes sense to calculate certain variables only once if they don't depend on jet energy
   if (syst_index == 0) {
@@ -535,6 +534,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	if (miniIso <  ELE_VETO_MINIISO_CUT) {
 	  nEleVeto++;
 	  veto_leptons.push_back(ele_v4);
+	  //veto_lep_in_jet.push_back(data.ele.IsPartOfNearAK4Jet[i]);
 	}
       }
       // Tight
@@ -582,6 +582,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	if (miniIso <  MU_VETO_MINIISO_CUT) {
 	  nMuVeto++;
 	  veto_leptons.push_back(mu_v4);
+	  //veto_lep_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
 	}
       }
       // Tight
@@ -635,8 +636,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   nTightBTag  = 0;
   AK4Puppi_Ht = 0;
   minDeltaPhi = 9999;
-  isLepIsolated = 1;
-  allVetoLepIsolated = 1;
+  //std::vector<bool> add_lepton_to_ht(veto_leptons.size(),1);
   while(data.jetsAK4Puppi.Loop()) {
     size_t i = data.jetsAK4Puppi.it;
     TLorentzVector jet_v4; jet_v4.SetPtEtaPhiE(data.jetsAK4Puppi.Pt[i], data.jetsAK4Puppi.Eta[i], data.jetsAK4Puppi.Phi[i], data.jetsAK4Puppi.E[i]);
@@ -667,26 +667,32 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	double dphi = fabs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4Puppi.Phi[i]));
 	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
       }
-
-      // HT
-      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];
       
-      // Lepton (complete) isolation from jet
-      float minDR_lep = 9999;
-      for (const auto& lep_v4 : selected_leptons) {
-        float dR_lep = jet_v4.DeltaR(lep_v4);
-        if (dR_lep < minDR_lep) minDR_lep = dR_lep;
-      }
-      if (minDR_lep<0.4) isLepIsolated = 0;
-      minDR_lep = 9999;
-      for (const auto& lep_v4 : veto_leptons_noiso) {
-        float dR_lep = jet_v4.DeltaR(lep_v4);
-        if (dR_lep < minDR_lep) minDR_lep = dR_lep;
-      }
-      if (minDR_lep<0.4) allVetoLepIsolated = 0;
-
     } // End Jet Selection
+    
+    // Online jet selection for HT
+    if ( data.jetsAK4Puppi.Pt[i]         >  30 &&
+	 fabs(data.jetsAK4Puppi.Eta[i])  <  3.0 ) {
+      AK4Puppi_Ht += data.jetsAK4Puppi.Pt[data.jetsAK4Puppi.it];
+
+      // Lepton (complete) isolation from jets
+      // float minDR_lep = 9999; 
+      // int ilep_match = -1;
+      // for (size_t ilep=0, nlep=veto_leptons.size(); ilep<nlep; ++ilep) {
+      //   float dR_lep = jet_v4.DeltaR(veto_leptons[ilep]);
+      //   if (dR_lep < minDR_lep) {
+      //     minDR_lep = dR_lep;
+      //     ilep_match = ilep;
+      //   }
+      // }
+      // if (minDR_lep<0.4 && veto_lep_in_jet[ilep_match]) add_lepton_to_ht[ilep_match] = 0;
+
+    }
   } // End AK4 Jet Loop
+  
+  // Add isolated leptons to HT computation
+  //for (size_t ilep=0, nlep=veto_leptons.size(); ilep<nlep; ++ilep)
+  //  if (add_lepton_to_ht[ilep]) AK4Puppi_Ht += veto_leptons[ilep].Pt();
   
   // AK8 Puppi jets
   iJetAK8   .clear();
@@ -767,10 +773,15 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 #endif
       }
 
+    } // End Jet Selection
+
+    // Online jet selection for AK8 HT
+    if ( data.jetsAK8Puppi.Pt[i]         > 150 &&
+	 fabs(data.jetsAK8Puppi.Eta[i])  <  2.5 ) {
       // Ht
       AK8Puppi_Ht += data.jetsAK8Puppi.Pt[i];
+    }
 
-    } // End Jet Selection
   } // End AK8 Jet Loop
 }
 
@@ -896,7 +907,7 @@ double
 AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filenames, const std::string& histoname)
 {
   // Merging totweight histos
-  for (auto filename : filenames) {
+  for (const auto& filename : filenames) {
     TFile* f = TFile::Open(filename.c_str());
     h_totweight->Add((TH1D*)f->Get(histoname.c_str()));
     f->Close();
@@ -922,13 +933,14 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
 
   // Merge totweight histos
   std::map<int, double> xsec_mother;
-  for (auto filename : filenames) {
+  for (const auto& filename : filenames) {
     TFile* f = TFile::Open(filename.c_str());
     // Get total weight
     TH2D* totweight = (TH2D*)f->Get(vname_totweight[signal_index].c_str());
     vh_totweight_signal[signal_index]->Add(totweight);
     f->Close();
   }
+
   // Set xsec for each gluino/stop mass bin
   // Read gluino/stop xsec from same file used in TTree step
   for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) {
@@ -979,7 +991,7 @@ AnalysisBase::init_pileup_reweightin(const std::string& pileupDir, const std::st
   f_pileup_mc->Close();
   // // Get mc histogram saved inside the ntuple (unfiltered pileup distribution)
   // std::cout<<h_pileup_mc->GetEntries()<<std::endl;
-  // for (auto filename : filenames) {
+  // for (const auto& filename : filenames) {
   //   TFile* f_pileup_mc = TFile::Open(filename.c_str());
   //   h_pileup_mc->Add((TH1D*)f_pileup_mc->Get(mcPileupHistoName.c_str()));
   //   f_pileup_mc->Close();
@@ -1157,7 +1169,7 @@ AnalysisBase::get_ht_weight(DataStruct& data, const double& nSigmaHT)
   // linear function(s): p0 + p1 * HT
 
   // Calculate unscaled jet HT
-  double ht = 0; for (auto pt : AK8Puppi_Pt) ht += pt;
+  double ht = 0; for (const auto& pt : AK8Puppi_Pt) ht += pt;
 
   double w = 1.0;
   if (ht>=800&&ht<2000)
@@ -1316,7 +1328,7 @@ Analysis::apply_all_cuts_except(char region, std::vector<std::string> cuts_to_sk
   // This is for safety: We do not want to fill histograms wrongly by mistake
   if (found!=cuts_to_skip.size()) {
     std::cout<<"A cut to be skipped does not exsist in seaerch region \""<<region<<"\" with names: ";
-    for (auto cut : cuts_to_skip) std::cout<<cut<<", "; std::cout<<std::endl;
+    for (const auto& cut : cuts_to_skip) std::cout<<cut<<", "; std::cout<<std::endl;
     utils::error("Analysis - the second argument for apply_all_cuts_except() contains at least one non-sensical cut");
   }
   return result;

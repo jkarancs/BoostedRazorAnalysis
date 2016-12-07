@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
   utils::commandLine cmdline;
   utils::decodeCommandLine(argc, argv, cmdline, vname_data, vname_signal);
 
-  itreestream stream(cmdline.fileNames, settings.treeName);
+  itreestream stream(cmdline.fileNames, settings.treeName, 2000);
   if ( !stream.good() ) utils::error("unable to open ntuple file(s)");
 
   if ( cmdline.isData ) cout << "Running on Data." << endl;
