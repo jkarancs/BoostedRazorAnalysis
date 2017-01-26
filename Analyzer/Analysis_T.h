@@ -378,7 +378,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 if (apply_all_cuts('J')) h_AK8Puppi_tau32->Fill(data.jetsAK8Puppi.tau3.at(0)/data.jetsAK8Puppi.tau2.at(0),weight); 
 if (apply_all_cuts('J')) h_AK8Puppi_tau31->Fill(data.jetsAK8Puppi.tau3.at(0)/data.jetsAK8Puppi.tau1.at(0),weight); 
 if (apply_all_cuts('J')) h_AK8Puppi_tau21->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),weight); 
-if (apply_all_cuts('J')) h_nhadtop->Fill(nLooseIDHadTopTagJets, weight);
+if (apply_all_cuts('J')) h_nhadtop->Fill(nLooseIDHadTopTagJets,weight);
 
 
 
