@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # 2015
 #CERT_dir=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV
 #PU_file=$CERT_dir/PileUp/pileup_JSON_11-19-2015.txt # = pileup_latest.txt 13 May 2016
@@ -18,14 +20,17 @@
 
 # 2016
 CERT_dir=/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV
-PU_file=$CERT_dir/PileUp/pileup_latest.txt
+PU_file=$CERT_dir/PileUp/pileup_latest.txt # Dec06 is latest (size 9942473)
 
 # ICHEP16 Golden JSON
 #JSON=$CERT_dir/Cert_271036-276811_13TeV_PromptReco_Collisions16_JSON_NoL1T.txt
 #OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/ICHEP16_Golden_JSON
 # Oct21 Golden JSON
-JSON=$CERT_dir/Cert_271036-280385_13TeV_PromptReco_Collisions16_JSON.txt
-OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/Oct21_Golden_JSON
+#JSON=$CERT_dir/Cert_271036-280385_13TeV_PromptReco_Collisions16_JSON.txt
+#OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/Oct21_Golden_JSON
+# Dec02 Final ReReco Golden JSON
+JSON=$CERT_dir/ReReco/Final/Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.txt
+OUT_dir=$CMSSW_BASE/src/BoostedRazorAnalysis/Analyzer/pileup/Dec02_Golden_JSON
 
 # 2016 MB XSec
 # https://hypernews.cern.ch/HyperNews/CMS/get/b2g/883/1.html

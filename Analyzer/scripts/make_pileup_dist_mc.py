@@ -9,13 +9,14 @@ maxPileupBin  = 100
 #outputfile = "pileup/Mar02_Golden_JSON/mc_pileup.root"
 
 # 2016 - 80X
-# ICHEP16/Oct21 Golden JSON
-from SimGeneral.MixingModule.mix_2016_25ns_SpringMC_PUScenarioV1_PoissonOOTPU_cfi import mix
-#outputfile = "pileup/ICHEP16_Golden_JSON/mc_pileup.root"
-outputfile = "pileup/Oct21_Golden_JSON/mc_pileup.root"
+# Spring16
+#from SimGeneral.MixingModule.mix_2016_25ns_SpringMC_PUScenarioV1_PoissonOOTPU_cfi import mix
+##outputfile = "pileup/ICHEP16_Golden_JSON/mc_pileup.root"
+#outputfile = "pileup/Oct21_Golden_JSON/mc_pileup.root"
 
-# Upcoming: Moriond17
-#from SimGeneral.MixingModule.mix_2016_25ns_Moriond17MC_PoissonOOTPU_cfi import mix
+# Moriond17
+from SimGeneral.MixingModule.mix_2016_25ns_Moriond17MC_PoissonOOTPU_cfi import mix
+outputfile = "pileup/Dec02_Golden_JSON/mc_pileup.root"
 
 # Write histogram to specified file
 f = ROOT.TFile.Open(outputfile, "recreate")

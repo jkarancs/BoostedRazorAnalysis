@@ -1,12 +1,14 @@
-#include "common/DataStruct.h"
-#include "common/treestream.h"
+// VER 0 - Spring15 MC, ICHEP Dataset
+// VER 1 - Moriond17 datasets
+#define VER 0
 
+#include "common/DataStruct_Oct31.h"
+#include "common/treestream.h"
 #include "Analysis_Ryonghae.h" // Specify here the implementations for your Analysis
 
 struct settings {
 
-#include "common/selectVariables_skim.h"
-//#include "common/selectVariables_fast.h"
+#include "common/selectVariables_fast_Oct31.h"
 
   //-----------------------------------------------------------------------------
   // -- Constants
@@ -15,11 +17,11 @@ struct settings {
     runOnSkim                ( true  ),
     saveSkimmedNtuple        ( false ),
     doPileupReweighting      ( true  ),
-    applyWTagSF              ( false ),
-    applyBTagSF              ( false ),
-    //applyHadTopTagSF         ( false ),
     scaleQCD                 ( false ),
     doHTReweighting          ( false ),
+    applySmearing            ( true  ),
+    applyScaleFactors        ( true  ),
+    nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 7 mu, 1 W, 1 b
     varySystematics          ( false ),
     systematicsFileName      ( "systematics/2016_10_31_1SigmaUpDown_NoPdf.txt" ),
     treeName                 ( runOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
@@ -30,10 +32,8 @@ struct settings {
     pileupDir                ( "pileup/Oct21_Golden_JSON/" ),
     intLumi                  ( 27655.802 /* brilcalc - Oct21 Golden JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.062 ),
-    useXSecFileForBkg        ( true  ), // true: use file below, false: use value in the ntuple (evt_XSec)
-    xSecFileName             ( "common/BackGroundXSec.txt" ),
-    triggerEffScaleFactor    (  1.00 ),
-    triggerEffUncertainty    (  0.01 )
+    useXSecFileForBkg        ( false ), // true: use file below, false: use value in the ntuple (evt_XSec)
+    xSecFileName             ( "common/BackGroundXSec.txt" )
   {
     if (runOnSkim) {
       totWeightHistoNamesSignal.push_back("totweight_T1tttt"); // lsp mass vs gluino mass scan, also used for T5ttcc and T5tttt
@@ -48,11 +48,11 @@ struct settings {
   const bool runOnSkim;
   const bool saveSkimmedNtuple;
   const bool doPileupReweighting;
-  const bool applyWTagSF;
-  const bool applyBTagSF;
-  //const bool applyHadTopTagSF;
   const bool scaleQCD;
   const bool doHTReweighting;
+  const bool applySmearing;
+  const bool applyScaleFactors;
+  const int  nSigmaScaleFactors;
   const bool varySystematics;
   const std::string systematicsFileName;
   const std::string treeName;
@@ -65,8 +65,6 @@ struct settings {
   const double lumiUncertainty;
   const bool useXSecFileForBkg;
   const std::string xSecFileName;
-  const double triggerEffScaleFactor;
-  const double triggerEffUncertainty;
   std::vector<std::string> totWeightHistoNamesSignal;
 
 } settings;

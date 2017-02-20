@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "settings_Viktor.h" // Define all Analysis specific settings here
+#include "settings_Ufuk.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   */
 
   // Constuct the Analysis (specified in settings.h)
-  Analysis ana;
+  Analysis ana(cmdline.isData, cmdline.isSignal, cmdline.dirname);
 
   // ---------------------------------------------------------------------------
   // -- output file                                                           --
@@ -116,19 +116,21 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaLumi        = std::vector<double>(1,0);
     std::vector<double> nSigmaPU          = std::vector<double>(1,0);
     std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
-    std::vector<double> nSigmaJEC         = std::vector<double>(1,0);
-    std::vector<double> nSigmaWTagSF      = std::vector<double>(1,0);
-    std::vector<double> nSigmaBTagSF      = std::vector<double>(1,0);
-    //std::vector<double> nSigmaHadTopTagSF = std::vector<double>(1,0);
-    std::vector<double> nSigmaHT          = std::vector<double>(1,0);
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
+    std::vector<double> nSigmaHT          = std::vector<double>(1,0);
+    std::vector<std::vector<double> > nSigmaSFs = 
+      std::vector<std::vector<double> >(settings.nSigmaScaleFactors, std::vector<double>(1,0));
+    std::vector<double> nSigmaJES         = std::vector<double>(1,0);
+    std::vector<double> nSigmaJER         = std::vector<double>(1,0);
+    std::vector<double> nSigmaRestMET     = std::vector<double>(1,0);
     std::vector<unsigned int> numScale    = std::vector<unsigned int>(1,0);
     std::vector<unsigned int> numPdf      = std::vector<unsigned int>(1,0);
   } syst;
 
   if (settings.varySystematics) {
-    cout << "varySystematics (settings): true" << endl;
+    cout << "varySystematics    (settings): true" << endl;
+    cout << "nSigmaScaleFactors (settings): " << settings.nSigmaScaleFactors << endl;
     cout << "systematicsFileName (settings): " << settings.systematicsFileName << endl;
     std::ifstream systFile(settings.systematicsFileName.c_str());
     if ( !systFile.good() ) utils::error("unable to open systematics file: " + settings.systematicsFileName);
@@ -145,45 +147,20 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaLumi.push_back(dbl);
       nth_line>>dbl; syst.nSigmaPU.push_back(dbl);
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaJEC.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaWTagSF.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaBTagSF.push_back(dbl);
-      //nth_line>>dbl; syst.nSigmaHadTopTagSF.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
+      for (int i=0; i<settings.nSigmaScaleFactors; ++i) {
+	nth_line>>dbl; syst.nSigmaSFs[i].push_back(dbl);
+      }
+      nth_line>>dbl; syst.nSigmaJES.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaJER.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaRestMET.push_back(dbl);
       nth_line>>uint; syst.numScale.push_back(uint);
       nth_line>>uint; syst.numPdf.push_back(uint);
       std::cout<<" line "<<syst.nSyst<<": "<<line<<std::endl;
     }
     std::cout<<std::endl;
-
-    /*
-    if ( cmdline.numSyst <= 0 ) utils::error("varySystematics true, but command line argument numSyst=<positive integer> was not given");
-    cout << "numSyst (cmdline): " << cmdline.numSyst << endl;
-
-    // read nth line
-    // error if end of file reached
-    std::string line;
-    for (int i=1; i<=cmdline.numSyst; ++i) if ( ! std::getline(systFile, line) ) 
-      utils::error("systematics file contains less lines than numSyst");
-    std::stringstream nth_line;
-    nth_line<<line;
-
-    // Assign the systematic sigmas:
-    nth_line>>syst.nSigmaPU;
-    nth_line>>syst.nSigmaJEC;
-    nth_line>>syst.nSigmaAlphaS;
-    nth_line>>syst.nSigmaScale;
-    nth_line>>syst.numScale;
-    nth_line>>syst.numPdf;
-    cout << " nSigmaPU     = " << syst.nSigmaPU << endl;
-    cout << " nSigmaJEC    = " << syst.nSigmaJEC << endl;
-    cout << " nSigmaAlphaS = " << syst.nSigmaAlphaS << endl;
-    cout << " nSigmaScale  = " << syst.nSigmaScale << endl;
-    cout << " numScale     = " << syst.numScale << endl;
-    cout << " numPdf       = " << syst.numPdf << endl;
-    */
     
   } else {
     cout << "varySystematics (settings): false" << endl;
@@ -242,11 +219,15 @@ int main(int argc, char** argv) {
   // But also, common methods in all anaylsis are defined in common/AnalysisBase.*
 
   if (!cmdline.noPlots)
-    ana.define_histo_options(w, data, syst.nSyst, syst.index, cmdline.dirname, settings.runOnSkim);
+    ana.define_histo_options(w, data, syst.nSyst, syst.index, settings.runOnSkim);
 
   ana.init_common_histos();
   if (!cmdline.noPlots)
     ana.init_analysis_histos(syst.nSyst, syst.index);
+
+  // Read histograms for scale factors
+  if (!cmdline.isData && settings.applyScaleFactors)
+    ana.init_scale_factors();
 
   // --------------------------------------------------------------
   // -- Calculate the normalization factor for the event weights --
@@ -264,7 +245,7 @@ int main(int argc, char** argv) {
     double xsec = 0;
     if (settings.useXSecFileForBkg) {
       cout << "xSecFileName (settings): " << settings.xSecFileName << endl; // given in settings.h
-      xsec = ana.get_xsec_from_txt_file(settings.xSecFileName, cmdline.dirname); // xSecFileName given in settings.h
+      xsec = ana.get_xsec_from_txt_file(settings.xSecFileName); // xSecFileName given in settings.h
       cout << "xsec (txt file): " << xsec << endl;      
     } else {
       xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
@@ -300,16 +281,17 @@ int main(int argc, char** argv) {
     ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.allFileNames);
   } else cout << "doPileupReweighting (settings): false" << endl;
 
-  // Scale factors
-  cout << "applyWTagSF (settings): " << ( settings.applyWTagSF ? "true" : "false" ) << endl;
-  cout << "applyBTagSF (settings): " << ( settings.applyBTagSF ? "true" : "false" ) << endl;
-  //cout << "applyHadTopTagSF (settings): " << ( settings.applyHadTopTagSF ? "true" : "false" ) << endl;
-
   // Scale QCD to match data in a QCD dominated region
   cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
 
   // Jet Pt Reweighting
   cout << "doHTReweighting (settings): " << ( settings.doHTReweighting ? "true" : "false" ) << endl;
+
+  // Scale factors
+  cout << "applySmearing (settings): " << ( settings.applySmearing ? "true" : "false" ) << endl;
+
+  // Scale factors
+  cout << "applyScaleFactors (settings): " << ( settings.applyScaleFactors ? "true" : "false" ) << endl;
 
   // ------------------------------------------------------------------------------
   // -- Define the order of cuts (and corresponding bins in the counts histogram --
@@ -317,14 +299,24 @@ int main(int argc, char** argv) {
 
   // Define cuts that are common in all analyses
   // Given in common/AnalysisBase.h
-  ana.define_preselections(data, cmdline.isData, cmdline.isSignal);
+  ana.define_preselections(data);
 
   // Define cuts that specific to this analysis
   // Given in [Name]_Analysis.h specified in setting.h
   ana.define_selections(data);
 
   // Define bin order for counts histogram
-  ofile->count("NoCuts", 0);
+  ofile->count("nevents",   0);
+  // Counts after each reweighting step
+  if ( ! cmdline.isData ) {
+    ofile->count("w_lumi",    0);
+    ofile->count("w_pileup",  0);
+    ofile->count("w_alphas",  0);
+    ofile->count("w_scale",   0);
+    ofile->count("w_pdf",     0);
+    ofile->count("w_trigger", 0);
+  }
+  ofile->count("NoCuts",    0);
   cout << endl;
   cout << "Number of events counted after applying" << endl;
   cout << "- Baseline cuts (common for all analysis):" << endl;
@@ -333,10 +325,19 @@ int main(int argc, char** argv) {
     cout << "  "<<cut.name << endl;
   }
   cout << endl;
-  cout << "- Analysis specific cuts:\n";
-  for (const auto& search_region : ana.analysis_cuts) for (const auto& cut : search_region.second) {
-    ofile->count(std::string(1,search_region.first)+"_"+cut.name, 0);
-    cout << "  " << std::string(1,search_region.first)+"_"+cut.name << endl;
+  cout << "- Analysis specific cuts (and scale factors):\n";
+  for (const auto& search_region : ana.analysis_cuts) {
+    for (const auto& cut : search_region.second) {
+      ofile->count(std::string(1,search_region.first)+"_cut_"+cut.name, 0);
+      cout << "  " << std::string(1,search_region.first)+"_cut_"+cut.name << endl;
+    }
+    if (settings.applyScaleFactors) {
+      // Then apply scale factors
+      //ana.apply_scale_factors();
+      //for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i)
+      for (size_t i=1, n=4; i<=n; ++i)
+        ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
+    }
   }
 
   //---------------------------------------------------------------------------
@@ -352,9 +353,14 @@ int main(int argc, char** argv) {
 
     if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;
 
+    ofile->count("nevents", 1);
+
     if ( cmdline.isData ) {
-      w = 1;
       syst.index = 0;
+      // All weights are 1 for data
+      w = 1;
+      for (const auto& region : ana.scale_factors)
+	ana.sf_weight[region.first] = 1;
 
       // Only analyze events that are in the JSON file
       if (settings.useJSON ? json_run_ls[data.evt.RunNumber][data.evt.LumiBlock] : 1) {
@@ -366,7 +372,7 @@ int main(int argc, char** argv) {
 	// Save counts (after each baseline cuts)
 	ofile->count("NoCuts", w);
 	bool pass_all_baseline_cuts = true;
-	for (auto cut : ana.baseline_cuts) {
+	for (const auto& cut : ana.baseline_cuts) {
 	  if ( !(pass_all_baseline_cuts = cut.func()) ) break;
 	  ofile->count(cut.name, w);
 	}
@@ -402,14 +408,17 @@ int main(int argc, char** argv) {
 	  // These are all defined in [Name]_Analysis.cc (included from settings.h)
 	  // You specify there also which cut is applied for each histo
 	  // But all common baseline cuts are alreay applied above
-	  if (!cmdline.noPlots) ana.fill_analysis_histos(data, syst.index, w);
+	  if (!cmdline.noPlots) {
+	    ana.fill_common_histos(data, syst.index, w);
+	    ana.fill_analysis_histos(data, syst.index, w);
+	  }
 
 	  // Save counts for the analysis cuts in each search region (signal/control)
 	  for (const auto& search_region : ana.analysis_cuts) {
 	    bool pass_all_regional_cuts = true;
-	    for (auto cut : search_region.second) {
+	    for (const auto& cut : search_region.second) {
 	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
-	      ofile->count(std::string(1,search_region.first)+"_"+cut.name, w);
+	      ofile->count(std::string(1,search_region.first)+"_cut_"+cut.name, w);
 	    }
 	  }
 
@@ -423,6 +432,7 @@ int main(int argc, char** argv) {
 
       // Loop and vary systematics
       for (syst.index = 0; syst.index <= (settings.varySystematics ? syst.nSyst : 0); ++syst.index) {
+	
 	w = 1;
 
 	// Event weights
@@ -434,6 +444,7 @@ int main(int argc, char** argv) {
 	}
 	// Normalize to chosen luminosity, also consider symmeteric up/down variation in lumi uncertainty
 	w *= ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);
+	ofile->count("w_lumi", w);
 
 	// Pileup reweighting
 	if (syst.index == 0) h_nvtx->Fill(data.evt.NGoodVtx, w);
@@ -441,23 +452,36 @@ int main(int argc, char** argv) {
 	  w *= ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index]);
 	  if (syst.index == 0) h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
 	}
+	ofile->count("w_pileup", w);
 
-	// Trigger efficiency scale factor
-	w *= ana.get_syst_weight(settings.triggerEffScaleFactor, settings.triggerEffUncertainty, syst.nSigmaTrigger[syst.index]);
+	// Theory weights
+	// LHE weight variations
+	// More info about them here:
+	// https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L165-L237
 
-	// Jet Energy Scale uncertainty
-	// Rescale jet 4-momenta
-	ana.rescale_jets(data, syst.index, syst.nSigmaJEC[syst.index]);
+	// Alpha_s variations
+	// A set of two weights
+	// Only stored for NLO, otherwise vector size==0
+	// If vector was not filled (LO samples), not doing any weighting
+	if ( data.syst_alphas.Weights.size() == 2 )
+	  w *= ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS[syst.index], data.evt.LHA_PDF_ID);
+	ofile->count("w_alphas", w);
 
-	// Scale factors
-	if (settings.applyWTagSF)
-	  w *= ana.get_w_tagging_sf(data, syst.nSigmaWTagSF[syst.index]);
+	// Scale variations
+	// A set of six weights, unphysical combinations excluded
+	// If numScale=0 is specified, not doing any weighting
+	if ( syst.numScale[syst.index] >= 1 && syst.numScale[syst.index] <= 3 )
+	  w *= ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
+	ofile->count("w_scale", w);
 
-	if (settings.applyBTagSF)
-	  w *= ana.get_b_tagging_sf(data, syst.nSigmaBTagSF[syst.index]);
-
-	//if (settings.applyHadTopTagSF)
-	//  w *= ana.get_top_tagging_sf(data, syst.nSigmaHadTopTagSF[syst.index]);
+	// PDF weights
+	// A set of 100 weights for the nominal PDF
+	// If numPdf=0 is specified, not doing any weighting
+	if ( syst.numPdf[syst.index] >= 1 && syst.numPdf[syst.index] <= data.syst_pdf.Weights.size() )
+	  w *= data.syst_pdf.Weights[syst.numPdf[syst.index]-1];
+	else if ( syst.numPdf[syst.index] > data.syst_pdf.Weights.size() )
+	  utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
+	ofile->count("w_pdf", w);
 
 	// Scale QCD to match data in QCD dominated region
 	if (TString(cmdline.dirname).Contains("QCD")) {
@@ -471,38 +495,29 @@ int main(int argc, char** argv) {
 	    w *= ana.get_ht_weight(data, syst.nSigmaHT[syst.index]);
 	}
 
-	// Theory weights
-	// LHE weight variations
-	// More info about them here:
-	// https://github.com/jkarancs/B2GTTrees/blob/master/plugins/B2GEdmExtraVarProducer.cc#L165-L237
-
-	// Alpha_s variations
-	// A set of two weights
-	// Only stored for NLO, otherwise vector size==0
-	// If vector was not filled (LO samples), not doing any weighting
-	if ( data.syst_alphas.Weights.size() == 2 )
-	  w *= ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS[syst.index], data.evt.LHA_PDF_ID);
-
-	// Scale variations
-	// A set of six weights, unphysical combinations excluded
-	// If numScale=0 is specified, not doing any weighting
-	if ( syst.numScale[syst.index] >= 1 && syst.numScale[syst.index] <= 3 )
-	  w *= ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
-
-	// PDF weights
-	// A set of 100 weights for the nominal PDF
-	// If numPdf=0 is specified, not doing any weighting
-	if ( syst.numPdf[syst.index] >= 1 && syst.numPdf[syst.index] <= data.syst_pdf.Weights.size() )
-	  w *= data.syst_pdf.Weights[syst.numPdf[syst.index]-1];
-	else if ( syst.numPdf[syst.index] > data.syst_pdf.Weights.size() )
-	  utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
-
-	// Analysis specific weights (comes last, as things may depend on jet energy)
-	w *= ana.get_analysis_weight(data);
+	// Scale and Smear Jets and MET
+	ana.rescale_smear_jet_met(data, settings.applySmearing, syst.index, syst.nSigmaJES[syst.index],
+				  syst.nSigmaJER[syst.index], syst.nSigmaRestMET[syst.index]);
 
 	// Calculate variables that do not exist in the ntuple
 	ana.calculate_common_variables(data, syst.index);
 	ana.calculate_variables(data, syst.index);
+
+	// Apply Trigger Efficiency Scale Factor
+	w *= ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]);
+	ofile->count("w_trigger", w);
+
+	// Apply Object Scale Factors
+	for (const auto& region : ana.scale_factors)
+	  ana.sf_weight[region.first] = w;
+	if (settings.applyScaleFactors) {
+	  // Analysis specific scale factors (region dependent)
+	  ana.apply_scale_factors(data, syst.index, syst.nSigmaSFs);
+	  // Multiply weight with calculated SFs
+	  for (const auto& region : ana.scale_factors)
+	    for (const auto& sf : region.second)
+	      ana.sf_weight[region.first] *= sf;
+	}
 
 	// Save counts (after each cuts)
 	// First cuts that are likely to be implemented in all analyses
@@ -510,7 +525,7 @@ int main(int argc, char** argv) {
 	bool pass_all_baseline_cuts = true;
 	if (syst.index == 0) {
 	  ofile->count("NoCuts", w);
-	  for (auto cut : ana.baseline_cuts) {
+	  for (const auto& cut : ana.baseline_cuts) {
 	    if ( !(pass_all_baseline_cuts = cut.func()) ) break; 
 	    ofile->count(cut.name, w);
 	  }
@@ -526,14 +541,26 @@ int main(int argc, char** argv) {
 	  // These are all defined in [Name]_Analysis.cc (included from settings.h)
 	  // You specify there also which cut is applied for each histo
 	  // But all common baseline cuts will be already applied above
-	  if (!cmdline.noPlots) ana.fill_analysis_histos(data, syst.index, w);
+	  if (!cmdline.noPlots) {
+	    ana.fill_common_histos(data, syst.index, w);
+	    ana.fill_analysis_histos(data, syst.index, w);
+	  }
 
 	  // Save counts for the analysis cuts in each search region (signal/control)
 	  if (syst.index==0) for (const auto& search_region : ana.analysis_cuts) {
+	    // First apply cuts
 	    bool pass_all_regional_cuts = true;
-	    for (auto cut : search_region.second) {
+	    for (const auto& cut : search_region.second) {
 	      if ( !(pass_all_regional_cuts = cut.func()) ) break;
-	      ofile->count(std::string(1,search_region.first)+"_"+cut.name, w);
+	      ofile->count(std::string(1,search_region.first)+"_cut_"+cut.name, w);
+	    }
+	    // Then apply scale factors
+	    if (settings.applyScaleFactors && pass_all_regional_cuts) {
+	      double sf_w = w;
+	      for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i) {
+                sf_w *= ana.scale_factors[search_region.first][i];
+                ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i+1), sf_w);
+	      }
 	    }
 	  }
 

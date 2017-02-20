@@ -1,4 +1,7 @@
-datasets="/data/jkarancs/CMSSW/ntuple/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_Oct24_input.txt"
+#!/bin/bash
+
+#datasets="/data/jkarancs/CMSSW/ntuple/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_Oct24_input.txt"
+datasets="/data/jkarancs/CMSSW/ntuple/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_Jan12_input.txt"
 xsecfile="/data/jkarancs/CMSSW/ntuple/Analysis/B2GTTrees/test/crab3/cross_sections.txt"
 
 echo -n "" > BackGroundXSec.txt

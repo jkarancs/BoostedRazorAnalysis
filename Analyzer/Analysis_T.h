@@ -1,50 +1,31 @@
+#ifndef VER
+#define VER 0
+#endif
+
 #include "TLorentzVector.h"
 #include "common/AnalysisBase.h"
 #include "common/SmartHistos.h"
-
-SmartHistos sh;
-
-
-//_______________________________________________________
-//                       Constructor
-Analysis::Analysis() : AnalysisBase() { }
-
-
-//_______________________________________________________
-//                       Destructor
-Analysis::~Analysis() { }
 
 //_______________________________________________________
 //                  Calculate variables
 
 
-unsigned int nLooseIDHadTopTagJets;  
+//unsigned int nLooseIDHadTopTagJets;  
 
 
 void
 Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 {
 
- nLooseIDHadTopTagJets = 0;
-
- // Loop on AK8Puppi jets
-
-  while(data.jetsAK8Puppi.Loop()) {
-    if (data.jetsAK8Puppi.looseJetID[data.jetsAK8Puppi.it]) {
-      if (passHadTopTag[data.jetsAK8Puppi.it]) ++nLooseIDHadTopTagJets; 
-      
-    }
-  } // end of AK8 jet loop
-}
-
-//_______________________________________________________
-//          Define Analysis specific weights
-double
-Analysis::get_analysis_weight(DataStruct& data)
-{
-  double w = 1;
-    
-  return w;
+  //nLooseIDHadTopTagJets = 0;
+  //
+  //// Loop on AK8 jets
+  //
+  //while(data.jetsAK8.Loop()) {
+  //  if (data.jetsAK8.looseJetID[data.jetsAK8.it]) {
+  //    if (passHadTopTag[data.jetsAK8.it]) ++nLooseIDHadTopTagJets;       
+  //  }
+  //} // end of AK8 jet loop
 }
 
 //_______________________________________________________
@@ -59,9 +40,9 @@ Analysis::pass_skimming(DataStruct& data)
   return 1;
 
   float pt_threshold = 300;
-  int N_Puppi = 0;
-  while(data.jetsAK8Puppi.Loop()) if (data.jetsAK8Puppi.Pt[data.jetsAK8Puppi.it]>=pt_threshold) ++N_Puppi;
-  return (N_Puppi >= 1);
+  int N = 0;
+  while(data.jetsAK8.Loop()) if (data.jetsAK8.Pt[data.jetsAK8.it]>=pt_threshold) ++N;
+  return (N >= 1);
 
   // Signal skim
   //return apply_all_cuts("S");
@@ -72,169 +53,175 @@ Analysis::pass_skimming(DataStruct& data)
 //     Can define all sorts of Signal/Control regions
 
 void
-Analysis::define_selections(const DataStruct& data)
+Analysis::define_selections(const DataStruct& d)
 {
- analysis_cuts.clear();
+  analysis_cuts.clear();
 
   // Define here cuts that are common in all Signal/Control regions
   // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
-  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                    }}); // Similar to pt>200, one AK8 jet has pt>170
-  baseline_cuts.push_back({ .name="Skim_2Jet",       .func = []    { return nJet>=2;                       }});
+
+  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  baseline_cuts.push_back({ .name="Skim_2Jet",       .func = []    { return nJet>=2;                         }});
   baseline_cuts.push_back({ .name="Baseline_3Jet",   .func = []    { return nJet>=3;                       }}); // Separate cut, so one can exclude (N-1)
- // baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
-  
+  baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
+
+  /*
+    W+b analysis selection
+
   // S: Signal region
-  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts["S"].push_back({ .name="0TauTrk",    .func = []    { return;  }});
-  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts['S'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['S'].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  
-  // W: W enriched control sample
-  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
-  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==1;                 }});
-  analysis_cuts['W'].push_back({ .name="1Wpre",      .func = []    { return nWPreTag>=1;                   }});
-  //analysis_cuts['W'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['W'].push_back({ .name="mDPhi>=0p4",  .func = []   { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  analysis_cuts['W'].push_back({ .name="30<=MT<100",  .func = []   { return MT>=30 && MT<100;              }});
-  
-  // T: Top enriched control sample
-  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
-  analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts['T'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts['T'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['T'].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  analysis_cuts['T'].push_back({ .name="MT<100",     .func = []    { return MT<100;                        }});
-  
+  analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
+  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                   }});
+  analysis_cuts['S'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+
+  // S': DPhi Control region of Signal region
+  analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['s'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
+  analysis_cuts['s'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                   }});
+  analysis_cuts['s'].push_back({ .name="mDPhi<0.4",  .func = []    { return minDeltaPhi<0.4;                 }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+
   // Q: QCD enriched control sample
-  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts['Q'].push_back({ .name="0TauTrk",    .func = []    { return;  }});
-  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                 }});
-  analysis_cuts['Q'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts['Q'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['Q'].push_back({ .name="mDPhi<0.25", .func = []    { return minDeltaPhi<0.25;              }}); // Decreased it to 0.25 (from 0.3)
- 
+  analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['Q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
+  analysis_cuts['Q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;               }});
+  analysis_cuts['Q'].push_back({ .name="mDPhi<0.25", .func = []    { return minDeltaPhi<0.25;                }}); // Decreased it to 0.25 (from 0.3)
+
+  // Q': Dphi Control region of QCD enriched sample
+  analysis_cuts['q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
+  analysis_cuts['q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;               }});
+  analysis_cuts['q'].push_back({ .name="mDPhi>0.4",  .func = []    { return minDeltaPhi<0.4;                 }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+
+  // T: Top enriched control sampleisData
+  analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
+  analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
+  analysis_cuts['T'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                   }});
+  analysis_cuts['T'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+  analysis_cuts['T'].push_back({ .name="MT<100",     .func = []    { return MT<100;                          }});
+
+  // W: W enriched control sample
+  analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
+  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
+  analysis_cuts['W'].push_back({ .name="1mW",        .func = []    { return nWPreTag>=1;                     }});
+  analysis_cuts['W'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+  analysis_cuts['W'].push_back({ .name="30<=MT<100", .func = []    { return MT>=30 && MT<100;                }});
+  
+  */
 
 
-// cut1: njet >= 2
+  // t: >=1 top Signal region
+  analysis_cuts['t'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['t'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['t'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['t'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['t'].push_back({ .name="1top",       .func = []    { return nHadTopTag>=1;                   }});
+  analysis_cuts['t'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
 
-  analysis_cuts['J'].push_back({ .name="2jet",   .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0;
-            return 1;
-          } });
-
-  // cut2: jet 1 pass loose jet id
- analysis_cuts['J'].push_back({ .name="jet1_id",   .func = [&data](){
-            // Define 'cut function here:
-            if (data.jetsAK8Puppi.size<1) return 0; // for safety
-            return data.jetsAK8Puppi.looseJetID[0]; 
-          } });
-
-  // cut3: jet 2 pass loose jet id
-  analysis_cuts['J'].push_back({ .name="jet2_id",   .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            return data.jetsAK8Puppi.looseJetID[1];
-          } });
-
-  // cut4: jet 1 eta < 2.4
-  analysis_cuts['J'].push_back({ .name="jet1_eta",   .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<1) return 0; // for safety
-            if (fabs(data.jetsAK8Puppi.Eta[0])>=2.4) return 0;
-            return 1;
-          } });
-
-  // cut5: jet 2 eta < 2.4
-  analysis_cuts['J'].push_back({ .name="jet2_eta",   .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            if (fabs(data.jetsAK8Puppi.Eta[1])>=2.4) return 0;
-            return 1;
-          } });
-
-  // cut6: jet 1 pt >= 400
-  analysis_cuts['J'].push_back({ .name="jet1_pt",   .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<1) return 0; // for safety
-            if (data.jetsAK8Puppi.Pt[0]<TOP_PT_CUT) return 0;
-            return 1;
-          } });
-
-  // cut7: jet 2 pt >= 400
-  analysis_cuts['J'].push_back({ .name="jet2_pt",   .func = [&data](){ 
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            if (data.jetsAK8Puppi.Pt[1]<TOP_PT_CUT) return 0;
-            return 1;
-          } });
-
-  // cut8: 105 <= jet 1 mass (softdrop) < 210
-  analysis_cuts['J'].push_back({ .name="jet1_mass", .func = [&data](){ 
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<1) return 0; // for safety
-            if (data.jetsAK8Puppi.softDropMass[0]<TOP_SD_MASS_CUT_LOW) return 0;
-            if (data.jetsAK8Puppi.softDropMass[0]>=TOP_SD_MASS_CUT_HIGH) return 0;
-            return 1;
-          } });
-
-  // cut9: 105 <= jet 2 mass (softdrop) < 210
- analysis_cuts['J'].push_back({ .name="jet2_mass", .func = [&data](){ 
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            if (data.jetsAK8Puppi.softDropMass[1]<TOP_SD_MASS_CUT_LOW) return 0;
-            if (data.jetsAK8Puppi.softDropMass[1]>=TOP_SD_MASS_CUT_HIGH) return 0;
-            return 1;
-          } });
- 
-  // cut10: | DeltaPhi | < DPHI_CUT
- analysis_cuts['J'].push_back({ .name="delta_phi", .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            TLorentzVector jet1, jet2;
-            jet1.SetPtEtaPhiE(data.jetsAK8Puppi.Pt[0], data.jetsAK8Puppi.Eta[0], data.jetsAK8Puppi.Phi[0], data.jetsAK8Puppi.E[0]);
-            jet2.SetPtEtaPhiE(data.jetsAK8Puppi.Pt[1], data.jetsAK8Puppi.Eta[1], data.jetsAK8Puppi.Phi[1], data.jetsAK8Puppi.E[1]);
-            double dPhi = fabs(jet1.DeltaPhi(jet2)); 
-            if (dPhi>=DPHI_CUT) return 0;            
-            return 1;
-          } });    
-
-  // cut11: jet 1 tau32 < TOP_TAU32_CUT
- analysis_cuts['J'].push_back({ .name="jet1_tau32",   .func = [&data](){
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<1) return 0; // for safety
-            double tau32 = data.jetsAK8Puppi.tau3[0];
-            if (data.jetsAK8Puppi.tau2[0]!=0) tau32 /= data.jetsAK8Puppi.tau2[0];
-            else tau32 = 9999;
-            if (tau32>=TOP_TAU32_CUT) return 0;
-            return 1;
-          } });
-
-  // cut12: jet 2 tau32 < TOP_TAU32_CUT
-  analysis_cuts['J'].push_back({ .name="jet2_tau32",   .func = [&data](){ 
-            // Define cut function here:
-            if (data.jetsAK8Puppi.size<2) return 0; // for safety
-            double tau32 = data.jetsAK8Puppi.tau3[1];
-            if (data.jetsAK8Puppi.tau2[1]!=0) tau32 /= data.jetsAK8Puppi.tau2[1];
-            else tau32 = 9999;
-            if (tau32>=TOP_TAU32_CUT) return 0;
-            return 1;
-          } }); 
 
 }//End of define_selections
 
+
+void
+Analysis::apply_scale_factors(DataStruct& d, const unsigned int& s, const std::vector<std::vector<double> >& nSigmaSFs)
+{
+  bool isFastSim = TString(sample).Contains("FastSim");
+  size_t i = 0;
+
+  // Don't forget to specify the total number of sigmas you use in settings_*.h !
+  // Here it is 12 currently (4 mu, 7 ele, 1 top)
+
+  // Electron SFs (4 sigmas - reco, iso, id, fastsim)
+  std::pair<double, double> sf_ele = calc_ele_sf(d, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s], isFastSim);
+  double sf_ele_veto = sf_ele.first/*, sf_ele_medium = sf_ele.second*/;
+  i+=4;
+
+  // Muon SFs (7 sigmas - tracking, fullsim id/iso/ip, fastsim id/iso/ip)
+  std::pair<double, double> sf_muon = calc_muon_sf(d, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s],
+						   nSigmaSFs[i+4][s], nSigmaSFs[i+5][s], nSigmaSFs[i+6][s], isFastSim);
+  double sf_muon_veto = sf_muon.first/*, sf_muon_medium = sf_muon.second*/;
+  i+=7;
+
+  //W+b  // W tagging SF  (1 sigma - efficiency)
+  //W+b  double sf_w = calc_w_tagging_sf(d, nSigmaSFs[i][s]);
+  //W+b  i+=1;
+  //W+b  
+  //W+b  // b tagging SFs (1 sigma)
+  //W+b  std::pair<double, double> sf_btag = calc_b_tagging_sf(d, nSigmaSFs[i][s], isFastSim);
+  //W+b  double sf_btag_loose = sf_btag.first, sf_btag_medium = sf_btag.second;
+  //W+b  i+=1;
+
+  // top tagging SF (1 sigma)
+  double sf_top = calc_top_tagging_sf(d, nSigmaSFs[i++][s]);
+  i+=1;
+
+  // Select scale factors to use
+  for (auto& sf : scale_factors) sf.second.clear();
+
+  /*
+    W+b analysis scale factors
+
+  scale_factors['S'].push_back(sf_ele_veto);
+  scale_factors['S'].push_back(sf_muon_veto);
+  scale_factors['S'].push_back(sf_btag_medium);
+  scale_factors['S'].push_back(sf_w);
+
+  scale_factors['s'] = scale_factors['S'];
+
+  scale_factors['Q'].push_back(sf_ele_veto);
+  scale_factors['Q'].push_back(sf_muon_veto);
+  scale_factors['Q'].push_back(sf_btag_loose);
+  scale_factors['Q'].push_back(sf_w);
+
+  scale_factors['q'] = scale_factors['Q'];
+
+  scale_factors['T'].push_back(sf_ele_medium);
+  scale_factors['T'].push_back(sf_muon_medium);
+  scale_factors['T'].push_back(sf_btag_medium);
+  scale_factors['T'].push_back(sf_w);
+
+  scale_factors['W'].push_back(sf_ele_medium);
+  scale_factors['W'].push_back(sf_muon_medium);
+  scale_factors['W'].push_back(sf_btag_loose);
+
+  */
+
+  // >=1 top analysis
+  scale_factors['t'].push_back(sf_ele_veto);
+  scale_factors['t'].push_back(sf_muon_veto);
+  scale_factors['t'].push_back(sf_top);
+}
 
 //_______________________________________________________
 //                 Signal Region
 //     Must define it, because we blind it in data!
 
 bool
-Analysis::signal_selection(const DataStruct& data) {
-  return apply_all_cuts('S');
+Analysis::signal_selection(const DataStruct& d) {
+  return apply_all_cuts('t');
 }
 
 //_______________________________________________________
@@ -243,8 +230,8 @@ TH1D* h_njet;
 TH1D* h_nb;
 TH1D* h_nw;
 TH1D* h_ht_gen;
-TH1D* h_ht_AK4Puppi;
-TH1D* h_ht_AK8Puppi;
+TH1D* h_ht_AK4;
+TH1D* h_ht_AK8;
 TH1D* h_jet1_pt;
 TH1D* h_jet2_pt;
 TH1D* h_jet3_pt;
@@ -263,34 +250,34 @@ TH1D* h_NtopMult;
 
 TH1D* h_nhadtop; 
 
-TH1D* h_AK8Puppi_tau32;
-TH1D* h_AK8Puppi_tau31;
-TH1D* h_AK8Puppi_tau21;
+TH1D* h_AK8_tau32;
+TH1D* h_AK8_tau31;
+TH1D* h_AK8_tau21;
 
 
 
 std::vector<TH1D*> vh_jet1_pt;
 
-Analysis::PostfixOptions
-Analysis::get_pf_opts_(std::vector<std::vector<Sample> > lists, std::string dirname) {
-  std::vector<Sample> samples;
-  for (auto list : lists) samples.insert(samples.end(), list.begin(), list.end());
-  PostfixOptions opt{ (size_t)-1, "", "", "" };
-  for (size_t i=0; i<samples.size(); ++i) {
-    // Find index of matching directory
-    for (size_t j=0; j<samples[i].dirs.size(); ++j)
-      if (samples[i].dirs[j] == dirname) opt.index = i;
-    opt.postfixes += samples[i].postfix;
-    opt.legends += samples[i].legend;
-    opt.colors += samples[i].color;
-    if (i+1!=samples.size()) {
-      opt.postfixes +=  ";";
-      opt.legends += ";";
-      opt.colors += ",";
-    }
-  }
-  return opt;
-}
+//Analysis::PostfixOptions
+//Analysis::get_pf_opts_(std::vector<std::vector<Sample> > lists, std::string dirname) {
+//  std::vector<Sample> samples;
+//  for (auto list : lists) samples.insert(samples.end(), list.begin(), list.end());
+//  PostfixOptions opt{ (size_t)-1, "", "", "" };
+//  for (size_t i=0; i<samples.size(); ++i) {
+//    // Find index of matching directory
+//    for (size_t j=0; j<samples[i].dirs.size(); ++j)
+//      if (samples[i].dirs[j] == dirname) opt.index = i;
+//    opt.postfixes += samples[i].postfix;
+//    opt.legends += samples[i].legend;
+//    opt.colors += samples[i].color;
+//    if (i+1!=samples.size()) {
+//      opt.postfixes +=  ";";
+//      opt.legends += ";";
+//      opt.colors += ",";
+//    }
+//  }
+//  return opt;
+//}
 
 //_______________________________________________________
 //              Define Histograms here
@@ -301,8 +288,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_nw             = new TH1D("nw",           ";N_{W tag}",              20, 0,  20);
   h_nb             = new TH1D("nb",           ";N_{b tag}",              20, 0,  20);
   h_ht_gen         = new TH1D("ht_gen",       ";H_{T}^{gen}",            200, 0,2000);
-  h_ht_AK4Puppi    = new TH1D("ht_AK4Puppi",  ";H_{T}",                  200, 0,2000);
-  h_ht_AK8Puppi    = new TH1D("ht_AK8Puppi",  ";H_{T}^{AK8}",            200, 0,2000);
+  h_ht_AK4         = new TH1D("ht_AK4",  ";H_{T}",                  200, 0,2000);
+  h_ht_AK8         = new TH1D("ht_AK8",  ";H_{T}^{AK8}",            200, 0,2000);
   h_jet1_pt        = new TH1D("jet1_pt",      ";p_{T, jet1}",            200, 0,2000);
   h_jet2_pt        = new TH1D("jet2_pt",      ";p_{T, jet2}",            200, 0,2000);
   h_jet3_pt        = new TH1D("jet3_pt",      ";p_{T, jet3}",            200, 0,2000);
@@ -319,33 +306,24 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_NtopMult       = new TH1D("h_NtopMult", "h_NtopMult", 10, 0, 10);
 
   h_nhadtop        = new TH1D("nhadtop", ";N_{top tag}", 5, 0, 5);
-  h_AK8Puppi_tau32 = new TH1D("tau32", "", 200,0,1);
-  h_AK8Puppi_tau31 = new TH1D("tau31", "", 200,0,1);
-  h_AK8Puppi_tau21 = new TH1D("tau21", "", 200,0,1);
+  h_AK8_tau32      = new TH1D("tau32", "", 200,0,1);
+  h_AK8_tau31      = new TH1D("tau31", "", 200,0,1);
+  h_AK8_tau21      = new TH1D("tau21", "", 200,0,1);
 
-  
 
-  
- for (unsigned int i=0; i<=syst_nSyst; ++i) {
+  for (unsigned int i=0; i<=syst_nSyst; ++i) {
     std::stringstream histoname, title;
     histoname<<"jet1_pt_syst"<<i;
     title<<"Systematic variation #="<<i;
     vh_jet1_pt.push_back(new TH1D(histoname.str().c_str(), (title.str()+";p_{T, jet1}").c_str(), 200, 0,2000));
-    vh_jet1_pt[i]->Sumw2();
   }
-
-h_nhadtop->Sumw2(); 
-h_AK8Puppi_tau32->Sumw2();
-h_AK8Puppi_tau31->Sumw2();
-h_AK8Puppi_tau21->Sumw2();
-
 }
 
 
 //_______________________________________________________
 //               Fill Histograms here
 void
-Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index, const double& weight)
+Analysis::fill_analysis_histos(DataStruct& d, const unsigned int& syst_index, const double& weight)
 {
   if (syst_index == 0) {
     // syst_index should only be non-0 if settings.varySystematics is true
@@ -358,138 +336,163 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     // There a good chance a lot of stuff is already calculated!
     // Especially common object selections or variables to cut on in Analysis
 
-    h_njet   ->Fill(nJet,        weight);
-    h_nb     ->Fill(nMediumBTag, weight);
-    h_nw     ->Fill(nTightWTag,  weight);
+    /*
+      Weight:
+      They now include trigger efficiencies for MC by default
+      w is the event weight without any scale factor applied
+      Because scale factors are region dependend, then
+      in order to apply them, one has to use the sf_weight[region] variable instead
+      eg. sf_weight['t']
+     */
+
+    // Baseline cuts 
+    // Additionally, let's apply the trigger selection
+    // since the weight contains the trigger scaling in MC
+    // no specific region, so don't apply scale factors
+    // Especially for comparison plots with Changgi
+    // Alternatively, could apply SF of the Signal regio
+
+    double w = weight; // No scale factor applied
+    //double w = sf_weight['t']; // Scale factors applied for the Signal region
+
+    if (apply_cut('t',"HLT")) {
+
+      h_njet   ->Fill(nJet,        w);
+      h_nb     ->Fill(nMediumBTag, w);
+      h_nw     ->Fill(nTightWTag,  w);
     
-    h_ht_gen->Fill(data.evt.Gen_Ht,  weight);  // in ntuple
-    h_ht_AK4Puppi->Fill(AK4Puppi_Ht, weight); // Calculated in AnalysisBase.h
-    h_ht_AK8Puppi->Fill(AK8Puppi_Ht, weight); // Calculated in AnalysisBase.h
+      h_ht_gen->Fill(d.evt.Gen_Ht,  w);  // in ntuple
+      h_ht_AK4->Fill(AK4_Ht, w); // Calculated in AnalysisBase.h
+      h_ht_AK8->Fill(AK8_Ht, w); // Calculated in AnalysisBase.h
 
 
-    h_R2->Fill(data.evt.R2, weight);
-    h_MR->Fill(data.evt.MR, weight);
-    h_R2_MR->Fill(data.evt.MR, data.evt.R2, weight);
+      h_R2->Fill(d.evt.R2, w);
+      h_MR->Fill(d.evt.MR, w);
+      h_R2_MR->Fill(d.evt.MR, d.evt.R2, w);
 
-    h_R2_Scaled->Fill(data.evt.R2);
-    h_R2_MR_Scaled->Fill(data.evt.R2, data.evt.MR);
-    h_MR_Scaled->Fill(data.evt.MR);
-
-if (apply_all_cuts('J')) h_AK8Puppi_tau32->Fill(data.jetsAK8Puppi.tau3.at(0)/data.jetsAK8Puppi.tau2.at(0),weight); 
-if (apply_all_cuts('J')) h_AK8Puppi_tau31->Fill(data.jetsAK8Puppi.tau3.at(0)/data.jetsAK8Puppi.tau1.at(0),weight); 
-if (apply_all_cuts('J')) h_AK8Puppi_tau21->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),weight); 
-if (apply_all_cuts('J')) h_nhadtop->Fill(nLooseIDHadTopTagJets,weight);
-
+      // Janos Did you want to apply scale factors?
+      // (This is the new way to do it)
+      w = sf_weight['t'];
+      h_R2_Scaled->Fill(d.evt.R2, w);
+      h_R2_MR_Scaled->Fill(d.evt.R2, d.evt.MR, w);
+      h_MR_Scaled->Fill(d.evt.MR, w);
+    }
 
 
-  if (h_R2_Scaled->Integral()!=0)
-  h_R2_Scaled->Scale(1/h_R2_Scaled->Integral());   
 
-  if (h_R2_MR_Scaled->Integral()!=0)
-   h_R2_MR_Scaled->Scale(1/h_R2_MR_Scaled->Integral());
 
-  if (h_MR_Scaled->Integral()!=0)
-   h_MR_Scaled->Scale(1/ h_MR_Scaled->Integral());
+    // >=1 top Signal region
+    // Apply scale factors corresponding to this region
+    w = sf_weight['t'];
+    if (apply_all_cuts('t')) h_AK8_tau32->Fill(tau21.at(0),w); 
+    if (apply_all_cuts('t')) h_AK8_tau31->Fill(tau21.at(0),w); 
+    if (apply_all_cuts('t')) h_AK8_tau21->Fill(tau21.at(0),w); 
+    if (apply_all_cuts('t')) h_nhadtop->Fill(nHadTopTag,w);
 
+    // Janos: what is this?
+    // I think this should be moved to the
+    // save_analysis_histos method (a final operation before writing them to files
+    // But I usually do such operations after producing the plots in a separate process
+    // If you instead wanted to apply scale factor I already did it above, and you can delete this)
+    /*
+    if (h_R2_Scaled->Integral()!=0)
+      h_R2_Scaled->Scale(1/h_R2_Scaled->Integral());   
+
+    if (h_R2_MR_Scaled->Integral()!=0)
+      h_R2_MR_Scaled->Scale(1/h_R2_MR_Scaled->Integral());
+
+    if (h_MR_Scaled->Integral()!=0)
+      h_MR_Scaled->Scale(1/ h_MR_Scaled->Integral());
+    */
    
 
-    // For example this applies the first three cuts in signal region
-    // ele/mu veto
 
+    //GenSize 
 
-//GenSize 
-
-int NtopMult=0;
+    int NtopMult=0;
  
-for (unsigned int i=0; i<data.gen.size; i++) 
-{
-  
+    for (unsigned int i=0; i<d.gen.size; i++) 
+      {
+	// if (d.gen.Status[i] != 3) continue;
+	if (fabs(d.gen.ID[i]) == 6) 
+	  {
+	    if ((fabs(d.gen.Dau1ID[i]) == 5 && fabs(d.gen.Dau0ID[i]) == 24) ||
+		(fabs(d.gen.Dau1ID[i]) == 24 && fabs(d.gen.Dau0ID[i]) == 5))
+	      { 
+		h_gen_toppt->Fill(d.gen.Pt[i]);
 
-   // if (data.gen.Status[i] != 3) continue;
-    if (fabs(data.gen.ID[i]) == 6) 
-    {
-
-  
-        if ((fabs(data.gen.Dau1ID[i]) == 5 && fabs(data.gen.Dau0ID[i]) == 24) ||
-           (fabs(data.gen.Dau1ID[i]) == 24 && fabs(data.gen.Dau0ID[i]) == 5))
-       { 
-  
-          h_gen_toppt->Fill(data.gen.Pt[i]);
-
-          NtopMult++;
-  
-       }
-    }
-    
-
-}
-
-        h_NtopMult->Fill(NtopMult);
+		NtopMult++;
+	      }
+	  }
+      }
+    h_NtopMult->Fill(NtopMult);
 
      
-    if (apply_ncut('S', 2)) {
-      h_jet1_pt->Fill(data.jetsAK4Puppi.Pt[iJet[0]], weight);
-      h_jet2_pt->Fill(data.jetsAK4Puppi.Pt[iJet[1]], weight);
-      h_jet3_pt->Fill(data.jetsAK4Puppi.Pt[iJet[2]], weight);
+    //  // For example this applies the first three cuts in signal region
+    //  // HLT, ele/mu veto
+    //  if (apply_ncut('t', 3)) {
+    //    h_jet1_pt->Fill(d.jetsAK4.Pt[iJet[0]], w);
+    //    h_jet2_pt->Fill(d.jetsAK4.Pt[iJet[1]], w);
+    //    h_jet3_pt->Fill(d.jetsAK4.Pt[iJet[2]], w);
+    //  }
 
-    }
     /* 
-      Other examples to use analysis_cuts object
+       Other examples to use analysis_cuts object
 
-      if (apply_cut("S","1W"))                          --> 1 Cut from S region
-      if (apply_cut("W","1Wpre"))                       --> 1 Cut from W region
-      if (apply_all_cuts("T"))                          --> All cuts in T region
-      if (apply_all_cuts_except("Q", "mDPhi<0.25"))     --> N-1 cut
-      if (apply_all_cuts_except("S", {"0Ele", "0Mu" })) --> S without Lep veto
+       if (apply_cut("S","1W"))                          --> 1 Cut from S region
+       if (apply_cut("W","1Wpre"))                       --> 1 Cut from W region
+       if (apply_all_cuts("T"))                          --> All cuts in T region
+       if (apply_all_cuts_except("Q", "mDPhi<0.25"))     --> N-1 cut
+       if (apply_all_cuts_except("S", {"0Ele", "0Mu" })) --> S without Lep veto
 
-      But be aware: Whatever is defined in the baseline_cuts will apply to all histograms
-      Also if you use skimmed ntuples (very likely) then those cuts are already applied
-      This is because unskimmed ntuple is 4.3 TB in size, and we cannot have them on EOS
+       But be aware: Whatever is defined in the baseline_cuts will apply to all histograms
+       Also if you use skimmed ntuples (very likely) then those cuts are already applied
+       This is because unskimmed ntuple is 4.3 TB in size, and we cannot have them on EOS
     */
   }
   
   // Vary systematics and save each variation into a different historgam
   // Switch on settings.varySystematics to be effective
-  if (apply_all_cuts('S')) vh_jet1_pt[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[0]], weight);
+  double w = sf_weight['t'];
+  if (apply_all_cuts('t')) vh_jet1_pt[syst_index]->Fill(d.jetsAK4.Pt[iJet[0]], w);
 }
 
 ////>>>>>>>>>>>>>>>>>> Methods used by SmartHistos (Plotter)>>>>>>>>>>>>>>>>>>
 
 void
 Analysis::define_histo_options(const double& weight, const DataStruct& d, const unsigned int& syst_nSyst, 
-             const unsigned int& syst_index, std::string dirname, bool runOnSkim=false)
+			       const unsigned int& syst_index, bool runOnSkim=false)
 {
 
-  std::vector<Sample> signal_all, signal_selected, signal_fastsim, signal_gluino, signal_stop;
-  signal_all.push_back({ .postfix="T5ttcc",       .legend="T5ttcc",      .color="12", /*DGrey*/ .dirs={ "FastSim_SMS-T5ttcc" } });
-  signal_all.push_back({ .postfix="T5tttt",       .legend="T5tttt",      .color="862",/*Azure*/ .dirs={ "FastSim_SMS-T5tttt" } });
-  signal_all.push_back({ .postfix="T1tttt",       .legend="T1tttt",      .color="841",/*Teal*/  .dirs={ "FastSim_SMS-T1tttt" } });
-  signal_all.push_back({ .postfix="T2tt",         .legend="T2tt",        .color="403",/*DYell*/ .dirs={ 
-         "FastSim_SMS-T2tt_mStop-150to250", "FastSim_SMS-T2tt_mStop-250to350",
-         "FastSim_SMS-T2tt_mStop-350to400", "FastSim_SMS-T2tt_mStop-400to1200" 
-       } });
-  signal_all.push_back({ .postfix="T2tt_FullSim", .legend="T2tt (FullSim)", .color="804",/*DOran*/ .dirs={
-         "FullSim_SMS-T2tt_mStop-425_mLSP-325", "FullSim_SMS-T2tt_mStop-500_mLSP-325",
-         "FullSim_SMS-T2tt_mStop-850_mLSP-100" 
-       } });
-  signal_selected.push_back(signal_all[0]);
-  for (int i=0; i<4; ++i) signal_fastsim.push_back(signal_all[i]);
-  for (int i=0; i<3; ++i) signal_gluino .push_back(signal_all[i]);
-  for (int i=3; i<5; ++i) signal_stop .push_back(signal_all[i]);
-
-
-
-static const PostfixOptions signals_background_opt = get_pf_opts_({signal_all}, dirname);
-  sh.AddNewPostfix("Signals,Background",  [&d] { 
-         // Select gluino/stop mass to give ~1k events with 40 fb^-1
-         if (signals_background_opt.index==1) {
-           if (d.evt.SUSY_Gluino_Mass == 1200 && d.evt.SUSY_LSP_Mass == 200) return (size_t)-1; // T5tttt
-         } else if (signals_background_opt.index==3) {
-           if (d.evt.SUSY_Stop_Mass  == 800 && d.evt.SUSY_LSP_Mass == 100) return (size_t)-1; // T2tt - Same as FullSim point
-         }
-         return signals_background_opt.index; 
-}, signals_background_opt.postfixes, signals_background_opt.legends, signals_background_opt.colors);
-
+  //   std::vector<Sample> signal_all, signal_selected, signal_fastsim, signal_gluino, signal_stop;
+  //   signal_all.push_back({ .postfix="T5ttcc",       .legend="T5ttcc",      .color="12", /*DGrey*/ .dirs={ "FastSim_SMS-T5ttcc" } });
+  //   signal_all.push_back({ .postfix="T5tttt",       .legend="T5tttt",      .color="862",/*Azure*/ .dirs={ "FastSim_SMS-T5tttt" } });
+  //   signal_all.push_back({ .postfix="T1tttt",       .legend="T1tttt",      .color="841",/*Teal*/  .dirs={ "FastSim_SMS-T1tttt" } });
+  //   signal_all.push_back({ .postfix="T2tt",         .legend="T2tt",        .color="403",/*DYell*/ .dirs={ 
+  //          "FastSim_SMS-T2tt_mStop-150to250", "FastSim_SMS-T2tt_mStop-250to350",
+  //          "FastSim_SMS-T2tt_mStop-350to400", "FastSim_SMS-T2tt_mStop-400to1200" 
+  //        } });
+  //   signal_all.push_back({ .postfix="T2tt_FullSim", .legend="T2tt (FullSim)", .color="804",/*DOran*/ .dirs={
+  //          "FullSim_SMS-T2tt_mStop-425_mLSP-325", "FullSim_SMS-T2tt_mStop-500_mLSP-325",
+  //          "FullSim_SMS-T2tt_mStop-850_mLSP-100" 
+  //        } });
+  //   signal_selected.push_back(signal_all[0]);
+  //   for (int i=0; i<4; ++i) signal_fastsim.push_back(signal_all[i]);
+  //   for (int i=0; i<3; ++i) signal_gluino .push_back(signal_all[i]);
+  //   for (int i=3; i<5; ++i) signal_stop .push_back(signal_all[i]);
+  // 
+  // 
+  // 
+  //   static const PostfixOptions signals_background_opt = get_pf_opts_({signal_all}, dirname);
+  //   sh.AddNewPostfix("Signals,Background",  [&d] { 
+  // 		     // Select gluino/stop mass to give ~1k events with 40 fb^-1
+  // 		     if (signals_background_opt.index==1) {
+  // 		       if (d.evt.SUSY_Gluino_Mass == 1200 && d.evt.SUSY_LSP_Mass == 200) return (size_t)-1; // T5tttt
+  // 		     } else if (signals_background_opt.index==3) {
+  // 		       if (d.evt.SUSY_Stop_Mass  == 800 && d.evt.SUSY_LSP_Mass == 100) return (size_t)-1; // T2tt - Same as FullSim point
+  // 		     }
+  // 		     return signals_background_opt.index; 
+  // 		   }, signals_background_opt.postfixes, signals_background_opt.legends, signals_background_opt.colors);
 }
 
 void

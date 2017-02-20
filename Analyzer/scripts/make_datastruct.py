@@ -1,7 +1,8 @@
 import ROOT
-#file = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
-file = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_20/src/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
-tree = file.Get("B2GTTreeMaker/B2GTree")
+#File = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
+#File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_20/src/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
+File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_24_patch1/src/B2GTTreeNtupleExtra_MC_80X.root")
+tree = File.Get("B2GTTreeMaker/B2GTree")
 
 def printvars( varname, vartype, prefix, isvector, keep_prefix ):
     if varname.startswith(prefix):
@@ -86,8 +87,7 @@ def printclass( tree, classname, name, prefix_list, add_loop ):
 
 
 # Now print the contents for common/DataStruct.h
-print """
-#ifndef DataStruct_h
+print """#ifndef DataStruct_h
 #define DataStruct_h
 
 #define NOVAL_I -9999
@@ -107,22 +107,25 @@ public:
   ~DataStruct() {};
 """
 
-printclass( tree, "EventData",          "evt",             ["evt_", "SUSY_"],   0 )
-printclass( tree, "METData",            "met",             ["met_"],            0 )
-printclass( tree, "PileupData",         "pu",              ["pu_"],             0 )
-printclass( tree, "VertexData",         "vtx",             ["vtx_"],            0 )
-printclass( tree, "SystScaleData",      "syst_scale",      ["scale_"],          1 )
-printclass( tree, "SystPDFData",        "syst_pdf",        ["pdf_"],            1 )
-printclass( tree, "SystAlphaSData",     "syst_alphas",     ["alphas_"],         1 )
-printclass( tree, "FilterData",         "filter",          ["Flag_"],           0 )
-printclass( tree, "HLTData",            "hlt",             ["HLT_"],            0 )
-printclass( tree, "GenVars",            "gen",             ["gen_"],            1 )
-printclass( tree, "ElectronVars",       "ele",             ["el_"],             1 )
-printclass( tree, "MuonVars",           "mu",              ["mu_"],             1 )
-printclass( tree, "AK4PuppiJetVars",    "jetsAK4Puppi",    ["jetAK4Puppi_"],    1 )
-printclass( tree, "AK8PuppiJetVars",    "jetsAK8Puppi",    ["jetAK8Puppi_"],    1 )
-printclass( tree, "AK8PuppiSubjetVars", "subjetsAK8Puppi", ["subjetAK8Puppi_"], 1 )
-printclass( tree, "AK8GenJetVars",      "genjetsAK8",      ["genjetAK8SD_"],    1 )
+printclass( tree, "EventData",           "evt",             ["evt_", "SUSY_"],   0 )
+printclass( tree, "METData",             "met",             ["met_"],            0 )
+printclass( tree, "PuppiMETData",        "puppimet",        ["puppimet_"],       0 )
+printclass( tree, "PileupData",          "pu",              ["pu_"],             0 )
+printclass( tree, "VertexData",          "vtx",             ["vtx_"],            0 )
+printclass( tree, "SystScaleData",       "syst_scale",      ["scale_"],          1 )
+printclass( tree, "SystPDFData",         "syst_pdf",        ["pdf_"],            1 )
+printclass( tree, "SystAlphaSData",      "syst_alphas",     ["alphas_"],         1 )
+printclass( tree, "SystMETUncData",      "syst_met",        ["metsyst_"],        1 )
+printclass( tree, "SystPuppiMETUncData", "syst_puppimet",   ["puppimetsyst_"],   1 )
+printclass( tree, "FilterData",          "filter",          ["Flag_"],           0 )
+printclass( tree, "HLTData",             "hlt",             ["HLT_"],            0 )
+printclass( tree, "GenVars",             "gen",             ["gen_"],            1 )
+printclass( tree, "ElectronVars",        "ele",             ["el_"],             1 )
+printclass( tree, "MuonVars",            "mu",              ["mu_"],             1 )
+printclass( tree, "AK4JetVars",          "jetsAK4",         ["jetAK4CHS_"],      1 )
+printclass( tree, "AK8JetVars",          "jetsAK8",         ["jetAK8CHS_"],      1 )
+printclass( tree, "AK8SubjetVars",       "subjetsAK8",      ["subjetAK8CHS_"],   1 )
+printclass( tree, "AK8GenJetVars",       "genjetsAK8",      ["genjetAK8SD_"],    1 )
 
 print """
 };

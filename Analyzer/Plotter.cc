@@ -8,8 +8,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include "common/utils.h" // Helper functions
-#include "common/DataStruct.h"
 #include "settings_Janos.h" // Define all Analysis specific settings here
 
 int main(int argc, char** argv) {
@@ -36,7 +34,7 @@ int main(int argc, char** argv) {
   double w = 1;
   Analysis ana;
 
-  ana.define_histo_options(w, data, syst.nSyst, syst.index, cmdline.dirname, settings.runOnSkim);
+  ana.define_histo_options(w, data, syst.nSyst, syst.index, cmdline.dirname, cmdline.isData, cmdline.isSignal, settings.runOnSkim);
   ana.init_common_histos();
   ana.init_analysis_histos(syst.nSyst, syst.index);
 

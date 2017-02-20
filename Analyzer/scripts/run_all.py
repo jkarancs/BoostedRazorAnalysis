@@ -395,8 +395,8 @@ if opt.replot:
         backup_files(EXEC_PATH)
         compile(0)
     plotter(PLOTTER_IN, PLOTTER_OUT)
-    if not 'lxplus' in socket.gethostname():
-        show_result(PLOTTER_OUT)
+    #if not 'lxplus' in socket.gethostname():
+    #    show_result(PLOTTER_OUT)
 else:
     if not opt.recover:
         if not opt.test:
@@ -405,7 +405,7 @@ else:
     plotter_input_files = analysis(ana_arguments, opt.NPROC)
     if opt.plot:
         plotter(plotter_input_files, PLOTTER_OUT)
-        if not 'lxplus' in socket.gethostname():
-            show_result(PLOTTER_OUT)
+        #if not 'lxplus' in socket.gethostname():
+        #    show_result(PLOTTER_OUT)
 
 print "Done."

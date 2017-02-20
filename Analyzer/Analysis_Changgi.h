@@ -1,15 +1,10 @@
+#ifndef VER
+#define VER 0
+#endif
+
 #include "TLorentzVector.h"
 #include "TMath.h"
 #include "common/AnalysisBase.h"
-
-//_______________________________________________________
-//                       Constructor
-Analysis::Analysis() : AnalysisBase() { }
-
-
-//_______________________________________________________
-//                       Destructor
-Analysis::~Analysis() { }
 
 //_______________________________________________________
 //                  Calculate variables
@@ -55,16 +50,6 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 
 
 //_______________________________________________________
-//          Define Analysis specific weights
-double
-Analysis::get_analysis_weight(DataStruct& data)
-{
-  double w = 1;
-  //w *=(TMath::Erf((AK4Puppi_Ht-784.036)/83.7739)/2.+0.5); //This isn't worked. It has a problem.
-  return w;
-}
-
-//_______________________________________________________
 //                Define Skimming cuts
 //   (Not needed, unless you want to skim the ntuple)
 
@@ -79,18 +64,6 @@ Analysis::pass_skimming(DataStruct& data)
   //return apply_all_cuts('S');
 }
 
-Double_t* getVariableBinEdges(int num_entries, Double_t* tmp_array)
-{ 
-  Double_t* my_array = new Double_t[num_entries];
-  for (int i = 0; i != num_entries; ++i) {
-    my_array[i] = tmp_array[i];
-    
-    cout << "bin edge " << i << " : " << my_array[i] << endl;
-  }
-   return my_array;
-}
-
-
 //_______________________________________________________
 //          Define Analysis event selection cuts
 //     Can define all sorts of Signal/Control regions
@@ -103,16 +76,16 @@ Analysis::define_selections(const DataStruct& d)
   // Define here cuts that are common in all Signal/Control regions
   // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
 
-/*
-    // cut0: signal mass region
+  /*
+  // cut0: signal mass region
   baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
             int num = 1;
             return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
-          } });
-*/
+	    } });
+  */
 
-  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                    }}); // Similar to pt>200, one AK8 jet has pt>170
-  baseline_cuts.push_back({ .name="Skim_2Jet",       .func = []    { return nJet>=2;                       }});
+  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  baseline_cuts.push_back({ .name="Skim_2Jet",       .func = []    { return nJet>=2;                         }});
   baseline_cuts.push_back({ .name="Baseline_3Jet",   .func = []    { return nJet>=3;                       }}); // Separate cut, so one can exclude (N-1)
   baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
   //baseline_cuts.push_back({ .name="Trigger",   .func = []    { return passTrigger==1;}});
@@ -123,39 +96,123 @@ Analysis::define_selections(const DataStruct& d)
   //baseline_cuts.push_back({ .name="Muon Trigger",   .func = [&d]    { return d.hlt.IsoMu24==1;        }});
 
   // S: Signal region
-  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts['S'].push_back({ .name="0TauTrk",    .func = []    { return;  }});
-  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts['S'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['S'].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  
-  // W: W enriched control sample
-  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
-  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                 }});
-  analysis_cuts['W'].push_back({ .name="1Wpre",      .func = []    { return nWPreTag>=1;                   }});
-  //analysis_cuts['W'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['W'].push_back({ .name="mDPhi>=0p4",  .func = []   { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  analysis_cuts['W'].push_back({ .name="30<=MT<100",  .func = []   { return MT>=30 && MT<100;              }});
-  
-  // T: Top enriched control sample
-  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepTight==1;                  }});
-  analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                }});
-  analysis_cuts['T'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts['T'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['T'].push_back({ .name="mDPhi>=0p4", .func = []    { return minDeltaPhi>=0.4;              }}); // Decreased it to the AK4 cone size (from 0.5)
-  analysis_cuts['T'].push_back({ .name="MT<100",     .func = []    { return MT<100;                        }});
-  
+  analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
+  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                   }});
+  analysis_cuts['S'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+
+  // S': DPhi Control region of Signal region
+  analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['s'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
+  analysis_cuts['s'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                   }});
+  analysis_cuts['s'].push_back({ .name="mDPhi<0.4",  .func = []    { return minDeltaPhi<0.4;                 }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+
   // Q: QCD enriched control sample
-  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  //analysis_cuts['Q'].push_back({ .name="0TauTrk",    .func = []    { return;  }});
-  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                 }});
-  analysis_cuts['Q'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                 }});
-  //analysis_cuts['Q'].push_back({ .name="mDPhiHat",   .func = []    { return;  }});
-  analysis_cuts['Q'].push_back({ .name="mDPhi<0p25", .func = []    { return minDeltaPhi<0.25;              }}); // Decreased it to 0.25 (from 0.3)
+  analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['Q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
+  analysis_cuts['Q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;               }});
+  analysis_cuts['Q'].push_back({ .name="mDPhi<0.25", .func = []    { return minDeltaPhi<0.25;                }}); // Decreased it to 0.25 (from 0.3)
+
+  // Q': Dphi Control region of QCD enriched sample
+  analysis_cuts['q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
+  analysis_cuts['q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
+#if VER != 0
+  analysis_cuts['q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
+#endif
+  analysis_cuts['q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
+  analysis_cuts['q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;               }});
+  analysis_cuts['q'].push_back({ .name="mDPhi>0.4",  .func = []    { return minDeltaPhi<0.4;                 }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+
+  // T: Top enriched control sampleisData
+  analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
+  analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
+  analysis_cuts['T'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                   }});
+  analysis_cuts['T'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+  analysis_cuts['T'].push_back({ .name="MT<100",     .func = []    { return MT<100;                          }});
+
+  // W: W enriched control sample
+  analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
+  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
+  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
+  analysis_cuts['W'].push_back({ .name="1mW",        .func = []    { return nWPreTag>=1;                     }});
+  analysis_cuts['W'].push_back({ .name="mDPhi>=0.4", .func = []    { return minDeltaPhi>=0.4;                }}); // Decreased it to 0.4 (from 0.5 to the AK4 cone size)
+  analysis_cuts['W'].push_back({ .name="30<=MT<100", .func = []    { return MT>=30 && MT<100;                }});
   
+}
+
+//____________________________________________________
+//          Analysis Specific Scale factors
+//    (Defined for each search region separately)
+
+void
+Analysis::apply_scale_factors(DataStruct& data, const unsigned int& s, const std::vector<std::vector<double> >& nSigmaSFs)
+{
+  bool isFastSim = TString(sample).Contains("FastSim");
+  size_t i = 0;
+
+  // Don't forget to specify the total number of sigmas you use in settings_*.h !
+
+  // Electron SFs (4 sigmas - reco, iso, id, fastsim)
+  std::pair<double, double> sf_ele = calc_ele_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s], isFastSim);
+  double sf_ele_veto = sf_ele.first, sf_ele_medium = sf_ele.second;  
+  i+=4;
+
+  // Muon SFs (7 sigmas - tracking, fullsim id/iso/ip, fastsim id/iso/ip)
+  std::pair<double, double> sf_muon = calc_muon_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s],
+						   nSigmaSFs[i+4][s], nSigmaSFs[i+5][s], nSigmaSFs[i+6][s], isFastSim);
+  double sf_muon_veto = sf_muon.first, sf_muon_medium = sf_muon.second;
+  i+=7;
+
+  // W tagging SF  (1 sigma - efficiency)
+  double sf_w = calc_w_tagging_sf(data, nSigmaSFs[i][s]);
+  i+=1;
+
+  // b tagging SFs (1 sigma)
+  std::pair<double, double> sf_btag = calc_b_tagging_sf(data, nSigmaSFs[i][s], isFastSim);
+  double sf_btag_loose = sf_btag.first, sf_btag_medium = sf_btag.second;
+  i+=1;
+
+  // Select scale factors to use
+  for (auto& sf : scale_factors) sf.second.clear();
+  scale_factors['S'].push_back(sf_ele_veto);
+  scale_factors['S'].push_back(sf_muon_veto);
+  scale_factors['S'].push_back(sf_btag_medium);
+  scale_factors['S'].push_back(sf_w);
+
+  scale_factors['s'] = scale_factors['S'];
+
+  scale_factors['Q'].push_back(sf_ele_veto);
+  scale_factors['Q'].push_back(sf_muon_veto);
+  scale_factors['Q'].push_back(sf_btag_loose);
+  scale_factors['Q'].push_back(sf_w);
+
+  scale_factors['q'] = scale_factors['Q'];
+
+  scale_factors['T'].push_back(sf_ele_medium);
+  scale_factors['T'].push_back(sf_muon_medium);
+  scale_factors['T'].push_back(sf_btag_medium);
+  scale_factors['T'].push_back(sf_w);
+
+  scale_factors['W'].push_back(sf_ele_medium);
+  scale_factors['W'].push_back(sf_muon_medium);
+  scale_factors['W'].push_back(sf_btag_loose);
 }
 
 //_______________________________________________________
@@ -174,11 +231,11 @@ TH1D* h_njet;
 TH1D* h_nb;
 TH1D* h_nw;
 TH1D* h_ht_gen;
-TH1D* h_ht_AK4Puppi;
-TH1D* h_ht_AK8Puppi;
+TH1D* h_ht_AK4;
+TH1D* h_ht_AK8;
 
-TH1D* h_ht_AK4Puppi_S;
-TH1D* h_ht_AK8Puppi_S;
+TH1D* h_ht_AK4_S;
+TH1D* h_ht_AK8_S;
 TH1D* h_jet1_pt_S;
 TH1D* h_jet2_pt_S;
 TH1D* h_jet3_pt_S;
@@ -189,8 +246,8 @@ TH1D* h_R2_S;
 TH1D* h_tau21_S;
 TH1D* h_MET_S;
 
-TH1D* h_ht_AK4Puppi_W;
-TH1D* h_ht_AK8Puppi_W;
+TH1D* h_ht_AK4_W;
+TH1D* h_ht_AK8_W;
 TH1D* h_jet1_pt_W;
 TH1D* h_jet2_pt_W;
 TH1D* h_jet3_pt_W;
@@ -201,8 +258,8 @@ TH1D* h_R2_W;
 TH1D* h_tau21_W;
 TH1D* h_MET_W;
 
-TH1D* h_ht_AK4Puppi_T;
-TH1D* h_ht_AK8Puppi_T;
+TH1D* h_ht_AK4_T;
+TH1D* h_ht_AK8_T;
 TH1D* h_jet1_pt_T;
 TH1D* h_jet2_pt_T;
 TH1D* h_jet3_pt_T;
@@ -213,8 +270,8 @@ TH1D* h_R2_T;
 TH1D* h_tau21_T;
 TH1D* h_MET_T;
 
-TH1D* h_ht_AK4Puppi_Q;
-TH1D* h_ht_AK8Puppi_Q;
+TH1D* h_ht_AK4_Q;
+TH1D* h_ht_AK8_Q;
 TH1D* h_jet1_pt_Q;
 TH1D* h_jet2_pt_Q;
 TH1D* h_jet3_pt_Q;
@@ -339,11 +396,11 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_nb           = new TH1D("nb",           ";N_{b tag}",              20, 0,  20);
   h_ht_gen       = new TH1D("ht_gen",       ";H_{T}^{gen}",            300, 0,3000);
 
-  h_ht_AK4Puppi  = new TH1D("ht_AK4Puppi",  ";H_{T}",                  300, 0,3000);
-  h_ht_AK8Puppi  = new TH1D("ht_AK8Puppi",  ";H_{T}^{AK8}",            300, 0,3000);
+  h_ht_AK4  = new TH1D("ht_AK4",  ";H_{T}",                  300, 0,3000);
+  h_ht_AK8  = new TH1D("ht_AK8",  ";H_{T}^{AK8}",            300, 0,3000);
 
-  h_ht_AK4Puppi_S = new TH1D("ht_AK4Puppi_S",  ";H_{T}",                  300, 0,3000);
-  h_ht_AK8Puppi_S = new TH1D("ht_AK8Puppi_S",  ";H_{T}^{AK8}",            300, 0,3000);
+  h_ht_AK4_S = new TH1D("ht_AK4_S",  ";H_{T}",                  300, 0,3000);
+  h_ht_AK8_S = new TH1D("ht_AK8_S",  ";H_{T}^{AK8}",            300, 0,3000);
   h_jet1_pt_S = new TH1D("jet1_pt_S",      ";p_{T, jet1}",            200, 0,2000);
   h_jet2_pt_S = new TH1D("jet2_pt_S",      ";p_{T, jet2}",            200, 0,2000);
   h_jet3_pt_S = new TH1D("jet3_pt_S",      ";p_{T, jet3}",            200, 0,2000);
@@ -354,8 +411,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_tau21_S = new TH1D("tau21_S", ";tau21", 200,0,1);
   h_MET_S = new TH1D("MET_S", ";MET", 400,0,2000);
 
-  h_ht_AK4Puppi_W = new TH1D("ht_AK4Puppi_W",  ";H_{T}",                  300, 0,3000);
-  h_ht_AK8Puppi_W = new TH1D("ht_AK8Puppi_W",  ";H_{T}^{AK8}",            300, 0,3000);
+  h_ht_AK4_W = new TH1D("ht_AK4_W",  ";H_{T}",                  300, 0,3000);
+  h_ht_AK8_W = new TH1D("ht_AK8_W",  ";H_{T}^{AK8}",            300, 0,3000);
   h_jet1_pt_W = new TH1D("jet1_pt_W",      ";p_{T, jet1}",            200, 0,2000);
   h_jet2_pt_W = new TH1D("jet2_pt_W",      ";p_{T, jet2}",            200, 0,2000);
   h_jet3_pt_W = new TH1D("jet3_pt_W",      ";p_{T, jet3}",            200, 0,2000);
@@ -366,8 +423,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_tau21_W = new TH1D("tau21_W", ";tau21", 200,0,1);
   h_MET_W = new TH1D("MET_W", ";MET", 400,0,2000);
 
-  h_ht_AK4Puppi_T = new TH1D("ht_AK4Puppi_T",  ";H_{T}",                  300, 0,3000);
-  h_ht_AK8Puppi_T = new TH1D("ht_AK8Puppi_T",  ";H_{T}^{AK8}",            300, 0,3000);
+  h_ht_AK4_T = new TH1D("ht_AK4_T",  ";H_{T}",                  300, 0,3000);
+  h_ht_AK8_T = new TH1D("ht_AK8_T",  ";H_{T}^{AK8}",            300, 0,3000);
   h_jet1_pt_T = new TH1D("jet1_pt_T",      ";p_{T, jet1}",            200, 0,2000);
   h_jet2_pt_T = new TH1D("jet2_pt_T",      ";p_{T, jet2}",            200, 0,2000);
   h_jet3_pt_T = new TH1D("jet3_pt_T",      ";p_{T, jet3}",            200, 0,2000);
@@ -378,8 +435,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_tau21_T = new TH1D("tau21_T", ";tau21", 200,0,1);
   h_MET_T = new TH1D("MET_T", ";MET", 400,0,2000);
 
-  h_ht_AK4Puppi_Q = new TH1D("ht_AK4Puppi_Q",  ";H_{T}",                  300, 0,3000);
-  h_ht_AK8Puppi_Q = new TH1D("ht_AK8Puppi_Q",  ";H_{T}^{AK8}",            300, 0,3000);
+  h_ht_AK4_Q = new TH1D("ht_AK4_Q",  ";H_{T}",                  300, 0,3000);
+  h_ht_AK8_Q = new TH1D("ht_AK8_Q",  ";H_{T}^{AK8}",            300, 0,3000);
   h_jet1_pt_Q = new TH1D("jet1_pt_Q",      ";p_{T, jet1}",            200, 0,2000);
   h_jet2_pt_Q = new TH1D("jet2_pt_Q",      ";p_{T, jet2}",            200, 0,2000);
   h_jet3_pt_Q = new TH1D("jet3_pt_Q",      ";p_{T, jet3}",            200, 0,2000);
@@ -433,16 +490,16 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   int nbn_R = 6;
   Double_t bn_HT_tmp[] = {0.,50.,100.,150.,200.,250.,300.,350.,400.,450.,500.,550.,600.,650.,700.,750.,800.,900.,1000.,2500.};
   Double_t* bn_HT = 0;
-  bn_HT = getVariableBinEdges(nbn_HT+1,bn_HT_tmp);
+  bn_HT = utils::getVariableBinEdges(nbn_HT+1,bn_HT_tmp);
   Double_t bn_j1pt_tmp[] = {0.,50.,100.,150.,200.,250.,300.,350.,400.,450.,500.,700.,1000.};
   Double_t* bn_j1pt = 0;
-  bn_j1pt = getVariableBinEdges(nbn_j1pt+1,bn_j1pt_tmp);
+  bn_j1pt = utils::getVariableBinEdges(nbn_j1pt+1,bn_j1pt_tmp);
   Double_t bn_MR_tmp[] = {0.,800.,1000.,1200.,1600.,2000.,4000.};
   Double_t* bn_MR = 0;
-  bn_MR = getVariableBinEdges(nbn_MR+1,bn_MR_tmp);
+  bn_MR = utils::getVariableBinEdges(nbn_MR+1,bn_MR_tmp);
   Double_t bn_R_tmp[] = {0.,0.08,.12,.16,0.24,0.5,1.};
   Double_t* bn_R = 0;
-  bn_R = getVariableBinEdges(nbn_R+1,bn_R_tmp);
+  bn_R = utils::getVariableBinEdges(nbn_R+1,bn_R_tmp);
   
 
   h_njet_pre = new TH1D("h_njet_pre",         ";N_{jet}",                20, 0,  20);
@@ -552,7 +609,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 //_______________________________________________________
 //               Fill Histograms here
 void
-Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index, const double& weight)
+Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index, const double& w)
 {
   if (syst_index == 0) {
     // syst_index should only be non-0 if settings.varySystematics is true
@@ -565,212 +622,239 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     // There a good chance a lot of stuff is already calculated!
     // Especially common object selections or variables to cut on in Analysis
 
-   bool pass = data.hlt.AK8PFJet360_TrimMass30+data.hlt.PFHT800 == 0 ? false : true;
+    bool pass = data.hlt.AK8PFJet360_TrimMass30+data.hlt.PFHT800 == 0 ? false : true;
 
-Analysis ana;
-    h_HT_weight->Fill(AK4Puppi_Ht,ana.get_analysis_weight(data),weight);
-    float reweight=1;
-  //if(AK4Puppi_Ht > 1080) cout << "HT : " << AK4Puppi_Ht << " weight : " << w << endl;
-   // if(AK4Puppi_Ht > 1080) cout << "HT : " << AK4Puppi_Ht << " weight : " << ana.get_analysis_weight(data) << endl;
-    //reweight = weight*(TMath::Erf((AK4Puppi_Ht-784.036)/83.7739)/2.+0.5);
-    //reweight = weight;
+    /*
+      Weight:
+      They now include trigger efficiencies for MC by default
+      w is the event weight without any scale factor applied
+      Because scale factors are region dependend, then
+      in order to apply them, one has to use the sf_weight[region] variable instead
+      eg. sf_weight['S']
+     */
 
-    if(AK4Puppi_Ht<450) reweight=weight*0;
-    if(AK4Puppi_Ht>=450 && AK4Puppi_Ht<525) reweight=weight*0.0132325;
-    if(AK4Puppi_Ht>=525 && AK4Puppi_Ht<600) reweight=weight*0.0304311;
-    if(AK4Puppi_Ht>=600 && AK4Puppi_Ht<675) reweight=weight*0.0544904;
-    if(AK4Puppi_Ht>=675 && AK4Puppi_Ht<750) reweight=weight*0.1318;
-    if(AK4Puppi_Ht>=750 && AK4Puppi_Ht<825) reweight=weight*0.477929;
-    if(AK4Puppi_Ht>=825 && AK4Puppi_Ht<900) reweight=weight*0.920323;
-    if(AK4Puppi_Ht>=900 && AK4Puppi_Ht<975) reweight=weight*0.99669;
-    if(AK4Puppi_Ht>=975 && AK4Puppi_Ht<1050) reweight=weight*0.998733;
-    if(AK4Puppi_Ht>=1050&& AK4Puppi_Ht<1125) reweight=weight*0.999553;
-    if(AK4Puppi_Ht>=1125&& AK4Puppi_Ht<1200) reweight=weight*1;
-    if(AK4Puppi_Ht>=1200&& AK4Puppi_Ht<1275) reweight=weight*0.997535;
-    if(AK4Puppi_Ht>=1275&& AK4Puppi_Ht<1350) reweight=weight*0.998922;
-    if(AK4Puppi_Ht>=1350) reweight=weight*1.;
-    
-  
-    h_njet   ->Fill(nJet,        reweight);
-    h_nb     ->Fill(nMediumBTag, reweight);
-    h_nw     ->Fill(nTightWTag,  reweight);
-    h_ht_gen->Fill(data.evt.Gen_Ht,  reweight);  // in ntuple
-    h_ht_AK4Puppi->Fill(AK4Puppi_Ht, reweight); // Calculated in AnalysisBase.h
-    h_ht_AK8Puppi->Fill(AK8Puppi_Ht, reweight); // Calculated in AnalysisBase.h
-    
+    // Baseline cuts 
+    // Additionally, let's apply the trigger selection
+    // since the weight contains the trigger scaling in MC
+    // no specific region, so don't apply scale factors
+    // Especially for comparison plots with Ufuk/Fatma
+    // Alternatively, could apply SF of the Signal regio
+
+    double w = weight; // No scale factor applied
+    //double w = sf_weight['S']; // Scale factors applied for the Signal region
+
+    if (apply_cut('S',"HLT")) {
+      //h_HT_weight->Fill(AK4_Ht,1,w);
+      h_njet   ->Fill(nJet,        w);
+      h_nb     ->Fill(nMediumBTag, w);
+      h_nw     ->Fill(nTightWTag,  w);
+      h_ht_gen->Fill(data.evt.Gen_Ht,  w);  // in ntuple
+      h_ht_AK4->Fill(AK4_Ht, w); // Calculated in AnalysisBase.h
+      h_ht_AK8->Fill(AK8_Ht, w); // Calculated in AnalysisBase.h
+    }
+
+    // W enriched region
+    w = sf_weight['W'];
     if (apply_all_cuts('W')) {
-      h_ht_AK4Puppi_W->Fill(AK4Puppi_Ht, reweight);
-      h_ht_AK8Puppi_W->Fill(AK8Puppi_Ht, reweight);
-      h_jet1_pt_W->Fill(data.jetsAK4Puppi.Pt[iJet[0]], reweight);
-      h_jet2_pt_W->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_jet3_pt_W->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_W->Fill(data.evt.MR, reweight);
-      h_MTR_W->Fill(data.evt.MTR, reweight);
-      h_R_W->Fill(data.evt.R, reweight);
-      h_R2_W->Fill(data.evt.R2, reweight);
-      h_tau21_W->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_W->Fill(data.met.Pt.at(0),reweight);
+      h_ht_AK4_W->Fill(AK4_Ht, w);
+      h_ht_AK8_W->Fill(AK8_Ht, w);
+      h_jet1_pt_W->Fill(data.jetsAK4.Pt[iJet[0]], w);
+      h_jet2_pt_W->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_jet3_pt_W->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_W->Fill(data.evt.MR, w);
+      h_MTR_W->Fill(data.evt.MTR, w);
+      h_R_W->Fill(data.evt.R, w);
+      h_R2_W->Fill(data.evt.R2, w);
+      h_tau21_W->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_W->Fill(data.met.Pt.at(0),w);
 
-      h_HT_j1pt_W->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      if(data.hlt.PFHT800) h_HT_j1pt_W_passHT->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      if(data.hlt.AK8PFJet360_TrimMass30) h_HT_j1pt_W_passj1pt->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      if(pass) h_HT_j1pt_W_pass->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+      h_HT_j1pt_W->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+    }
+    if (apply_all_cuts_except('W', "HLT")) {
+      if(data.hlt.PFHT800) h_HT_j1pt_W_passHT->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      if(data.hlt.AK8PFJet360_TrimMass30) h_HT_j1pt_W_passj1pt->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      if(pass) h_HT_j1pt_W_pass->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
 
+    // top enriched region
+    w = sf_weight['T'];
     if (apply_all_cuts('T')) {
-      h_ht_AK4Puppi_T->Fill(AK4Puppi_Ht, reweight);
-      h_ht_AK8Puppi_T->Fill(AK8Puppi_Ht, reweight);
-      h_jet1_pt_T->Fill(data.jetsAK4Puppi.Pt[iJet[0]], reweight);
-      h_jet2_pt_T->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_jet3_pt_T->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_T->Fill(data.evt.MR, reweight);
-      h_MTR_T->Fill(data.evt.MTR, reweight);
-      h_R_T->Fill(data.evt.R, reweight);
-      h_R2_T->Fill(data.evt.R2, reweight);
-      h_tau21_T->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_T->Fill(data.met.Pt.at(0),reweight);
+      h_ht_AK4_T->Fill(AK4_Ht, w);
+      h_ht_AK8_T->Fill(AK8_Ht, w);
+      h_jet1_pt_T->Fill(data.jetsAK4.Pt[iJet[0]], w);
+      h_jet2_pt_T->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_jet3_pt_T->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_T->Fill(data.evt.MR, w);
+      h_MTR_T->Fill(data.evt.MTR, w);
+      h_R_T->Fill(data.evt.R, w);
+      h_R2_T->Fill(data.evt.R2, w);
+      h_tau21_T->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_T->Fill(data.met.Pt.at(0),w);
 
-      h_HT_j1pt_T->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      if(data.hlt.PFHT800) h_HT_j1pt_T_passHT->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      if(data.hlt.AK8PFJet360_TrimMass30) h_HT_j1pt_T_passj1pt->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      if(pass) h_HT_j1pt_T_pass->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+      h_HT_j1pt_T->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+    }
+    
+    if (apply_all_cuts_except('T', "HLT")) {
+      if(data.hlt.PFHT800) h_HT_j1pt_T_passHT->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      if(data.hlt.AK8PFJet360_TrimMass30) h_HT_j1pt_T_passj1pt->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      if(pass) h_HT_j1pt_T_pass->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
 
+    // QCD enriched region
+    w = sf_weight['Q'];
     if (apply_all_cuts('Q')) {
-      h_ht_AK4Puppi_Q->Fill(AK4Puppi_Ht, reweight);
-      h_ht_AK8Puppi_Q->Fill(AK8Puppi_Ht, reweight);
-      h_jet1_pt_Q->Fill(data.jetsAK4Puppi.Pt[iJet[0]], reweight);
-      h_jet2_pt_Q->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_jet3_pt_Q->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_Q->Fill(data.evt.MR, reweight);
-      h_MTR_Q->Fill(data.evt.MTR, reweight);
-      h_R_Q->Fill(data.evt.R, reweight);
-      h_R2_Q->Fill(data.evt.R2, reweight);
-      h_tau21_Q->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_Q->Fill(data.met.Pt.at(0),reweight);
+      h_ht_AK4_Q->Fill(AK4_Ht, w);
+      h_ht_AK8_Q->Fill(AK8_Ht, w);
+      h_jet1_pt_Q->Fill(data.jetsAK4.Pt[iJet[0]], w);
+      h_jet2_pt_Q->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_jet3_pt_Q->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_Q->Fill(data.evt.MR, w);
+      h_MTR_Q->Fill(data.evt.MTR, w);
+      h_R_Q->Fill(data.evt.R, w);
+      h_R2_Q->Fill(data.evt.R2, w);
+      h_tau21_Q->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_Q->Fill(data.met.Pt.at(0),w);
 
-      h_HT_Q->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_Q->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_Q->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-
-    if(data.hlt.PFHT800){
-      h_HT_Q_passHT->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_Q_passHT->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_Q_passHT->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-    }
-    if(data.hlt.AK8PFJet360_TrimMass30){
-      h_HT_Q_passj1pt->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_Q_passj1pt->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_Q_passj1pt->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-    }
-    if(pass){
-      h_HT_Q_pass->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_Q_pass->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_Q_pass->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-    }
+      h_HT_Q->Fill(AK4_Ht,w);
+      h_j1_pt_Q->Fill(data.jetsAK8.Pt[iJet[0]],w);
+      h_HT_j1pt_Q->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
 
+    if (apply_all_cuts_except('Q', "HLT")) {
+      if(data.hlt.PFHT800){
+	h_HT_Q_passHT->Fill(AK4_Ht,w);
+	h_j1_pt_Q_passHT->Fill(data.jetsAK8.Pt[iJet[0]],w);
+	h_HT_j1pt_Q_passHT->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      }
+      if(data.hlt.AK8PFJet360_TrimMass30){
+	h_HT_Q_passj1pt->Fill(AK4_Ht,w);
+	h_j1_pt_Q_passj1pt->Fill(data.jetsAK8.Pt[iJet[0]],w);
+	h_HT_j1pt_Q_passj1pt->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      }
+      if(pass){
+	h_HT_Q_pass->Fill(AK4_Ht,w);
+	h_j1_pt_Q_pass->Fill(data.jetsAK8.Pt[iJet[0]],w);
+	h_HT_j1pt_Q_pass->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      }
+    }
+
+    // Signal region
+    w = sf_weight['S'];
     //if (apply_all_cuts_except('S', "mDPhi>=0p4")) {
     if (apply_all_cuts('S')) {
-      h_ht_AK4Puppi_S->Fill(AK4Puppi_Ht, reweight);
-      h_ht_AK8Puppi_S->Fill(AK8Puppi_Ht, reweight);
-      h_jet1_pt_S->Fill(data.jetsAK4Puppi.Pt[iJet[0]], reweight);
-      h_jet2_pt_S->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_jet3_pt_S->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_S->Fill(data.evt.MR, reweight);
-      h_R_S->Fill(data.evt.R, reweight);
-      h_MTR_S->Fill(data.evt.MTR, reweight);
-      h_R2_S->Fill(data.evt.R2, reweight);
-      h_tau21_S->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_S->Fill(data.met.Pt.at(0),reweight);
+      h_ht_AK4_S->Fill(AK4_Ht, w);
+      h_ht_AK8_S->Fill(AK8_Ht, w);
+      h_jet1_pt_S->Fill(data.jetsAK4.Pt[iJet[0]], w);
+      h_jet2_pt_S->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_jet3_pt_S->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_S->Fill(data.evt.MR, w);
+      h_R_S->Fill(data.evt.R, w);
+      h_MTR_S->Fill(data.evt.MTR, w);
+      h_R2_S->Fill(data.evt.R2, w);
+      h_tau21_S->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_S->Fill(data.met.Pt.at(0),w);
 
-      h_GluinoLSPMass->Fill(data.evt.SUSY_Gluino_Mass,data.evt.SUSY_LSP_Mass,reweight);
-      h_R2_MR->Fill(data.evt.MR, data.evt.R2, reweight);
-      h_minDeltaPhi->Fill(minDeltaPhi, reweight);
-      h_softDropMass->Fill(data.jetsAK8Puppi.softDropMass.at(0),reweight);
-      h_StopMass->Fill(data.evt.SUSY_Stop_Mass,reweight);
-      h_GluinoMass->Fill(data.evt.SUSY_Gluino_Mass,reweight);
-      h_LSPMass->Fill(data.evt.SUSY_LSP_Mass,reweight);
+      h_GluinoLSPMass->Fill(data.evt.SUSY_Gluino_Mass,data.evt.SUSY_LSP_Mass,w);
+      h_R2_MR->Fill(data.evt.MR, data.evt.R2, w);
+      h_minDeltaPhi->Fill(minDeltaPhi, w);
+      h_softDropMass->Fill(data.jetsAK8.softDropMass.at(0),w);
+      h_StopMass->Fill(data.evt.SUSY_Stop_Mass,w);
+      h_GluinoMass->Fill(data.evt.SUSY_Gluino_Mass,w);
+      h_LSPMass->Fill(data.evt.SUSY_LSP_Mass,w);
 
-      h_HT_S->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_S->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_S->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
- 
+      h_HT_S->Fill(AK4_Ht,w);
+      h_j1_pt_S->Fill(data.jetsAK8.Pt[iJet[0]],w);
+      h_HT_j1pt_S->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+    }
+
+    if (apply_all_cuts_except('S', "HLT")) { 
       if(data.hlt.PFHT800){
-        h_HT_S_passHT->Fill(AK4Puppi_Ht,reweight);
-        h_j1_pt_S_passHT->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-        h_HT_j1pt_S_passHT->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+        h_HT_S_passHT->Fill(AK4_Ht,w);
+        h_j1_pt_S_passHT->Fill(data.jetsAK8.Pt[iJet[0]],w);
+        h_HT_j1pt_S_passHT->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
       }
-    if(data.hlt.AK8PFJet360_TrimMass30){
-      h_HT_S_passj1pt->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_S_passj1pt->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_S_passj1pt->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-    }
-    if(pass){
-      h_HT_S_pass->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_S_pass->Fill(data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_S_pass->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
-    }
+      if(data.hlt.AK8PFJet360_TrimMass30){
+	h_HT_S_passj1pt->Fill(AK4_Ht,w);
+	h_j1_pt_S_passj1pt->Fill(data.jetsAK8.Pt[iJet[0]],w);
+	h_HT_j1pt_S_passj1pt->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      }
+      if(pass){
+	h_HT_S_pass->Fill(AK4_Ht,w);
+	h_j1_pt_S_pass->Fill(data.jetsAK8.Pt[iJet[0]],w);
+	h_HT_j1pt_S_pass->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
+      }
     }
 
-    h_njet_pre->Fill(nJet,        reweight);
-    h_nb_pre->Fill(nMediumBTag, reweight);
-    h_nw_pre->Fill(nTightWTag,  reweight);
-    h_j2_pt_pre->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-    h_j3_pt_pre->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-    h_MR_pre->Fill(data.evt.MR, reweight);
-    h_R2_pre->Fill(data.evt.R2, reweight);
-    h_tau21_pre->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-    h_MET_pre->Fill(data.met.Pt.at(0),reweight);
-    h_softDropMass_pre->Fill(data.jetsAK8Puppi.softDropMass.at(0),reweight);
-    h_HT_pre->Fill(AK4Puppi_Ht,reweight);
-    h_j1_pt_pre->Fill(data.jetsAK4Puppi.Pt[iJet[0]],reweight);
-    h_HT_j1pt_pre->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+    // Trigger efficiencies
+    // No weighting
+ 
+    // I guess these histots are for data only (trigger efficiencies)
+    // One could just use the normal weight  for that ( = 1)
+    // Since MC already has trigger efficiency weight applied already
+    // one could use simply 1 as the weight there also
+    // N-1 weights are not currently supported
+
+    //w = isData ? 1 : sf_weight['S'];
+    w = 1;
+
+    h_njet_pre->Fill(nJet,        w);
+    h_nb_pre->Fill(nMediumBTag, w);
+    h_nw_pre->Fill(nTightWTag,  w);
+    h_j2_pt_pre->Fill(data.jetsAK4.Pt[iJet[1]], w);
+    h_j3_pt_pre->Fill(data.jetsAK4.Pt[iJet[2]], w);
+    h_MR_pre->Fill(data.evt.MR, w);
+    h_R2_pre->Fill(data.evt.R2, w);
+    h_tau21_pre->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+    h_MET_pre->Fill(data.met.Pt.at(0),w);
+    h_softDropMass_pre->Fill(softDropMassCorr.at(0),w);
+    h_HT_pre->Fill(AK4_Ht,w);
+    h_j1_pt_pre->Fill(data.jetsAK4.Pt[iJet[0]],w);
+    h_HT_j1pt_pre->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
 
     if(data.hlt.PFHT800){
-      h_njet_pre_passHT->Fill(nJet,        reweight);
-      h_nb_pre_passHT->Fill(nMediumBTag, reweight);
-      h_nw_pre_passHT->Fill(nTightWTag,  reweight);
-      h_j2_pt_pre_passHT->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_j3_pt_pre_passHT->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_pre_passHT->Fill(data.evt.MR, reweight);
-      h_R2_pre_passHT->Fill(data.evt.R2, reweight);
-      h_tau21_pre_passHT->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_pre_passHT->Fill(data.met.Pt.at(0),reweight);
-      h_softDropMass_pre_passHT->Fill(data.jetsAK8Puppi.softDropMass.at(0),reweight);
-      h_HT_pre_passHT->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_pre_passHT->Fill(data.jetsAK4Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_pre_passHT->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+      h_njet_pre_passHT->Fill(nJet,        w);
+      h_nb_pre_passHT->Fill(nMediumBTag, w);
+      h_nw_pre_passHT->Fill(nTightWTag,  w);
+      h_j2_pt_pre_passHT->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_j3_pt_pre_passHT->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_pre_passHT->Fill(data.evt.MR, w);
+      h_R2_pre_passHT->Fill(data.evt.R2, w);
+      h_tau21_pre_passHT->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_pre_passHT->Fill(data.met.Pt.at(0),w);
+      h_softDropMass_pre_passHT->Fill(softDropMassCorr.at(0),w);
+      h_HT_pre_passHT->Fill(AK4_Ht,w);
+      h_j1_pt_pre_passHT->Fill(data.jetsAK4.Pt[iJet[0]],w);
+      h_HT_j1pt_pre_passHT->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
     if(data.hlt.AK8PFJet360_TrimMass30){
-      h_njet_pre_passj1pt->Fill(nJet,        reweight);
-      h_nb_pre_passj1pt->Fill(nMediumBTag, reweight);
-      h_nw_pre_passj1pt->Fill(nTightWTag,  reweight);
-      h_j2_pt_pre_passj1pt->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_j3_pt_pre_passj1pt->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_pre_passj1pt->Fill(data.evt.MR, reweight);
-      h_R2_pre_passj1pt->Fill(data.evt.R2, reweight);
-      h_tau21_pre_passj1pt->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_pre_passj1pt->Fill(data.met.Pt.at(0),reweight);
-      h_softDropMass_pre_passj1pt->Fill(data.jetsAK8Puppi.softDropMass.at(0),reweight);
-      h_HT_pre_passj1pt->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_pre_passj1pt->Fill(data.jetsAK4Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_pre_passj1pt->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+      h_njet_pre_passj1pt->Fill(nJet,        w);
+      h_nb_pre_passj1pt->Fill(nMediumBTag, w);
+      h_nw_pre_passj1pt->Fill(nTightWTag,  w);
+      h_j2_pt_pre_passj1pt->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_j3_pt_pre_passj1pt->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_pre_passj1pt->Fill(data.evt.MR, w);
+      h_R2_pre_passj1pt->Fill(data.evt.R2, w);
+      h_tau21_pre_passj1pt->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_pre_passj1pt->Fill(data.met.Pt.at(0),w);
+      h_softDropMass_pre_passj1pt->Fill(softDropMassCorr.at(0),w);
+      h_HT_pre_passj1pt->Fill(AK4_Ht,w);
+      h_j1_pt_pre_passj1pt->Fill(data.jetsAK4.Pt[iJet[0]],w);
+      h_HT_j1pt_pre_passj1pt->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
     if(pass){
-      h_njet_pre_pass->Fill(nJet,        reweight);
-      h_nb_pre_pass->Fill(nMediumBTag, reweight);
-      h_nw_pre_pass->Fill(nTightWTag,  reweight);
-      h_j2_pt_pre_pass->Fill(data.jetsAK4Puppi.Pt[iJet[1]], reweight);
-      h_j3_pt_pre_pass->Fill(data.jetsAK4Puppi.Pt[iJet[2]], reweight);
-      h_MR_pre_pass->Fill(data.evt.MR, reweight);
-      h_R2_pre_pass->Fill(data.evt.R2, reweight);
-      h_tau21_pre_pass->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),reweight);
-      h_MET_pre_pass->Fill(data.met.Pt.at(0),reweight);
-      h_softDropMass_pre_pass->Fill(data.jetsAK8Puppi.softDropMass.at(0),reweight);
-      h_HT_pre_pass->Fill(AK4Puppi_Ht,reweight);
-      h_j1_pt_pre_pass->Fill(data.jetsAK4Puppi.Pt[iJet[0]],reweight);
-      h_HT_j1pt_pre_pass->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],reweight);
+      h_njet_pre_pass->Fill(nJet,        w);
+      h_nb_pre_pass->Fill(nMediumBTag, w);
+      h_nw_pre_pass->Fill(nTightWTag,  w);
+      h_j2_pt_pre_pass->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_j3_pt_pre_pass->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_pre_pass->Fill(data.evt.MR, w);
+      h_R2_pre_pass->Fill(data.evt.R2, w);
+      h_tau21_pre_pass->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_pre_pass->Fill(data.met.Pt.at(0),w);
+      h_softDropMass_pre_pass->Fill(softDropMassCorr.at(0),w);
+      h_HT_pre_pass->Fill(AK4_Ht,w);
+      h_j1_pt_pre_pass->Fill(data.jetsAK4.Pt[iJet[0]],w);
+      h_HT_j1pt_pre_pass->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
 
     /*
@@ -789,46 +873,46 @@ Analysis ana;
   }
   
 /*
-    h_njet_pre[syst_index]->Fill(nJet,        weight);
-    h_nb_pre[syst_index]->Fill(nMediumBTag, weight);
-    h_nw_pre[syst_index]->Fill(nTightWTag,  weight);
-    h_j1_pt_pre[syst_index]->Fill(data.jetsAK8Puppi.Pt[iJet[0]],weight);
-    h_j2_pt_pre[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[1]], weight);
-    h_j3_pt_pre[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[2]], weight);
-    h_MR_pre[syst_index]->Fill(data.evt.MR, weight);
-    h_R2_pre[syst_index]->Fill(data.evt.R2, weight);
-    h_tau21_pre[syst_index]->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),weight);
-    h_MET_pre[syst_index]->Fill(data.met.Pt.at(0),weight);
-    h_softDropMass_pre[syst_index]->Fill(data.jetsAK8Puppi.softDropMass.at(0),weight);
-    h_HT_pre[syst_index]->Fill(AK4Puppi_Ht,weight);
-    h_HT_j1pt_pre[syst_index]->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],weight);
+    h_njet_pre[syst_index]->Fill(nJet,        w);
+    h_nb_pre[syst_index]->Fill(nMediumBTag, w);
+    h_nw_pre[syst_index]->Fill(nTightWTag,  w);
+    h_j1_pt_pre[syst_index]->Fill(data.jetsAK8.Pt[iJet[0]],w);
+    h_j2_pt_pre[syst_index]->Fill(data.jetsAK4.Pt[iJet[1]], w);
+    h_j3_pt_pre[syst_index]->Fill(data.jetsAK4.Pt[iJet[2]], w);
+    h_MR_pre[syst_index]->Fill(data.evt.MR, w);
+    h_R2_pre[syst_index]->Fill(data.evt.R2, w);
+    h_tau21_pre[syst_index]->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+    h_MET_pre[syst_index]->Fill(data.met.Pt.at(0),w);
+    h_softDropMass_pre[syst_index]->Fill(softDropMassCorr.at(0),w);
+    h_HT_pre[syst_index]->Fill(AK4_Ht,w);
+    h_HT_j1pt_pre[syst_index]->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
 
     if(pass){
-      h_njet_pre_pass[syst_index]->Fill(nJet,        weight);
-      h_nb_pre_pass[syst_index]->Fill(nMediumBTag, weight);
-      h_nw_pre_pass[syst_index]->Fill(nTightWTag,  weight);
-      h_j1 pt_pre_pass[syst_index]->Fill(data.jetsAK8Puppi.Pt[iJet[0]],weight);
-      h_j2_pt_pre_pass[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[1]], weight);
-      h_j3_pt_pre_pass[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[2]], weight);
-      h_MR_pre_pass[syst_index]->Fill(data.evt.MR, weight);
-      h_R2_pre_pass[syst_index]->Fill(data.evt.R2, weight);
-      h_tau21_pre_pass[syst_index]->Fill(data.jetsAK8Puppi.tau2.at(0)/data.jetsAK8Puppi.tau1.at(0),weight);
-      h_MET_pre_pass[syst_index]->Fill(data.met.Pt.at(0),weight);
-      h_softDropMass_pre_pass[syst_index]->Fill(data.jetsAK8Puppi.softDropMass.at(0),weight);
-      h_HT_pre_pass[syst_index]->Fill(AK4Puppi_Ht,weight);
-      h_HT_j1pt_pre_pass[syst_index]->Fill(AK4Puppi_Ht,data.jetsAK8Puppi.Pt[iJet[0]],weight);
+      h_njet_pre_pass[syst_index]->Fill(nJet,        w);
+      h_nb_pre_pass[syst_index]->Fill(nMediumBTag, w);
+      h_nw_pre_pass[syst_index]->Fill(nTightWTag,  w);
+      h_j1 pt_pre_pass[syst_index]->Fill(data.jetsAK8.Pt[iJet[0]],w);
+      h_j2_pt_pre_pass[syst_index]->Fill(data.jetsAK4.Pt[iJet[1]], w);
+      h_j3_pt_pre_pass[syst_index]->Fill(data.jetsAK4.Pt[iJet[2]], w);
+      h_MR_pre_pass[syst_index]->Fill(data.evt.MR, w);
+      h_R2_pre_pass[syst_index]->Fill(data.evt.R2, w);
+      h_tau21_pre_pass[syst_index]->Fill(data.jetsAK8.tau2.at(0)/data.jetsAK8.tau1.at(0),w);
+      h_MET_pre_pass[syst_index]->Fill(data.met.Pt.at(0),w);
+      h_softDropMass_pre_pass[syst_index]->Fill(softDropMassCorr.at(0),w);
+      h_HT_pre_pass[syst_index]->Fill(AK4_Ht,w);
+      h_HT_j1pt_pre_pass[syst_index]->Fill(AK4_Ht,data.jetsAK8.Pt[iJet[0]],w);
     }
 */
   // Vary systematics and save each variation into a different historgam
   // Switch on settings.varySystematics to be effective
-  //if (apply_all_cuts('S')) vh_jet1_pt[syst_index]->Fill(data.jetsAK4Puppi.Pt[iJet[0]], weight);
+  //if (apply_all_cuts('S')) vh_jet1_pt[syst_index]->Fill(data.jetsAK4.Pt[iJet[0]], w);
 }
 
 // Methods used by SmartHistos (Plotter)
 // Can leave them empty
 void
-Analysis::define_histo_options(const double& weight, const DataStruct& d, const unsigned int& syst_nSyst, 
-			       const unsigned int& syst_index, std::string dirname, bool runOnSkim=false)
+Analysis::define_histo_options(const double& w, const DataStruct& d, const unsigned int& syst_nSyst,
+			       const unsigned int& syst_index, bool runOnSkim=false)
 {
 }
 

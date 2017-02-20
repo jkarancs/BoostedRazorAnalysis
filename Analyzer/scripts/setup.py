@@ -23,6 +23,7 @@ LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Oct24"
 LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
+#LATEST_NTUPLE_GRID18="Jan12"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
@@ -80,12 +81,28 @@ elif 'grid18.kfki.hu' in socket.gethostname():
         print "Making directory for latest ntuple symlinks: "+ANA_BASE+'/ntuple/Latest'
         os.makedirs(ANA_BASE+'/ntuple/Latest')
     print 'Creating symlinks to the latest ntuples in ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/ ... ',
-    for grid18_subdir in os.listdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_EOS):
-        if os.path.isdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_EOS+'/'+grid18_subdir):
-            source = os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_EOS+'/'+grid18_subdir)
-            target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
-            os.symlink(source, target)
-    print 'Done.'
+    #for grid18_subdir in os.listdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18):
+    #    if os.path.isdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/'+grid18_subdir):
+    #        source = os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/'+grid18_subdir)
+    #        target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+    #        os.symlink(source, target)
+    #
+    if os.path.exists(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
+        print 'Creating symlinks to the latest ntuples in /data drive: ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/ ... ',
+        for data_subdir in os.listdir(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
+            if os.path.isdir(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/'+data_subdir):
+                source = os.path.realpath(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/'+data_subdir)
+                target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+                os.symlink(source, target)
+        print 'Done.'
+    if os.path.exists(ANA_BASE+'/ntuple/grid18_data_6tb/'+LATEST_NTUPLE_GRID18):
+        print 'Creating symlinks to the latest ntuples in /data_6tb drive: ntuple/grid18_data_6tb/'+LATEST_NTUPLE_GRID18+'/ ... ',
+        for data_6tb_subdir in os.listdir(ANA_BASE+'/ntuple/grid18_data_6tb/'+LATEST_NTUPLE_GRID18):
+            if os.path.isdir(ANA_BASE+'/ntuple/grid18_data_6tb/'+LATEST_NTUPLE_GRID18+'/'+data_6tb_subdir):
+                source = os.path.realpath(ANA_BASE+'/ntuple/grid18_data_6tb/'+LATEST_NTUPLE_GRID18+'/'+data_6tb_subdir)
+                target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+                os.symlink(source, target)
+        print 'Done.'
 else:
     print "Error: not on lxplus or grid18 (Budapest)"
     sys.exit()
