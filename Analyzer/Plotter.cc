@@ -32,9 +32,9 @@ int main(int argc, char** argv) {
 
   DataStruct data;
   double w = 1;
-  Analysis ana;
+  Analysis ana(cmdline.isData, cmdline.isSignal, cmdline.dirname);
 
-  ana.define_histo_options(w, data, syst.nSyst, syst.index, cmdline.dirname, cmdline.isData, cmdline.isSignal, settings.runOnSkim);
+  ana.define_histo_options(w, data, syst.nSyst, syst.index, settings.runOnSkim);
   ana.init_common_histos();
   ana.init_analysis_histos(syst.nSyst, syst.index);
 

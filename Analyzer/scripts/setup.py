@@ -18,12 +18,14 @@ import os, re, sys, glob, socket, subprocess
 
 # 80X
 #LATEST_NTUPLE_EOS="Skim_Aug30_1AK8JetPt300"
-LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
+#LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
+LATEST_NTUPLE_EOS="Skim_Feb26_1JetAK8_0p04R2"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Oct24"
-LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
+#LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Jan12"
+LATEST_NTUPLE_GRID18="Skim_Feb26_1JetAK8_0p04R2"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
@@ -63,6 +65,7 @@ if 'lxplus' in socket.gethostname():
         if os.path.isdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir):
             source = os.path.realpath(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir)
             target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+            if os.path.islink(target): target += "_2"
             os.symlink(source, target)
     print 'Done.'
 elif 'grid18.kfki.hu' in socket.gethostname():
@@ -86,7 +89,7 @@ elif 'grid18.kfki.hu' in socket.gethostname():
     #        source = os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/'+grid18_subdir)
     #        target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
     #        os.symlink(source, target)
-    #
+    
     if os.path.exists(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
         print 'Creating symlinks to the latest ntuples in /data drive: ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/ ... ',
         for data_subdir in os.listdir(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
@@ -119,7 +122,10 @@ for directory in os.listdir(DIR):
         if os.listdir(DIR+'/'+directory):
             # Data
             if re.compile('.*20[1-2][0-9][A-J].*').match(directory):
-                flist = open(ANA_BASE+'/filelists/data/'+directory+'.txt', 'w')
+                txtname = directory
+                if txtname.endswith('_2'): txtname = txtname[:-2]
+                elif txtname.endswith('_recovery'): txtname = txtname[:-9]
+                flist = open(ANA_BASE+'/filelists/data/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
                     if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
@@ -127,7 +133,9 @@ for directory in os.listdir(DIR):
                     print>>flist, filename
             # Signals
             elif re.compile('.*T[1-9][t,b,c,q][t,b,c,q].*').match(directory):
-                flist = open(ANA_BASE+'/filelists/signals/'+directory+'.txt', 'w')
+                txtname = directory
+                if txtname.endswith('_2'): txtname = txtname[:-2]
+                flist = open(ANA_BASE+'/filelists/signals/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
                     if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
@@ -135,7 +143,9 @@ for directory in os.listdir(DIR):
                     print>>flist, filename
             # Backgrounds
             else:
-                flist = open(ANA_BASE+'/filelists/backgrounds/'+directory+'.txt', 'w')
+                txtname = directory
+                if txtname.endswith('_2'): txtname = txtname[:-2]
+                flist = open(ANA_BASE+'/filelists/backgrounds/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
                     if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:

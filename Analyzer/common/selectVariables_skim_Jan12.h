@@ -12,8 +12,8 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("evt_RunNumber", data.evt.RunNumber);
   stream.select("evt_LumiBlock", data.evt.LumiBlock);
   stream.select("evt_EventNumber", data.evt.EventNumber);
-  //stream.select("evt_NGoodVtx", data.evt.NGoodVtx);
-  //stream.select("evt_LHA_PDF_ID", data.evt.LHA_PDF_ID);
+  stream.select("evt_NGoodVtx", data.evt.NGoodVtx);
+  stream.select("evt_LHA_PDF_ID", data.evt.LHA_PDF_ID);
   stream.select("evt_NIsoTrk", data.evt.NIsoTrk);
   stream.select("evt_MR", data.evt.MR);
   stream.select("evt_MTR", data.evt.MTR);

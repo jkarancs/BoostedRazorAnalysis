@@ -9,7 +9,7 @@
 
 void selectVariables(itreestream& stream, DataStruct& data) {
 
-  //++ stream.select("evt_RunNumber", data.evt.RunNumber);
+  stream.select("evt_RunNumber", data.evt.RunNumber);
   //++ stream.select("evt_LumiBlock", data.evt.LumiBlock);
   //++ stream.select("evt_EventNumber", data.evt.EventNumber);
   //stream.select("evt_NGoodVtx", data.evt.NGoodVtx);
@@ -31,26 +31,26 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("met_Pt", data.met.Pt);
   stream.select("met_Phi", data.met.Phi);
   //stream.select("puppimet_size", data.puppimet.size);
-  stream.select("puppimet_Pt", data.puppimet.Pt);
-  stream.select("puppimet_Phi", data.puppimet.Phi);
+  //stream.select("puppimet_Pt", data.puppimet.Pt);
+  //stream.select("puppimet_Phi", data.puppimet.Phi);
   
-  //sys stream.select("pu_NtrueInt", data.pu.NtrueInt);
-  //sys 
-  //sys stream.select("scale_size", data.syst_scale.size);
-  //sys stream.select("scale_Weights", data.syst_scale.Weights);
-  //sys 
-  //sys stream.select("pdf_size", data.syst_pdf.size);
-  //sys stream.select("pdf_Weights", data.syst_pdf.Weights);
-  //sys 
-  //sys stream.select("alphas_size", data.syst_alphas.size);
-  //sys stream.select("alphas_Weights", data.syst_alphas.Weights);
-  //sys 
-  //sys stream.select("metsyst_size", data.syst_met.size);
-  //sys stream.select("metsyst_Pt", data.syst_met.Pt);
-  //sys stream.select("metsyst_Phi", data.syst_met.Phi);
-  //sys stream.select("puppimetsyst_size", data.syst_puppimet.size);
-  //sys stream.select("puppimetsyst_Pt", data.syst_puppimet.Pt);
-  //sys stream.select("puppimetsyst_Phi", data.syst_puppimet.Phi);
+  stream.select("pu_NtrueInt", data.pu.NtrueInt);
+  
+  stream.select("scale_size", data.syst_scale.size);
+  stream.select("scale_Weights", data.syst_scale.Weights);
+  
+  stream.select("pdf_size", data.syst_pdf.size);
+  stream.select("pdf_Weights", data.syst_pdf.Weights);
+  
+  stream.select("alphas_size", data.syst_alphas.size);
+  stream.select("alphas_Weights", data.syst_alphas.Weights);
+  
+  stream.select("metsyst_size", data.syst_met.size);
+  stream.select("metsyst_Pt", data.syst_met.Pt);
+  stream.select("metsyst_Phi", data.syst_met.Phi);
+  //stream.select("puppimetsyst_size", data.syst_puppimet.size);
+  //stream.select("puppimetsyst_Pt", data.syst_puppimet.Pt);
+  //stream.select("puppimetsyst_Phi", data.syst_puppimet.Phi);
   
   stream.select("Flag_BadPFMuonFilter", data.filter.BadPFMuonFilter);
   stream.select("Flag_BadChargedCandidateFilter", data.filter.BadChargedCandidateFilter);
@@ -358,10 +358,10 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("el_DB", data.ele.DB);
   stream.select("el_DBerr", data.ele.DBerr);
   stream.select("el_SCEta", data.ele.SCEta);
-  stream.select("el_vidVeto", data.ele.vidVeto);
-  stream.select("el_vidLoose", data.ele.vidLoose);
-  stream.select("el_vidMedium", data.ele.vidMedium);
-  stream.select("el_vidTight", data.ele.vidTight);
+  //stream.select("el_vidVeto", data.ele.vidVeto);
+  //stream.select("el_vidLoose", data.ele.vidLoose);
+  //stream.select("el_vidMedium", data.ele.vidMedium);
+  //stream.select("el_vidTight", data.ele.vidTight);
   //++ stream.select("el_vidHEEP", data.ele.vidHEEP);
   stream.select("el_vidVetonoiso", data.ele.vidVetonoiso);
   stream.select("el_vidLoosenoiso", data.ele.vidLoosenoiso);
@@ -374,13 +374,13 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //++ stream.select("el_DRNearGenEleFromSLTop", data.ele.DRNearGenEleFromSLTop);
   //++ stream.select("el_PtNearGenEleFromSLTop", data.ele.PtNearGenEleFromSLTop);
   //++ stream.select("el_PtNearGenTop", data.ele.PtNearGenTop);
-  stream.select("el_LepAK4JetFrac", data.ele.LepAK4JetFrac);
+  //++ stream.select("el_LepAK4JetFrac", data.ele.LepAK4JetFrac);
   //++ stream.select("el_LepAK8JetFrac", data.ele.LepAK8JetFrac);
   //++ stream.select("el_LepSubjetFrac", data.ele.LepSubjetFrac);
   //++ stream.select("el_LepAK4JetMassDrop", data.ele.LepAK4JetMassDrop);
   //++ stream.select("el_LepAK8JetMassDrop", data.ele.LepAK8JetMassDrop);
   //++ stream.select("el_LepSubjetMassDrop", data.ele.LepSubjetMassDrop);
-  stream.select("el_AK4JetV1DR", data.ele.AK4JetV1DR);
+  //++ stream.select("el_AK4JetV1DR", data.ele.AK4JetV1DR);
   //++ stream.select("el_AK4JetV2DR", data.ele.AK4JetV2DR);
   //++ stream.select("el_AK4JetV3DR", data.ele.AK4JetV3DR);
   //++ stream.select("el_AK8JetV1DR", data.ele.AK8JetV1DR);
@@ -424,13 +424,13 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //++ stream.select("mu_DRNearGenMuFromSLTop", data.mu.DRNearGenMuFromSLTop);
   //++ stream.select("mu_PtNearGenMuFromSLTop", data.mu.PtNearGenMuFromSLTop);
   //++ stream.select("mu_PtNearGenTop", data.mu.PtNearGenTop);
-  stream.select("mu_LepAK4JetFrac", data.mu.LepAK4JetFrac);
+  //++ stream.select("mu_LepAK4JetFrac", data.mu.LepAK4JetFrac);
   //++ stream.select("mu_LepAK8JetFrac", data.mu.LepAK8JetFrac);
   //++ stream.select("mu_LepSubjetFrac", data.mu.LepSubjetFrac);
   //++ stream.select("mu_LepAK4JetMassDrop", data.mu.LepAK4JetMassDrop);
   //++ stream.select("mu_LepAK8JetMassDrop", data.mu.LepAK8JetMassDrop);
   //++ stream.select("mu_LepSubjetMassDrop", data.mu.LepSubjetMassDrop);
-  stream.select("mu_AK4JetV1DR", data.mu.AK4JetV1DR);
+  //++ stream.select("mu_AK4JetV1DR", data.mu.AK4JetV1DR);
   //++ stream.select("mu_AK4JetV2DR", data.mu.AK4JetV2DR);
   //++ stream.select("mu_AK4JetV3DR", data.mu.AK4JetV3DR);
   //++ stream.select("mu_AK8JetV1DR", data.mu.AK8JetV1DR);
@@ -476,11 +476,11 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //sys stream.select("jetAK4CHS_JERSF", data.jetsAK4.JERSF);
   //sys stream.select("jetAK4CHS_JERSFUp", data.jetsAK4.JERSFUp);
   //sys stream.select("jetAK4CHS_JERSFDown", data.jetsAK4.JERSFDown);
-  //sys stream.select("jetAK4CHS_SmearedPt", data.jetsAK4.SmearedPt);
+  stream.select("jetAK4CHS_SmearedPt", data.jetsAK4.SmearedPt);
   //stream.select("jetAK4CHS_Keys", data.jetsAK4.Keys);
   stream.select("jetAK4CHS_looseJetID", data.jetsAK4.looseJetID);
-  stream.select("jetAK4CHS_tightJetID", data.jetsAK4.tightJetID);
-  stream.select("jetAK4CHS_tightLepVetoJetID", data.jetsAK4.tightLepVetoJetID);
+  //stream.select("jetAK4CHS_tightJetID", data.jetsAK4.tightJetID);
+  //stream.select("jetAK4CHS_tightLepVetoJetID", data.jetsAK4.tightLepVetoJetID);
   
   stream.select("jetAK8CHS_size", data.jetsAK8.size);
   stream.select("jetAK8CHS_Pt", data.jetsAK8.Pt);
@@ -509,15 +509,15 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //sys stream.select("jetAK8CHS_JERSF", data.jetsAK8.JERSF);
   //sys stream.select("jetAK8CHS_JERSFUp", data.jetsAK8.JERSFUp);
   //sys stream.select("jetAK8CHS_JERSFDown", data.jetsAK8.JERSFDown);
-  //sys stream.select("jetAK8CHS_SmearedPt", data.jetsAK8.SmearedPt);
+  stream.select("jetAK8CHS_SmearedPt", data.jetsAK8.SmearedPt);
   //stream.select("jetAK8CHS_DoubleBAK8", data.jetsAK8.DoubleBAK8);
   //stream.select("jetAK8CHS_DoubleBCA15", data.jetsAK8.DoubleBCA15);
   stream.select("jetAK8CHS_vSubjetIndex0", data.jetsAK8.vSubjetIndex0);
   stream.select("jetAK8CHS_vSubjetIndex1", data.jetsAK8.vSubjetIndex1);
-  stream.select("jetAK8CHS_tau1CHS", data.jetsAK8.tau1CHS);
-  stream.select("jetAK8CHS_tau2CHS", data.jetsAK8.tau2CHS);
-  stream.select("jetAK8CHS_tau3CHS", data.jetsAK8.tau3CHS);
-  stream.select("jetAK8CHS_softDropMassCHS", data.jetsAK8.softDropMassCHS);
+  //++ stream.select("jetAK8CHS_tau1CHS", data.jetsAK8.tau1CHS);
+  //++ stream.select("jetAK8CHS_tau2CHS", data.jetsAK8.tau2CHS);
+  //++ stream.select("jetAK8CHS_tau3CHS", data.jetsAK8.tau3CHS);
+  //++ stream.select("jetAK8CHS_softDropMassCHS", data.jetsAK8.softDropMassCHS);
   stream.select("jetAK8CHS_softDropMassPuppi", data.jetsAK8.softDropMassPuppi);
   stream.select("jetAK8CHS_PtPuppi", data.jetsAK8.PtPuppi);
   stream.select("jetAK8CHS_EtaPuppi", data.jetsAK8.EtaPuppi);
@@ -535,9 +535,9 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //++ stream.select("jetAK8CHS_NearGenWToTauNu", data.jetsAK8.NearGenWToTauNu);
   stream.select("jetAK8CHS_looseJetID", data.jetsAK8.looseJetID);
   stream.select("jetAK8CHS_tightJetID", data.jetsAK8.tightJetID);
-  stream.select("jetAK8CHS_tightLepVetoJetID", data.jetsAK8.tightLepVetoJetID);
+  //++ stream.select("jetAK8CHS_tightLepVetoJetID", data.jetsAK8.tightLepVetoJetID);
   stream.select("jetAK8CHS_maxSubjetCSVv2", data.jetsAK8.maxSubjetCSVv2);
-  stream.select("jetAK8CHS_maxSubjetCMVAv2", data.jetsAK8.maxSubjetCMVAv2);
+  //++ stream.select("jetAK8CHS_maxSubjetCMVAv2", data.jetsAK8.maxSubjetCMVAv2);
   stream.select("jetAK8CHS_DRNearGenTop", data.jetsAK8.DRNearGenTop);
   //++ stream.select("jetAK8CHS_DRNearGenWFromTop", data.jetsAK8.DRNearGenWFromTop);
   //++ stream.select("jetAK8CHS_DRNearGenBFromTop", data.jetsAK8.DRNearGenBFromTop);

@@ -16,7 +16,7 @@ parser.add_option("--nevt",    dest="NEVT",    type="int",          default=-1, 
 parser.add_option("--nfile",   dest="NFILE",   type="int",          default=-1,      help="Tells how many input files to run in a single job (Default=-1 all)")
 parser.add_option("--sleep",   dest="SLEEP",   type="int",          default=3,       help="Wait for this number of seconds between submitting each batch job (Default 3s)")
 parser.add_option("--useprev", dest="useprev", action="store_true", default=False,   help="Use previously created temporary filelists")
-parser.add_option("--nproc",   dest="NPROC",   type="int",          default=3,       help="Tells how many parallel interactive jobs to start (Default=3)")
+parser.add_option("--nproc",   dest="NPROC",   type="int",          default=1,       help="Tells how many parallel interactive jobs to start (Default=3)")
 parser.add_option("--outdir",  dest="OUTDIR",  type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
 parser.add_option("--skimout", dest="SKIMOUT", type="string",       default="",      help="Output directory for skimming")
 parser.add_option("--skim",    dest="skim",    action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
@@ -35,13 +35,14 @@ if opt.OUTDIR == "" and not opt.skim and not opt.replot:
     opt.OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
 
 if opt.skim:
+    COPYSCRIPT = ""
     if opt.OUTDIR == "":
         opt.OUTDIR = "results/skim_"+DATE # log files, backup files, output files for non-skims
     # Mirror also here
     if opt.SKIMOUT == "":
         print "ERROR: Give a suitable --skimout argument, eg. --skimout ntuple/grid18/Skim_Oct31_2Jet_1JetAK8"
         sys.exit()
-    if opt.NFILE == -1 and opt.NEVT == -1:
+    if opt.NFILE == -1 and opt.NEVT == -1 and not opt.useprev:
         print "ERROR: Give a suitable --nfile or --nevt argument, otherwise output might become too large!"
         sys.exit()
     if opt.NQUICK>1:
@@ -95,7 +96,7 @@ if not opt.run:
 
 if opt.full:
     print "Running with option: --full"
-elif opt.skim:
+if opt.skim:
     print "Running with option: --skim"
 elif opt.replot:
     print "Running with option: --replot"
@@ -141,6 +142,7 @@ elif (opt.NFILE != -1 or opt.NEVT != -1):
 
 ana_arguments = []
 # Loop over all filelists
+if opt.NEVT != -1: bad_files = open("bad_files_found.txt", "w")
 for filelist in input_filelists:
     # Will put all files into the OUTDIR and its subdirectories
     log_file = opt.OUTDIR+"/log/"+filelist.split("/")[-1].replace("txt", "log")
@@ -157,15 +159,15 @@ for filelist in input_filelists:
     # Temporary filelists
     if opt.useprev:
         # Use previously created lists
-        options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize weights
+        options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
         for jobnum in range(1, len(prev_lists)+1):
             tmp_filelist = prev_lists[jobnum-1]
-            args = [output_file.replace(".root","_"+str(jobnum)+".root"), [tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
+            args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
             ana_arguments.append(args)
     elif opt.NEVT != -1:
         # SPLIT MODE (recommended for batch): Each jobs runs on max opt.NEVT
-        options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize weights
+        options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
         with open(filelist) as f:
             files = f.read().splitlines()
             jobnum = 0
@@ -173,14 +175,21 @@ for filelist in input_filelists:
             for i in range(0, len(files)):
                 # First get the number of events in the file
                 f = ROOT.TFile.Open(files[i])
+                if not f:
+                    print files[i]+" is not a root file"
+                    print>>bad_files, files[i]+" bad file"
+                    continue
                 tree = f.Get("B2GTree")
                 if not tree: tree = f.Get("B2GTTreeMaker/B2GTree")
                 nevt = tree.GetEntries()
+                if nevt == 0:
+                    print files[i]+" has 0 entries"
+                    print>>bad_files, files[i]+" 0 entry"
                 # Create a new list after every opt.NEVT
                 if i==0 or (totalevt + nevt > opt.NEVT):
                     jobnum += 1
                     tmp_filelist = filelist.replace("filelists","filelists_tmp").replace(".txt","_"+str(jobnum)+".txt")
-                    args = [output_file.replace(".root","_"+str(jobnum)+".root"), [tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
+                    args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
                     ana_arguments.append(args)
                     totalevt = 0
                 totalevt += nevt
@@ -189,7 +198,7 @@ for filelist in input_filelists:
         print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created"
     elif opt.NFILE != -1:
         # SPLIT MODE: Each jobs runs on max opt.NFILE
-        options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize
+        options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize
         with open(filelist) as f:
             files = f.read().splitlines()
             for n in range(1, (len(files)-1)/opt.NFILE+2):
@@ -197,11 +206,13 @@ for filelist in input_filelists:
                 with open(tmp_filelist, "w") as job_filelist:
                     for i in range((n-1)*opt.NFILE, min(n*opt.NFILE,len(files))):
                         print>>job_filelist, files[i]
-                args = [output_file.replace(".root","_"+str(n)+".root"), [tmp_filelist], options, log_file.replace(".log","_"+str(n)+".log")]
+                args = [output_file.replace(".root","_"+str(n)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(n)+".log")]
                 ana_arguments.append(args)
     else:
         # In case of a single job/dataset
-        ana_arguments.append([output_file, [filelist], options, log_file])
+        ana_arguments.append([output_file, [EXEC_PATH+"/"+filelist], options, log_file])
+
+if opt.NEVT != -1: bad_files.close()
 
 if opt.NFILE != -1 or opt.NEVT != -1 and not opt.useprev:
     print "All temporary filelist ready."
@@ -262,8 +273,11 @@ def backup_files(backup_dir):
     print "Backing up files in: "+backup_dir
     print
     special_call(["mkdir", "-p", backup_dir])
-    special_call(["cp", "-rp", "pileup", "systematics", "filelists", "common", "scripts"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
+    #special_call(["cp", "-rp", "btag_eff", "pileup", "scale_factors", "trigger_eff", "common", "filelists", "filelists_tmp", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
+    special_call(["cp", "-rp", "pileup", "scale_factors", "common", "filelists", "filelists_tmp", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
     print
+
+
 
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
 def analyzer_job((jobindex)):
@@ -293,7 +307,7 @@ def analyzer_job((jobindex)):
     elif opt.skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
         if opt.mirror: logged_call(["lcg-cp", "-v", output_file, EOS_JANOS+outpath], output_log)
-        elif opt.run:
+        elif opt.run and opt.NQUICK==0:
             with open(COPYSCRIPT, "a") as script:
                 print>>script, 'lcg-cp -v '+output_file+' '+EOS_VIKTOR+outpath
                 #print>>script, 'srm-set-permissions -type=CHANGE -group=RW '+EOS_VIKTOR+outpath
@@ -402,7 +416,7 @@ else:
         if not opt.test:
             backup_files(EXEC_PATH)
         compile(1, opt.plot)
-    plotter_input_files = analysis(ana_arguments, opt.NPROC)
+        plotter_input_files = analysis(ana_arguments, opt.NPROC)
     if opt.plot:
         plotter(plotter_input_files, PLOTTER_OUT)
         #if not 'lxplus' in socket.gethostname():
