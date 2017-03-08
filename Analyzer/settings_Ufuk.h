@@ -2,7 +2,7 @@
 // VER 1 - Moriond17 datasets
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     1
-#define SKIM    0
+#define SKIM    1
 
 #if VER == 0
 #include "common/DataStruct_Oct31.h"
@@ -38,7 +38,7 @@ struct settings {
     scaleQCD                 ( false ),
     doHTReweighting          ( false ),
     applySmearing            ( true  ),
-    applyScaleFactors        ( false ),
+    applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 7 mu, 1 W, 1 b
     varySystematics          ( false ),
     systematicsFileName      ( "systematics/2016_10_31_1SigmaUpDown_NoPdf.txt" ),
