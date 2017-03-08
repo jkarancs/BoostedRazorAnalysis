@@ -52,10 +52,10 @@ if opt.skim:
     else:
         if opt.mirror:
             # --mirror copies here
-            EOS_JANOS  = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
+            EOS_JANOS  = "gsiftp://eoscmsftp.cern.ch//eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
         else:
             # If not, then makes a script for Viktor
-            EOS_VIKTOR = "srm://srm-eoscms.cern.ch/eos/cms/store/caf/user/veszpv/B2GTTreeNtuple/"
+            EOS_VIKTOR = "gsiftp://eoscmsftp.cern.ch//eos/cms/store/caf/user/veszpv/B2GTTreeNtuple/"
             COPYSCRIPT = opt.SKIMOUT.replace(opt.SKIMOUT.split("/")[-1],"")+"mirror_to_Viktors_EOS_"+opt.SKIMOUT.split("/")[-1]+".sh"
             print "Warning: Don't you want to mirror to EOS? Add: --mirror option!"
             print "         If not, ignore this message!"
@@ -306,10 +306,10 @@ def analyzer_job((jobindex)):
     if opt.batch: time.sleep(opt.SLEEP)
     elif opt.skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
-        if opt.mirror: logged_call(["lcg-cp", "-v", output_file, EOS_JANOS+outpath], output_log)
+        if opt.mirror: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-r", output_file, EOS_JANOS+outpath], output_log)
         elif opt.run and opt.NQUICK==0:
             with open(COPYSCRIPT, "a") as script:
-                print>>script, 'lcg-cp -v '+output_file+' '+EOS_VIKTOR+outpath
+                print>>script, 'env --unset=LD_LIBRARY_PATH gfal-copy -r '+output_file+' '+EOS_VIKTOR+outpath
                 #print>>script, 'srm-set-permissions -type=CHANGE -group=RW '+EOS_VIKTOR+outpath
     return output_file
 

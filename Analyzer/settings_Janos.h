@@ -2,7 +2,7 @@
 // VER 1 - Moriond17 datasets
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     1
-#define SKIM    1
+#define SKIM    0
 
 #if VER == 0
 #include "common/DataStruct_Oct31.h"
