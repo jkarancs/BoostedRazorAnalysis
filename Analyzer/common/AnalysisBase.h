@@ -12,6 +12,7 @@
 #include "TH3.h"
 #include "TProfile.h"
 #include "TStopwatch.h"
+#include "TRandom3.h"
 #include <unistd.h>
 
 #include "utils.h"
@@ -106,6 +107,7 @@ public:
 
 private:
   TStopwatch *sw_1_, *sw_1k_, *sw_10k_, *sw_job_;
+  TRandom3 rnd_;
   std::map<std::string, int> bad_files;
 
   BTagCalibration* btag_calib_full_;
@@ -253,20 +255,17 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define B_CSV_TIGHT_CUT        0.9535
 
 /* 
-   Latest W-tagging Working points / scale factors (Spring16+PromptReco with ICHEP JEC)
-   https://twiki.cern.ch/twiki/bin/view/CMS/JetWtagging?rev=43#Working_points_and_scale_factors
-   
-   - Using currently values for Spring16+ICHEP JEC
-   TODO: Update to Moriond17+ReReco
+   Boosted W-tagging:
 
-   Choose:
-   - Loose jet ID
-   Tight Tag selection:
+   Latest WPs/SFs:
+   https://twiki.cern.ch/twiki/bin/view/CMS/JetWtagging?rev=51#Working_points_and_scale_factors
+
+   W-Tag selection:
    - AK8 CHS jets
    - pt > 200
    - |eta| < 2.4
-   - 65 <= Puppi SD Mass (corr) < 105
-   - Puppi tau21 < 0.40
+   - 65 <= Puppi SD Mass (corrected) < 105
+   - Medium WP: Puppi tau21 < 0.4
 
 */
 
@@ -274,44 +273,45 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define W_ETA_CUT           2.4
 #define W_SD_MASS_CUT_LOW   65
 #define W_SD_MASS_CUT_HIGH  105
-#define W_TAU21_LOOSE_CUT   0.6 // DO NOT USE WITH PUPPI
-#define W_TAU21_TIGHT_CUT   0.4
+#define W_TAU21_LOOSE_CUT   0.55
+#define W_TAU21_TIGHT_CUT   0.4 // There is a Tighter WP: 0.35
 
-#define W_TAG_EFF_SF     1.03
-#define W_TAG_EFF_SF_ERR 0.078
-#define W_TAG_JMS_SF     1.00
-#define W_TAG_JMS_SF_ERR 0.004
-#define W_TAG_JMR_SF     1.08
-#define W_TAG_JMR_SF_ERR 0.11
+#define W_TAG_HP_SF       1.00
+#define W_TAG_HP_SF_ERR   0.06
+#define W_TAG_LP_SF       0.96
+#define W_TAG_LP_SF_ERR   0.11
+#define W_TAG_JMS_SF      1.00
+#define W_TAG_JMS_SF_ERR  0.0094
+#define W_TAG_JMR_SF      1.00
+#define W_TAG_JMR_SF_ERR  0.20
+#define W_TAG_SIGMA_MC    10.1
 
 /*
-  Top Tagging working points (No subjet B tag):
-  https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging#13_TeV_working_points
+
+Top Tagging working points (No subjet B tag):
   
-  Latest WPs/SFs not yet on twiki (Angela Mc Lean, Mareike Meyer, Svenja Schumann):
-  https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868103/TopTaggingWp_v5.pdf
-  https://indico.cern.ch/event/523604/contributions/2147605/attachments/1263012/1868207/TopTaggingSF_76X.pdf
+Latest WPs/SFs:
+https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging?rev=14#13_TeV_working_points_CMSSW_8_0
   
-  !! Warning, Scale factor to be updated for Puppi jets !!
-  
-  Choose:
-  - Loose selection: e(S) = 51.2%, e(B) = 3% WP
-  - AK8 Puppi jets
-  - 105 < SD Mass < 200
-  - tau32 < 0.67
+Choose:
+- Tightest selection
+- AK8 CHS jets
+- 105 < Puppi SD Mass < 210
+- Puppi tau32 < 0.46
 
 
-  Top Tagging working point (With subjet B tag, 2015 Data)
+Top Tagging working point (with subjet b tag):
   
-  Latest WPs/SFs -  JME-16-003 PAS:
-  http://cms.cern.ch/iCMS/analysisadmin/viewanalysis?id=1694&field=id&value=1694
+Latest WPs/SFs:
+https://twiki.cern.ch/twiki/bin/view/CMS/JetTopTagging?rev=14#13_TeV_working_points_CMSSW_8_0
+https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation80XReReco?rev=14#Boosted_event_topologies
   
-  Choose:
-  - Loose selection: e(S) ~= 55%, e(B) = 3.0% WP
-  - AK8 Puppi jets
-  - 105 <= SD Mass < 210
-  - tau32 < 0.8
-  - max subjet BTag CSV > 0.46
+Choose:
+- Use Tightest selection
+- AK8 CHS jets
+- 105 <= Puppi SD Mass < 210
+- Puppi tau32 < 0.46
+- max subjet BTag CSV > 0.5426
 */
 
 #define USE_BTAG 1
@@ -319,26 +319,26 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #if USE_BTAG == 0
 
 #define TOP_PT_CUT            400
-#define TOP_SD_MASS_CUT_LOW   105 // prev 74X 110
-#define TOP_SD_MASS_CUT_HIGH  200 // prev 74X 210
-#define TOP_TAU32_CUT        0.67 // prev 74X 0.75
+#define TOP_SD_MASS_CUT_LOW   105
+#define TOP_SD_MASS_CUT_HIGH  210
+#define TOP_TAU32_CUT        0.46
 
-#define TOP_TAG_SF_LOW       0.97
-#define TOP_TAG_SF_LOW_ERR   0.09
-#define TOP_TAG_SF_HIGH      0.99
-#define TOP_TAG_SF_HIGH_ERR  0.18
+#define TOP_TAG_SF           1.07
+#define TOP_TAG_SF_ERR_UP    0.08
+#define TOP_TAG_SF_ERR_DOWN  0.04
 
 #else
+
 #define TOP_PT_CUT            400
 #define TOP_SD_MASS_CUT_LOW   105
 #define TOP_SD_MASS_CUT_HIGH  210
-#define TOP_TAU32_CUT        0.80
-#define TOP_BTAG_CSV         0.46
+#define TOP_TAU32_CUT        0.46
+#define TOP_BTAG_CSV         0.5426
 
-#define TOP_TAG_SF_LOW       1.04
-#define TOP_TAG_SF_LOW_ERR   0.11
-#define TOP_TAG_SF_HIGH      1.05
-#define TOP_TAG_SF_HIGH_ERR  0.26
+#define TOP_TAG_SF           1.05
+#define TOP_TAG_SF_ERR_UP    0.07
+#define TOP_TAG_SF_ERR_DOWN  0.04
+
 #endif
 
 /*
@@ -359,14 +359,21 @@ AnalysisBase::define_preselections(const DataStruct& data)
   - Mini-Isolation (EA)/pt < 0.1 (Medium WP [4])
   - pt >= 5
   - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
-  - |d0| < 0.2, |dz| < 0.5 (Loose IP cut Recommended by SUSY Group [5])
+  - |d0| < 0.2, |dz| < 0.5 (Loose IP2D [5])
 
   For Selection Choose:
   - Spring15 Cut based Medium ID without relIso (EA) cut
   - Mini-Isolation (EA)/pt < 0.1 (Tight WP [4])
   - pt >= 10
   - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
-  - |d0| < 0.05, |dz| < 0.1 (Loose IP cut Recommended by SUSY Group [5])
+  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D [5])
+
+  For Tight Selection (TriggerEff Only) Choose:
+  - Spring15 Cut based Tight ID without relIso (EA) cut
+  - Mini-Isolation (EA)/pt < 0.1 (Tight WP [4])
+  - pt >= 30
+  - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
+  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D and IP3D [5])
 
 */
 
@@ -379,8 +386,15 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define ELE_SELECT_PT_CUT       10
 #define ELE_SELECT_ETA_CUT      2.5
 #define ELE_SELECT_MINIISO_CUT  0.1
-#define ELE_SELECT_IP_D0_CUT   0.05
+#define ELE_SELECT_IP_D0_CUT    0.05
 #define ELE_SELECT_IP_DZ_CUT    0.1
+
+#define ELE_TIGHT_PT_CUT       30
+#define ELE_TIGHT_ETA_CUT      2.5
+#define ELE_TIGHT_MINIISO_CUT  0.1
+#define ELE_TIGHT_IP_D0_CUT    0.05
+#define ELE_TIGHT_IP_DZ_CUT    0.1
+#define ELE_TIGHT_IP_SIG_CUT   4
 
 /*
   Latest Muon IDs (Loose/Medium):
@@ -406,6 +420,13 @@ AnalysisBase::define_preselections(const DataStruct& data)
   - |eta| < 2.4
   - |d0| < 0.05, |dz| < 0.1 (Tight IP2D [3])
 
+  For Tight Selection (TriggerEff Only) Choose:
+  - POG recommended Tight ID (No Iso/IP)
+  - Mini-Isolation (EA)/pt < 0.2 (tight WP [2])
+  - pt >= 30
+  - |eta| < 2.4
+  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D and IP3D [3])
+
 */
 
 #define MU_VETO_PT_CUT         5
@@ -419,6 +440,13 @@ AnalysisBase::define_preselections(const DataStruct& data)
 #define MU_SELECT_MINIISO_CUT   0.2
 #define MU_SELECT_IP_D0_CUT     0.05
 #define MU_SELECT_IP_DZ_CUT     0.1
+
+#define MU_TIGHT_PT_CUT        30
+#define MU_TIGHT_ETA_CUT       2.4
+#define MU_TIGHT_MINIISO_CUT   0.2
+#define MU_TIGHT_IP_D0_CUT     0.05
+#define MU_TIGHT_IP_DZ_CUT     0.1
+#define MU_TIGHT_IP_SIG_CUT    4
 
 // AK4 jets
 /*
@@ -437,7 +465,7 @@ AnalysisBase::define_preselections(const DataStruct& data)
 
   example:
   for (size_t it=0; it<data.jetsAK4.size; ++it)
-    if (passLooseJet[it]) vh_pt[itJet[it]]->Fill( data.jetsAK4.Pt[it] );
+  if (passLooseJet[it]) vh_pt[itJet[it]]->Fill( data.jetsAK4.Pt[it] );
 
 */
 std::vector<size_t > iJet;
@@ -476,7 +504,6 @@ std::vector<double> tau31;
 std::vector<double> tau32;
 std::vector<float> softDropMassCorr; // Correction + uncertainties for W tagging
 std::vector<float> softDropMassW;
-std::vector<float> softDropMassTop;
 #if VER == 0
 std::vector<double> maxSubjetCSV;
 #endif
@@ -503,19 +530,28 @@ std::vector<size_t > iEleSelect;
 std::vector<size_t > iMuSelect;
 std::vector<size_t > itEleSelect;
 std::vector<size_t > itMuSelect;
+std::vector<size_t > iEleTight;
+std::vector<size_t > iMuTight;
+std::vector<size_t > itEleTight;
+std::vector<size_t > itMuTight;
 std::vector<bool> passEleVeto;
 std::vector<bool> passMuVeto;
 std::vector<bool> passEleSelect;
 std::vector<bool> passMuSelect;
+std::vector<bool> passEleTight;
+std::vector<bool> passMuTight;
 unsigned int nEleVetoNoIso;
 unsigned int nEleVeto;
 unsigned int nEleSelect;
+unsigned int nEleTight;
 unsigned int nMuVetoNoIso;
 unsigned int nMuVeto;
 unsigned int nMuSelect;
+unsigned int nMuTight;
 unsigned int nLepVetoNoIso;
 unsigned int nLepVeto;
 unsigned int nLepSelect;
+unsigned int nLepTight;
 double MT;
 
 void
@@ -570,10 +606,13 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 
     // Event Letpons
     iEleSelect   .clear();
+    iEleTight    .clear();
     itEleSelect  .assign(data.ele.size, (size_t)-1);
+    itEleTight   .assign(data.ele.size, (size_t)-1);
     passEleVeto  .assign(data.ele.size, 0);
     passEleSelect.assign(data.ele.size, 0);
-    nEleVetoNoIso = nEleVeto = nEleSelect = 0;
+    passEleTight .assign(data.ele.size, 0);
+    nEleVetoNoIso = nEleVeto = nEleSelect = nEleTight = 0;
     while(data.ele.Loop()) {
       size_t i = data.ele.it;
       TLorentzVector ele_v4; ele_v4.SetPtEtaPhiE(data.ele.Pt[i], data.ele.Eta[i], data.ele.Phi[i], data.ele.E[i]);
@@ -582,8 +621,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float miniIso = data.ele.MiniIso[i]/data.ele.Pt[i];
       float absd0 = std::abs(data.ele.Dxy[i]);
       float absdz = std::abs(data.ele.Dz[i]);
+      float ipsig = std::abs(data.ele.DB[i])/data.ele.DBerr[i];
       bool id_veto = (data.ele.vidVetonoiso[i] == 1.0);
       bool id_select = (data.ele.vidMediumnoiso[i] == 1.0);
+      bool id_tight  = (data.ele.vidTightnoiso[i] == 1.0);
       //bool id_veto = (data.ele.vidVeto[i] == 1.0);
       //bool id_select = (data.ele.vidTight[i] == 1.0);
       // Veto
@@ -613,14 +654,29 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	iEleSelect.push_back(i);
 	itEleSelect[i] = nEleSelect++;
       }
+      // Tight
+      if (passEleTight[i] = 
+	  ( id_tight &&
+	    pt        >= ELE_TIGHT_PT_CUT &&
+	    abseta    <  ELE_TIGHT_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
+	    miniIso   <  ELE_TIGHT_MINIISO_CUT &&
+	    absd0     <  ELE_TIGHT_IP_D0_CUT &&
+	    absdz     <  ELE_TIGHT_IP_DZ_CUT &&
+	    ipsig     <  ELE_TIGHT_IP_SIG_CUT) ) {
+	iEleTight.push_back(i);
+	itEleTight[i] = nEleTight++;
+      }
     }
 
     // Number of Veto/Select Muons
     iMuSelect    .clear();
+    iMuTight     .clear();
     itMuSelect   .assign(data.mu.size,  (size_t)-1);
+    itMuTight    .assign(data.mu.size,  (size_t)-1);
     passMuVeto   .assign(data.mu.size,  0);
     passMuSelect .assign(data.mu.size,  0);
-    nMuVetoNoIso = nMuVeto = nMuSelect = 0;
+    passMuTight  .assign(data.mu.size,  0);
+    nMuVetoNoIso = nMuVeto = nMuSelect = nMuTight = 0;
     while(data.mu.Loop()) {
       size_t i = data.mu.it;
       TLorentzVector mu_v4; mu_v4.SetPtEtaPhiE(data.mu.Pt[i], data.mu.Eta[i], data.mu.Phi[i], data.mu.E[i]);
@@ -629,8 +685,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float miniIso = data.mu.MiniIso[i]/data.mu.Pt[i];
       float absd0 = std::abs(data.mu.Dxy[i]);
       float absdz = std::abs(data.mu.Dz[i]);
+      float ipsig = std::abs(data.mu.DB[i])/data.mu.DBerr[i];
       bool id_veto = (data.mu.IsLooseMuon[i] == 1.0);
       bool id_select = (data.mu.IsMediumMuon[i] == 1.0);
+      bool id_tight  = (data.mu.IsTightMuon[i] == 1.0);
       // Veto
       if (passMuVeto[i] =
 	  (id_veto &&
@@ -663,11 +721,24 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	itMuSelect[i] = nMuSelect++;
 	//selected_mu_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
       }
+      // Tight
+      if (passMuTight[i] =
+	  ( id_tight &&
+	    pt      >= MU_TIGHT_PT_CUT &&
+	    abseta  <  MU_TIGHT_ETA_CUT &&
+	    miniIso <  MU_TIGHT_MINIISO_CUT &&
+	    absd0   <  MU_TIGHT_IP_D0_CUT &&
+	    absdz   <  MU_TIGHT_IP_DZ_CUT &&
+	    ipsig   <  MU_TIGHT_IP_SIG_CUT) ) {
+	iMuTight.push_back(i);
+	itMuTight[i] = nMuTight++;
+      }
     }
 
     nLepVetoNoIso = nEleVetoNoIso + nMuVetoNoIso;
     nLepVeto      = nEleVeto  + nMuVeto;
     nLepSelect    = nEleSelect + nMuSelect;
+    nLepTight     = nEleTight + nMuTight;
 
     // MT
     MT = 9999;
@@ -741,8 +812,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     
     // Online jet selection for HT (+ testing Additional Loose Jet ID)
     if ( //data.jetsAK4.looseJetID[i] == 1 &&
-	 data.jetsAK4.Pt[i]         >  30 &&
-	 std::abs(data.jetsAK4.Eta[i])  <  3.0 ) {
+	data.jetsAK4.Pt[i]         >  30 &&
+	std::abs(data.jetsAK4.Eta[i])  <  3.0 ) {
       AK4_HtOnline += data.jetsAK4.Pt[data.jetsAK4.it];
 
       // Lepton (complete) isolation from jets
@@ -925,8 +996,6 @@ TH2D* h_btag_eff_l_medium;
 
 TH1D* h_trigger_pass;
 TH1D* h_trigger_total;
-TH1D* h_trigger_1mW_pass;
-TH1D* h_trigger_1mW_total;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -975,8 +1044,6 @@ AnalysisBase::init_common_histos()
   double htbins[19]  = { 0, 200, 300, 400, 500, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1200, 1500, 2000, 4000, 10000 };
   h_trigger_pass                = new TH1D("trigger_pass",      ";H_{T} (GeV)", 18,htbins);
   h_trigger_total               = new TH1D("trigger_total",     ";H_{T} (GeV)", 18,htbins);
-  h_trigger_1mW_pass            = new TH1D("trigger_1mW_pass",  ";H_{T} (GeV)", 18,htbins);
-  h_trigger_1mW_total           = new TH1D("trigger_1mW_total", ";H_{T} (GeV)", 18,htbins);
 }
 
 //_______________________________________________________
@@ -1002,18 +1069,21 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
 	}
       }
     }
-    // trigger efficiency
+    // trigger efficiency, measured in single lepton datasets
+    // SingleElectron dataset: Pass HLT_Ele27_WPTight_Gsf && 1 Tight Electron
+    // SingleMuon     dataset: Pass HLT_IsoMu24 && 1 tight Muon
     // Baseline cuts to be applied: 3 jets, 1 AK8 jet, MR & R^2
-    if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
-      if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) 
-	h_trigger_pass->Fill(AK4_Ht);
-      h_trigger_total->Fill(AK4_Ht);
-      
-      // Additional cut (common in all regions): 1 mass tagged W
-      if (nWPreTag>=1) { 
-        if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) 
-          h_trigger_1mW_pass->Fill(AK4_Ht);
-        h_trigger_1mW_total->Fill(AK4_Ht);
+    bool pass_single_lep = 0;
+    if (TString(sample).Contains("SingleElectron")) {
+      if (d.hlt.Ele27_WPTight_Gsf && nEleTight==1) pass_single_lep = 1;
+    } else if (TString(sample).Contains("SingleMuon")) {
+      if (d.hlt.IsoMu24 && nMuTight==1) pass_single_lep = 1;
+    }
+    if (pass_single_lep) {
+      if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
+	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) 
+	  h_trigger_pass->Fill(AK4_Ht);
+	h_trigger_total->Fill(AK4_Ht);
       }
     }
   }
@@ -1232,9 +1302,10 @@ std::vector<float> AK4_E, AK4_Pt;
 std::vector<float> AK8_E, AK8_Pt, AK8_softDropMass;//, AK8_trimmedMass, AK8_prunedMass, AK8_filteredMass;
 std::vector<float> AK8_softDropMassCorr; // Correction for W tagging
 
-std::vector<float> AK4_JERSmearFactor,     AK8_JERSmearFactor,     AK8_JMRSmearFactor;  
-std::vector<float> AK4_JERSmearFactorUp,   AK8_JERSmearFactorUp,   AK8_JMRSmearFactorUp;
-std::vector<float> AK4_JERSmearFactorDown, AK8_JERSmearFactorDown, AK8_JMRSmearFactorDown;
+std::vector<float> AK4_JERSmearFactor,     AK8_JERSmearFactor;
+std::vector<float> AK4_JERSmearFactorUp,   AK8_JERSmearFactorUp;
+std::vector<float> AK4_JERSmearFactorDown, AK8_JERSmearFactorDown;
+std::vector<float> AK8_JMR_random;
 
 TVector3 met;
 TVector3 dmet_JESUp,  dmet_JESDown;
@@ -1247,46 +1318,10 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
 {
   // Apply Jet Energy Scale (JES) and Jet Energy Resolution (JER) corrections
   // For AK8 jets which are used for W tagging (only):
-  // - Additionally apply jet mass scale (JMS) and jet mass resolutin (JMR) corrections
-  //   (We use the combination measured by the JMAR group)
+  // - Additionally or instead apply jet mass scale (JMS) and jet mass resolutin (JMR) corrections
 
   // Initialization (needed for later variations
   if (syst_index==0) {
-    if (applySmearing) {
-      // Calculate the smear factors
-      AK4_JERSmearFactor    .clear();
-      AK4_JERSmearFactorUp  .clear();
-      AK4_JERSmearFactorDown.clear();
-      for (size_t i=0; i<data.jetsAK4.size; ++i) {
-        double JERSmear     = data.jetsAK4.SmearedPt[i]/data.jetsAK4.Pt[i];
-        double JERSmearUp   = 1 + (JERSmear-1) * (data.jetsAK4.JERSFUp[i]  -1) / (data.jetsAK4.JERSF[i]-1);
-        double JERSmearDown = 1 + (JERSmear-1) * (data.jetsAK4.JERSFDown[i]-1) / (data.jetsAK4.JERSF[i]-1);
-        AK4_JERSmearFactor    .push_back(JERSmear);
-        AK4_JERSmearFactorUp  .push_back(JERSmearUp);
-        AK4_JERSmearFactorDown.push_back(JERSmearDown);
-      }
-      AK8_JERSmearFactor    .clear();
-      AK8_JERSmearFactorUp  .clear();
-      AK8_JERSmearFactorDown.clear();
-      AK8_JMRSmearFactor    .clear();
-      AK8_JMRSmearFactorUp  .clear();
-      AK8_JMRSmearFactorDown.clear();
-      for (size_t i=0; i<data.jetsAK8.size; ++i) {
-        double JERSmear     = data.jetsAK8.SmearedPt[i]/data.jetsAK8.Pt[i];
-        double JERSmearUp   = 1 + (JERSmear-1) * (data.jetsAK8.JERSFUp[i]  -1) / (data.jetsAK8.JERSF[i]-1);
-        double JERSmearDown = 1 + (JERSmear-1) * (data.jetsAK8.JERSFDown[i]-1) / (data.jetsAK8.JERSF[i]-1);
-        AK8_JERSmearFactor    .push_back(JERSmear);
-        AK8_JERSmearFactorUp  .push_back(JERSmearUp);
-        AK8_JERSmearFactorDown.push_back(JERSmearDown);
-        // For the JMR Smearing apply the same procedure, but swap to the JMR scale factor
-        double JMRSmear     = 1 + (JERSmear-1) * (W_TAG_JMR_SF                 -1) / (data.jetsAK8.JERSF[i]-1);
-        double JMRSmearUp   = 1 + (JERSmear-1) * (W_TAG_JMR_SF+W_TAG_JMR_SF_ERR-1) / (data.jetsAK8.JERSF[i]-1);
-        double JMRSmearDown = 1 + (JERSmear-1) * (W_TAG_JMR_SF-W_TAG_JMR_SF_ERR-1) / (data.jetsAK8.JERSF[i]-1);
-        AK8_JMRSmearFactor    .push_back(JMRSmear);
-        AK8_JMRSmearFactorUp  .push_back(JMRSmearUp);
-        AK8_JMRSmearFactorDown.push_back(JMRSmearDown);      
-      }
-    }
     // Save the original values for later (before applying any systematics)
     AK4_E            = data.jetsAK4.E;
     AK4_Pt           = data.jetsAK4.Pt;
@@ -1328,6 +1363,40 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
       }
     }
 
+    // Calculate the JER/JMR smear factors
+    if (applySmearing) {
+      AK4_JERSmearFactor    .clear();
+      AK4_JERSmearFactorUp  .clear();
+      AK4_JERSmearFactorDown.clear();
+      for (size_t i=0; i<data.jetsAK4.size; ++i) {
+        double JERSmear     = data.jetsAK4.SmearedPt[i]/data.jetsAK4.Pt[i];
+        double JERSmearUp   = 1 + (JERSmear-1) * (data.jetsAK4.JERSFUp[i]  -1) / (data.jetsAK4.JERSF[i]-1);
+        double JERSmearDown = 1 + (JERSmear-1) * (data.jetsAK4.JERSFDown[i]-1) / (data.jetsAK4.JERSF[i]-1);
+        AK4_JERSmearFactor    .push_back(JERSmear);
+        AK4_JERSmearFactorUp  .push_back(JERSmearUp);
+        AK4_JERSmearFactorDown.push_back(JERSmearDown);
+      }
+      AK8_JERSmearFactor    .clear();
+      AK8_JERSmearFactorUp  .clear();
+      AK8_JERSmearFactorDown.clear();
+      AK8_JMR_random.clear();
+      for (size_t i=0; i<data.jetsAK8.size; ++i) {
+        double JERSmear     = data.jetsAK8.SmearedPt[i]/data.jetsAK8.Pt[i];
+        double JERSmearUp   = 1 + (JERSmear-1) * (data.jetsAK8.JERSFUp[i]  -1) / (data.jetsAK8.JERSF[i]-1);
+        double JERSmearDown = 1 + (JERSmear-1) * (data.jetsAK8.JERSFDown[i]-1) / (data.jetsAK8.JERSF[i]-1);
+        AK8_JERSmearFactor    .push_back(JERSmear);
+        AK8_JERSmearFactorUp  .push_back(JERSmearUp);
+        AK8_JERSmearFactorDown.push_back(JERSmearDown);
+	// Apply random gaussian smearing to worsen mass resolution (It cannot improve with this method)
+	// Recipe is the same as the stochastic smearing explained here:
+	// https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetResolution#Smearing_procedures
+	// Generate the random number once, and vary the systematics only on the SF
+	double sigma_rel = W_TAG_SIGMA_MC / (AK8_softDropMassCorr[i] * W_TAG_JMS_SF);
+	double random = rnd_.Gaus(0,sigma_rel);
+	AK8_JMR_random.push_back(random);
+      }
+    }
+
     // Save the original MET
     met.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
 
@@ -1337,13 +1406,13 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
       Met uncertainty vector indices:
 
       enum METUncertainty {
-        JetResUp =0, JetResDown =1,
-        JetEnUp =2, JetEnDown =3,
-        MuonEnUp =4, MuonEnDown =5,
-        ElectronEnUp =6, ElectronEnDown =7,
-        TauEnUp =8, TauEnDown =9,
-        UnclusteredEnUp =10, UnclusteredEnDown =11,
-        PhotonEnUp =12, PhotonEnDown =13,
+      JetResUp =0, JetResDown =1,
+      JetEnUp =2, JetEnDown =3,
+      MuonEnUp =4, MuonEnDown =5,
+      ElectronEnUp =6, ElectronEnDown =7,
+      TauEnUp =8, TauEnDown =9,
+      UnclusteredEnUp =10, UnclusteredEnDown =11,
+      PhotonEnUp =12, PhotonEnDown =13,
       }
     */
     float maxdpt_up = 0, maxdpt_down = 0;
@@ -1429,14 +1498,18 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
     //data.jetsAK8.prunedMass[i]   = AK8_prunedMass[i]   * scaleJES * scaleJER;
     //data.jetsAK8.filteredMass[i] = AK8_filteredMass[i] * scaleJES * scaleJER;
     
-    // For W jet mass apply combination of both JES+JMS and JER+JMR
-    // Measurements of the combined uncertainties are provided by the JMAR group
-    // We use those instead of only applying the JES and JER
-    double scaleJMS = get_syst_weight(W_TAG_JMS_SF, W_TAG_JMS_SF_ERR, nSigmaJES);
+    // For W jet mass apply combination of both JES+JMS and JMR (JER not needed)
+    // JES uncertainty is added on top of the JMS one (in quadrature)
+    double comb_unc = std::sqrt(W_TAG_JMS_SF_ERR*W_TAG_JMS_SF_ERR + data.jetsAK8.jecUncertainty[i]*data.jetsAK8.jecUncertainty[i]);
+    double scaleJMS = get_syst_weight(W_TAG_JMS_SF, comb_unc, nSigmaJES);
     double scaled_corrected_mass = AK8_softDropMassCorr[i] * scaleJMS;
+    // Apply random gaussian smearing to worsen mass resolution (It cannot improve with this method)
     if (applySmearing) {
-      double scaleJMR = get_syst_weight(AK8_JMRSmearFactor[i], AK8_JMRSmearFactorUp[i], AK8_JMRSmearFactorDown[i], nSigmaJER);
-      scaled_corrected_mass *= scaleJMR;
+      double scale_factor = get_syst_weight(W_TAG_JMR_SF, W_TAG_JMR_SF_ERR, nSigmaJER);
+      if (scale_factor > 1) {
+	double scaleJMR = 1 + AK8_JMR_random[i] * std::sqrt( scale_factor*scale_factor - 1 );
+	scaled_corrected_mass *= scaleJMR;
+      }
     }
     softDropMassCorr.push_back(scaled_corrected_mass);
   }
@@ -1494,10 +1567,10 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
 
 // Silver JSON
 /*
-const double p0[2]     = { 1.16434, 1.00188 };
-const double p0_err[2] = { 0.00459931, 0.0266651 };
-const double p1[2]     = { -0.000142391, -7.80628e-05 };
-const double p1_err[2] = { 3.62929e-06, 1.11035e-05 };
+  const double p0[2]     = { 1.16434, 1.00188 };
+  const double p0_err[2] = { 0.00459931, 0.0266651 };
+  const double p1[2]     = { -0.000142391, -7.80628e-05 };
+  const double p1_err[2] = { 3.62929e-06, 1.11035e-05 };
 */
 
 // Golden JSON
@@ -1561,15 +1634,15 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
   /*
     Typical LHE run info:
     <weightgroup combine="envelope" type="Central scale variation">
-      <weight id="1"> mur=1 muf=1 </weight>
-      <weight id="2"> mur=1 muf=2 </weight>     --> save [0]
-      <weight id="3"> mur=1 muf=0.5 </weight>   --> save [1]
-      <weight id="4"> mur=2 muf=1 </weight>     --> save [2]
-      <weight id="5"> mur=2 muf=2 </weight>     --> save [3]
-      <weight id="6"> mur=2 muf=0.5 </weight>
-      <weight id="7"> mur=0.5 muf=1 </weight>   --> save [4]
-      <weight id="8"> mur=0.5 muf=2 </weight>
-      <weight id="9"> mur=0.5 muf=0.5 </weight> --> save [5]
+    <weight id="1"> mur=1 muf=1 </weight>
+    <weight id="2"> mur=1 muf=2 </weight>     --> save [0]
+    <weight id="3"> mur=1 muf=0.5 </weight>   --> save [1]
+    <weight id="4"> mur=2 muf=1 </weight>     --> save [2]
+    <weight id="5"> mur=2 muf=2 </weight>     --> save [3]
+    <weight id="6"> mur=2 muf=0.5 </weight>
+    <weight id="7"> mur=0.5 muf=1 </weight>   --> save [4]
+    <weight id="8"> mur=0.5 muf=2 </weight>
+    <weight id="9"> mur=0.5 muf=0.5 </weight> --> save [5]
     </weightgroup>
 
     SUSY GEN Lumi info:
@@ -1897,26 +1970,14 @@ void AnalysisBase::init_syst_input() {
   //TH1D* total = utils::getplot_TH1D("trigger_eff/Oct21_Golden_JSON/SingleLepton.root", "h_HT_pre",       "trig2");
   TH1D* pass  = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_pass",  "trig1");
   TH1D* total = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_total", "trig2");
-  //TH1D* pass  = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_1mW_pass",  "trig1");
-  //TH1D* total = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_1mW_total", "trig2");
   eff_trigger = new TGraphAsymmErrors(pass, total);
 }
 
 
 double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF) {
-  double w = 1.0;
-
-  while(data.jetsAK8.Loop()) {
-    size_t i = data.jetsAK8.it;
-    double pt = data.jetsAK8.Pt[i];
-    if (passHadTopTag[i]) {
-      // Top-tagged AK8 jets
-      if (pt >= 400 && pt < 550)
-	w *= get_syst_weight(TOP_TAG_SF_LOW, TOP_TAG_SF_LOW_ERR, nSigmaTopTagSF);
-      else if (pt >= 550)
-	w *= get_syst_weight(TOP_TAG_SF_HIGH, TOP_TAG_SF_HIGH_ERR, nSigmaTopTagSF);
-    }
-  }
+  double w = 1;
+  while(data.jetsAK8.Loop()) if (passHadTopTag[data.jetsAK8.it])
+    w *= get_syst_weight(TOP_TAG_SF, TOP_TAG_SF+TOP_TAG_SF_ERR_UP, TOP_TAG_SF-TOP_TAG_SF_ERR_DOWN, nSigmaTopTagSF);
 
   return w;
 }
@@ -1925,8 +1986,12 @@ double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaT
 double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF) {
   double w = 1.0;
 
-  while(data.jetsAK8.Loop()) if (passTightWTag[data.jetsAK8.it])
-    w *= get_syst_weight(W_TAG_EFF_SF, W_TAG_EFF_SF_ERR, nSigmaWTagSF);
+  while(data.jetsAK8.Loop()) {
+    if (passTightWTag[data.jetsAK8.it])
+      w *= get_syst_weight(W_TAG_HP_SF, W_TAG_HP_SF_ERR, nSigmaWTagSF);
+    else if (passTightWAntiTag[data.jetsAK8.it])
+      w *= get_syst_weight(W_TAG_LP_SF, W_TAG_LP_SF_ERR, nSigmaWTagSF);
+  }
 
   return w;
 }

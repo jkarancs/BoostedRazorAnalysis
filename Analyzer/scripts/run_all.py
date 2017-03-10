@@ -20,6 +20,7 @@ parser.add_option("--nproc",   dest="NPROC",   type="int",          default=1,  
 parser.add_option("--outdir",  dest="OUTDIR",  type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
 parser.add_option("--skimout", dest="SKIMOUT", type="string",       default="",      help="Output directory for skimming")
 parser.add_option("--skim",    dest="skim",    action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
+parser.add_option("--skimopt", dest="skimopt", action="store_true", default=False,   help="Optimize skim output size based on measured event ratios")
 parser.add_option("--mirror",  dest="mirror",  action="store_true", default=False,   help="Also copy skim output to EOS")
 parser.add_option("--plot",    dest="plot",    action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
 parser.add_option("--replot",  dest="replot",  action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
@@ -167,7 +168,20 @@ for filelist in input_filelists:
             ana_arguments.append(args)
     elif opt.NEVT != -1:
         # SPLIT MODE (recommended for batch): Each jobs runs on max opt.NEVT
-        options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
+        JOB_NEVT = opt.NEVT
+        # Further optimize this number for skimming
+        # based on measured unskimmed to skimmed ratios (found in skim_ratios.txt)
+        if opt.skimopt:
+            samplename = filelist.split("/")[-1][:-4]
+            with open("skim_ratios.txt") as ratios:
+                for line in ratios:
+                    column = line.split()
+                    if samplename == column[2]:
+                        JOB_NEVT *= int(column[0])
+            #print str(JOB_NEVT)+" "+samplename
+        # Need full ntuple to correctly normalize weights
+        options.append("fullFileList="+EXEC_PATH+"/"+filelist)
+        # loop on file lists and split to tmp_filists for nevt < JOB_NEVT
         with open(filelist) as f:
             files = f.read().splitlines()
             jobnum = 0
@@ -182,11 +196,12 @@ for filelist in input_filelists:
                 tree = f.Get("B2GTree")
                 if not tree: tree = f.Get("B2GTTreeMaker/B2GTree")
                 nevt = tree.GetEntries()
+                #print str(nevt)+" "+files[i] # comment in if need event number per files (for skim_ratios.txt)
                 if nevt == 0:
                     print files[i]+" has 0 entries"
                     print>>bad_files, files[i]+" 0 entry"
-                # Create a new list after every opt.NEVT
-                if i==0 or (totalevt + nevt > opt.NEVT):
+                # Create a new list after every JOB_NEVT
+                if i==0 or (totalevt + nevt > JOB_NEVT):
                     jobnum += 1
                     tmp_filelist = filelist.replace("filelists","filelists_tmp").replace(".txt","_"+str(jobnum)+".txt")
                     args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
@@ -211,6 +226,7 @@ for filelist in input_filelists:
     else:
         # In case of a single job/dataset
         ana_arguments.append([output_file, [EXEC_PATH+"/"+filelist], options, log_file])
+
 
 if opt.NEVT != -1: bad_files.close()
 

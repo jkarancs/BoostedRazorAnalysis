@@ -68,9 +68,6 @@ Analysis::define_selections(const DataStruct& d)
 {
   analysis_cuts.clear();
 
-  // Remove filters for skimming only
-  //baseline_cuts.clear();
-
   // Define here cuts that are common in all Signal/Control regions
   // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
   baseline_cuts.push_back({ .name="Skim_R2",         .func = [&d]  { return d.evt.R2>=0.04;                  }}); // New skim cut introduced in 2017 february
@@ -591,16 +588,16 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
 		       //if (Pass_any_PFHT) return (size_t)0;
 		       return (size_t)0;
 		     } else if (triggers_opt.index==1) { // SingleElectron
-		       if (d.hlt.Ele27_WPTight_Gsf==1&&nEleSelect==1) return (size_t)1;
+		       if (d.hlt.Ele27_WPTight_Gsf==1&&nEleTight==1) return (size_t)1;
 		     } else if (triggers_opt.index==2) { // SingleMuon
-		       if (d.hlt.IsoMu24==1&&nMuSelect==1) return (size_t)2;
+		       if (d.hlt.IsoMu24==1&&nMuTight==1) return (size_t)2;
 		     } else if (triggers_opt.index==3) { // MET
-		       if (d.hlt.MET200==1&&d.met.Pt[0]>300) return (size_t)3;
+		       if (d.hlt.PFMET170_HBHECleaned==1&&d.met.Pt[0]>200) return (size_t)3;
 		     } else if (triggers_opt.index==4) { // Background MC
 		       return (size_t)4;
 		     }
 		     return (size_t)-1; 
-		   }, "JetHT;Ele27WPTight;IsoMu24;MET200;MC", "JetHT (All events);SingleEle (Ele27, Medium);SingleMu (IsoMu24, Medium);MET (MET>300);Simulation", "1,417,601,618,633");
+		   }, "JetHT;Ele27WPTight;IsoMu24;MET200;MC", "JetHT (All events);Ele27, Tight ID;IsoMu24, Tight ID;PFMET170, MET>200;Simulation", "1,417,601,618,633");
   //sh.AddNewPostfix("Triggers", [&d] { return triggers_opt.index; },
   //      	   "JetHT;SingleEle;SingleMu;MET;MC", "Data: JetHT;Data: SingleEle;Data: SingleMu;Data: MET;MC: t#bar{t}", "1,417,601,618,633");
   
@@ -639,8 +636,8 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
     sh.AddNewPostfix("CutFlow"+std::string(1,region.first), [this,region] { for (size_t i=0, n=region.second.size(); i<n; ++i) if (!region.second[i].func()) return i; return region.second.size(); }, 
 		     cutflow_str+"PassAll"+std::string(1,region.first), cutflow_str+std::string(1,region.first)+" region", col10+col10);
   }
-  sh.AddNewPostfix("PassTriggerPreSelection", [this] { return apply_cuts('W', {W_3Jet, W_MR_R2, W_1mW})?0:(size_t)-1; }, "PassTriggerPreSelection", "Pass trigger pre-selection", "1");
-  sh.AddNewPostfix("PassTriggerPreSelNoWm", [this] { return apply_cuts('W', {W_3Jet, W_MR_R2})?0:(size_t)-1; },           "PassTriggerPreSelNoWm", "Loose Razor cut only", "1");
+  sh.AddNewPostfix("PassTriggerPreSelection",  [this] { return apply_cuts('W', {W_3Jet, W_MR_R2})?0:(size_t)-1; }, "PassTriggerPreSelection", "Pass trigger pre-selection", "1");
+  sh.AddNewPostfix("PassTriggerPreSelPlus1mW", [this] { return apply_cuts('W', {W_3Jet, W_MR_R2, W_1mW})?0:(size_t)-1; }, "PassTriggerPreSelPlus1mW", "Pass trigger pre-selection + 1mW", "1");
   //sh.AddNewPostfix("AllLepIsolated",          [this] { return allVetoLepIsolated;                             }, "NotAllLepIsoLated;AllLepIsolated", "Not all lepton isolated;All lepton isolated", "633,418");
   //sh.AddNewPostfix("LepInsideJet",            [this] { return isLepInsideJet;                                 }, "LeptonOutsideJet;LeptonInsideJet", "Lepton not inside jet;Lepton inside jet", "633,418");
   
@@ -1132,8 +1129,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                                   Trigger
   
 
-  //for (const auto& cut : {"PassTriggerPreSelNoWm","PassTriggerPreSelection","PassAllCutsSExcl1W","PassAllCutsSExclMR_R2","PassAllCutsS","PassAllCutsT","PassAllCutsQ","PassAllCutsW"}) {
-  for (const auto& cut : {"PassTriggerPreSelNoWm","PassTriggerPreSelection","PassAllCutsS"}) {
+  //for (const auto& cut : {"PassTriggerPreSelection","PassTriggerPreSelPlus1mW","PassAllCutsSExcl1W","PassAllCutsSExclMR_R2","PassAllCutsS","PassAllCutsT","PassAllCutsQ","PassAllCutsW"}) {
+  for (const auto& cut : {"PassTriggerPreSelection","PassTriggerPreSelPlus1mW","PassAllCutsS"}) {
     // (AK8)HT triggers
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_R2_vs_MR",              .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_WPreTag1Mass_vs_AK8HT", .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
@@ -1185,6 +1182,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet450_vs_R2_vs_MR",                        .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet450_vs_WPreTag1Mass",                    .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
+    sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet450_vs_HT",                              .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet450_vs_OnlineHT",                        .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet450_vs_Bin",                             .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
     
