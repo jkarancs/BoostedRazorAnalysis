@@ -25,7 +25,8 @@ LATEST_NTUPLE_EOS="Skim_Feb26_1JetAK8_0p04R2"
 #LATEST_NTUPLE_GRID18="Oct24"
 #LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Jan12"
-LATEST_NTUPLE_GRID18="Skim_Feb26_1JetAK8_0p04R2"
+#LATEST_NTUPLE_GRID18="Skim_Feb26_1JetAK8_0p04R2"
+LATEST_NTUPLE_GRID18="Skim_Mar09_1JetAK8_0p04R2"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
@@ -53,21 +54,23 @@ if 'lxplus' in socket.gethostname():
     if not os.path.exists(ANA_BASE+'/ntuple/Latest'):
         print "Making directory for latest ntuple symlinks: "+ANA_BASE+'/ntuple/Latest'
         os.makedirs(ANA_BASE+'/ntuple/Latest')
-    print 'Creating symlinks to the latest ntuples in Viktor\'s EOS folder: ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/ ... ',
-    for viktor_subdir in os.listdir(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS):
-        if os.path.isdir(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir):
-            source = os.path.realpath(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir)
-            target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
-            os.symlink(source, target)
-    print 'Done.'
-    print 'Creating symlinks to the latest ntuples in Janos\' EOS folder: ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/ ... ',
-    for janos_subdir in os.listdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):
-        if os.path.isdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir):
-            source = os.path.realpath(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir)
-            target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
-            if os.path.islink(target): target += "_2"
-            os.symlink(source, target)
-    print 'Done.'
+    if os.path.exists(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS):
+        print 'Creating symlinks to the latest ntuples in Viktor\'s EOS folder: ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/ ... ',
+        for viktor_subdir in os.listdir(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS):
+            if os.path.isdir(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir):
+                source = os.path.realpath(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir)
+                target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+                os.symlink(source, target)
+                print 'Done.'
+    if os.path.exists(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):
+        print 'Creating symlinks to the latest ntuples in Janos\' EOS folder: ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/ ... ',
+        for janos_subdir in os.listdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):
+            if os.path.isdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir):
+                source = os.path.realpath(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir)
+                target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+                if os.path.islink(target): target += "_2"
+                os.symlink(source, target)
+        print 'Done.'
 elif 'grid18.kfki.hu' in socket.gethostname():
     print 'Running on grid18 (Budapest)'
 
