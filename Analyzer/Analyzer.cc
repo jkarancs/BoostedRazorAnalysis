@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "settings_Changgi.h" // Define all Analysis specific settings here
+#include "settings_Janos.h" // Define all Analysis specific settings here
 
 using namespace std;
 
@@ -236,8 +236,8 @@ int main(int argc, char** argv) {
   if (debug) std::cout<<"Analyzer::main: init_histos ok"<<std::endl;
 
   // Read histograms for scale factors
-  if (!cmdline.isData) ana.init_syst_input();
-  if (debug) std::cout<<"Analyzer::main: init_scale_factors ok"<<std::endl;
+  ana.init_syst_input();
+  if (debug) std::cout<<"Analyzer::main: init_syst_input ok"<<std::endl;
 
   // --------------------------------------------------------------
   // -- Calculate the normalization factor for the event weights --
@@ -347,10 +347,11 @@ int main(int argc, char** argv) {
     }
     if (settings.applyScaleFactors) {
       // Then apply scale factors
-      //ana.apply_scale_factors();
-      //for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i)
-      for (size_t i=1, n=4; i<=n; ++i)
-        ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
+      ana.apply_scale_factors(data, syst.index, syst.nSigmaSFs);
+      for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i)
+	ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
+      //for (size_t i=1, n=4; i<=n; ++i)
+      //  ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
     }
   }
   if (debug) std::cout<<"Analyzer::main: init counts ok"<<std::endl;

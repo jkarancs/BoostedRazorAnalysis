@@ -432,7 +432,7 @@ else:
         if not opt.test:
             backup_files(EXEC_PATH)
         compile(1, opt.plot)
-        plotter_input_files = analysis(ana_arguments, opt.NPROC)
+    plotter_input_files = analysis(ana_arguments, opt.NPROC)
     if opt.plot:
         plotter(plotter_input_files, PLOTTER_OUT)
         #if not 'lxplus' in socket.gethostname():

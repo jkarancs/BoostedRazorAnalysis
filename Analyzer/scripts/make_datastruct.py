@@ -72,6 +72,7 @@ def printclass( tree, classname, name, prefix_list, add_loop ):
     if add_loop:
         print "    "
         print "    bool Loop() {"
+        print "      if (size==9999) return 0;"
         print "      ++it;"
         print "      if (it<size) {"
         print "        return 1;"

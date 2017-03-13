@@ -131,6 +131,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -158,6 +159,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -185,6 +187,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -214,6 +217,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -243,6 +247,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -862,6 +867,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -995,6 +1001,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -1116,6 +1123,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -1203,6 +1211,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -1358,6 +1367,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -1435,6 +1445,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
@@ -1470,6 +1481,7 @@ public:
     }
     
     bool Loop() {
+      if (size==9999) return 0;
       ++it;
       if (it<size) {
         return 1;
