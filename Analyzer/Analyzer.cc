@@ -252,19 +252,22 @@ int main(int argc, char** argv) {
 
     cout << "useXSecFileForBkg (settings): " << ( settings.useXSecFileForBkg ? "true" : "false" ) << endl; // given in settings.h
 
-    double xsec = 0;
+    double xsec = 0, totweight = 0;
     if (settings.useXSecFileForBkg) {
       cout << "xSecFileName (settings): " << settings.xSecFileName << endl; // given in settings.h
-      xsec = ana.get_xsec_from_txt_file(settings.xSecFileName); // xSecFileName given in settings.h
-      cout << "xsec (txt file): " << xsec << endl;      
+      std::pair<double, double> values = ana.get_xsec_totweight_from_txt_file(settings.xSecFileName); // xSecFileName given in settings.h
+      xsec = values.first;
+      totweight = values.second;
+      cout << "xsec      (txt file): " << xsec << endl;      
+      cout << "totweight (txt file): " << totweight << endl;      
     } else {
       xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
-      cout << "xsec (ntuple): " << xsec << endl;
+      cout << "xsec      (ntuple): " << xsec << endl;
+      totweight = ana.get_totweight_from_ntuple(cmdline.allFileNames, settings.totWeightHistoName); // weight histo name given in settings.h
+      cout << "totweight (ntuple): " << totweight << endl;
     }
-    if ( xsec==0 ) return 1;
+    if ( xsec==0 || totweight==0 ) return 1;
 
-    double totweight = ana.get_totweight_from_ntuple(cmdline.allFileNames, settings.totWeightHistoName); // weight histo name given in settings.h
-    cout << "totweight (ntuple): " << totweight << endl;
 
     weightnorm = (settings.intLumi*xsec)/totweight;
     cout << "weightnorm (calc): " << weightnorm << endl;
@@ -345,14 +348,10 @@ int main(int argc, char** argv) {
       ofile->count(std::string(1,search_region.first)+"_cut_"+cut.name, 0);
       cout << "  " << std::string(1,search_region.first)+"_cut_"+cut.name << endl;
     }
-    if (settings.applyScaleFactors) {
-      // Then apply scale factors
-      ana.apply_scale_factors(data, syst.index, syst.nSigmaSFs);
-      for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i)
-	ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
-      //for (size_t i=1, n=4; i<=n; ++i)
-      //  ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
-    }
+    // Apply scale factors
+    ana.apply_scale_factors(data, syst.index, syst.nSigmaSFs);
+    for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i)
+      ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i), 0);
   }
   if (debug) std::cout<<"Analyzer::main: init counts ok"<<std::endl;
 

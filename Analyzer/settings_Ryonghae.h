@@ -59,7 +59,7 @@ struct settings {
     intLumi                  ( 35867 /* brilcalc - Dec02 Golden JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.026 ),
 #endif
-    useXSecFileForBkg        ( false ), // true: use file below, false: use value in the ntuple (evt_XSec)
+    useXSecFileForBkg        ( true  ), // true: use file below, false: use value in the ntuple (evt_XSec)
     xSecFileName             ( "common/BackGroundXSec.txt" )
   {
     totWeightHistoNamesSignal.push_back(runOnSkim ? "totweight_T1tttt" : "EventCounter/h_totweight_T1tttt"); // lsp mass vs gluino mass scan, also used for T5ttcc and T5tttt

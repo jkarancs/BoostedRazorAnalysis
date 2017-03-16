@@ -59,7 +59,7 @@ public:
 
   double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
 
-  double get_xsec_from_txt_file(const std::string&);
+  std::pair<double, double> get_xsec_totweight_from_txt_file(const std::string&);
 
   double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
 
@@ -486,7 +486,7 @@ unsigned int nMediumBTag;
 unsigned int nTightBTag;
 double AK4_Ht;
 double AK4_HtOnline;
-double minDeltaPhi; // Min(DeltaPhi(Jet_i, MET)), i=1,2,3
+double minDeltaPhi; // Min(DeltaPhi(Jet_i, MET)), i=1,2,3,4
 
 // AK8 jets
 std::vector<size_t > iJetAK8;
@@ -1112,37 +1112,39 @@ AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, co
 
 //_______________________________________________________
 //           Read cross-section from txt file
-double
-AnalysisBase::get_xsec_from_txt_file(const std::string& txt_file)
+std::pair<double, double>
+AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
 {
-  double evt_XSec = 0;
+  double XSec = 0, Totweight;
   std::ifstream xsecFile(txt_file.c_str());
   if ( !xsecFile.good() ) {
-    return -9999.0;
+    return std::make_pair(0,0);
     std::cout<<"Unable to open cross-section file: "<<txt_file<<std::endl;
     utils::error("Please provide the correct txt file for Cross-sections in settings.h!");
   } else {
 
-    // Read all nSigmas, nums
     std::string line;
-    std::string shortname;
-    std::string primary_dataset;
-    double xsec;
+    std::string shortname, primary_dataset;
+    double xsec, totweight;
     while ( std::getline(xsecFile, line) ) {
       std::stringstream nth_line;
       nth_line<<line;
       nth_line>>shortname;
       nth_line>>primary_dataset;
       nth_line>>xsec;
-      if (sample==shortname) evt_XSec = xsec;
+      nth_line>>totweight;
+      if (sample==shortname) {
+	XSec = xsec;
+	Totweight = totweight;
+      }
     }
   }
-  if (evt_XSec == 0) {
+  if (XSec == 0) {
     std::cout<<"No crossection found for "<<sample<<" in cross section file: "<<txt_file<<std::endl;
     utils::error("Please fix the cross-section file in settings.h!");
   }
 
-  return evt_XSec;
+  return std::make_pair(XSec, Totweight);
 }
 
 //_______________________________________________________
@@ -1833,6 +1835,7 @@ AnalysisBase::job_monitoring(const int& entry, const int& nevents, const std::st
       h_read_speed_vs_nevt_job->Fill(nevents, meas_job);
       h_runtime_job->Fill(sw_job_->RealTime()/60.);
       h_runtime_vs_nevt_job->Fill(nevents, sw_job_->RealTime()/60.);
+      std::cout<<"JobMonitoringReport RunTime(s): "<<sw_job_->RealTime()<<" Nevents: "<<nevents<<" Nevt/s: "<<meas_job<<std::endl;
       for (const auto& bad_file : bad_files)
 	std::cout<<"Badly readable file found: "<<bad_file.first<<" N_occurence: "<<bad_file.second<<std::endl;
     }

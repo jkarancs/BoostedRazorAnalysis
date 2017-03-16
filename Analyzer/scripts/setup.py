@@ -19,7 +19,8 @@ import os, re, sys, glob, socket, subprocess
 # 80X
 #LATEST_NTUPLE_EOS="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
-LATEST_NTUPLE_EOS="Skim_Feb26_1JetAK8_0p04R2"
+#LATEST_NTUPLE_EOS="Skim_Feb26_1JetAK8_0p04R2"
+LATEST_NTUPLE_EOS="Skim_Mar09_1JetAK8_0p04R2"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Oct24"
@@ -61,7 +62,7 @@ if 'lxplus' in socket.gethostname():
                 source = os.path.realpath(ANA_BASE+'/ntuple/eos_viktor/'+LATEST_NTUPLE_EOS+'/'+viktor_subdir)
                 target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
                 os.symlink(source, target)
-                print 'Done.'
+        print 'Done.'
     if os.path.exists(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):
         print 'Creating symlinks to the latest ntuples in Janos\' EOS folder: ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/ ... ',
         for janos_subdir in os.listdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):

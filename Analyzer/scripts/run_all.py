@@ -160,7 +160,7 @@ for filelist in input_filelists:
     # Temporary filelists
     if opt.useprev:
         # Use previously created lists
-        options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
+        if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
         for jobnum in range(1, len(prev_lists)+1):
             tmp_filelist = prev_lists[jobnum-1]
@@ -180,7 +180,7 @@ for filelist in input_filelists:
                         JOB_NEVT *= int(column[0])
             #print str(JOB_NEVT)+" "+samplename
         # Need full ntuple to correctly normalize weights
-        options.append("fullFileList="+EXEC_PATH+"/"+filelist)
+        if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
         # loop on file lists and split to tmp_filists for nevt < JOB_NEVT
         with open(filelist) as f:
             files = f.read().splitlines()
@@ -213,7 +213,7 @@ for filelist in input_filelists:
         print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created"
     elif opt.NFILE != -1:
         # SPLIT MODE: Each jobs runs on max opt.NFILE
-        options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize
+        if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
         with open(filelist) as f:
             files = f.read().splitlines()
             for n in range(1, (len(files)-1)/opt.NFILE+2):
