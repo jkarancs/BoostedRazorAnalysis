@@ -20,7 +20,7 @@ parser.add_option("--nproc",   dest="NPROC",   type="int",          default=1,  
 parser.add_option("--outdir",  dest="OUTDIR",  type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
 parser.add_option("--skimout", dest="SKIMOUT", type="string",       default="",      help="Output directory for skimming")
 parser.add_option("--skim",    dest="skim",    action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
-parser.add_option("--skimopt", dest="skimopt", action="store_true", default=False,   help="Optimize skim output size based on measured event ratios")
+parser.add_option("--optim",   dest="optim",   action="store_true", default=False,   help="Optimize job event number based on measured skim/jobspeed ratios")
 parser.add_option("--mirror",  dest="mirror",  action="store_true", default=False,   help="Also copy skim output to EOS")
 parser.add_option("--plot",    dest="plot",    action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
 parser.add_option("--replot",  dest="replot",  action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
@@ -171,13 +171,21 @@ for filelist in input_filelists:
         JOB_NEVT = opt.NEVT
         # Further optimize this number for skimming
         # based on measured unskimmed to skimmed ratios (found in skim_ratios.txt)
-        if opt.skimopt:
+        if opt.optim:
             samplename = filelist.split("/")[-1][:-4]
-            with open("skim_ratios.txt") as ratios:
-                for line in ratios:
-                    column = line.split()
-                    if samplename == column[2]:
-                        JOB_NEVT *= int(column[0])
+            if opt.skim:
+                with open("skim_ratios.txt") as ratios:
+                    for line in ratios:
+                        column = line.split()
+                        if samplename == column[2]:
+                            JOB_NEVT *= int(column[0])
+                if "FastSim" in samplename: JOB_NEVT /= 4
+            else:
+                with open("job_ratios.txt") as ratios:
+                    for line in ratios:
+                        column = line.split()
+                        if samplename == column[1]:
+                            JOB_NEVT *= float(column[0])
             #print str(JOB_NEVT)+" "+samplename
         # Need full ntuple to correctly normalize weights
         if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights

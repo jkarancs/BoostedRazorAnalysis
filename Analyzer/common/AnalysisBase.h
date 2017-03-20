@@ -996,6 +996,8 @@ TH2D* h_btag_eff_l_medium;
 
 TH1D* h_trigger_pass;
 TH1D* h_trigger_total;
+TH2D* h_trigger2d_pass;
+TH2D* h_trigger2d_total;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -1042,8 +1044,12 @@ AnalysisBase::init_common_histos()
 
   // trigger efficiency
   double htbins[19]  = { 0, 200, 300, 400, 500, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1200, 1500, 2000, 4000, 10000 };
-  h_trigger_pass                = new TH1D("trigger_pass",      ";H_{T} (GeV)", 18,htbins);
-  h_trigger_total               = new TH1D("trigger_total",     ";H_{T} (GeV)", 18,htbins);
+  double HTF[12] = {400, 600, 700, 750, 800, 850, 900, 1000, 1200, 1500, 2000, 5000};
+  double Pt1[9]  = {200, 300, 400, 450, 500, 550, 600, 1000, 2000};
+  h_trigger_pass                = new TH1D("trigger_pass",    "Pass trigger;H_{T} (GeV)", 18,htbins);
+  h_trigger_total               = new TH1D("trigger_total",          "Total;H_{T} (GeV)", 18,htbins);
+  h_trigger2d_pass              = new TH2D("trigger2d_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTF, 8,Pt1);
+  h_trigger2d_total             = new TH2D("trigger2d_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTF, 8,Pt1);
 }
 
 //_______________________________________________________
@@ -1081,9 +1087,12 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
     }
     if (pass_single_lep) {
       if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
-	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) 
-	  h_trigger_pass->Fill(AK4_Ht);
-	h_trigger_total->Fill(AK4_Ht);
+	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) {
+	  h_trigger_pass  ->Fill(AK4_Ht);
+	  h_trigger2d_pass->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
+	}
+	h_trigger_total   ->Fill(AK4_Ht);
+	h_trigger2d_total ->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
       }
     }
   }
@@ -1115,7 +1124,7 @@ AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, co
 std::pair<double, double>
 AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
 {
-  double XSec = 0, Totweight;
+  double XSec = 0, Totweight = 0;
   std::ifstream xsecFile(txt_file.c_str());
   if ( !xsecFile.good() ) {
     return std::make_pair(0,0);
