@@ -92,8 +92,8 @@ Analysis::define_selections(const DataStruct& d)
 
   baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
   baseline_cuts.push_back({ .name="Skim_R2",         .func = [&d]  { return d.evt.R2>=0.04;                  }}); // New skim cut introduced in 2017 february
-  baseline_cuts.push_back({ .name="Baseline_3Jet",   .func = []    { return nJet>=3;                       }}); // Separate cut, so one can exclude (N-1)
-  baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
+  //baseline_cuts.push_back({ .name="Baseline_3Jet",   .func = []    { return nJet>=3;                       }}); // Separate cut, so one can exclude (N-1)
+  //baseline_cuts.push_back({ .name="Baseline_MR_R2",  .func = [&d]  { return d.evt.MR>800 && d.evt.R2>0.08; }});
   //baseline_cuts.push_back({ .name="Trigger",   .func = []    { return passTrigger==1;}});
   //temporaray
   //baseline_cuts.push_back({ .name="One Electron",       .func = []    { return nEleTight>=1;                  }});
@@ -102,6 +102,8 @@ Analysis::define_selections(const DataStruct& d)
   //baseline_cuts.push_back({ .name="Muon Trigger",   .func = [&d]    { return d.hlt.IsoMu24==1;        }});
 
   // S: Signal region
+  analysis_cuts['S'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                         }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['S'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08; }}); 
   analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
   analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
@@ -124,6 +126,8 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return minDeltaPhi<0.5;                 }});
 
   // Q: QCD enriched control sample
+  analysis_cuts['Q'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                         }});
+  analysis_cuts['Q'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
   analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
   analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
@@ -146,6 +150,8 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['q'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
 
   // T: Top enriched control sample
+  analysis_cuts['T'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                         }});
+  analysis_cuts['T'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
   analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
   analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                  }});
@@ -154,6 +160,8 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['T'].push_back({ .name="MT<100",     .func = []    { return MT<100;                          }});
 
   // W: W enriched control sample
+  analysis_cuts['W'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                         }});
+  analysis_cuts['W'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
   analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
   analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
@@ -227,12 +235,24 @@ Analysis::apply_scale_factors(DataStruct& data, const unsigned int& s, const std
 
 bool
 Analysis::signal_selection(const DataStruct& data) {
-  return apply_all_cuts('S');
-  //return 1;
+  //return apply_all_cuts('S');
+  return 0;
 }
 
 //_______________________________________________________
 //                 List of Histograms
+
+TH1D* h_njet_S;
+TH1D* h_njet_S_MRR2;
+TH1D* h_njet_S_3Jet;
+TH1D* h_njet_Q_3Jet;
+TH1D* h_njet_W_3Jet;
+TH1D* h_njet_T_3Jet;
+TH1D* h_njetAK8_S;
+TH1D* h_njetAK8_Q;
+TH1D* h_njetAK8_W;
+TH1D* h_njetAK8_T;
+
 TH1D* h_njet;
 TH1D* h_nb;
 TH1D* h_nw;
@@ -523,7 +543,18 @@ TH2D* h_HT_weight;
 void
 Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned int& syst_index)
 {
-  h_HT_weight = new TH2D("HT_weight","",40,0,2000,40,0,2);
+
+  h_njet_S = new TH1D("njet_S",         ";N_{jet}",                20, 0,  20);
+  h_njet_S_MRR2 = new TH1D("njet_S_MRR2",         ";N_{jet}",                20, 0,  20);
+  h_njet_S_3Jet = new TH1D("njet_S_3Jet",         ";N_{jet}",                20, 0,  20);
+  h_njet_Q_3Jet = new TH1D("njet_Q_3Jet",         ";N_{jet}",                20, 0,  20);
+  h_njet_W_3Jet = new TH1D("njet_W_3Jet",         ";N_{jet}",                20, 0,  20);
+  h_njet_T_3Jet = new TH1D("njet_T_3Jet",         ";N_{jet}",                20, 0,  20);
+  h_njetAK8_S = new TH1D("njetAK8_S",         ";N_{jet}",                20, 0,  20);
+  h_njetAK8_Q = new TH1D("njetAK8_Q",         ";N_{jet}",                20, 0,  20);
+  h_njetAK8_W = new TH1D("njetAK8_W",         ";N_{jet}",                20, 0,  20);
+  h_njetAK8_T = new TH1D("njetAK8_T",         ";N_{jet}",                20, 0,  20);
+
   h_njet         = new TH1D("njet",         ";N_{jet}",                20, 0,  20);
   h_nw           = new TH1D("nw",           ";N_{W tag}",              20, 0,  20);
   h_nb           = new TH1D("nb",           ";N_{b tag}",              20, 0,  20);
@@ -903,65 +934,66 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     double w = weight; // No scale factor applied
     //double w = sf_weight['S']; // Scale factors applied for the Signal region
 
+
       if(nJet>=3 && nJet<5){
-        h_njet_S_nj35->Fill(nJet,        w);
-        h_njetAK8_S_nj35->Fill(nJetAK8,        w);
-        h_nb_S_nj35->Fill(nMediumBTag, w);
-        h_nw_S_nj35->Fill(nTightWTag,  w);
-        h_mT_S_nj35->Fill(MT,w);
-        h_dPhimin_S_nj35->Fill(minDeltaPhi, w);
-        h_MR_S_nj35->Fill(data.evt.MR, w);
-        h_R2_S_nj35->Fill(data.evt.R2, w);
+        h_njet_nj35->Fill(nJet,        w);
+        h_njetAK8_nj35->Fill(nJetAK8,        w);
+        h_nb_nj35->Fill(nMediumBTag, w);
+        h_nw_nj35->Fill(nTightWTag,  w);
+        h_mT_nj35->Fill(MT,w);
+        h_dPhimin_nj35->Fill(minDeltaPhi, w);
+        h_MR_nj35->Fill(data.evt.MR, w);
+        h_R2_nj35->Fill(data.evt.R2, w);
       }
       if(nJet>5){
-        h_njet_S_nj5->Fill(nJet,        w);
-        h_njetAK8_S_nj5->Fill(nJetAK8,        w);
-        h_nb_S_nj5->Fill(nMediumBTag, w);
-        h_nw_S_nj5->Fill(nTightWTag,  w);
-        h_mT_S_nj5->Fill(MT,w);
-        h_dPhimin_S_nj5->Fill(minDeltaPhi, w);
-        h_MR_S_nj5->Fill(data.evt.MR, w);
-        h_R2_S_nj5->Fill(data.evt.R2, w);
+        h_njet_nj5->Fill(nJet,        w);
+        h_njetAK8_nj5->Fill(nJetAK8,        w);
+        h_nb_nj5->Fill(nMediumBTag, w);
+        h_nw_nj5->Fill(nTightWTag,  w);
+        h_mT_nj5->Fill(MT,w);
+        h_dPhimin_nj5->Fill(minDeltaPhi, w);
+        h_MR_nj5->Fill(data.evt.MR, w);
+        h_R2_nj5->Fill(data.evt.R2, w);
       }
       if(nTightWTag==1){
-        h_njet_S_nw1->Fill(nJet,        w);
-        h_njetAK8_S_nw1->Fill(nJetAK8,        w);
-        h_nb_S_nw1->Fill(nMediumBTag, w);
-        h_nw_S_nw1->Fill(nTightWTag,  w);
-        h_mT_S_nw1->Fill(MT,w);
-        h_dPhimin_S_nw1->Fill(minDeltaPhi, w);
-        h_MR_S_nw1->Fill(data.evt.MR, w);
-        h_R2_S_nw1->Fill(data.evt.R2, w);
+        h_njet_nw1->Fill(nJet,        w);
+        h_njetAK8_nw1->Fill(nJetAK8,        w);
+        h_nb_nw1->Fill(nMediumBTag, w);
+        h_nw_nw1->Fill(nTightWTag,  w);
+        h_mT_nw1->Fill(MT,w);
+        h_dPhimin_nw1->Fill(minDeltaPhi, w);
+        h_MR_nw1->Fill(data.evt.MR, w);
+        h_R2_nw1->Fill(data.evt.R2, w);
       }
       if(nTightWTag>1){
-        h_njet_S_nw2->Fill(nJet,        w);
-        h_njetAK8_S_nw2->Fill(nJetAK8,        w);
-        h_nb_S_nw2->Fill(nMediumBTag, w);
-        h_nw_S_nw2->Fill(nTightWTag,  w);
-        h_mT_S_nw2->Fill(MT,w);
-        h_dPhimin_S_nw2->Fill(minDeltaPhi, w);
-        h_MR_S_nw2->Fill(data.evt.MR, w);
-        h_R2_S_nw2->Fill(data.evt.R2, w);
+        h_njet_nw2->Fill(nJet,        w);
+        h_njetAK8_nw2->Fill(nJetAK8,        w);
+        h_nb_nw2->Fill(nMediumBTag, w);
+        h_nw_nw2->Fill(nTightWTag,  w);
+        h_mT_nw2->Fill(MT,w);
+        h_dPhimin_nw2->Fill(minDeltaPhi, w);
+        h_MR_nw2->Fill(data.evt.MR, w);
+        h_R2_nw2->Fill(data.evt.R2, w);
       }
       if(nMediumBTag==1){
-        h_njet_S_nb1->Fill(nJet,        w);
-        h_njetAK8_S_nb1->Fill(nJetAK8,        w);
-        h_nb_S_nb1->Fill(nMediumBTag, w);
-        h_nw_S_nb1->Fill(nTightWTag,  w);
-        h_mT_S_nb1->Fill(MT,w);
-        h_dPhimin_S_nb1->Fill(minDeltaPhi, w);
-        h_MR_S_nb1->Fill(data.evt.MR, w);
-        h_R2_S_nb1->Fill(data.evt.R2, w);
+        h_njet_nb1->Fill(nJet,        w);
+        h_njetAK8_nb1->Fill(nJetAK8,        w);
+        h_nb_nb1->Fill(nMediumBTag, w);
+        h_nw_nb1->Fill(nTightWTag,  w);
+        h_mT_nb1->Fill(MT,w);
+        h_dPhimin_nb1->Fill(minDeltaPhi, w);
+        h_MR_nb1->Fill(data.evt.MR, w);
+        h_R2_nb1->Fill(data.evt.R2, w);
       }
       if(nMediumBTag>1){
-        h_njet_S_nb2->Fill(nJet,        w);
-        h_njetAK8_S_nb2->Fill(nJetAK8,        w);
-        h_nb_S_nb2->Fill(nMediumBTag, w);
-        h_nw_S_nb2->Fill(nTightWTag,  w);
-        h_mT_S_nb2->Fill(MT,w);
-        h_dPhimin_S_nb2->Fill(minDeltaPhi, w);
-        h_MR_S_nb2->Fill(data.evt.MR, w);
-        h_R2_S_nb2->Fill(data.evt.R2, w);
+        h_njet_nb2->Fill(nJet,        w);
+        h_njetAK8_nb2->Fill(nJetAK8,        w);
+        h_nb_nb2->Fill(nMediumBTag, w);
+        h_nw_nb2->Fill(nTightWTag,  w);
+        h_mT_nb2->Fill(MT,w);
+        h_dPhimin_nb2->Fill(minDeltaPhi, w);
+        h_MR_nb2->Fill(data.evt.MR, w);
+        h_R2_nb2->Fill(data.evt.R2, w);
       }
 
     if (apply_cut('S',"HLT")) {
@@ -973,6 +1005,22 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_ht_AK4->Fill(AK4_Ht, w); // Calculated in AnalysisBase.h
       h_ht_AK8->Fill(AK8_Ht, w); // Calculated in AnalysisBase.h
     }
+
+    w = sf_weight['Q'];
+    if (apply_all_cuts('Q')) h_njetAK8_Q->Fill(nJetAK8,w);
+    if (apply_all_cuts_except('Q', "3Jet")) h_njet_Q_3Jet->Fill(nJet,w);
+    w = sf_weight['S'];
+    if (apply_all_cuts('S')) h_njetAK8_S->Fill(nJetAK8,w);
+    if (apply_all_cuts('S')) h_njet_S->Fill(nJet,w);
+    if (apply_all_cuts_except('S', "3Jet")) h_njet_S_3Jet->Fill(nJet,w);
+    if (apply_all_cuts_except('S', "MR_R2")) h_njet_S_MRR2->Fill(nJet,w);
+    w = sf_weight['T'];
+    if (apply_all_cuts('T')) h_njetAK8_T->Fill(nJetAK8,w);
+    if (apply_all_cuts_except('T', "3Jet")) h_njet_T_3Jet->Fill(nJet,w);
+    w = sf_weight['W'];
+    if (apply_all_cuts('W')) h_njetAK8_W->Fill(nJetAK8,w);
+    if (apply_all_cuts_except('W', "3Jet")) h_njet_W_3Jet->Fill(nJet,w);
+
 
     // W enriched region
     w = sf_weight['W'];
@@ -1061,8 +1109,8 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 
     // Signal region
     w = sf_weight['S'];
-    if (apply_all_cuts_except('S', "mDPhi")) {
-    //if (apply_all_cuts('S')) {
+    //if (apply_all_cuts_except('S', "HLT")) {
+    if (apply_all_cuts('S')) {
       h_ht_AK4_S->Fill(AK4_Ht, w);
       h_ht_AK8_S->Fill(AK8_Ht, w);
       h_jet1_pt_S->Fill(data.jetsAK4.Pt[iJet[0]], w);
