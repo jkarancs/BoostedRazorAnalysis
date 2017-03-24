@@ -99,7 +99,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;               }});
   analysis_cuts['q'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
 */
-  // T: Top enriched control sample
+  // T: Region Top enriched control sample 
   analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
   analysis_cuts['T'].push_back({ .name="1top",         .func = []    { return nHadTopTag>=1;                  }});
