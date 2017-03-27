@@ -361,7 +361,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //stream.select("el_vidVeto", data.ele.vidVeto);
   //stream.select("el_vidLoose", data.ele.vidLoose);
   //stream.select("el_vidMedium", data.ele.vidMedium);
-  //stream.select("el_vidTight", data.ele.vidTight);
+  stream.select("el_vidTight", data.ele.vidTight);
   //++ stream.select("el_vidHEEP", data.ele.vidHEEP);
   stream.select("el_vidVetonoiso", data.ele.vidVetonoiso);
   stream.select("el_vidLoosenoiso", data.ele.vidLoosenoiso);
@@ -406,7 +406,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("mu_E", data.mu.E);
   //stream.select("mu_Charge", data.mu.Charge);
   //stream.select("mu_Key", data.mu.Key);
-  //++ stream.select("mu_Iso04", data.mu.Iso04);
+  stream.select("mu_Iso04", data.mu.Iso04);
   stream.select("mu_MiniIso", data.mu.MiniIso);
   stream.select("mu_Dxy", data.mu.Dxy);
   stream.select("mu_Dz", data.mu.Dz);

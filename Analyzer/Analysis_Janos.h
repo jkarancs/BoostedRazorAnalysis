@@ -147,7 +147,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                   }});
   analysis_cuts['W'].push_back({ .name="1mW",        .func = []    { return nWPreTag>=1;                     }});
   analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                }});
-  analysis_cuts['W'].push_back({ .name="MT",      .func = []       { return MT>=30 && MT<100;                }});
+  analysis_cuts['W'].push_back({ .name="MT",         .func = []    { return MT>=30 && MT<100;                }});
 
 }
 
@@ -589,16 +589,16 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
 		       //if (Pass_any_PFHT) return (size_t)0;
 		       return (size_t)0;
 		     } else if (triggers_opt.index==1) { // SingleElectron
-		       if (d.hlt.Ele27_WPTight_Gsf==1&&nEleTight==1) return (size_t)1;
+		       if ((d.hlt.Ele23_WPLoose_Gsf==1||d.hlt.Ele27_WPTight_Gsf==1)&&nEleTight==1) return (size_t)1;
 		     } else if (triggers_opt.index==2) { // SingleMuon
 		       if (d.hlt.IsoMu24==1&&nMuTight==1) return (size_t)2;
 		     } else if (triggers_opt.index==3) { // MET
-		       if (d.hlt.PFMET170_HBHECleaned==1&&d.met.Pt[0]>200) return (size_t)3;
+		       if (d.hlt.PFMET120_PFMHT120_IDTight==1&&d.met.Pt[0]>200&&nLepVeto==0&&d.evt.NIsoTrk==0) return (size_t)3;
 		     } else if (triggers_opt.index==4) { // Background MC
 		       return (size_t)4;
 		     }
 		     return (size_t)-1; 
-		   }, "JetHT;Ele27WPTight;IsoMu24;MET200;MC", "JetHT (All events);Ele27, Tight ID;IsoMu24, Tight ID;PFMET170, MET>200;Simulation", "1,417,601,618,633");
+		   }, "JetHT;Ele23or27;IsoMu24;MET120;MC", "JetHT (All events);Ele23/27, 1 Tight Ele;IsoMu24, 1 Tight muon;PFMET120_PFMHT120, MET>200, lep veto;Simulation", "1,417,601,618,633");
   //sh.AddNewPostfix("Triggers", [&d] { return triggers_opt.index; },
   //      	   "JetHT;SingleEle;SingleMu;MET;MC", "Data: JetHT;Data: SingleEle;Data: SingleMu;Data: MET;MC: t#bar{t}", "1,417,601,618,633");
   
@@ -690,16 +690,16 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // Bins
   std::vector<double> E   = {0, 100, 200, 400, 600, 800, 1000, 1500, 2000, 3000, 5000, 10000};
   std::vector<double> Pt  = {0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 800, 1000, 1400, 2000, 3000, 4000, 5000, 10000};
-  std::vector<double> Pt1 = {200, 300, 400, 450, 500, 550, 600, 1000, 2000};
+  std::vector<double> PtF = {0, 200, 300, 400, 600, 1000, 2000, 5000};
   std::vector<double> M   = {0, 10, 20, 30, 40, 50, 65, 75, 85, 95, 105, 120, 135, 150, 165, 180, 195, 210, 230, 260, 300, 500, 1000};
   std::vector<double> MW  = {65, 75, 85, 95, 105};
-  std::vector<double> PtF = {0, 200, 300, 400, 600, 1000, 2000, 5000};
   std::vector<double> CSV = {0, 0.05, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0 };
   std::vector<double> R   = {0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.6, 0.7, 0.8, 1.0, 1.2, 2.0 };
   std::vector<double> MR  = {0, 600, 800, 1000, 1200, 1600, 2000, 4000, 10000};
   std::vector<double> R2  = {0, 0.04, 0.08, 0.12, 0.16, 0.24, 0.5, 1.0, 5.0};
   std::vector<double> HT  = {0, 200, 300, 400, 500, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 10000};
-  std::vector<double> HTF = {400, 600, 700, 750, 800, 850, 900, 1000, 1200, 1500, 2000, 5000};
+  std::vector<double> HTB = {400, 500, 600, 700, 750, 800, 850, 900, 950, 1000, 1500, 10000}; // 2D Trigger Eff
+  std::vector<double> PtB = {200, 300, 400, 450, 500, 550, 600, 1000, 10000}; // 2D Trigger Eff
   sh.AddNewFillParam("Bin", { .nbin=1,   .bins={0,1}, .fill=[&d] { return 0; }, .axis_title="Bin"}); // For averages/counts
 
   // AK4 Jets
@@ -737,7 +737,7 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   sh.AddNewFillParam("BJetPt",               { .nbin= 200, .bins={     0,  10000}, .fill=[&d] { return d.jetsAK4.Pt[d.jetsAK4.it];           }, .axis_title="B-jet p_{T} (GeV)", .def_range={0,2000} });
   sh.AddNewFillParam("BJetEta",              { .nbin=  40, .bins={    -4,      4}, .fill=[&d] { return d.jetsAK4.Eta[d.jetsAK4.it];          }, .axis_title="B-jet #eta",        .def_range={-2.4,2.4}});
   sh.AddNewFillParam("BJetPhi",              { .nbin=  16, .bins={-3.142,  3.142}, .fill=[&d] { return d.jetsAK4.Phi[d.jetsAK4.it];          }, .axis_title="B-jet #phi"});
-
+  sh.AddNewFillParam("BJetCSV",              { .nbin=  20, .bins={     0,   1.00}, .fill=[&d] { return std::min(d.jetsAK4.CSVv2[d.jetsAK4.it],float(0.999)); }, .axis_title="B-jet CSV"});
 
 
   // AK8 Jets
@@ -832,9 +832,10 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   sh.AddNewFillParam("MTR",                  { .nbin=  80, .bins={    0,    4000}, .fill=[&d] { return d.evt.MTR;               }, .axis_title="M_{T}^{R} (GeV)",      .def_range={0,2000}});
   sh.AddNewFillParam("R2",                   { .nbin=R2.size()-1, .bins=R2,        .fill=[&d] { return d.evt.R2;                }, .axis_title="R^{2}",                .def_range={0,1}});
   // HT
-  sh.AddNewFillParam("HT",                   { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={200, 4000}});
-  sh.AddNewFillParam("HTFew",                { .nbin=HTF.size()-1, .bins=HTF,      .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={400, 4000}});
-  sh.AddNewFillParam("OnlineHT",             { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return AK4_HtOnline;       }, .axis_title="H_{T}^{HLT} (GeV)",    .def_range={0, 2000}});
+  //sh.AddNewFillParam("HT",                   { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={200, 4000}});
+  sh.AddNewFillParam("HT",                   { .nbin= 200, .bins={    0,   10000}, .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={400, 3000}});
+  sh.AddNewFillParam("OnlineHT",             { .nbin= 200, .bins={    0,   10000}, .fill=[&d] { return AK4_HtOnline;       }, .axis_title="H_{T}^{HLT} (GeV)",    .def_range={400, 3000}});
+  sh.AddNewFillParam("HTBins",               { .nbin=HTB.size()-1, .bins=HTB,      .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={400, 1500}});
   sh.AddNewFillParam("GenHT",                { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return d.evt.Gen_Ht;            }, .axis_title="H_{T}^{Gen} (GeV)",    .def_range={0, 2000}});
   sh.AddNewFillParam("AK8HT",                { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return AK8_Ht;             }, .axis_title="H_{T}^{AK8} (GeV)",    .def_range={0, 2000}});
   // MET
@@ -850,8 +851,9 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   // AK8 JetN
   sh.AddNewFillParam("Jet1AK8Mass",         { .nbin=M.size()-1, .bins=M,           .fill=[&d] { return (nJetAK8<1) ? -9999. : softDropMassW[iJetAK8[0]]; }, .axis_title="Leading AK8 jet M_{Soft-Drop} (GeV)",    .def_range={0, 300}});
   sh.AddNewFillParam("Jet2AK8Mass",         { .nbin=M.size()-1, .bins=M,           .fill=[&d] { return (nJetAK8<2) ? -9999. : softDropMassW[iJetAK8[1]]; }, .axis_title="Subleading AK8 jet M_{Soft-Drop} (GeV)", .def_range={0, 300}});
-  sh.AddNewFillParam("Jet1AK8Pt",           { .nbin=Pt1.size()-1, .bins=Pt1,       .fill=[&d] { return (nJetAK8<1) ? -9999. : d.jetsAK8.Pt[iJetAK8[0]];           }, .axis_title="Leading AK8 jet p_{T} (GeV)",    .def_range={0, 2000}});
-  sh.AddNewFillParam("Jet2AK8Pt",           { .nbin=Pt1.size()-1, .bins=Pt1,       .fill=[&d] { return (nJetAK8<2) ? -9999. : d.jetsAK8.Pt[iJetAK8[1]];           }, .axis_title="Subleading AK8 jet p_{T} (GeV)", .def_range={0, 2000}});
+  sh.AddNewFillParam("Jet1AK8Pt",           { .nbin=  100, .bins={    0,   10000}, .fill=[&d] { return (nJetAK8<1) ? -9999. : d.jetsAK8.Pt[iJetAK8[0]];           }, .axis_title="Leading AK8 jet p_{T} (GeV)",    .def_range={200, 1000}});
+  sh.AddNewFillParam("Jet1AK8PtBins",       { .nbin=PtB.size()-1, .bins=PtB,       .fill=[&d] { return (nJetAK8<1) ? -9999. : d.jetsAK8.Pt[iJetAK8[0]];           }, .axis_title="Leading AK8 jet p_{T} (GeV)",    .def_range={200, 1000}});
+  sh.AddNewFillParam("Jet2AK8PtBins",       { .nbin=PtB.size()-1, .bins=PtB,       .fill=[&d] { return (nJetAK8<2) ? -9999. : d.jetsAK8.Pt[iJetAK8[1]];           }, .axis_title="Subleading AK8 jet p_{T} (GeV)", .def_range={200, 1000}});
   sh.AddNewFillParam("Jet1AK8Eta",          { .nbin=   80, .bins={   -4,       4}, .fill=[&d] { return (nJetAK8<1) ? -9999. : d.jetsAK8.Eta[iJetAK8[0]];          }, .axis_title="Leading AK8 jet #eta",    .def_range={-3, 3}});
   sh.AddNewFillParam("Jet2AK8Eta",          { .nbin=   80, .bins={   -4,       4}, .fill=[&d] { return (nJetAK8<2) ? -9999. : d.jetsAK8.Eta[iJetAK8[1]];          }, .axis_title="Subleading AK8 jet #eta", .def_range={-3, 3}});
   sh.AddNewFillParam("Jet1AK8Tau32",        { .nbin=   50, .bins={    0,       1}, .fill=[&d] { return (nJetAK8<1) ? -9999. : tau32[iJetAK8[0]];                       }, .axis_title="Leading AK8 jet #tau_{32}"});
@@ -986,24 +988,25 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //                                   Trigger
 
   //for (const auto& cut : {"PassTriggerPreSelection","PassTriggerPreSelPlus1mW","S_Excl1W","S_ExclMR_R2","S","T","Q","W"}) {
-  for (const auto& cut : {"PassTriggerPreSelection","PassTriggerPreSelPlus1mW","S"}) {
+  //for (const auto& cut : {"PassTriggerPreSelection","PassTriggerPreSelPlus1mW","S"}) {
+  for (const auto& cut : {"PassTriggerPreSelection"}) {
     // (AK8)HT triggers
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_R2_vs_MR",              .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_mW1Mass_vs_AK8HT",      .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Mass_vs_AK8HT",  .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_mW1Mass_vs_HT",         .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Mass_vs_HT",     .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_AK8HT",                 .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_HT",                    .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_OnlineHT",              .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Bin",                   .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Pt",             .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Mass",           .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_mW1Mass",               .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_R2_vs_MR",              .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_mW1Mass_vs_AK8HT",      .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Mass_vs_AK8HT",  .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_mW1Mass_vs_HTBins",     .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Mass_vs_HTBins", .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_AK8HT",                 .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_HT",                    .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_OnlineHT",              .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Bin",                   .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Pt",             .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_Jet1AK8Mass",           .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
+    //sh.AddHistos("evt", { .fill="HLTEff_AK8PFHT700_TrimMass50_vs_mW1Mass",               .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
     
     sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_R2_vs_MR",                            .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_mW1Mass_vs_HT",                       .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,1, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_Jet1AK8Mass_vs_HT",                   .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,1, 0,1} });
+    sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_mW1Mass_vs_HTBins",                   .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,1, 0,1} });
+    sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_Jet1AK8Mass_vs_HTBins",               .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,1, 0,1} });
     sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_HT",                                  .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
     sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_OnlineHT",                            .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
     sh.AddHistos("evt", { .fill="HLTEff_PFHT800or900_vs_Bin",                                 .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
@@ -1019,8 +1022,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     
     // AK8/B2G triggers
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_R2_vs_MR",                        .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_Jet1AK8Pt_vs_Jet1AK8Mass",        .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-    sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_Jet1AK8Pt_vs_mW1Mass",            .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_Jet1AK8PtBins_vs_Jet1AK8Mass",    .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+    sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_Jet1AK8PtBins_vs_mW1Mass",        .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_mW1Mass",                         .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_Jet1AK8Pt",                       .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
     sh.AddHistos("evt", { .fill="HLTEff_AK8PFJet360_vs_Jet1AK8Pt",                       .pfs={"Triggers",cut,"Jet1AK8Pt450"},  .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
@@ -1046,16 +1049,16 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     //sh.AddHistos("evt", { .fill="HLTEff_AK8DiPFJet250_200_vs_mW1Mass",                   .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
     //sh.AddHistos("evt", { .fill="HLTEff_AK8DiPFJet250_200_vs_Bin",                       .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,0, 0.45,0.45} });
 
-    // Suggestion: AK8PFHT700 OR PFHT800or900
-    for (auto trigger_comb : std::vector<std::string>({"HLTEff_AK8PFHT700orPFHT800or900", "HLTEff_AK8PFJet450orPFHT800or900", "HLTEff_AK8PFJet450orAK8PFHT700", "HLTEff_AK8PFJet360orPFHT800or900","HLTEff_AK8PFJet360orAK8PFHT700"})) {
-    //for (auto trigger_comb : std::vector<std::string>({"HLTEff_AK8PFJet450orPFHT800or900", "HLTEff_AK8PFJet360orPFHT800or900"})) {
+    // Suggestion: AK8PFJet450 OR PFHT800or900
+    //for (auto trigger_comb : std::vector<std::string>({"HLTEff_AK8PFHT700orPFHT800or900", "HLTEff_AK8PFJet450orPFHT800or900", "HLTEff_AK8PFJet450orAK8PFHT700", "HLTEff_AK8PFJet360orPFHT800or900","HLTEff_AK8PFJet360orAK8PFHT700"})) {
+    for (auto trigger_comb : std::vector<std::string>({"HLTEff_AK8PFJet450orPFHT800or900", "HLTEff_AK8PFJet360orPFHT800or900"})) {
       sh.AddHistos("evt", { .fill=trigger_comb+"_vs_R2_vs_MR",                .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-      //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8Pt_vs_AK8HT",         .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-      //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8Mass_vs_AK8HT",       .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-      //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_mW1Mass_vs_AK8HT",           .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-      sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8Pt_vs_HT",         .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-      sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8Mass_vs_HT",       .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
-      sh.AddHistos("evt", { .fill=trigger_comb+"_vs_mW1Mass_vs_HT",           .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+      //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8PtBins_vs_AK8HT",  .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+      //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8Mass_vs_AK8HT",    .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+      //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_mW1Mass_vs_AK8HT",        .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+      sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8PtBins_vs_HTBins", .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+      sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Jet1AK8Mass_vs_HTBins",   .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
+      sh.AddHistos("evt", { .fill=trigger_comb+"_vs_mW1Mass_vs_HTBins",       .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0, 0,1} });
       //sh.AddHistos("evt", { .fill=trigger_comb+"_vs_AK8HT",                   .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
       sh.AddHistos("evt", { .fill=trigger_comb+"_vs_HT",                      .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
       sh.AddHistos("evt", { .fill=trigger_comb+"_vs_OnlineHT",                .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
@@ -1064,7 +1067,10 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
       sh.AddHistos("evt", { .fill=trigger_comb+"_vs_mW1Mass",                 .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
       sh.AddHistos("evt", { .fill=trigger_comb+"_vs_Bin",                     .pfs={"Triggers",cut}, .cuts={}, .draw="PE1",  .opt="Sumw2", .ranges={0,0, 0,1, 0.45,0.45} });
     }
+    
+    sh.AddHistos("evt", { .fill="Jet1AK8Pt_vs_HT", .pfs={"Triggers",cut}, .cuts={}, .draw="COLZ", .opt="Sumw2", .ranges={0,0, 0,0} });
   }
+
 
   // -------------------------------------------------------------------------
   //                              Selected AK4 Jets
@@ -1200,7 +1206,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("evt",  { .fill="R2_vs_MR",           .pfs={cut,"PassHLT","Signals,Background"}, .cuts={},.draw="COLZ",.opt="Sumw2",.ranges={}});
     sh.AddHistos("evt",  { .fill="HT_vs_MR",           .pfs={cut,"PassHLT","Signals,Background"}, .cuts={},.draw="COLZ",.opt="Sumw2",.ranges={}});
     sh.AddHistos("evt",  { .fill="NJet",               .pfs={Stack,cut,"PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-    sh.AddHistos("evt",  { .fill="NJetAK8",            .pfs={Stack,cut,"PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+    if (std::string(cut) != "S" && std::string(cut) != "S_ExclMR_R2")
+      sh.AddHistos("evt",  { .fill="NJetAK8",            .pfs={Stack,cut,"PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
     // MGlunio/MStop plots
     sh.AddHistos("evt",  { .fill="MLSP_vs_MGluino",    .pfs={cut,"PassHLT","GluinoSignalScans"},  .cuts={},.draw="COLZ",.opt="Sumw2",.ranges={}});
     sh.AddHistos("evt",  { .fill="MLSP_vs_MStop",      .pfs={cut,"PassHLT","StopSignalScans"},    .cuts={},.draw="COLZ",.opt="Sumw2",.ranges={}});
@@ -1228,15 +1235,15 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   // N-1 plots
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"S_Excl3Jet",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="MR",          .pfs={Stack,"S_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="MR",          .pfs={Stack,"S_ExclMR_R2","R2Bins","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="MTR",         .pfs={Stack,"S_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"S_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="MR",          .pfs={Stack,"S_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="MR",          .pfs={Stack,"S_ExclMR_R2","R2Bins","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="MTR",         .pfs={Stack,"S_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"S_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NEleVeto",    .pfs={Stack,"S_Excl0Ele",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NMuVeto",     .pfs={Stack,"S_Excl0Mu",    "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NIsoTrk",     .pfs={Stack,"S_Excl0IsoTrk","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NBTag",       .pfs={Stack,"S_Excl1b",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NW",          .pfs={Stack,"S_Excl1W",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NW",          .pfs={Stack,"S_Excl1W",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MinDeltaPhi", .pfs={Stack,"S_ExclmDPhi",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
 
   // -------------------------------------------------------------------------
@@ -1254,7 +1261,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="NMuVeto",     .pfs={Stack,"Q_Excl0Mu",        "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NIsoTrk",     .pfs={Stack,"Q_Excl0IsoTrk",    "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NLooseBTag",  .pfs={Stack,"Q_Excl0b",         "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NaW",         .pfs={Stack,"Q_Excl1aW",        "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NaW",         .pfs={Stack,"Q_Excl1aW",        "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MinDeltaPhi", .pfs={Stack,"Q_ExclInvmDPhi0p3","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"Q_ExclMR_R2",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -1271,11 +1278,11 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="MR",          .pfs={Stack,"T_ExclMR_R2","R2Bins","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MTR",         .pfs={Stack,"T_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"T_ExclMR_R2",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"T_Excl1Lep",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NMu",         .pfs={Stack,"T_Excl1Lep",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NLep",        .pfs={Stack,"T_Excl1Lep",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"T_Excl1Lep",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NMu",         .pfs={Stack,"T_Excl1Lep",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NLep",        .pfs={Stack,"T_Excl1Lep",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NBTag",       .pfs={Stack,"T_Excl1b",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NW",          .pfs={Stack,"T_Excl1W",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NW",          .pfs={Stack,"T_Excl1W",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MinDeltaPhi", .pfs={Stack,"T_ExclmDPhi",  "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MT",          .pfs={Stack,"T_ExclmDPhiMT","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MT",          .pfs={Stack,"T_ExclMT",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
@@ -1294,11 +1301,11 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="MR",          .pfs={Stack,"W_ExclMR_R2","R2Bins","PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MTR",         .pfs={Stack,"W_ExclMR_R2",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"W_ExclMR_R2",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"W_Excl1Lep",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NMu",         .pfs={Stack,"W_Excl1Lep",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NLep",        .pfs={Stack,"W_Excl1Lep",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"W_Excl1Lep",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NMu",         .pfs={Stack,"W_Excl1Lep",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NLep",        .pfs={Stack,"W_Excl1Lep",      "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NLooseBTag",  .pfs={Stack,"W_Excl0b",        "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
-  sh.AddHistos("evt",  { .fill="NmW",         .pfs={Stack,"W_Excl1mW",       "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
+  //sh.AddHistos("evt",  { .fill="NmW",         .pfs={Stack,"W_Excl1mW",       "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MinDeltaPhi", .pfs={Stack,"W_ExclmDPhi",     "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MT",          .pfs={Stack,"W_ExclmDPhiMT",   "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MT",          .pfs={Stack,"W_ExclMT",        "PassHLT"}, .cuts={},.draw=d,.opt=o_stk,.ranges=r_stk});

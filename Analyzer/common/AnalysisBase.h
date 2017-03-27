@@ -10,6 +10,7 @@
 #include "TFile.h"
 #include "TF1.h"
 #include "TH3.h"
+#include "TGraphAsymmErrors.h"
 #include "TProfile.h"
 #include "TStopwatch.h"
 #include "TRandom3.h"
@@ -369,8 +370,7 @@ Choose:
   - |d0| < 0.05, |dz| < 0.1 (Tight IP2D [5])
 
   For Tight Selection (TriggerEff Only) Choose:
-  - Spring15 Cut based Tight ID without relIso (EA) cut
-  - Mini-Isolation (EA)/pt < 0.1 (Tight WP [4])
+  - Spring15 Cut based Tight ID (including relIso (EA) cut)
   - pt >= 30
   - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
   - |d0| < 0.05, |dz| < 0.1 (Tight IP2D and IP3D [5])
@@ -391,7 +391,6 @@ Choose:
 
 #define ELE_TIGHT_PT_CUT       30
 #define ELE_TIGHT_ETA_CUT      2.5
-#define ELE_TIGHT_MINIISO_CUT  0.1
 #define ELE_TIGHT_IP_D0_CUT    0.05
 #define ELE_TIGHT_IP_DZ_CUT    0.1
 #define ELE_TIGHT_IP_SIG_CUT   4
@@ -402,30 +401,31 @@ Choose:
 
   Latest Isolation WPs:
   [2] SUSY MiniISo Loose/Tight - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=172#ID_IP_ISO
+  [3] POG Tight RelIso - https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2?rev=28#Muon_Isolation
 
   Latest Impact Point Cut (Loose/Tight):
-  [3] SUSY Loose/Tight IP2D - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=172#ID_IP_ISO
+  [4] SUSY Loose/Tight IP2D - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=172#ID_IP_ISO
   
   For Veto Choose:
   - POG recommended Loose ID (No Iso/IP)
   - Mini-Isolation (EA)/pt < 0.4 (Loose WP [2])
   - pt >= 5
   - |eta| < 2.4
-  - |d0| < 0.2, |dz| < 0.5 (Loose IP2D [3])
+  - |d0| < 0.2, |dz| < 0.5 (Loose IP2D [4])
 
   For Selection Choose:
   - POG recommended Medium ID (No Iso/IP)
   - Mini-Isolation (EA)/pt < 0.2 (tight WP [2])
   - pt >= 5
   - |eta| < 2.4
-  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D [3])
+  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D [4])
 
   For Tight Selection (TriggerEff Only) Choose:
   - POG recommended Tight ID (No Iso/IP)
-  - Mini-Isolation (EA)/pt < 0.2 (tight WP [2])
+  - comb. rel. Isolation (R=0.4) < 0.15 (tight WP [3])
   - pt >= 30
   - |eta| < 2.4
-  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D and IP3D [3])
+  - |d0| < 0.05, |dz| < 0.1 (Tight IP2D and IP3D [4])
 
 */
 
@@ -443,7 +443,7 @@ Choose:
 
 #define MU_TIGHT_PT_CUT        30
 #define MU_TIGHT_ETA_CUT       2.4
-#define MU_TIGHT_MINIISO_CUT   0.2
+#define MU_TIGHT_RELISO_CUT    0.15
 #define MU_TIGHT_IP_D0_CUT     0.05
 #define MU_TIGHT_IP_DZ_CUT     0.1
 #define MU_TIGHT_IP_SIG_CUT    4
@@ -622,14 +622,14 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float absd0 = std::abs(data.ele.Dxy[i]);
       float absdz = std::abs(data.ele.Dz[i]);
       float ipsig = std::abs(data.ele.DB[i])/data.ele.DBerr[i];
-      bool id_veto = (data.ele.vidVetonoiso[i] == 1.0);
-      bool id_select = (data.ele.vidMediumnoiso[i] == 1.0);
-      bool id_tight  = (data.ele.vidTightnoiso[i] == 1.0);
+      bool id_veto_noiso = (data.ele.vidVetonoiso[i] == 1.0);
+      bool id_select_noiso = (data.ele.vidMediumnoiso[i] == 1.0);
+      bool id_tight  = (data.ele.vidTight[i] == 1.0);
       //bool id_veto = (data.ele.vidVeto[i] == 1.0);
       //bool id_select = (data.ele.vidTight[i] == 1.0);
       // Veto
       if (passEleVeto[i] = 
-	  ( id_veto &&
+	  ( id_veto_noiso &&
 	    pt      >= ELE_VETO_PT_CUT &&
 	    abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
 	    absd0   <  ELE_VETO_IP_D0_CUT &&
@@ -644,7 +644,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       }
       // Select
       if (passEleSelect[i] = 
-	  ( id_select &&
+	  ( id_select_noiso &&
 	    pt        >= ELE_SELECT_PT_CUT &&
 	    abseta    <  ELE_SELECT_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
 	    miniIso   <  ELE_SELECT_MINIISO_CUT &&
@@ -659,7 +659,6 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  ( id_tight &&
 	    pt        >= ELE_TIGHT_PT_CUT &&
 	    abseta    <  ELE_TIGHT_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
-	    miniIso   <  ELE_TIGHT_MINIISO_CUT &&
 	    absd0     <  ELE_TIGHT_IP_D0_CUT &&
 	    absdz     <  ELE_TIGHT_IP_DZ_CUT &&
 	    ipsig     <  ELE_TIGHT_IP_SIG_CUT) ) {
@@ -683,15 +682,16 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float pt = data.mu.Pt[i];
       float abseta = std::abs(data.mu.Eta[i]);
       float miniIso = data.mu.MiniIso[i]/data.mu.Pt[i];
+      float relIso = data.mu.Iso04[i];
       float absd0 = std::abs(data.mu.Dxy[i]);
       float absdz = std::abs(data.mu.Dz[i]);
       float ipsig = std::abs(data.mu.DB[i])/data.mu.DBerr[i];
-      bool id_veto = (data.mu.IsLooseMuon[i] == 1.0);
-      bool id_select = (data.mu.IsMediumMuon[i] == 1.0);
-      bool id_tight  = (data.mu.IsTightMuon[i] == 1.0);
+      bool id_veto_noiso = (data.mu.IsLooseMuon[i] == 1.0);
+      bool id_select_noiso = (data.mu.IsMediumMuon[i] == 1.0);
+      bool id_tight_noiso  = (data.mu.IsTightMuon[i] == 1.0);
       // Veto
       if (passMuVeto[i] =
-	  (id_veto &&
+	  (id_veto_noiso &&
 	   pt      >= MU_VETO_PT_CUT &&
 	   abseta  <  MU_VETO_ETA_CUT &&
 	   absd0   <  MU_VETO_IP_D0_CUT &&
@@ -709,7 +709,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       }
       // Select
       if (passMuSelect[i] =
-	  ( id_select &&
+	  ( id_select_noiso &&
 	    pt      >= MU_SELECT_PT_CUT &&
 	    abseta  <  MU_SELECT_ETA_CUT &&
 	    miniIso <  MU_SELECT_MINIISO_CUT &&
@@ -723,10 +723,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       }
       // Tight
       if (passMuTight[i] =
-	  ( id_tight &&
+	  ( id_tight_noiso &&
 	    pt      >= MU_TIGHT_PT_CUT &&
 	    abseta  <  MU_TIGHT_ETA_CUT &&
-	    miniIso <  MU_TIGHT_MINIISO_CUT &&
+	    relIso  <  MU_TIGHT_RELISO_CUT &&
 	    absd0   <  MU_TIGHT_IP_D0_CUT &&
 	    absdz   <  MU_TIGHT_IP_DZ_CUT &&
 	    ipsig   <  MU_TIGHT_IP_SIG_CUT) ) {
@@ -1044,12 +1044,12 @@ AnalysisBase::init_common_histos()
 
   // trigger efficiency
   double htbins[19]  = { 0, 200, 300, 400, 500, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1200, 1500, 2000, 4000, 10000 };
-  double HTF[12] = {400, 600, 700, 750, 800, 850, 900, 1000, 1200, 1500, 2000, 5000};
-  double Pt1[9]  = {200, 300, 400, 450, 500, 550, 600, 1000, 2000};
+  double HTB[12] = {400, 500, 600, 700, 750, 800, 850, 900, 950, 1000, 1500, 10000};
+  double PtB[9]  = {200, 300, 400, 450, 500, 550, 600, 1000, 10000};
   h_trigger_pass                = new TH1D("trigger_pass",    "Pass trigger;H_{T} (GeV)", 18,htbins);
   h_trigger_total               = new TH1D("trigger_total",          "Total;H_{T} (GeV)", 18,htbins);
-  h_trigger2d_pass              = new TH2D("trigger2d_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTF, 8,Pt1);
-  h_trigger2d_total             = new TH2D("trigger2d_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTF, 8,Pt1);
+  h_trigger2d_pass              = new TH2D("trigger2d_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
+  h_trigger2d_total             = new TH2D("trigger2d_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
 }
 
 //_______________________________________________________
@@ -1079,13 +1079,15 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
     // SingleElectron dataset: Pass HLT_Ele27_WPTight_Gsf && 1 Tight Electron
     // SingleMuon     dataset: Pass HLT_IsoMu24 && 1 tight Muon
     // Baseline cuts to be applied: 3 jets, 1 AK8 jet, MR & R^2
-    bool pass_single_lep = 0;
+    bool pass_aux_trigger = 0;
     if (TString(sample).Contains("SingleElectron")) {
-      if (d.hlt.Ele27_WPTight_Gsf && nEleTight==1) pass_single_lep = 1;
+      if ((d.hlt.Ele23_WPLoose_Gsf==1||d.hlt.Ele27_WPTight_Gsf==1)&&nEleTight==1) pass_aux_trigger = 1;
     } else if (TString(sample).Contains("SingleMuon")) {
-      if (d.hlt.IsoMu24 && nMuTight==1) pass_single_lep = 1;
+      if (d.hlt.IsoMu24==1&&nMuTight==1) pass_aux_trigger = 1;
+    } else if (TString(sample).Contains("MET")) {
+      if (d.hlt.PFMET120_PFMHT120_IDTight==1&&d.met.Pt[0]>200&&nLepVeto==0&&d.evt.NIsoTrk==0) pass_aux_trigger = 1;      
     }
-    if (pass_single_lep) {
+    if (pass_aux_trigger) {
       if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
 	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) {
 	  h_trigger_pass  ->Fill(AK4_Ht);
@@ -1881,7 +1883,10 @@ TH2D* eff_fast_muon_miniiso02;
 TH2D* eff_fast_muon_looseip2d;
 TH2D* eff_fast_muon_tightip2d;
 
-TGraphAsymmErrors* eff_trigger;
+//TGraphAsymmErrors* eff_trigger;
+TH2D* eff_trigger;
+TH2D* eff_trigger_up;
+TH2D* eff_trigger_down;
 
 void AnalysisBase::init_syst_input() {
   TString Sample(sample);
@@ -1977,12 +1982,32 @@ void AnalysisBase::init_syst_input() {
   eff_fast_muon_looseip2d	  = utils::getplot_TH2D("scale_factors/muon/fastsim/sf_mu_looseIP2D.root",      "histo2D", "mu12");
   eff_fast_muon_tightip2d         = utils::getplot_TH2D("scale_factors/muon/fastsim/sf_mu_tightIP2D.root",      "histo2D", "mu13");
 
-  // Trigger efficiency
-  //TH1D* pass  = utils::getplot_TH1D("trigger_eff/Oct21_Golden_JSON/SingleLepton.root", "h_HT_pre_pass",  "trig1");
-  //TH1D* total = utils::getplot_TH1D("trigger_eff/Oct21_Golden_JSON/SingleLepton.root", "h_HT_pre",       "trig2");
-  TH1D* pass  = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_pass",  "trig1");
-  TH1D* total = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_total", "trig2");
-  eff_trigger = new TGraphAsymmErrors(pass, total);
+  // 1D Trigger efficiency
+  // TH1D* pass  = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_pass",  "trig1");
+  // TH1D* total = utils::getplot_TH1D("trigger_eff/Dec02_Golden_JSON/SingleLepton.root", "trigger_total", "trig2");
+  // eff_trigger = new TGraphAsymmErrors(pass, total);
+
+  // 2D Trigger Efficiency (New) - Use combination of SingleElectron + MET datasets
+  TH2D* pass_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron_MET.root", "trigger2d_pass",   "trig1");
+  TH2D* total_2d = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron_MET.root", "trigger2d_total",  "trig2");
+  eff_trigger      = (TH2D*)total_2d->Clone("eff_trigger");      eff_trigger     ->Reset();
+  eff_trigger_up   = (TH2D*)total_2d->Clone("eff_trigger_up");   eff_trigger_up  ->Reset();
+  eff_trigger_down = (TH2D*)total_2d->Clone("eff_trigger_down"); eff_trigger_down->Reset();
+  for (int i=1; i<total_2d->GetNbinsX()+1; i++) for (int j=1; j<total_2d->GetNbinsY()+1; j++) {
+    int pass = pass_2d->GetBinContent(i,j), total = total_2d->GetBinContent(i,j);
+    if (total>0) {
+      TH1D p("p","",1,0,1); p.SetBinContent(1,pass);  p.SetBinError(1,std::sqrt(pass));
+      TH1D t("t","",1,0,1); t.SetBinContent(1,total); t.SetBinError(1,std::sqrt(total));
+      double eff = 0, err_down = 0, err_up = 0;
+      utils::geteff_AE(TGraphAsymmErrors(&p,&t), 0, eff, err_down, err_up);
+      //std::cout<<"Trigger efficiency: "<<i<<" "<<j<<" "<<eff-err_down<<" "<<eff<<" "<<eff+err_up<<std::endl;
+      eff_trigger     ->SetBinContent(i,j,eff);
+      eff_trigger_up  ->SetBinContent(i,j,eff+err_up);
+      eff_trigger_down->SetBinContent(i,j,eff-err_down);
+      // SPECIAL: Set error to the total counts, so we know if a bin is not empty
+      eff_trigger     ->SetBinError(i,j,total);
+    }
+  }
 }
 
 
@@ -2093,8 +2118,8 @@ std::pair<double, double> AnalysisBase::calc_ele_sf(DataStruct& data, const doub
     float miniIso  = data.ele.MiniIso[i]/data.ele.Pt[i];
     float absd0    = std::abs(data.ele.Dxy[i]);
     float absdz    = std::abs(data.ele.Dz[i]);
-    bool id_veto   = (data.ele.vidVetonoiso[i] == 1.0);
-    bool id_select = (data.ele.vidMediumnoiso[i] == 1.0);
+    bool id_veto_noiso   = (data.ele.vidVetonoiso[i] == 1.0);
+    bool id_select_noiso = (data.ele.vidMediumnoiso[i] == 1.0);
     // Apply reconstruction scale factor - Warning! strange binning (pt vs eta)
     utils::geteff2D(eff_full_ele_reco, eta, pt, sf, sf_err);
     // If pt is below 20 or above 80 GeV increase error by 1%
@@ -2104,7 +2129,7 @@ std::pair<double, double> AnalysisBase::calc_ele_sf(DataStruct& data, const doub
     weight_select *= get_syst_weight(sf, sf_err, nSigmaEleRecoSF);
 
     // Veto Electrons
-    if ( id_veto &&
+    if ( id_veto_noiso &&
 	 pt      >= ELE_VETO_PT_CUT &&
 	 abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) ) {
       // Apply ID scale factor
@@ -2128,7 +2153,7 @@ std::pair<double, double> AnalysisBase::calc_ele_sf(DataStruct& data, const doub
 
 
     // Selected Electrons
-    if ( id_select &&
+    if ( id_select_noiso &&
 	 pt        >= ELE_SELECT_PT_CUT &&
 	 abseta    <  ELE_SELECT_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) ) {
       // Apply ID scale factor
@@ -2166,8 +2191,8 @@ std::pair<double, double> AnalysisBase::calc_muon_sf(DataStruct& data, const dou
     float miniIso  = data.mu.MiniIso[i]/data.mu.Pt[i];
     float absd0    = std::abs(data.mu.Dxy[i]);
     float absdz    = std::abs(data.mu.Dz[i]);
-    bool id_veto   = (data.mu.IsLooseMuon[i] == 1.0);
-    bool id_select = (data.mu.IsMediumMuon[i] == 1.0);
+    bool id_veto_noiso   = (data.mu.IsLooseMuon[i] == 1.0);
+    bool id_select_noiso = (data.mu.IsMediumMuon[i] == 1.0);
     // Apply tracking efficiency scale factor
     if (pt>=10) {
       utils::geteff_AE(eff_full_muon_trk, eta, sf, sf_err_down, sf_err_up);
@@ -2176,7 +2201,7 @@ std::pair<double, double> AnalysisBase::calc_muon_sf(DataStruct& data, const dou
     }
     
     // Veto Muons
-    if ( id_veto &&
+    if ( id_veto_noiso &&
 	 pt      >= MU_VETO_PT_CUT &&
 	 abseta  <  MU_VETO_ETA_CUT) {
       // Apply ID scale factor
@@ -2209,7 +2234,7 @@ std::pair<double, double> AnalysisBase::calc_muon_sf(DataStruct& data, const dou
 
 
     // Selected muons
-    if ( id_select &&
+    if ( id_select_noiso &&
 	 pt      >= MU_SELECT_PT_CUT &&
 	 abseta  <  MU_SELECT_ETA_CUT ) {
       // Apply ID scale factor
@@ -2247,8 +2272,22 @@ std::pair<double, double> AnalysisBase::calc_muon_sf(DataStruct& data, const dou
 
 
 double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSigmaTrigger) {
-  double eff, err_down, err_up;
-  utils::geteff_AE(eff_trigger, AK4_Ht, eff, err_down, err_up);
-  double w = get_syst_weight(eff, eff-err_down, eff+err_up, nSigmaTrigger);
-  return w;
+  // 1D trigger efficiency method
+  //  double eff, err_down, err_up;
+  //  utils::geteff_AE(eff_trigger, AK4_Ht, eff, err_down, err_up);
+  //  double w = get_syst_weight(eff, eff-err_down, eff+err_up, nSigmaTrigger);
+  
+  // 2D trigger efficiency (New)
+  if (nJetAK8>0) {
+    double eff = 0, total = 0;
+    utils::geteff2D(eff_trigger, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]], eff, total); // total was saved to histo error
+    // For the time being only weight the measurable phase space
+    // Rest is 0 --> Could weight with the TGraphAsymmErrors::Efficiency value (0.5+-0.5)
+    if (total>0) {
+      double eff_up   = utils::geteff2D(eff_trigger_up,   AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
+      double eff_down = utils::geteff2D(eff_trigger_down, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
+      double w = get_syst_weight(eff, eff_down, eff_up, nSigmaTrigger);
+      return w;
+    } else return 0;
+  } else return 0;
 }

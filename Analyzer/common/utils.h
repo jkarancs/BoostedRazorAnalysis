@@ -347,6 +347,17 @@ namespace utils {
       if (x<X+g->GetErrorXhigh(i)) break;
     }
   }
+  void geteff_AE(const TGraphAsymmErrors& g, double x, double& eff, double& err_down, double& err_up) {
+    double X;
+    // If the bin is out of range, use the closest bin
+    for (int i=0, n=g.GetN(); i<n; ++i) {
+      g.GetPoint(i,X,eff);
+      err_down = g.GetErrorYlow(i);
+      err_up = g.GetErrorYhigh(i);
+      if (x<X+g.GetErrorXhigh(i)) break;
+    }
+  }
+
 
   // Get efficiency from a 2D histogram (for error use 2nd)
   double geteff2D(TH2* h, double x, double y)
