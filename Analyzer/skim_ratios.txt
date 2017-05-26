@@ -1,35 +1,35 @@
-        12   26 JetHT_Run2016B_RRv3
-        11    9 JetHT_Run2016C_RRv1
-        11   15 JetHT_Run2016D_RRv1
-        10   14 JetHT_Run2016E_RRv1
-        10   10 JetHT_Run2016F_RRv1
-        10   24 JetHT_Run2016G_RRv1
-        10   24 JetHT_Run2016H_PRv2
-        17    1 JetHT_Run2016H_PRv3
-         7    7 MET_Run2016B_RRv3
-         9    4 MET_Run2016C_RRv1
-         6    5 MET_Run2016D_RRv1
-         6    5 MET_Run2016E_RRv1
-         6    3 MET_Run2016F_RRv1
-         7    6 MET_Run2016G_RRv1
-         8    8 MET_Run2016H_PRv2
-        44    1 MET_Run2016H_PRv3
-        52   49 SingleElectron_Run2016B_RRv3
-        39   19 SingleElectron_Run2016C_RRv1
-        43   30 SingleElectron_Run2016D_RRv1
-        33   23 SingleElectron_Run2016E_RRv1
-        38   15 SingleElectron_Run2016F_RRv1
-        38   31 SingleElectron_Run2016G_RRv1
-        30   25 SingleElectron_Run2016H_PRv2
-        50    1 SingleElectron_Run2016H_PRv3
-        49   31 SingleMuon_Run2016B_RRv3
-        44   13 SingleMuon_Run2016C_RRv1
-        44   20 SingleMuon_Run2016D_RRv1
-        42   18 SingleMuon_Run2016E_RRv1
-        45   14 SingleMuon_Run2016F_RRv1
-        42   30 SingleMuon_Run2016G_RRv1
-        44   34 SingleMuon_Run2016H_PRv2
-        48    1 SingleMuon_Run2016H_PRv3
+        12   26 JetHT_Run2016B
+        11    9 JetHT_Run2016C
+        11   15 JetHT_Run2016D
+        10   14 JetHT_Run2016E
+        10   10 JetHT_Run2016F
+        10   24 JetHT_Run2016G
+        10   24 JetHT_Run2016H_03Feb2017_v2
+        17    1 JetHT_Run2016H_03Feb2017_v3
+         7    7 MET_Run2016B
+         9    4 MET_Run2016C
+         6    5 MET_Run2016D
+         6    5 MET_Run2016E
+         6    3 MET_Run2016F
+         7    6 MET_Run2016G
+         8    8 MET_Run2016H_03Feb2017_v2
+        44    1 MET_Run2016H_03Feb2017_v3
+        52   49 SingleElectron_Run2016B
+        39   19 SingleElectron_Run2016C
+        43   30 SingleElectron_Run2016D
+        33   23 SingleElectron_Run2016E
+        38   15 SingleElectron_Run2016F
+        38   31 SingleElectron_Run2016G
+        30   25 SingleElectron_Run2016H_03Feb2017_v2
+        50    1 SingleElectron_Run2016H_03Feb2017_v3
+        49   31 SingleMuon_Run2016B
+        44   13 SingleMuon_Run2016C
+        44   20 SingleMuon_Run2016D
+        42   18 SingleMuon_Run2016E
+        45   14 SingleMuon_Run2016F
+        42   30 SingleMuon_Run2016G
+        44   34 SingleMuon_Run2016H_03Feb2017_v2
+        48    1 SingleMuon_Run2016H_03Feb2017_v3
        154    1 DYJetsToLL_M-50_HT-100to200
         77    1 DYJetsToLL_M-50_HT-1200to2500
         38    1 DYJetsToLL_M-50_HT-200to400
@@ -51,7 +51,7 @@
         14    1 QCD_HT300to500
         12    1 QCD_HT500to700
         11    4 QCD_HT700to1000
-        66    1 ST_s-channel_4f_leptonDecays
+        66    1 ST_s-channel_4f
         48    1 ST_t-channel_antitop_4f_inclusiveDecays
         57    2 ST_t-channel_top_4f_inclusiveDecays
          5    1 TTGJets

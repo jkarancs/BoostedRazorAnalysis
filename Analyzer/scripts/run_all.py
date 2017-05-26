@@ -1,4 +1,4 @@
-import os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, ROOT
+import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, ROOT
 from optparse import OptionParser
 
 # ---------------------- Cmd Line  -----------------------
@@ -11,6 +11,9 @@ parser.add_option("--full",    dest="full",    action="store_true", default=Fals
 parser.add_option("--test",    dest="test",    action="store_true", default=False,   help="Run only on some test files (jetht, ttbar, qcd, T5ttcc)")
 parser.add_option("--batch",   dest="batch",   action="store_true", default=False,   help="Send the jobs to batch")
 parser.add_option("--queue",   dest="QUEUE",   type="string",       default="1nh",   help="Specify which batch queue to use (Default=1nh)")
+parser.add_option("--optim",   dest="optim",   action="store_true", default=False,   help="Optimize job event number based log files in --prevdir, or measured skim ratios")
+parser.add_option("--prevdir", dest="PREVDIR", type="string",       default="",      help="Previous running directory used to optimize jobs (default=last dir in results/)")
+parser.add_option("--jobtime", dest="JOBTIME", type="int",          default=1500,    help="Desired job running time in s (default=1500)")
 parser.add_option("--quick",   dest="NQUICK",  type="int",          default=0,       help="Run only on a subset of events (1/NQUICK)")
 parser.add_option("--nevt",    dest="NEVT",    type="int",          default=-1,      help="Tells how many event to run as a maximum in a single job (Default=-1 all)")
 parser.add_option("--nfile",   dest="NFILE",   type="int",          default=-1,      help="Tells how many input files to run in a single job (Default=-1 all)")
@@ -20,7 +23,6 @@ parser.add_option("--nproc",   dest="NPROC",   type="int",          default=1,  
 parser.add_option("--outdir",  dest="OUTDIR",  type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
 parser.add_option("--skimout", dest="SKIMOUT", type="string",       default="",      help="Output directory for skimming")
 parser.add_option("--skim",    dest="skim",    action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
-parser.add_option("--optim",   dest="optim",   action="store_true", default=False,   help="Optimize job event number based on measured skim/jobspeed ratios")
 parser.add_option("--mirror",  dest="mirror",  action="store_true", default=False,   help="Also copy skim output to EOS")
 parser.add_option("--plot",    dest="plot",    action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
 parser.add_option("--replot",  dest="replot",  action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
@@ -43,8 +45,8 @@ if opt.skim:
     if opt.SKIMOUT == "":
         print "ERROR: Give a suitable --skimout argument, eg. --skimout ntuple/grid18/Skim_Oct31_2Jet_1JetAK8"
         sys.exit()
-    if opt.NFILE == -1 and opt.NEVT == -1 and not opt.useprev:
-        print "ERROR: Give a suitable --nfile or --nevt argument, otherwise output might become too large!"
+    if opt.NFILE == -1 and opt.NEVT == -1 and not opt.optim and not opt.useprev:
+        print "ERROR: Give a suitable --nfile, --nevt or --optim argument, otherwise output might become too large!"
         sys.exit()
     if opt.NQUICK>1:
         if opt.mirror:
@@ -61,11 +63,21 @@ if opt.skim:
             print "Warning: Don't you want to mirror to EOS? Add: --mirror option!"
             print "         If not, ignore this message!"
             print "         Creating a copy script for Viktor: "+COPYSCRIPT
-if opt.batch and opt.NEVT == -1 and not opt.useprev:
-    print "ERROR: Give a suitable --nevt argument, otherwise some jobs will run too long on batch!"
-    print "       Recommended option for 1nh queue: --nevt=2000000 (~30min/job, ~1000 evt/s is usual)"
+if opt.batch and opt.NEVT == -1 and not opt.optim and not opt.useprev:
+    print "ERROR: Give a suitable --nevt or --optim argument, otherwise some jobs will run too long on batch!"
+    print "       Recommended to start with: --queue=8nh --nevt=1000000"
+    print "       Then next time, you can use default 1nh queue with ~1500s jobs using: --optim"
+    print "       If too many jobs fail, try lowering job runtime eg: --optim --jobtime=1200"
     print "       Or use --useprev option to run on previously created temporary filelists"
     sys.exit()
+if opt.optim and opt.PREVDIR == "":
+    sorted_dirs = sorted(glob.glob("results/*/"), key=os.path.getmtime)
+    if len(sorted_dirs):
+        opt.PREVDIR = sorted_dirs[-1][:-1]
+        print "Using --optim option, but no --prevdir argument was given, using previous working directory: "+opt.PREVDIR
+    else:
+        print "ERROR: Using --optim option, but no --prevdir argument was given, and cannot find previous working directory in results/*"
+        sys.exit()
 if opt.plot:
     #PLOTTER_IN automatic
     if opt.test:
@@ -143,7 +155,7 @@ elif (opt.NFILE != -1 or opt.NEVT != -1):
 
 ana_arguments = []
 # Loop over all filelists
-if opt.NEVT != -1: bad_files = open("bad_files_found.txt", "w")
+if opt.NEVT != -1 or opt.optim: bad_files = open("bad_files_found.txt", "w")
 for filelist in input_filelists:
     # Will put all files into the OUTDIR and its subdirectories
     log_file = opt.OUTDIR+"/log/"+filelist.split("/")[-1].replace("txt", "log")
@@ -166,27 +178,50 @@ for filelist in input_filelists:
             tmp_filelist = prev_lists[jobnum-1]
             args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
             ana_arguments.append(args)
-    elif opt.NEVT != -1:
+    elif opt.NEVT != -1 or opt.optim:
         # SPLIT MODE (recommended for batch): Each jobs runs on max opt.NEVT
         JOB_NEVT = opt.NEVT
-        # Further optimize this number for skimming
+        # Further optimize this number
         # based on measured unskimmed to skimmed ratios (found in skim_ratios.txt)
         if opt.optim:
             samplename = filelist.split("/")[-1][:-4]
+            # Skimming uses a text file (skim_ratios.txt)
             if opt.skim:
                 with open("skim_ratios.txt") as ratios:
                     for line in ratios:
                         column = line.split()
-                        if samplename == column[2]:
+                        #if samplename == column[2]:
+                        if column[2] in samplename:
                             JOB_NEVT *= int(column[0])
                 if "FastSim" in samplename: JOB_NEVT /= 4
+            # Other jobs use the results from a previous run
             else:
+                # Previous txt file method (job_ratios.txt)
                 with open("job_ratios.txt") as ratios:
                     for line in ratios:
                         column = line.split()
                         if samplename == column[1]:
-                            JOB_NEVT *= float(column[0])
-            #print str(JOB_NEVT)+" "+samplename
+                            JOB_NEVT *= float(column[0]) * 0.8
+                
+                ##  # Get information from log files in opt.PREVDIR
+                ##  min_nps  = float(1e6)
+                ##  tot_nevt = float(0)
+                ##  tot_time = float(0)
+                ##  for log_file in sorted(glob.glob(opt.PREVDIR+"/log/"+samplename+"*.log")):
+                ##      with open (log_file) as log:
+                ##          for line in log:
+                ##              if re.search("JobMonitoringReport", line):
+                ##                  column  = line.split()
+                ##                  runtime = column[2]
+                ##                  nevt    = column[4]
+                ##                  nps     = column[6]
+                ##                  #print samplename+" "+nevt+"/"+runtime+" = "+nps
+                ##                  if (float(nps)<min_nps): min_nps = float(nps)
+                ##                  tot_nevt += float(nevt)
+                ##                  tot_time += float(runtime)
+                ##  max_nevt = int(opt.JOBTIME * min_nps)
+                ##  #print ("%-50s   MIN=%7.1f  AVG=%7.1f   MAX_NEVT=%10d" % (samplename, min_nps, (tot_nevt/tot_time), max_nevt))
+                ##  JOB_NEVT = max_nevt
         # Need full ntuple to correctly normalize weights
         if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
         # loop on file lists and split to tmp_filists for nevt < JOB_NEVT
@@ -218,7 +253,10 @@ for filelist in input_filelists:
                 totalevt += nevt
                 with open(tmp_filelist, "a") as job_filelist:
                     print>>job_filelist, files[i]
-        print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created"
+        if opt.optim:
+            print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created (MAX NEVT (optim) = "+str(JOB_NEVT)+")"
+        else:
+            print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created"
     elif opt.NFILE != -1:
         # SPLIT MODE: Each jobs runs on max opt.NFILE
         if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
@@ -272,7 +310,7 @@ def logged_call(cmd, logfile):
     if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
     if opt.run:
-        with open(logfile, "w") as log:
+        with open(logfile, "a") as log:
             proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
             proc.wait()
     else:
@@ -330,7 +368,7 @@ def analyzer_job((jobindex)):
     if opt.batch: time.sleep(opt.SLEEP)
     elif opt.skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
-        if opt.mirror: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-r", output_file, EOS_JANOS+outpath], output_log)
+        if opt.mirror: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-f", "-r", output_file, EOS_JANOS+outpath], output_log)
         elif opt.run and opt.NQUICK==0:
             with open(COPYSCRIPT, "a") as script:
                 print>>script, 'env --unset=LD_LIBRARY_PATH gfal-copy -r '+output_file+' '+EOS_VIKTOR+outpath

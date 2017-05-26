@@ -20,6 +20,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("evt_R", data.evt.R);
   stream.select("evt_R2", data.evt.R2);
   stream.select("evt_MR_Smear", data.evt.MR_Smear);
+  stream.select("evt_MTR_Smear", data.evt.MTR_Smear);
   stream.select("evt_XSec", data.evt.XSec);
   stream.select("evt_Gen_Weight", data.evt.Gen_Weight);
   stream.select("evt_Gen_Ht", data.evt.Gen_Ht);
@@ -27,6 +28,9 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("SUSY_Gluino_Mass", data.evt.SUSY_Gluino_Mass);
   stream.select("SUSY_LSP_Mass", data.evt.SUSY_LSP_Mass);
   
+  //stream.select("met_MuCleanOnly_size", data.met.MuCleanOnly_size);
+  //stream.select("met_MuCleanOnly_Pt", data.met.MuCleanOnly_Pt);
+  //stream.select("met_MuCleanOnly_Phi", data.met.MuCleanOnly_Phi);
   //stream.select("met_size", data.met.size);
   stream.select("met_Pt", data.met.Pt);
   stream.select("met_Phi", data.met.Phi);
@@ -46,6 +50,8 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("alphas_Weights", data.syst_alphas.Weights);
   
   stream.select("metsyst_size", data.syst_met.size);
+  //stream.select("metsyst_MuCleanOnly_Pt", data.syst_met.MuCleanOnly_Pt);
+  //stream.select("metsyst_MuCleanOnly_Phi", data.syst_met.MuCleanOnly_Phi);
   stream.select("metsyst_Pt", data.syst_met.Pt);
   stream.select("metsyst_Phi", data.syst_met.Phi);
   //stream.select("puppimetsyst_size", data.syst_puppimet.size);
@@ -75,6 +81,9 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //++ stream.select("Flag_trkPOG_toomanystripclus53X", data.filter.trkPOG_toomanystripclus53X);
   //++ stream.select("Flag_trkPOG_logErrorTooManyClusters", data.filter.trkPOG_logErrorTooManyClusters);
   //++ stream.select("Flag_METFilters", data.filter.METFilters);
+  stream.select("Flag_badMuons", data.filter.badMuons);
+  stream.select("Flag_duplicateMuons", data.filter.duplicateMuons);
+  stream.select("Flag_noBadMuons", data.filter.noBadMuons);
   
   //++ stream.select("HLT_PFJet40", data.hlt.PFJet40);
   //++ stream.select("HLT_PFJet40_prescale", data.hlt.PFJet40_prescale);
@@ -348,7 +357,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("el_Eta", data.ele.Eta);
   stream.select("el_Phi", data.ele.Phi);
   stream.select("el_E", data.ele.E);
-  //stream.select("el_Charge", data.ele.Charge);
+  stream.select("el_Charge", data.ele.Charge);
   //stream.select("el_Key", data.ele.Key);
   //++ stream.select("el_Iso03", data.ele.Iso03);
   //stream.select("el_Iso03db", data.ele.Iso03db);
@@ -368,13 +377,17 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("el_vidMediumnoiso", data.ele.vidMediumnoiso);
   stream.select("el_vidTightnoiso", data.ele.vidTightnoiso);
   //++ stream.select("el_vidHEEPnoiso", data.ele.vidHEEPnoiso);
+  stream.select("el_vidMvaGPvalue", data.ele.vidMvaGPvalue);
+  stream.select("el_vidMvaGPcateg", data.ele.vidMvaGPcateg);
+  stream.select("el_vidMvaHZZvalue", data.ele.vidMvaHZZvalue);
+  stream.select("el_vidMvaHZZcateg", data.ele.vidMvaHZZcateg);
   stream.select("el_IsPartOfNearAK4Jet", data.ele.IsPartOfNearAK4Jet);
   //++ stream.select("el_IsPartOfNearAK8Jet", data.ele.IsPartOfNearAK8Jet);
   //++ stream.select("el_IsPartOfNearSubjet", data.ele.IsPartOfNearSubjet);
   //++ stream.select("el_DRNearGenEleFromSLTop", data.ele.DRNearGenEleFromSLTop);
   //++ stream.select("el_PtNearGenEleFromSLTop", data.ele.PtNearGenEleFromSLTop);
   //++ stream.select("el_PtNearGenTop", data.ele.PtNearGenTop);
-  //++ stream.select("el_LepAK4JetFrac", data.ele.LepAK4JetFrac);
+  stream.select("el_LepAK4JetFrac", data.ele.LepAK4JetFrac);
   //++ stream.select("el_LepAK8JetFrac", data.ele.LepAK8JetFrac);
   //++ stream.select("el_LepSubjetFrac", data.ele.LepSubjetFrac);
   //++ stream.select("el_LepAK4JetMassDrop", data.ele.LepAK4JetMassDrop);
@@ -404,7 +417,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("mu_Eta", data.mu.Eta);
   stream.select("mu_Phi", data.mu.Phi);
   stream.select("mu_E", data.mu.E);
-  //stream.select("mu_Charge", data.mu.Charge);
+  stream.select("mu_Charge", data.mu.Charge);
   //stream.select("mu_Key", data.mu.Key);
   stream.select("mu_Iso04", data.mu.Iso04);
   stream.select("mu_MiniIso", data.mu.MiniIso);
@@ -424,7 +437,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //++ stream.select("mu_DRNearGenMuFromSLTop", data.mu.DRNearGenMuFromSLTop);
   //++ stream.select("mu_PtNearGenMuFromSLTop", data.mu.PtNearGenMuFromSLTop);
   //++ stream.select("mu_PtNearGenTop", data.mu.PtNearGenTop);
-  //++ stream.select("mu_LepAK4JetFrac", data.mu.LepAK4JetFrac);
+  stream.select("mu_LepAK4JetFrac", data.mu.LepAK4JetFrac);
   //++ stream.select("mu_LepAK8JetFrac", data.mu.LepAK8JetFrac);
   //++ stream.select("mu_LepSubjetFrac", data.mu.LepSubjetFrac);
   //++ stream.select("mu_LepAK4JetMassDrop", data.mu.LepAK4JetMassDrop);
@@ -510,8 +523,6 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //sys stream.select("jetAK8CHS_JERSFUp", data.jetsAK8.JERSFUp);
   //sys stream.select("jetAK8CHS_JERSFDown", data.jetsAK8.JERSFDown);
   stream.select("jetAK8CHS_SmearedPt", data.jetsAK8.SmearedPt);
-  //stream.select("jetAK8CHS_DoubleBAK8", data.jetsAK8.DoubleBAK8);
-  //stream.select("jetAK8CHS_DoubleBCA15", data.jetsAK8.DoubleBCA15);
   stream.select("jetAK8CHS_vSubjetIndex0", data.jetsAK8.vSubjetIndex0);
   stream.select("jetAK8CHS_vSubjetIndex1", data.jetsAK8.vSubjetIndex1);
   //++ stream.select("jetAK8CHS_tau1CHS", data.jetsAK8.tau1CHS);
@@ -526,6 +537,8 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("jetAK8CHS_tau1Puppi", data.jetsAK8.tau1Puppi);
   stream.select("jetAK8CHS_tau2Puppi", data.jetsAK8.tau2Puppi);
   stream.select("jetAK8CHS_tau3Puppi", data.jetsAK8.tau3Puppi);
+  stream.select("jetAK8CHS_uncorrSDMassPuppi", data.jetsAK8.uncorrSDMassPuppi);
+  stream.select("jetAK8CHS_corrSDMassPuppi", data.jetsAK8.corrSDMassPuppi);
   //stream.select("jetAK8CHS_Keys", data.jetsAK8.Keys);
   stream.select("jetAK8CHS_HasNearGenTop", data.jetsAK8.HasNearGenTop);
   stream.select("jetAK8CHS_NearGenTopIsHadronic", data.jetsAK8.NearGenTopIsHadronic);

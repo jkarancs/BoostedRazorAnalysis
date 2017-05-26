@@ -363,7 +363,7 @@ namespace utils {
   double geteff2D(TH2* h, double x, double y)
   {
     double eff = 0.0;
-    for (int i=1; i<h->GetNbinsX()+1; i++) {
+    for (int i=1; i<=h->GetNbinsX(); i++) {
       double xmin = h->GetXaxis()->GetBinLowEdge(i);
       double xmax = h->GetXaxis()->GetBinUpEdge(i);
       if (!(x >= xmin && x < xmax)) continue;

@@ -20,14 +20,17 @@ import os, re, sys, glob, socket, subprocess
 #LATEST_NTUPLE_EOS="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_EOS="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_EOS="Skim_Feb26_1JetAK8_0p04R2"
-LATEST_NTUPLE_EOS="Skim_Mar09_1JetAK8_0p04R2"
+#LATEST_NTUPLE_EOS="Skim_Mar09_1JetAK8_0p04R2"
+LATEST_NTUPLE_EOS="Skim_May19_1JetAK8_0p04R2"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Oct24"
 #LATEST_NTUPLE_GRID18="Skim_Oct31_2Jet_1JetAK8"
 #LATEST_NTUPLE_GRID18="Jan12"
 #LATEST_NTUPLE_GRID18="Skim_Feb26_1JetAK8_0p04R2"
-LATEST_NTUPLE_GRID18="Skim_Mar09_1JetAK8_0p04R2"
+#LATEST_NTUPLE_GRID18="Skim_Mar09_1JetAK8_0p04R2"
+#LATEST_NTUPLE_GRID18="May10"
+LATEST_NTUPLE_GRID18="Skim_May19_1JetAK8_0p04R2"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
@@ -36,13 +39,6 @@ USE_EOS_MOUNT=0
 
 if 'lxplus' in socket.gethostname():
     print 'Running on lxplus'
-    if not os.path.exists(ANA_BASE+'/eos_mount_dir'):
-        os.makedirs(ANA_BASE+'/eos_mount_dir')
-        os.chmod(ANA_BASE+'/eos_mount_dir', 0444)
-    if os.listdir(ANA_BASE+'/eos_mount_dir') == []:
-        print 'Mounting EOS ... ',
-        subprocess.call(['/afs/cern.ch/project/eos/installation/cms/bin/eos.select', '-b', 'fuse', 'mount', 'eos_mount_dir'])
-        print 'Done.'
     if os.path.lexists(ANA_BASE+'/ntuple/Latest'):
         if os.path.islink(ANA_BASE+'/ntuple/Latest'):
             print 'Removing soft-link directory (used by previous version): '+ANA_BASE+'/ntuple/Latest'
@@ -133,7 +129,8 @@ for directory in os.listdir(DIR):
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
                     if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
-                        filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                        filename = "root://eoscms/"+filename
+                        #filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
             # Signals
             elif re.compile('.*T[1-9][t,b,c,q][t,b,c,q].*').match(directory):
@@ -143,17 +140,23 @@ for directory in os.listdir(DIR):
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
                     if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
-                        filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                        filename = "root://eoscms/"+filename
+                        #filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
             # Backgrounds
             else:
                 txtname = directory
-                if txtname.endswith('_2'): txtname = txtname[:-2]
+                if txtname.endswith('_2'):      txtname = txtname[:-2]
+                if txtname.endswith('_ext1'):   txtname = txtname[:-5]
+                if txtname.endswith('_ext2'):   txtname = txtname[:-5]
+                if txtname.endswith('_ext3'):   txtname = txtname[:-5]
+                if txtname.endswith('_backup'): txtname = txtname[:-7]
                 flist = open(ANA_BASE+'/filelists/backgrounds/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
                     if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
-                        filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                        filename = "root://eoscms/"+filename
+                        #filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
                     print>>flist, filename
 
 print "Creating temp file list directories (for batch and split jobs) ... ",

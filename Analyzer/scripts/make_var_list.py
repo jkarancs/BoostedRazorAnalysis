@@ -1,7 +1,8 @@
 import ROOT
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_20/src/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
-File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_24_patch1/src/B2GTTreeNtupleExtra_MC_80X.root")
+#File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_24_patch1/src/B2GTTreeNtupleExtra_MC_80X.root")
+File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X.root")
 tree = File.Get("B2GTTreeMaker/B2GTree")
 
 def printvars( tree, name, prefix_list ):

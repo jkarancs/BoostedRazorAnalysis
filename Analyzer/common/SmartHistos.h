@@ -198,8 +198,12 @@ public:
     months_ = opt.find("Months")!=std::string::npos;
     weeks_ = opt.find("Weeks")!=std::string::npos;
     dates_ = opt.find("Dates")!=std::string::npos;
+    twocol_ = opt.find("TwoCol")!=std::string::npos;
+    addint_ = opt.find("AddInt")!=std::string::npos;
     n_nostack_ = 0;
-    if (stack_) { std::stringstream ss; ss<<opt.substr(opt.find("Stack")+5,1); ss>>n_nostack_; }
+    if (stack_)    { std::stringstream ss; ss<<opt.substr(opt.find("Stack")   +5,1); ss>>n_nostack_; }
+    if (twocol_)   { std::stringstream ss; ss<<opt.substr(opt.find("TwoCol")  +6,2); ss>>twocol_; }
+    if (approval_) { std::stringstream ss; ss<<opt.substr(opt.find("Approval")+8,2); ss>>approval_; }
     ranges_=ranges;
     bin_labels_=bin_labels;
     if (npf_>5) std::cout<<"!!! ERROR: SmartHisto::constructor: Fixme! - More than 5 postfixes, only use max 4, or redefine functions!\n";
@@ -254,10 +258,13 @@ private:
   bool sumw2_;
   bool stack_; // Create Stacked plot
   bool ratio_; // Add ratio - For stacked: below plot, otherwise Draw ratio on top
-  bool approval_; // Add sqrt(s) and CMS Preliminary text
+  int approval_; // Add sqrt(s) and CMS (Preliminary/Work in progess) text
   bool months_; // Use X-axis Time format: dd/mm
   bool weeks_;  // Use X-axis Time format: ww
   bool dates_;  // Use X-axis Time format: Jan Feb Mar ....
+  int  twocol_;  // Split legend into two columns, number specify how to split,
+  //                eg. 57 = first 5 entries in the first colum, 7 in the second
+  bool addint_;  // Add plot integrals to a separate column in the legend
   size_t n_nostack_; // Do no stack first n plots
   bool plot_asymm_err_; // Decide automatically if histo should be plotted with asymmetric errors (Using TGraphAE)
   
@@ -339,29 +346,34 @@ private:
     else if (s==1) calc_mpv_1d_(h1d, h2d, savemother); // Fit landau + gaus, extract maximum
     else if (name_.find("DColEfficiency")!=std::string::npos) calc_dcol_1d_(h1d, h2d, savemother);
     else if (name_.find("Counts")!=std::string::npos) calc_syst_1d_(h1d, h2d, savemother);
+    else if (name_.find("SignalSignificance")!=std::string::npos) calc_soverb_1d_(h1d, h2d, savemother);
     else calc_eff_1d_(h1d, h2d, 1, savemother); // Efficiencies/Fractions/Rates
   }
   
   void calc_spec_2d_(TH2D* h2d, TH3D* h3d, bool savemother=0) {
-    for (int i=1, ni=h3d->GetNbinsX(); i<=ni; ++i) {
-      TH1D h1d_temp("h1d_temp","", h3d->GetNbinsY(), h3d->GetYaxis()->GetXmin(), h3d->GetYaxis()->GetXmax());
-      TH2D h2d_temp("h2d_temp","", h3d->GetNbinsY(), h3d->GetYaxis()->GetXmin(), h3d->GetYaxis()->GetXmax(), 
-		  h3d->GetNbinsZ(), h3d->GetZaxis()->GetXmin(), h3d->GetZaxis()->GetXmax());
-      double slice_entries = 0;
-      for (int j=1, nj=h3d->GetNbinsY(); j<=nj; ++j) for (int k=1, nk=h3d->GetNbinsZ(); k<=nk; ++k) {
-	slice_entries += h3d->GetBinContent(i, j, k);
-	h2d_temp.SetBinContent(j, k, h3d->GetBinContent(i, j, k));
-	h2d_temp.SetBinError  (j, k, h3d->GetBinError  (i, j, k));
+    // Only 2D S/B needs special treatment due to background bin (eg. MLSP vs MGluino)
+    if (name_.find("SignalSignificance")!=std::string::npos) calc_soverb_2d_(h2d, h3d);
+    else {
+      for (int i=1, ni=h3d->GetNbinsX(); i<=ni; ++i) {
+	TH1D h1d_temp("h1d_temp","", h3d->GetNbinsY(), h3d->GetYaxis()->GetXmin(), h3d->GetYaxis()->GetXmax());
+	TH2D h2d_temp("h2d_temp","", h3d->GetNbinsY(), h3d->GetYaxis()->GetXmin(), h3d->GetYaxis()->GetXmax(), 
+		      h3d->GetNbinsZ(), h3d->GetZaxis()->GetXmin(), h3d->GetZaxis()->GetXmax());
+	double slice_entries = 0;
+	for (int j=1, nj=h3d->GetNbinsY(); j<=nj; ++j) for (int k=1, nk=h3d->GetNbinsZ(); k<=nk; ++k) {
+	  slice_entries += h3d->GetBinContent(i, j, k);
+	  h2d_temp.SetBinContent(j, k, h3d->GetBinContent(i, j, k));
+	  h2d_temp.SetBinError  (j, k, h3d->GetBinError  (i, j, k));
+	}
+	h2d->SetEntries(slice_entries);
+	calc_spec_1d_(&h1d_temp, &h2d_temp, savemother);
+	for (int j=1, nj=h3d->GetNbinsY(); j<=nj; ++j) {
+	  h2d->SetBinContent(i, j, h1d_temp.GetBinContent(j));
+	  h2d->SetBinError  (i, j, h1d_temp.GetBinError  (j));
+	}
       }
-      h2d->SetEntries(slice_entries);
-      calc_spec_1d_(&h1d_temp, &h2d_temp, savemother);
-      for (int j=1, nj=h3d->GetNbinsY(); j<=nj; ++j) {
-	h2d->SetBinContent(i, j, h1d_temp.GetBinContent(j));
-	h2d->SetBinError  (i, j, h1d_temp.GetBinError  (j));
-      }
+      h2d->SetEntries(h3d->GetEntries());
+      if (savemother) mother_3d_[h2d]=h3d;
     }
-    h2d->SetEntries(h3d->GetEntries());
-    if (savemother) mother_3d_[h2d]=h3d;
   }
   //void calc_spec_2d_(TH2D* h2d, TH3D* h3d) {
   //  if (find_spec2_(name_)==0) calc_eff_2d_(h2d, h3d); // Average (Use 3DProfile)
@@ -397,7 +409,7 @@ private:
     }
     h1d->SetEntries(h2d->GetEntries());
     if (savemother) mother_2d_[h1d]=h2d;
-    if (h2d->GetNbinsY()==2&&h2d->GetYaxis()->GetBinCenter(1)==0&&h2d->GetYaxis()->GetBinCenter(2)==1) plot_asymm_err_=1;
+    //if (h2d->GetNbinsY()==2&&h2d->GetYaxis()->GetBinCenter(1)==0&&h2d->GetYaxis()->GetBinCenter(2)==1) plot_asymm_err_=1;
   }
   
   //void calc_eff_2d_(TH2D* h2d, TH3D* h3d) {
@@ -535,6 +547,29 @@ private:
     }
     h1d->SetEntries(h2d->GetEntries());
     if (savemother) mother_2d_[h1d]=h2d;
+  }
+  // ******************* Signal Significance  *******************
+  void calc_soverb_1d_(TH1D* h1d, TH2D* h2d, bool savemother=0) {
+    for (int binx=1; binx<=h2d->GetNbinsX(); ++binx) {
+      double bkg = h2d->GetBinContent(binx, 1);
+      double sig = h2d->GetBinContent(binx, 2);
+      double soverb = sig+bkg>0 ? sig / std::sqrt(sig+bkg) : 0; 
+      h1d->SetBinContent(binx, soverb);
+    }
+    h1d->SetEntries(h2d->GetEntries());
+    if (savemother) mother_2d_[h1d]=h2d;
+  }
+  void calc_soverb_2d_(TH2D* h2d, TH3D* h3d, bool savemother=0) {
+    double bkg_underflow = h3d->GetBinContent(0, 0, 1); // MLSP/MGluino/MStop goes to underflow bin
+    for (int binx=1; binx<=h3d->GetNbinsX(); ++binx) for (int biny=1; biny<=h3d->GetNbinsY(); ++biny) {
+      double bkg = h3d->GetBinContent(binx, biny, 1);
+      double sig = h3d->GetBinContent(binx, biny, 2);
+      if (bkg_underflow>0) bkg = bkg_underflow;
+      double soverb = sig+bkg>0 ? sig / std::sqrt(sig+bkg) : 0; 
+      h2d->SetBinContent(binx, biny, soverb);
+    }
+    h2d->SetEntries(h3d->GetEntries());
+    if (savemother) mother_3d_[h2d]=h3d;
   }
   
   //TF1* get_eff_vs_dcol_func_(TH1* h) {
@@ -1162,9 +1197,11 @@ public:
   // Fill Histograms using the std::function<double()>
   void Fill(const bool debug = 0) {
     if (debug) {
-    //if (debug&&name_=="HitEfficiency_vs_InstLumi") {
-      std::cout<<name_;
-      std::cout<<" pass_cuts: "<<pass_cuts_();
+    //if (name_=="HitEfficiency_vs_InstLumi") {
+    //if (name_=="HitEfficiency_vs_LayersDisks"&&npf_==0) {
+      std::cout<<name_<<" ";
+      for (size_t i=0, n=pf_names_.size(); i<n; ++i) std::cout<<pf_names_[i]<<" ";
+      std::cout<<" - pass_cuts: "<<pass_cuts_();
       if (npf_) {
 	std::cout<<" pfs: "<<pfs_[0].sel();
 	if (npf_>1) std::cout<<", "<<pfs_[1].sel();
@@ -1302,22 +1339,22 @@ private:
         	       int histosize_x = 500, int histosize_y = 500,
         	       int mar_left = 90, int mar_right = 20, int mar_top = 20, int mar_bottom = 60,
 		       int title_align = 33, float title_x = 0.99, float title_y = 0.99) {
-    if (std::string(h->GetTitle()).size()>0) mar_top += 25;
-    int titlefontsize = 32;
-    int labelfontsize = 20;
-    int yoffset_x = mar_left - titlefontsize - 4;
-    int xoffset_y = mar_bottom - titlefontsize - 4;
-    int zoffset_x = mar_right - titlefontsize - 4;
-    int padsize_x = histosize_x + mar_left + mar_right;
-    int padsize_y = histosize_y + mar_top + mar_bottom;
-    int padsize = ((padsize_x<=padsize_y) ? padsize_x : padsize_y);
-    float padratio_yx = (float)padsize_y/padsize_x > 1 ? 1 : (float)padsize_y/padsize_x;
-    float padratio_xy = (float)padsize_x/padsize_y > 1 ? 1 : (float)padsize_x/padsize_y;
-    Float_t xoffset = ((Float_t)xoffset_y/titlefontsize+0.5) * padratio_xy /1.6;
-    Float_t yoffset = ((Float_t)yoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
-    Float_t zoffset = ((Float_t)zoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
-    Float_t titlesize = (Float_t)titlefontsize/padsize;
-    Float_t labelsize = (Float_t)labelfontsize/padsize;
+    if (std::string(h->GetTitle()).size()>0||approval_) mar_top += 25;
+    float titlefontsize = 32;
+    float labelfontsize = 20;
+    float yoffset_x = mar_left - titlefontsize - 4;
+    float xoffset_y = mar_bottom - titlefontsize - 4;
+    float zoffset_x = mar_right - titlefontsize - 4;
+    float padsize_x = histosize_x + mar_left + mar_right;
+    float padsize_y = histosize_y + mar_top + mar_bottom;
+    float padsize = std::min(padsize_x, padsize_y);
+    float padratio_yx = padsize_y/padsize_x > 1 ? 1 : padsize_y/padsize_x;
+    float padratio_xy = padsize_x/padsize_y > 1 ? 1 : padsize_x/padsize_y;
+    float xoffset = (xoffset_y/titlefontsize+0.5) * padratio_xy /1.6;
+    float yoffset = (yoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
+    float zoffset = (zoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
+    float titlesize = titlefontsize/padsize;
+    float labelsize = labelfontsize/padsize;
     if (std::string(h->GetTitle()).size()) {
       gStyle->SetOptTitle(1);
       gStyle->SetTitleH(titlefontsize/padsize);
@@ -1336,19 +1373,19 @@ private:
     h->GetZaxis()->SetTitleOffset(zoffset);
     h->GetYaxis()->SetDecimals(1);
     h->GetZaxis()->SetDecimals(1);
-    //gStyle->SetPadLeftMargin((Float_t)mar_left/padsize_x);
-    //gStyle->SetPadRightMargin((Float_t)mar_right/padsize_x);
-    //gStyle->SetPadTopMargin((Float_t)mar_top/padsize_y);
-    //gStyle->SetPadBottomMargin((Float_t)mar_bottom/padsize_y);
+    //gStyle->SetPadLeftMargin(mar_left/padsize_x);
+    //gStyle->SetPadRightMargin(mar_right/padsize_x);
+    //gStyle->SetPadTopMargin(mar_top/padsize_y);
+    //gStyle->SetPadBottomMargin(mar_bottom/padsize_y);
     gStyle->SetOptTitle(1);
     gStyle->SetTitleH(titlefontsize/padsize);
     gStyle->SetTitleFontSize(titlesize);
     TCanvas* canvas = new TCanvas(canname.c_str(), h->GetTitle(), padsize_x + 4, padsize_y + 26);
     TVirtualPad* pad = canvas->cd(1);
-    pad->SetLeftMargin((Float_t)mar_left/padsize_x);
-    pad->SetRightMargin((Float_t)mar_right/padsize_x);
-    pad->SetTopMargin((Float_t)mar_top/padsize_y);
-    pad->SetBottomMargin((Float_t)mar_bottom/padsize_y);
+    pad->SetLeftMargin((float)mar_left/padsize_x);
+    pad->SetRightMargin((float)mar_right/padsize_x);
+    pad->SetTopMargin((float)mar_top/padsize_y);
+    pad->SetBottomMargin((float)mar_bottom/padsize_y);
     canvas->SetGrid(gx,gy);
     if (logx_) canvas->SetLogx(1);
     if (log_) canvas->SetLogy(1);
@@ -1359,7 +1396,7 @@ private:
 		       int histosize_x = 500, int histosize_y = 500,
 		       int mar_left = 80, int mar_right = 120, int mar_top = 20, int mar_bottom = 60,
 		       int title_align = 33, float title_x = 0.99, float title_y = 0.99) {
-    if (std::string(h->GetTitle()).size()>0) mar_top += 25;
+    if (std::string(h->GetTitle()).size()>0||approval_) mar_top += 25;
     int titlefontsize = 32;
     int labelfontsize = 20;
     int pal_offset_x = 5;
@@ -1370,13 +1407,13 @@ private:
     int padsize_x = histosize_x + mar_left + mar_right;
     int padsize_y = histosize_y + mar_top + mar_bottom;
     int padsize = ((padsize_x<=padsize_y) ? padsize_x : padsize_y);
-    float padratio_yx = (Float_t)padsize_y/padsize_x > 1 ? 1 : (Float_t)padsize_y/padsize_x;
-    float padratio_xy = (Float_t)padsize_x/padsize_y > 1 ? 1 : (Float_t)padsize_x/padsize_y;
-    Float_t xoffset = ((Float_t)xoffset_y/titlefontsize+0.5) * padratio_xy /1.6;
-    Float_t yoffset = ((Float_t)yoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
-    Float_t zoffset = ((Float_t)zoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
-    Float_t titlesize = (Float_t)titlefontsize/padsize;
-    Float_t labelsize = (Float_t)labelfontsize/padsize;
+    float padratio_yx = (float)padsize_y/padsize_x > 1 ? 1 : (float)padsize_y/padsize_x;
+    float padratio_xy = (float)padsize_x/padsize_y > 1 ? 1 : (float)padsize_x/padsize_y;
+    float xoffset = ((float)xoffset_y/titlefontsize+0.5) * padratio_xy /1.6;
+    float yoffset = ((float)yoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
+    float zoffset = ((float)zoffset_x/titlefontsize+0.5) * padratio_yx /1.6;
+    float titlesize = (float)titlefontsize/padsize;
+    float labelsize = (float)labelfontsize/padsize;
     h->SetTitleFont(42,"xyz");
     h->SetLabelFont(42,"xyz");
     h->SetTitleSize(titlesize,"xyz");
@@ -1397,19 +1434,19 @@ private:
       gStyle->SetTitleX(title_x);
       gStyle->SetTitleY(title_y);
     }
-    //gStyle->SetPadLeftMargin((Float_t)mar_left/padsize_x);
-    //gStyle->SetPadRightMargin((Float_t)mar_right/padsize_x);
-    //gStyle->SetPadTopMargin((Float_t)mar_top/padsize_y);
-    //gStyle->SetPadBottomMargin((Float_t)mar_bottom/padsize_y);
+    //gStyle->SetPadLeftMargin((float)mar_left/padsize_x);
+    //gStyle->SetPadRightMargin((float)mar_right/padsize_x);
+    //gStyle->SetPadTopMargin((float)mar_top/padsize_y);
+    //gStyle->SetPadBottomMargin((float)mar_bottom/padsize_y);
     gStyle->SetOptTitle(1);
     gStyle->SetTitleH(titlefontsize/padsize);
     gStyle->SetTitleFontSize(titlesize);
     TCanvas* canvas = new TCanvas(canname.c_str(), h->GetTitle(), padsize_x + 4, padsize_y + 26);
     TVirtualPad* pad = canvas->cd(1);
-    pad->SetLeftMargin((Float_t)mar_left/padsize_x);
-    pad->SetRightMargin((Float_t)mar_right/padsize_x);
-    pad->SetTopMargin((Float_t)mar_top/padsize_y);
-    pad->SetBottomMargin((Float_t)mar_bottom/padsize_y);
+    pad->SetLeftMargin((float)mar_left/padsize_x);
+    pad->SetRightMargin((float)mar_right/padsize_x);
+    pad->SetTopMargin((float)mar_top/padsize_y);
+    pad->SetBottomMargin((float)mar_bottom/padsize_y);
     canvas->SetGrid(gx,gy);
     if (norm_&&h->Integral()>0) h = (TH2D*)h->DrawNormalized(draw_.c_str());
     else h->Draw(draw_.c_str());
@@ -1417,10 +1454,10 @@ private:
       gPad->Update();
       TPaletteAxis* palette = (TPaletteAxis*)h->GetListOfFunctions()->FindObject("palette");
       if (palette) {
-	palette->SetX1NDC(1 - (Float_t)(mar_right - pal_offset_x)/padsize_x);
-	palette->SetX2NDC(1 - (Float_t)(mar_right - pal_offset_x - pal_width_x)/padsize_x);
-	palette->SetY1NDC((Float_t)mar_bottom/padsize_y);
-	palette->SetY2NDC(1 - (Float_t)mar_top/padsize_y);
+	palette->SetX1NDC(1 - (float)(mar_right - pal_offset_x)/padsize_x);
+	palette->SetX2NDC(1 - (float)(mar_right - pal_offset_x - pal_width_x)/padsize_x);
+	palette->SetY1NDC((float)mar_bottom/padsize_y);
+	palette->SetY2NDC(1 - (float)mar_top/padsize_y);
       }
     }
     gStyle->SetOptTitle(0);
@@ -1429,41 +1466,65 @@ private:
     return canvas;
   }
 
-  void add_labels_(TCanvas* c, bool approval=1) {
+  void add_labels_(TCanvas* c) {
     double xmin = ((TFrame*)c->GetListOfPrimitives()->At(0))->GetX1();
     double xmax = ((TFrame*)c->GetListOfPrimitives()->At(0))->GetX2();
     double ymin = ((TFrame*)c->GetListOfPrimitives()->At(0))->GetY1();
     double ymax = ((TFrame*)c->GetListOfPrimitives()->At(0))->GetY2();
-    era_and_prelim_lat_(xmin, xmax, ymin, ymax, approval);
+    era_and_prelim_lat_(xmin, xmax, ymin, ymax);
   }
-  void add_labels_(TH1D* h, bool approval=1) {
+  void add_labels_(TH1D* h) {
     double xmin = h->GetXaxis()->GetBinLowEdge(h->GetXaxis()->GetFirst());
     double xmax = h->GetXaxis()->GetBinUpEdge(h->GetXaxis()->GetLast());
     double ymin = h->GetMinimum();
     double ymax = h->GetMaximum();
-    era_and_prelim_lat_(xmin, xmax, ymin, ymax, approval);
+    era_and_prelim_lat_(xmin, xmax, ymin, ymax);
   }
-  void add_labels_(TH2D* h, bool approval=1) {
+  void add_labels_(TH2D* h) {
     double xmin = h->GetXaxis()->GetBinLowEdge(h->GetXaxis()->GetFirst());
     double xmax = h->GetXaxis()->GetBinUpEdge(h->GetXaxis()->GetLast());
     double ymin = h->GetYaxis()->GetBinLowEdge(h->GetYaxis()->GetFirst());
     double ymax = h->GetYaxis()->GetBinUpEdge(h->GetYaxis()->GetLast());
-    era_and_prelim_lat_(xmin, xmax, ymin, ymax, approval);
+    era_and_prelim_lat_(xmin, xmax, ymin, ymax);
   }
-  void era_and_prelim_lat_(double xmin, double xmax, double ymin, double ymax, bool approval, bool in=0) {
-    //std::string era = "#sqrt{s}=13 TeV (25ns)";
-    //TLatex* era_lat = new TLatex(xmax, ymax+(ymax-ymin)/25.0, era.c_str());
-    //era_lat->SetTextAlign(32);
-    //era_lat->SetTextSize(0.04);
-    //era_lat->SetTextFont(42);
-    //era_lat->SetLineWidth(2);
-    //era_lat->Draw();
-    if (approval) {
+  void era_and_prelim_lat_(double xmin, double xmax, double ymin, double ymax, bool in=0) {
+    int app = approval_/10;
+    if (app) {
       // Latex example: #font[22]{Times bold} and #font[12]{Times Italic}
-      std::string prelim = "CMS #scale[0.8]{#font[52]{Preliminary 2015}}";
-      TLatex* cms_lat = new TLatex(in ? xmin+(xmax-xmin)/20.0 : xmin, in ? ymax-(ymax-ymin)/10.0 : ymax+(ymax-ymin)/40.0, prelim.c_str()); 
-      cms_lat->SetLineWidth(2); 
+      std::string text = "";
+      if (app==1) text = "CMS #scale[0.7]{#font[52]{Work in progress}}";
+      if (app==2) text = "CMS #scale[0.7]{#font[52]{Preliminary}}";
+      if (app==3) text = "CMS";
+      if (app==4) text = "#scale[0.8]{CMS Simulation }#scale[0.6]{#font[52]{Work in progress}}";
+      if (app==5) text = "#scale[0.8]{CMS Simulation }#scale[0.6]{#font[52]{Preliminary}}";
+      if (app==6) text = "CMS Simulation";
+      if (app==7) text = "CMS #scale[0.7]{#font[52]{Work in progress 2016}}";
+      if (app==8) text = "CMS #scale[0.7]{#font[52]{Preliminary 2016}}";
+      double x = in ? xmin+(xmax-xmin)/20.0 : xmin;
+      double y = in ? ymax-(ymax-ymin)/10.0 : ymax+(ymax-ymin)/40.0;
+      if (log_&&ymin>0) y = in ? std::exp(std::log(ymax)-(std::log(ymax)-std::log(ymin))/10.0) : 
+	std::exp(std::log(ymax)+(std::log(ymax)-std::log(ymin))/40);
+      TLatex* cms_lat = new TLatex(x, y, text.c_str()); 
+      cms_lat->SetLineWidth(2);
       cms_lat->Draw();
+    }
+    int era = approval_%10;
+    if (era) {
+      std::string text = "";
+      if (era==1) text = "#sqrt{s}=7 TeV";
+      if (era==2) text = "#sqrt{s}=8 TeV";
+      if (era==3) text = "#sqrt{s}=13 TeV";
+      if (era==4) text = "Run 2, #sqrt{s}=13 TeV";
+      if (era==5) text = "#scale[0.7]{35.9 fb^{-1} (13 TeV)}";
+      if (era==6) text = "#scale[0.65]{W ana, 35.9 fb^{-1} (13 TeV)}";
+      if (era==7) text = "#scale[0.65]{Top ana, 35.9 fb^{-1} (13 TeV)}";
+      double y = log_&&ymin>0 ? std::exp(std::log(ymax)+(std::log(ymax)-std::log(ymin))/25.0) : ymax+(ymax-ymin)/25.0;
+      TLatex* era_lat = new TLatex(xmax, y, text.c_str());
+      era_lat->SetTextAlign(32);
+      era_lat->SetTextSize(0.04);
+      era_lat->SetTextFont(42);
+      era_lat->SetLineWidth(2);
+      era_lat->Draw();
     }
   }
   
@@ -1501,38 +1562,47 @@ private:
       stats->SetY2NDC(0.9-i*0.11);
     }
   }
+
+  void add_integ_(std::vector<TLegendEntry*>& legentries, TH1D* h) {
+    if (addint_) {
+      char integ[100]; sprintf(integ, "#font[82]{%7.1f}", h->Integral());
+      legentries.push_back(new TLegendEntry((TObject*)0, integ, ""));
+    }
+  }
   
   void multidraw_with_legend_(size_t skip, std::vector<TH1D*>& hvec, std::vector<std::string> pf, std::string colz,
 			      std::string legtitle="", float x1=0.15, float y2=0.9) {
     // Draw multiple histograms, set their marker/line color/style
     // Then Draw legend for all histo with titles from a postfix
     std::vector<int> col = string_to_vector_(colz);
-    std::vector<Int_t> marker = { 20, 21, 22, 23, 29 }; //full circle, square, tri-up, tri-down, star
-    int nleg = 0;
+    // full  : circle, square, tri-up, tri-down, star
+    // hollow: circle, square, tri-up, diam, star
+    std::vector<Int_t> marker = { 20, 21, 22, 23, 29, 24, 25, 26, 27, 30}; 
+    size_t nrow = 0, ncol = (1+(twocol_>0))*(1+addint_);
     // Set styles for histos
     for (size_t i=skip; i<hvec.size(); i++) if (hvec[i]->GetEntries()>0) {
       if (!stack_) {
 	if (draw_.find("P")!=std::string::npos) {
 	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]); 
 	  hvec[i]->SetMarkerColor((Color_t)col[i-(keep_color_?skip:0)]); 
-	  hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%5]); 
+	  hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%10]); 
 	} else {
 	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  hvec[i]->SetLineWidth(2);
 	}
       }
       if (stat_) hvec[i]->SetStats(1);
-      ++nleg;
+      ++nrow;
     }
-    if (legtitle.size()>0) ++nleg;
-    float x2 = x1 + 0.2;
-    float y1 = y2 - nleg * 0.05;
-    TLegend *leg = new TLegend(x1,y1,x2,y2,legtitle.c_str());
+    if (twocol_) nrow = std::max(twocol_/10, twocol_%10);
+    if (legtitle.size()>0) ++nrow;
+    std::vector<TLegendEntry*> legentries;
     std::string same = (stat_ ? "SAMES" : "SAME") + draw_;
     std::vector<TH1D*> vh;
     std::vector<std::string> vlegtext;
     std::vector<TGraphAsymmErrors*> graphs;
     bool draw_axis=1;
+    size_t n_nonstack_drawn = 0;
     for (size_t i=skip; i<hvec.size() ; ++i) if (hvec[i]->GetEntries()>0) {
       std::stringstream colored_text;
       colored_text<<"#color["<<(Color_t)col[i-(keep_color_?skip:0)]<<"]{"<<pf[i]<<"}";
@@ -1544,17 +1614,20 @@ private:
 	    hvec[i]->SetFillColor(0);
 	    //hvec[i]->SetLineColor(0);
 	    hvec[i]->SetMarkerColor((Color_t)col[i-(keep_color_?skip:0)]); 
-	    hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%5]); 
+	    hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%10]); 
 	    hvec[i]->Draw("PE1");
-	    leg->AddEntry(hvec[i], colored_text.str().c_str(), "P");
+	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), "P"));
+	    n_nonstack_drawn++;
 	  } else {
 	    // Signal
 	    hvec[i]->SetLineStyle(2);
 	    hvec[i]->SetLineWidth(2);
 	    hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	    if (skip!=0&&i==skip) hvec[i]->Draw("HIST");
-	    leg->AddEntry(hvec[i], colored_text.str().c_str(), "L");
+	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), "L"));
+	    n_nonstack_drawn++;
 	  }
+	  add_integ_(legentries,hvec[i]);
 	} else {
 	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  hvec[i]->SetFillColor((Color_t)col[i-(keep_color_?skip:0)]);
@@ -1565,7 +1638,8 @@ private:
 	// Draw ordinary histos and legend
 	if (norm_&&hvec[i]->Integral()>0) {
 	  hvec[i]->DrawNormalized((i==skip) ? draw_.c_str() : same.c_str());
-	  leg->AddEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L");
+	  legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
+	  add_integ_(legentries, hvec[i]);
 	} else if (plot_asymm_err_) {
 	  hvec[i]->SetLineWidth(2);
 	  //if (name_=="HitEfficiency_vs_BiasVoltage") std::cout<<hvec[i]->GetName()<<std::endl;
@@ -1575,7 +1649,8 @@ private:
 	      tgae->Draw("AP");
 	      draw_axis=0;
 	    } else tgae->Draw("SAMEP");
-	    leg->AddEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L");
+	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
+	    add_integ_(legentries, hvec[i]);
 	  }
 	  //tgae->Draw((i==skip) ? "AP" : "SAMEP");
 	  if (i==skip) asym_labels_(hvec[i], tgae, 0);
@@ -1586,11 +1661,13 @@ private:
 	    ratio->SetMarkerStyle(22);
 	    ratio->SetLineColor(417);
 	    ratio->Draw("SAMEP");
-	    leg->AddEntry(ratio, "#color[417]{Ratio}", "P");
+	    legentries.push_back(new TLegendEntry(ratio, "#color[417]{Ratio}", "P"));
+	    if (addint_) legentries.push_back(new TLegendEntry((TObject*)0, "", ""));
 	  }
 	} else {
 	  hvec[i]->Draw((i==skip) ? draw_.c_str() : same.c_str());
-	  leg->AddEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L");
+	  legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
+	  add_integ_(legentries, hvec[i]);
 	}
       }
       if (stat_) set_stat_(hvec[i], (Color_t)col[i-(keep_color_?skip:0)], i-skip);
@@ -1611,7 +1688,8 @@ private:
           }
           if (imax==(size_t)-1) imax = 0;
           vh_max.push_back(vh[imax]);
-          leg->AddEntry(vh[imax], vlegtext[imax].c_str(), "F");
+          legentries.push_back(new TLegendEntry(vh[imax], vlegtext[imax].c_str(), "F"));
+	  add_integ_(legentries, vh[imax]);
           vh.erase(vh.begin()+imax);
           vlegtext.erase(vlegtext.begin()+imax);
         }
@@ -1619,7 +1697,8 @@ private:
 	// or keep original order
 	for (int i=0, n=vh.size(); i<n; ++i) {
 	  vh_max.push_back(vh[i]);
-	  leg->AddEntry(vh[i], vlegtext[i].c_str(), "F");
+	  legentries.push_back(new TLegendEntry(vh[i], vlegtext[i].c_str(), "F"));
+	  add_integ_(legentries, vh[i]);
 	}
       }
       for (int i=(int)vh_max.size()-1; i>=0; --i) s->Add(vh_max[i]);
@@ -1644,20 +1723,64 @@ private:
       ratio->SetLineColor(417);
       den_err->Draw("SAME E2");
       ratio->Draw(same.c_str());
-      leg->AddEntry(ratio, "#color[417]{Ratio}", "P");
+      legentries.push_back(new TLegendEntry(ratio, "#color[417]{Ratio}", "P"));
+      if (addint_) legentries.push_back(new TLegendEntry((TObject*)0, "", ""));
     }
+    // Legend
+    float textsize = ratio_ ? 0.028 : 0.04;
+    float x2 = x1 + 0.2 * (1+(twocol_>0))*(1+addint_*0.3);
+    float y1 = y2 - nrow * (textsize*1.2); // 0.1 + textsize + 0.1 (fEntrySeparation = 0.1)
+    TLegend *leg = new TLegend(x1,y1,x2,y2,legtitle.c_str());
     leg->SetFillColor(0);
     leg->SetFillStyle(0);
     leg->SetBorderSize(0);
-    leg->SetTextSize(0.04);
+    leg->SetTextSize(textsize);
+    leg->SetNColumns(ncol);
+    // Reorganize legend entries into two columns before drawing
+    if (twocol_) {
+      size_t nrow1 = twocol_/10, nrow2 = twocol_%10;
+      if (n_nonstack_drawn>0) nrow1 = std::min(n_nonstack_drawn, nrow1);
+      for (size_t irow=0, n = std::max(nrow1,nrow2); irow<n; ++irow) {
+	// add left column(s) first
+	size_t i = irow * (1+addint_);
+	if (i+addint_<legentries.size() && irow<nrow1) {
+	  leg->AddEntry(legentries[i]->GetObject(), legentries[i]->GetLabel(), legentries[i]->GetOption());
+	  if (addint_) leg->AddEntry(legentries[i+1]->GetObject(), legentries[i+1]->GetLabel(), legentries[i+1]->GetOption());
+	} else {
+	  leg->AddEntry((TObject*)0,"","");
+	  if (addint_) leg->AddEntry((TObject*)0,"","");
+	}
+	// then right column(s)
+	i = (nrow1 + irow) * (1+addint_);
+	if (i+addint_<legentries.size() && irow<nrow2) {
+	  leg->AddEntry(legentries[i]->GetObject(), legentries[i]->GetLabel(), legentries[i]->GetOption());
+	  if (addint_) leg->AddEntry(legentries[i+1]->GetObject(), legentries[i+1]->GetLabel(), legentries[i+1]->GetOption());
+	} else {
+	  leg->AddEntry((TObject*)0,"","");
+	  if (addint_) leg->AddEntry((TObject*)0,"","");
+	}
+      }
+    } else for (auto e : legentries) leg->AddEntry(e->GetObject(), e->GetLabel(), e->GetOption());
     leg->Draw("SAME");
   }
   
-  void add_stack_ratio_plot_(TCanvas*& c, bool remove=false) {
+  void add_stack_ratio_plot_(TCanvas*& c, double xmin, double xmax , bool remove=false) {
     // Canvas division sizes
-    int y1 = 350;
-    int y2 = 150;
-    int mid2 = 10;
+    float mar_top    = 45;
+    float y1         = 365;
+    float mid2       = 10;
+    float y2         = 115;
+    float mar_bottom = 60;
+    float mar_left   = 90;
+    float x          = 500;
+    float mar_right  = 20;
+    float x_can    = mar_left+x+mar_right;
+    float y_can    = mar_top+y1+mid2*2+y2+mar_bottom;
+    float padsize1 = std::min(mar_top+y1+mid2,    x_can);
+    float padsize2 = std::min(mar_bottom+y2+mid2, x_can);
+    float labelfontsize = 20;
+    float titlefontsize = 32;
+    float leg_y2 = 0.9; // not used values, read from orig
     if (c->GetListOfPrimitives()->GetEntries()>2) {
       // Histos
       TH1D* Data = (TH1D*)c->GetListOfPrimitives()->At(0);
@@ -1692,8 +1815,10 @@ private:
         // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
         for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
           std::string prim_name = c->GetListOfPrimitives()->At(i)->GetName();
-          if (prim_name=="TPave") leg = (TLegend*)c->GetListOfPrimitives()->At(i);
-          else if (!remove&&prim_name!=Data->GetName())
+          if (prim_name=="TPave") {
+	    leg = (TLegend*)c->GetListOfPrimitives()->At(i);
+	    leg_y2 = leg->GetY2();
+          } else if (!remove&&prim_name!=Data->GetName())
             rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
         }
         if (remove) {
@@ -1705,27 +1830,33 @@ private:
           }
         }
         // Styles
-        Data->SetLabelSize(20.0/(y1+40),"xyz");
-        ratio->SetTitleSize(32.0/(y2+60+mid2),"xyz");
-        ratio->SetLabelSize(20.0/(y2+60+mid2),"xyz");
+	float heightratio1 = padsize1/y_can;
+        Data ->SetTitleSize  (Data->GetYaxis()->GetTitleSize()  /heightratio1,"y");
+        Data ->SetTitleOffset(Data->GetYaxis()->GetTitleOffset()*heightratio1,"y");
+        Data ->SetLabelSize(labelfontsize/padsize1,"xyz");
+        ratio->SetLabelSize(labelfontsize/padsize2,"xyz");
+        ratio->SetTitleSize(titlefontsize/padsize2,"xyz");
         ratio->GetYaxis()->SetRangeUser(0,2);
         ratio->GetYaxis()->SetNdivisions(305);
-        ratio->GetYaxis()->SetTitle("Ratio");
-        ratio->GetYaxis()->SetTitleOffset(0.45);
-        ratio->SetTitleSize(24.0/(y2+60+mid2),"y");
+        ratio->GetYaxis()->SetTitle("Data/MC");
+	float heightratio2 = padsize2/y_can;
+        ratio->SetTitleOffset(ratio->GetYaxis()->GetTitleOffset()*heightratio2,"y");
         ratio->SetTitle("");
         ratio->SetMarkerStyle(20);
         ratio->SetMarkerColor(1);
         ratio->SetLineColor(1);
-        // Canvas
+        // New Canvas
+	float left_mar = c->GetLeftMargin(), right_mar = c->GetRightMargin();
         bool logScale = c->GetLogy();
-        c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), 604,626+(y1-500)+y2+mid2); // 600, 600
+        c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), x_can+4,y_can+26); // 600, 600
         c->Divide(1,2);
-        // Pad 1 (80+500+20 x 40+500)
+        // Pad 1 (x: 90+500+20 x y: 45+350+10)
         TVirtualPad* p = c->cd(1);
-        p->SetPad(0,(y2+60+mid2)/(y1+y2+100.0+mid2),1,1);
-        p->SetTopMargin(40.0/(y1+40));
+        p->SetPad(0,padsize2/y_can,1,1);
+        p->SetTopMargin(mar_top/(mar_top+y1+mid2));
         p->SetBottomMargin(0);
+	p->SetLeftMargin(left_mar);
+	p->SetRightMargin(right_mar);
         if (logScale) p->SetLogy(1);
         Data->Draw("PE1");
         MCstack->Draw("SAMEHIST");
@@ -1733,20 +1864,48 @@ private:
         Data->Draw("SAMEPE1");
         leg->Draw("SAME");
         gPad->Update();
-        // Pad 2 (80+500+20 x 200+60)
+        // Pad 2 (x: 90+500+20 x y: 60+150+10)
         p = c->cd(2);
         p->SetGrid(0,1);
-        p->SetPad(0,0,1,(y2+60+mid2)/(y1+y2+100.0+mid2));
-        p->SetTopMargin(((double)mid2)/(y2+60+mid2));
-        p->SetBottomMargin(60.0/(y2+60+mid2));
+        p->SetPad(0,0,1,padsize2/y_can);
+        p->SetTopMargin(mid2/padsize2);
+        p->SetBottomMargin(mar_bottom/padsize2);
+	p->SetLeftMargin(left_mar);
+	p->SetRightMargin(right_mar);
         ratio->Draw("PE1");
 	den_err->Draw("SAME E2");
-        TLine* l = new TLine(ratio->GetXaxis()->GetXmin(), 1, ratio->GetXaxis()->GetXmax(), 1);
-        l->SetLineWidth(2);
-        //l->SetLineColor(2);
-        l->SetLineStyle(2);
-        l->Draw();
+	if (xmin==xmax) {
+	  xmin = ratio->GetYaxis()->GetXmin();
+	  xmax = ratio->GetYaxis()->GetXmax();
+	}
+	TLine* l = new TLine(xmin, 1, xmax, 1);
+	l->SetLineWidth(2);
+	//l->SetLineColor(2);
+	l->SetLineStyle(2);
+	l->Draw();
       }
+    }
+    TPad* pad = (TPad*)c->GetListOfPrimitives()->At(0);
+    // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), cms, era, data, legend
+    int extra = 3;
+    if (approval_/10>0) extra++;
+    if (approval_%10>0) extra++;
+    if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+extra) { 
+      // Resize CMS label and era text
+      extra = 1;
+      if (approval_/10>0) {
+	TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
+	cms_lat->SetTextSize(cms_lat->GetTextSize()*(y1+y2)/y1);
+      }
+      if (approval_%10>0) {
+	TLatex* era_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
+	era_lat->SetTextSize(era_lat->GetTextSize()*(y1+y2)/y1);
+      }
+      // Resize Legend (Back to default)
+      TLegend* leg = (TLegend*)pad->GetListOfPrimitives()->At(n_nostack_+(extra+=2));
+      leg->SetTextSize(0.04);
+      leg->SetY1(leg_y2 - leg->GetNRows()*1.2*0.04);
+      leg->SetY2(1-(1-leg_y2)*1.25);
     }
   }
   
@@ -1907,7 +2066,8 @@ private:
   std::vector<DrawParams1D> get_dps_1stpf_1d_() {
     std::vector<DrawParams1D> dps;
     bool is_spec = (find_spec_(name_)!=(size_t)-1)||(find_spec2_(name_)!=(size_t)-1);
-    std::string appr = approval_ ? "_ForApproval" : "";
+    //std::string appr = approval_ ? "_ForApproval" : "";
+    std::string appr = "";
     if (ndim_==1||(ndim_==2&&is_spec)) {
       if (npf_==0) {
 	dps.push_back({ .hvec={h1d_0p_}, .canname=name_+appr, .legtitle="" });
@@ -1946,33 +2106,59 @@ private:
     return dps;
   }
   
-  typedef struct DrawParams2D { TH2D* h; std::string canname; } DrawParams2D;
+  typedef struct DrawParams2D { TH2D* h; std::string canname; std::string label; } DrawParams2D;
   std::vector<DrawParams2D> get_dps_2d_() {
     std::vector<DrawParams2D> dps;
     bool is_spec = (find_spec_(name_)!=(size_t)-1)||(find_spec2_(name_)!=(size_t)-1);
-    std::string appr = approval_ ? "_ForApproval" : "";
+    //std::string appr = approval_ ? "_ForApproval" : "";
+    std::string appr = "";
     if ((ndim_==2&&!is_spec)||(ndim_==3&&is_spec)) {
       if (npf_==0)
-	dps.push_back({ .h=h2d_0p_, .canname=name_+appr});
-      else if (npf_==1) for (size_t i=0; i<pfs_[0].vec.size(); ++i)
-	dps.push_back({ .h=h2d_1p_[i], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+appr });
-      else if (npf_==2) for (size_t i=0; i<pfs_[0].vec.size(); ++i) for (size_t j=0; j<pfs_[1].vec.size(); ++j)
-	dps.push_back({ .h=h2d_2p_[i][j], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+appr });
+	dps.push_back({ .h=h2d_0p_, .canname=name_+appr, .label="" });
+      else if (npf_==1) for (size_t i=0; i<pfs_[0].vec.size(); ++i) {
+	dps.push_back({ .h=h2d_1p_[i], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+appr, .label="" });
+	if (pfs_[0].leg[i].size()) dps[dps.size()-1].label = pfs_[0].leg[i];
+      }
+      else if (npf_==2) for (size_t i=0; i<pfs_[0].vec.size(); ++i) for (size_t j=0; j<pfs_[1].vec.size(); ++j) {
+	dps.push_back({ .h=h2d_2p_[i][j], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+appr, .label="" });
+	if (pfs_[0].leg[i].size()) dps[dps.size()-1].label = pfs_[0].leg[i];
+	if (pfs_[1].leg[j].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[1].leg[j]; }
+      }
       else if (npf_==3) for (size_t i=0; i<pfs_[0].vec.size(); ++i)
-	for (size_t j=0; j<pfs_[1].vec.size(); ++j) for (size_t k=0; k<pfs_[2].vec.size(); ++k)
-	  dps.push_back({ .h=h2d_3p_[i][j][k], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+"_"+pfs_[2].vec[k]+appr });
+	for (size_t j=0; j<pfs_[1].vec.size(); ++j) for (size_t k=0; k<pfs_[2].vec.size(); ++k) {
+	  dps.push_back({ .h=h2d_3p_[i][j][k], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+"_"+pfs_[2].vec[k]+appr, .label="" });
+	  if (pfs_[0].leg[i].size()) dps[dps.size()-1].label = pfs_[0].leg[i];
+	  if (pfs_[1].leg[j].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[1].leg[j]; }
+	  if (pfs_[2].leg[k].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[2].leg[k]; }
+	}
       else if (npf_==4) for (size_t i=0; i<pfs_[0].vec.size(); ++i) for (size_t j=0; j<pfs_[1].vec.size(); ++j)
-	for (size_t k=0; k<pfs_[2].vec.size(); ++k) for (size_t l=0; l<pfs_[3].vec.size(); ++l)
-	  dps.push_back({ .h=h2d_4p_[i][j][k][l], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+"_"+pfs_[2].vec[k]+"_"+pfs_[3].vec[l]+appr });
+	for (size_t k=0; k<pfs_[2].vec.size(); ++k) for (size_t l=0; l<pfs_[3].vec.size(); ++l) {
+	  dps.push_back({ .h=h2d_4p_[i][j][k][l], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+"_"+pfs_[2].vec[k]+"_"+pfs_[3].vec[l]+appr, .label="" });
+	  if (pfs_[0].leg[i].size()) dps[dps.size()-1].label = pfs_[0].leg[i];
+	  if (pfs_[1].leg[j].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[1].leg[j]; }
+	  if (pfs_[2].leg[k].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[2].leg[k]; }
+	  if (pfs_[3].leg[l].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[3].leg[l]; }
+	}
       else if (npf_==5) for (size_t i=0; i<pfs_[0].vec.size(); ++i) for (size_t j=0; j<pfs_[1].vec.size(); ++j)
-	for (size_t k=0; k<pfs_[2].vec.size(); ++k) for (size_t l=0; l<pfs_[3].vec.size(); ++l) for (size_t m=0; m<pfs_[4].vec.size(); ++m)
-	  dps.push_back({ .h=h2d_5p_[i][j][k][l][m], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+"_"+pfs_[2].vec[k]+"_"+pfs_[3].vec[l]+"_"+pfs_[4].vec[l]+appr });
+	for (size_t k=0; k<pfs_[2].vec.size(); ++k) for (size_t l=0; l<pfs_[3].vec.size(); ++l) for (size_t m=0; m<pfs_[4].vec.size(); ++m) {
+	  dps.push_back({ .h=h2d_5p_[i][j][k][l][m], .canname=name_+"_"+pf_names_[0]+"_"+pfs_[0].vec[i]+"_"+pfs_[1].vec[j]+"_"+pfs_[2].vec[k]+"_"+pfs_[3].vec[l]+"_"+pfs_[4].vec[l]+appr, .label="" });
+	  if (pfs_[0].leg[i].size()) dps[dps.size()-1].label = pfs_[0].leg[i];
+	  if (pfs_[1].leg[j].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[1].leg[j]; }
+	  if (pfs_[2].leg[k].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[2].leg[k]; }
+	  if (pfs_[3].leg[l].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[3].leg[l]; }
+	  if (pfs_[4].leg[m].size()) { if (dps[dps.size()-1].label.size()) dps[dps.size()-1].label+=", "; dps[dps.size()-1].label+=pfs_[4].leg[m]; }
+	}
     }
     return dps;
   }
   
 public:
-  void DrawPlots() {
+  void DrawPlots(bool debug=1) {
+    if (debug) {
+      std::cout<<name_<<" ";
+      for (size_t i=0, n=pf_names_.size(); i<n; ++i) std::cout<<pf_names_[i]<<" ";
+      std::cout<<"\n";
+    }
     calc_specials_();
     //gStyle->SetOptStat(stat_);
     // 1D plots
@@ -1997,10 +2183,10 @@ public:
 	    multidraw_with_legend_(skip, dps1d[i].hvec, pfs_[0].leg, pfs_[0].colz, dps1d[i].legtitle, ranges_[4], ranges_[5]);
 	  else multidraw_with_legend_(skip, dps1d[i].hvec, pfs_[0].leg, pfs_[0].colz, dps1d[i].legtitle);
 	} else draw_one_(dps1d[i].hvec[0]);
-	if (!norm_ && y_range_set) add_labels_(dps1d[i].hvec[skip], approval_);
+	if (!norm_ && y_range_set) add_labels_(dps1d[i].hvec[skip]);
 	write_(c);
 	if (stack_&&ratio_&&skip==0) {
-	  add_stack_ratio_plot_(c);
+	  add_stack_ratio_plot_(c,ranges_[0],ranges_[1]);
 	  write_(c);
 	}
       }
@@ -2013,10 +2199,20 @@ public:
 	  dps2d[i].h->GetXaxis()->SetRangeUser(ranges_[0],ranges_[1]);
 	if (ranges_.size()>=4) if (ranges_[2]!=ranges_[3]) 
 	  dps2d[i].h->GetYaxis()->SetRangeUser(ranges_[2],ranges_[3]);
-	if (ranges_.size()==6) if (ranges_[4]!=ranges_[5]) 
+	if (ranges_.size()>=6) if (ranges_[4]!=ranges_[5]) 
 	  dps2d[i].h->GetZaxis()->SetRangeUser(ranges_[4],ranges_[5]);
 	TCanvas *c = custom_can_(dps2d[i].h, dps2d[i].canname);
-	add_labels_(dps2d[i].h, approval_);
+	add_labels_(dps2d[i].h);
+	// Add more custom labels (similar to TLegend header)
+	if (ranges_.size()==8) {
+	  double x  = ranges_[0]+(ranges_[1]-ranges_[0])*ranges_[6];
+	  double y  = ranges_[2]+(ranges_[3]-ranges_[2])*ranges_[7];
+	  TLatex* lat = new TLatex(x, y, dps2d[i].label.c_str()); 
+	  lat->SetLineWidth(2);
+	  lat->SetTextSize(0.04);
+	  lat->SetTextFont(42);
+	  lat->Draw();
+	}
 	write_(c);
       }
     }
@@ -2080,7 +2276,10 @@ private:
   
   // FillParams container
   std::map<std::string, FillParams> hp_map_;
-    
+  
+  // Name of the objects
+  std::map<std::string, std::string> objects_;
+  
   FillParams get_hp_(std::string name) {
     // Check if name has a special pre/suffix (Avg/MPV etc)
     // and remove them
@@ -2170,7 +2369,7 @@ public:
   
   void SetHistoWeights(std::vector<std::function<double()> > weights) { weights_ = weights; }
   
-  void AddHistoType(std::string type) { sh_[type] = std::vector<SmartHisto*>(); }
+  void AddHistoType(std::string type, std::string objects) { sh_[type] = std::vector<SmartHisto*>(); objects_[type] = objects; }
   
   typedef struct HistoParams    { std::string fill; std::vector<std::string> pfs; std::vector<std::string> cuts; std::string draw; std::string opt; std::vector<double> ranges; } HistoParams;
   typedef struct HistoParamsNew { std::string fill; std::vector<std::string> pfs; std::vector<std::string> cuts; std::string draw; std::string opt; std::vector<double> ranges={}; } HistoParamsNew;
@@ -2203,6 +2402,7 @@ public:
 	}
 	if (debug) std::cout<<axis_titles<<std::endl;
 	if (debug) std::cout<<spec_axis_titles<<std::endl;
+	bool isSpecial = 0;
         for (size_t i=hp_vec.second.size(), i_hp=0; i>0; --i, ++i_hp) {
 	  std::string hp_name = hp_vec.first[i-1];
 	  if (debug) std::cout<<i<<" "<<hp_name<<std::endl;
@@ -2216,6 +2416,7 @@ public:
 	  for (size_t j=0; j<spec_.size(); ++j) if (hp_name.find(spec_[j][0])!=std::string::npos) s = j;
 	  if (debug) std::cout<<"s = "<<s<<std::endl;
 	  if (s!=(size_t)-1) {
+	    isSpecial = 1;
 	    if (debug) std::cout<<"spec found"<<std::endl;
 	    histo_name = std::string(histo_name).replace(histo_name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]);
 	    if (debug) std::cout<<histo_name<<std::endl;
@@ -2223,7 +2424,7 @@ public:
 	    if (debug) std::cout<<"axis_title: "<<axis_title<<" spec: "<<spec_[s][2]<<" find: "<<axis_title.find(spec_[s][2])<<std::endl;
 	    axis_title.replace(axis_title.find(spec_[s][2]), spec_[s][2].size(), spec_[s][3]);
 	    if (debug) std::cout<<axis_title<<std::endl;
-	  } 
+	  }
 	  if (debug) std::cout<<"ok "<<i<<std::endl;
 	  for (size_t j=0; j<spec2_.size(); ++j) {
 	    if (j==0&&hp_name.find(spec2_[j][0])==0) s2 = j;
@@ -2231,6 +2432,7 @@ public:
 	  }
 	  if (debug) std::cout<<"s2 = "<<s2<<std::endl;
 	  if (s2!=(size_t)-1) {
+	    isSpecial = 1;
 	    if (debug) std::cout<<"spec2 found"<<std::endl;
 	    histo_name = std::string(histo_name).insert(histo_name.find(spec2_[s2][0]),"For");
 	    if (debug) std::cout<<histo_name<<std::endl;
@@ -2274,6 +2476,32 @@ public:
         }
 	if (hp.ranges.size()>ranges.size()) for (size_t i=ranges.size(); i<hp.ranges.size(); ++i) ranges.push_back(hp.ranges[i]);
 	if (debug) std::cout<<"ok"<<std::endl;
+	// Add object name in y/z axis (only for non-special histos)
+	if (!isSpecial) {
+	  axis_titles      += ";" + objects_[name];
+	  spec_axis_titles += ";" + objects_[name];
+	  if (hp_vec.second.size()==1&&hp_vec.second[0].bins.size()==2) {
+	    // Add also bin size for 1D plots
+	    double binsize = (hp_vec.second[0].bins[1]-hp_vec.second[0].bins[0])/hp_vec.second[0].nbin;
+	    // And unit if available
+	    //std::string unit = " units";
+	    std::string unit = "";
+	    size_t beg = hp_vec.second[0].axis_title.find("(");
+	    size_t end = hp_vec.second[0].axis_title.find(")");
+	    if (beg!=std::string::npos&&end!=std::string::npos) {
+	      unit = " "+hp_vec.second[0].axis_title.substr(beg+1,end-beg-1);
+	    }
+	    std::stringstream ss;
+	    ss<<" / "<<binsize<<unit;
+	    axis_titles      += ss.str();
+	    spec_axis_titles += ss.str();
+	  } else if (hp_vec.second.size()==2&&hp_vec.second[0].bins.size()==2) {
+	    // or " / bin" for 2D ones
+	    axis_titles      += " / bin";
+	    spec_axis_titles += " / bin";	  
+	  }
+	}
+	if (debug) std::cout<<"Add object names ok"<<std::endl;
 	std::vector<Cut*> cuts;
         for (size_t i=0; i<hp.cuts.size(); ++i) cuts.push_back(cuts_->GetCut(hp.cuts[i]));
 	if (debug) std::cout<<"ok"<<std::endl;
