@@ -66,18 +66,47 @@ Analysis::define_selections(const DataStruct& d)
 {
   analysis_cuts.clear();
 
+ // Define here cuts that are common in all Signal/Control regions
+  // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
+
+bool isT2tt = TString(sample).Contains("T2tt");
+  if(isT2tt){ 
+  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
+            //return d.evt.SUSY_Gluino_Mass==2000 && d.evt.SUSY_LSP_Mass==300;
+            return d.evt.SUSY_Stop_Mass==850 && d.evt.SUSY_LSP_Mass==100;
+	    } });}
+bool isT5tttt = TString(sample).Contains("T5tttt");
+  if(isT5tttt){ 
+  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
+            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
+            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
+	    } });}
+bool isT1tttt = TString(sample).Contains("T1tttt");
+  if(isT1tttt){ 
+  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
+	    } });}
+bool isT5ttcc = TString(sample).Contains("T5ttcc");
+  if(isT5ttcc){ 
+  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
+            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
+            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
+} });}
+
   // Define here cuts that are common in all Signal/Control regions
   // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
 
-  baseline_cuts.push_back({ .name="signal_mass_selection",  .func = [this,&d]  { return isSignal ? d.evt.SUSY_Gluino_Mass==1200 && d.evt.SUSY_LSP_Mass == 300 : 1;     }});
   baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  baseline_cuts.push_back({ .name="Skim_R2",         .func = [&d]  { return d.evt.R2>=0.04;                  }}); // New skim cut introduced in 2017 february
+  baseline_cuts.push_back({ .name="Skim_R2",         .func = [&d]  { return d.evt.R2>=0.08;                  }}); // New skim cut introduced in 2017 february
   
   // Q: QCD enriched control sample
   analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
   analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
-  analysis_cuts['Q'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.04; }});
+  analysis_cuts['Q'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
 #if VER != 0
   analysis_cuts['Q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
 #endif
@@ -90,7 +119,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
   analysis_cuts['q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
-  analysis_cuts['q'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.04; }});
+  analysis_cuts['q'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
 #if VER != 0
   analysis_cuts['q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
 #endif
@@ -100,7 +129,7 @@ Analysis::define_selections(const DataStruct& d)
 
   // T: Region Top enriched control sample 
   analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['T'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.04; }});
+  analysis_cuts['T'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
   analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
   analysis_cuts['T'].push_back({ .name="1top",         .func = []    { return nHadTopTag>=1;                  }});
   analysis_cuts['T'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                }});
@@ -109,7 +138,7 @@ Analysis::define_selections(const DataStruct& d)
 
   // W: W enriched control sample
   analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['W'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.04; }});
+  analysis_cuts['W'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
   analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                   }});
   analysis_cuts['W'].push_back({ .name="1topBpretag",         .func = []    { return nHadTop0BPreTag>=1;                   }});
   analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                }});
@@ -120,7 +149,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
   analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
-  analysis_cuts['S'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.04; }});
+  analysis_cuts['S'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
 #if VER != 0
   analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
 #endif
@@ -131,7 +160,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet360_TrimMass30==1 || d.hlt.PFHT800==1 : 1; }});
   analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                     }});
   analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                      }});
-  analysis_cuts['s'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.04; }});
+  analysis_cuts['s'].push_back({ .name="MR_R2", .func = [&d] { return d.evt.MR>=800 && d.evt.R2>=0.08; }});
 #if VER != 0
   analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                }});
 #endif
