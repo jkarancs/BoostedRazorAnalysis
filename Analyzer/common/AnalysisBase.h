@@ -229,6 +229,7 @@ AnalysisBase::define_preselections(const DataStruct& data)
   - Loose jet ID
   - pt > 30
   - |eta| < 2.4
+  - No isolated lepton within the mini-isolation cone
 
   For AK8 Jet Selection Choose:
   - Loose jet ID
@@ -503,28 +504,27 @@ std::vector<size_t > itJet;
 std::vector<size_t > itLooseBTag;
 std::vector<size_t > itMediumBTag;
 std::vector<size_t > itTightBTag;
+std::vector<bool> passLooseJetInclLep;
 std::vector<bool> passLooseJet;
-std::vector<bool> passLooseJetNoLep;
 std::vector<bool> passLooseBTag;
 std::vector<bool> passMediumBTag;
 std::vector<bool> passTightBTag;
+unsigned int nJetInclLep;
 unsigned int nJet;
-unsigned int nJetNoLep;
 unsigned int nLooseBTag;
 unsigned int nMediumBTag;
 unsigned int nTightBTag;
-double AK4_Ht;
-double AK4_HtOnline;
+double AK4_Ht, AK4_HtOnline, AK4_HtNoLep;
 double minDeltaPhi; // Min(DeltaPhi(Jet_i, MET)), i=1,2,3,4
 
 // AK8 jets
 std::vector<size_t > iJetAK8;
-std::vector<size_t > iWPreTag;
+std::vector<size_t > iWMassTag;
 std::vector<size_t > iLooseWTag;
 std::vector<size_t > iTightWTag;
 std::vector<size_t > iTightWAntiTag;
 std::vector<size_t > itJetAK8;
-std::vector<size_t > itWPreTag;
+std::vector<size_t > itWMassTag;
 std::vector<size_t > itLooseWTag;
 std::vector<size_t > itTightWTag;
 std::vector<size_t > itTightWAntiTag;
@@ -539,20 +539,24 @@ std::vector<double> maxSubjetCSV;
 #endif
 std::vector<bool> passSubjetBTag;
 std::vector<bool> passLooseJetAK8;
-std::vector<bool> passWPreTag;
+std::vector<bool> passWMassTag;
 std::vector<bool> passLooseWTag;
 std::vector<bool> passTightWTag;
 std::vector<bool> passTightWAntiTag;
-std::vector<bool> passHadTopPreTag;
 std::vector<bool> passHadTopTag;
+std::vector<bool> passHadTopMassTag;
+std::vector<bool> passHadTop0BMassTag;
+std::vector<bool> passHadTop0BAntiTag;
 unsigned int nJetAK8;
-unsigned int nWPreTag;
+unsigned int nWMassTag;
 unsigned int nLooseWTag;
 unsigned int nTightWTag;
 unsigned int nTightWAntiTag;
 unsigned int nSubjetBTag;
 unsigned int nHadTopTag;
-unsigned int nHadTopPreTag;
+unsigned int nHadTopMassTag;
+unsigned int nHadTop0BMassTag;
+unsigned int nHadTop0BAntiTag;
 double AK8_Ht;
 double minDeltaR_W_b;
 
@@ -620,6 +624,7 @@ void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
   std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons;
+  std::vector<float> r_iso_veto_leptons;
   TLorentzVector lep_pair;
   //std::vector<TLorentzVector> veto_muons_noiso, veto_muons, selected_muons;
   //std::vector<bool> veto_lep_in_jet;
@@ -709,6 +714,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  iEleVeto.push_back(i);
 	  itEleVeto[i] = nEleVeto++;
 	  veto_leptons.push_back(ele_v4);
+	  float r_iso = std::max(0.05, std::min(0.2, 10./pt));
+	  r_iso_veto_leptons.push_back(r_iso);
 	  //veto_lep_in_jet.push_back(data.ele.IsPartOfNearAK4Jet[i]);
 	}
       }
@@ -790,6 +797,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  iMuVeto.push_back(i);
 	  itMuVeto[i] = nMuVeto++;
 	  veto_leptons.push_back(mu_v4);
+	  float r_iso = std::max(0.05, std::min(0.2, 10./pt));
+	  r_iso_veto_leptons.push_back(r_iso);
 	  //veto_muons.push_back(mu_v4);
 	  //veto_lep_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
 	  //veto_mu_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
@@ -896,21 +905,20 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   iLooseBTag .clear();
   iMediumBTag.clear();
   iTightBTag .clear();
-  itJet            .assign(data.jetsAK4.size, (size_t)-1);
-  itLooseBTag      .assign(data.jetsAK4.size, (size_t)-1);
-  itMediumBTag     .assign(data.jetsAK4.size, (size_t)-1);
-  itTightBTag      .assign(data.jetsAK4.size, (size_t)-1);
-  passLooseJet     .assign(data.jetsAK4.size, 0);
-  passLooseJetNoLep.assign(data.jetsAK4.size, 0);
-  passLooseBTag    .assign(data.jetsAK4.size, 0);
-  passMediumBTag   .assign(data.jetsAK4.size, 0);
-  passTightBTag    .assign(data.jetsAK4.size, 0);
-  nJet = nJetNoLep = 0;
+  itJet              .assign(data.jetsAK4.size, (size_t)-1);
+  itLooseBTag        .assign(data.jetsAK4.size, (size_t)-1);
+  itMediumBTag       .assign(data.jetsAK4.size, (size_t)-1);
+  itTightBTag        .assign(data.jetsAK4.size, (size_t)-1);
+  passLooseJetInclLep.assign(data.jetsAK4.size, 0);
+  passLooseJet  .assign(data.jetsAK4.size, 0);
+  passLooseBTag      .assign(data.jetsAK4.size, 0);
+  passMediumBTag     .assign(data.jetsAK4.size, 0);
+  passTightBTag      .assign(data.jetsAK4.size, 0);
+  nJetInclLep = nJet = 0;
   nLooseBTag  = 0;
   nMediumBTag = 0;
   nTightBTag  = 0;
-  AK4_Ht = 0;
-  AK4_HtOnline = 0;
+  AK4_Ht = AK4_HtOnline = AK4_HtNoLep = 0;
   minDeltaPhi = 9999, minDeltaPhi_ll = 9999, dPhi_ll_jet = 9999;
   //std::vector<bool> add_lepton_to_ht(veto_leptons.size(),1);
   //std::vector<bool> remove_muon_from_ht(selected_muons.size(),0);
@@ -918,12 +926,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     size_t i = data.jetsAK4.it;
     TLorentzVector jet_v4; jet_v4.SetPtEtaPhiE(data.jetsAK4.Pt[i], data.jetsAK4.Eta[i], data.jetsAK4.Phi[i], data.jetsAK4.E[i]);
     // Jet ID
-    if ( passLooseJet[i] = 
+    if ( passLooseJetInclLep[i] = 
 	 ( data.jetsAK4.looseJetID[i] == 1 &&
 	   data.jetsAK4.Pt[i]         >= JET_AK4_PT_CUT &&
 	   std::abs(data.jetsAK4.Eta[i])  <  JET_AK4_ETA_CUT ) ) {
-      iJet.push_back(i);
-      itJet[i] = nJet++;
+      nJetInclLep++;
 
       // B tagging
       if (passLooseBTag[i]  = (data.jetsAK4.CSVv2[i] >= B_CSV_LOOSE_CUT ) ) {
@@ -939,14 +946,22 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	itTightBTag[i] = nTightBTag++;
       }
 
-      // Exclude jets that have selected leptons in the cone for the DeltaPhi calculation
-      double minDR = 9999;
-      for (auto lep : selected_leptons) if (lep.DeltaR(jet_v4)<minDR) minDR=lep.DeltaR(jet_v4);
+      // Exclude jets that have selected leptons in the isolation cone for the DeltaPhi calculation
+      float minDR = 9999;
+      float r_iso = -9999;
+      for (size_t i=0, n=veto_leptons.size(); i<n; ++i) {
+	double DR = veto_leptons[i].DeltaR(jet_v4);
+	if (DR<minDR) {
+	  minDR=DR;
+	  r_iso = r_iso_veto_leptons[i];
+	}
+      }
 
-      if (passLooseJetNoLep[i] = (minDR>=0.4)) {
-	++nJetNoLep;
+      if (passLooseJet[i] = (minDR>=r_iso)) {
+	iJet.push_back(i);
+	itJet[i] = nJet++;
 	// minDeltaPhi
-	if (nJetNoLep<=4) {
+	if (nJet<=4) {
 	  double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4.Phi[i]));
 	  if (dphi<minDeltaPhi) minDeltaPhi = dphi;
 	  // with added lepton pair
@@ -958,6 +973,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    if (dphi_ll<dPhi_ll_jet) dPhi_ll_jet = dphi_ll;
 	  }
 	}
+	AK4_HtNoLep += data.jetsAK4.Pt[data.jetsAK4.it];
       }
 	
       AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];
@@ -1006,7 +1022,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     // Nearest jet info
     while(data.jetsAK4.Loop()) {
       size_t j = data.jetsAK4.it;
-      if (passLooseJetNoLep[j]) {
+      if (passLooseJet[j]) {
 	TLorentzVector jet_v4; jet_v4.SetPtEtaPhiE(data.jetsAK4.Pt[j], data.jetsAK4.Eta[j], data.jetsAK4.Phi[j], data.jetsAK4.E[j]);
 	double dR = ele_v4.DeltaR(jet_v4);
 	if (dR<eleJetDR[i]) {
@@ -1027,7 +1043,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     // Nearest jet info
     while(data.jetsAK4.Loop()) {
       size_t j = data.jetsAK4.it;
-      if (passLooseJetNoLep[j]) {
+      if (passLooseJet[j]) {
 	TLorentzVector jet_v4; jet_v4.SetPtEtaPhiE(data.jetsAK4.Pt[j], data.jetsAK4.Eta[j], data.jetsAK4.Phi[j], data.jetsAK4.E[j]);
 	double dR = mu_v4.DeltaR(jet_v4);
 	if (dR<muJetDR[i]) {
@@ -1050,32 +1066,36 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   
   // AK8 jets
   iJetAK8        .clear();
-  iWPreTag       .clear();
+  iWMassTag      .clear();
   iLooseWTag     .clear();
   iTightWTag     .clear();
   iTightWAntiTag .clear();
   softDropMassW  .clear();
   softDropMassTop.clear();
-  itJetAK8         .assign(data.jetsAK8.size, (size_t)-1);
-  itWPreTag        .assign(data.jetsAK8.size, (size_t)-1);
-  itLooseWTag      .assign(data.jetsAK8.size, (size_t)-1);
-  itTightWTag      .assign(data.jetsAK8.size, (size_t)-1);
-  itTightWAntiTag  .assign(data.jetsAK8.size, (size_t)-1);
-  passLooseJetAK8  .assign(data.jetsAK8.size, 0);
-  passWPreTag      .assign(data.jetsAK8.size, 0);
-  passLooseWTag    .assign(data.jetsAK8.size, 0);
-  passTightWTag    .assign(data.jetsAK8.size, 0);
-  passTightWAntiTag.assign(data.jetsAK8.size, 0);
-  passHadTopPreTag .assign(data.jetsAK8.size, 0);
-  passHadTopTag    .assign(data.jetsAK8.size, 0);
-  nJetAK8       = 0;
-  nWPreTag      = 0;
-  nLooseWTag    = 0;
-  nTightWTag    = 0;
-  nTightWAntiTag= 0;
-  nSubjetBTag   = 0;
-  nHadTopTag    = 0;
-  nHadTopPreTag = 0;
+  itJetAK8           .assign(data.jetsAK8.size, (size_t)-1);
+  itWMassTag         .assign(data.jetsAK8.size, (size_t)-1);
+  itLooseWTag        .assign(data.jetsAK8.size, (size_t)-1);
+  itTightWTag        .assign(data.jetsAK8.size, (size_t)-1);
+  itTightWAntiTag    .assign(data.jetsAK8.size, (size_t)-1);
+  passLooseJetAK8    .assign(data.jetsAK8.size, 0);
+  passWMassTag       .assign(data.jetsAK8.size, 0);
+  passLooseWTag      .assign(data.jetsAK8.size, 0);
+  passTightWTag      .assign(data.jetsAK8.size, 0);
+  passTightWAntiTag  .assign(data.jetsAK8.size, 0);
+  passHadTopTag      .assign(data.jetsAK8.size, 0);
+  passHadTopMassTag  .assign(data.jetsAK8.size, 0);
+  passHadTop0BMassTag.assign(data.jetsAK8.size, 0);
+  passHadTop0BAntiTag.assign(data.jetsAK8.size, 0);
+  nJetAK8          = 0;
+  nWMassTag        = 0;
+  nLooseWTag       = 0;
+  nTightWTag       = 0;
+  nTightWAntiTag   = 0;
+  nSubjetBTag      = 0;
+  nHadTopTag       = 0;
+  nHadTopMassTag   = 0;
+  nHadTop0BMassTag = 0;
+  nHadTop0BAntiTag = 0;
   AK8_Ht   = 0;
   minDeltaR_W_b = 9999;
   while(data.jetsAK8.Loop()) {
@@ -1113,13 +1133,13 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       // _______________________________________________________
       //                   Hadronic W Tag definition
 
-      if (passWPreTag[i] = 
+      if (passWMassTag[i] = 
 	  ( pt        >= W_PT_CUT &&
 	    abseta    <  W_ETA_CUT &&
 	    sd_mass_w >= W_SD_MASS_CUT_LOW && 
 	    sd_mass_w <  W_SD_MASS_CUT_HIGH) ) {
-	iWPreTag.push_back(i);
-	itWPreTag[i] = nWPreTag++;
+	iWMassTag.push_back(i);
+	itWMassTag[i] = nWMassTag++;
 	// Loose/Tight W Tag Working points
 	if (passLooseWTag[i] = (tau_21 < W_TAU21_LOOSE_CUT) ) {
 	  iLooseWTag.push_back(i);
@@ -1147,16 +1167,20 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       // _______________________________________________________
       //                  Hadronic Top Tag definition
 
-      if (passHadTopPreTag[i] = 
+      if (passHadTopMassTag[i] = 
 	  ( pt          >= TOP_PT_CUT && 
 	    sd_mass_top >= TOP_SD_MASS_CUT_LOW &&
 	    sd_mass_top <  TOP_SD_MASS_CUT_HIGH) ) {
 #if USE_BTAG == 1
-	if (passHadTopPreTag[i] = passSubjetBTag[i]) {
+	if (passHadTopMassTag[i] = passSubjetBTag[i]) {
 #endif
-	  nHadTopPreTag++;
+	  nHadTopMassTag++;
 	  if (passHadTopTag[i] = (tau_32 < TOP_TAU32_CUT) ) nHadTopTag++;
 #if USE_BTAG == 1
+	} else {
+	  passHadTop0BMassTag[i] = 1;
+	  nHadTop0BMassTag++;
+	  if (passHadTop0BAntiTag[i] = (tau_32 >= TOP_TAU32_CUT) ) nHadTop0BAntiTag++;
 	}
 #endif
       }
@@ -1266,6 +1290,8 @@ TH1D* h_trigger_pass;
 TH1D* h_trigger_total;
 TH2D* h_trigger2d_pass;
 TH2D* h_trigger2d_total;
+TH2D* h_trigger2d_nolep_pass;
+TH2D* h_trigger2d_nolep_total;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -1318,6 +1344,8 @@ AnalysisBase::init_common_histos()
   h_trigger_total               = new TH1D("trigger_total",          "Total;H_{T} (GeV)", 18,htbins);
   h_trigger2d_pass              = new TH2D("trigger2d_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
   h_trigger2d_total             = new TH2D("trigger2d_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
+  h_trigger2d_nolep_pass        = new TH2D("trigger2d_nolep_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
+  h_trigger2d_nolep_total       = new TH2D("trigger2d_nolep_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
 }
 
 //_______________________________________________________
@@ -1349,9 +1377,9 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
     // Baseline cuts to be applied: 3 jets, 1 AK8 jet, MR & R^2
     bool pass_aux_trigger = 0;
     if (TString(sample).Contains("SingleElectron")) {
-      if ((d.hlt.Ele23_WPLoose_Gsf==1||d.hlt.Ele27_WPTight_Gsf==1)&&nEleTight==1) pass_aux_trigger = 1;
+      if ((d.hlt.Ele23_WPLoose_Gsf==1||d.hlt.Ele27_WPTight_Gsf==1)&&nEleTight>=1&&nMuVeto==0) pass_aux_trigger = 1;
     } else if (TString(sample).Contains("SingleMuon")) {
-      if (d.hlt.IsoMu24==1&&nMuTight==1) pass_aux_trigger = 1;
+      if (d.hlt.IsoMu24==1&&nMuTight>=1&&nEleVeto==0) pass_aux_trigger = 1;
     } else if (TString(sample).Contains("MET")) {
       if (d.hlt.PFMET120_PFMHT120_IDTight==1&&d.met.Pt[0]>200&&nLepVeto==0&&d.evt.NIsoTrk==0) pass_aux_trigger = 1;      
     }
@@ -1360,9 +1388,11 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
 	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) {
 	  h_trigger_pass  ->Fill(AK4_Ht);
 	  h_trigger2d_pass->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
+	  h_trigger2d_nolep_pass->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
 	}
 	h_trigger_total   ->Fill(AK4_Ht);
 	h_trigger2d_total ->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
+	h_trigger2d_nolep_total ->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
       }
     }
   }
@@ -2021,7 +2051,7 @@ Analysis::apply_all_cuts_except(char region, std::string cut_to_skip) {
   // eg. mistyped, then end the job with ar error
   // This is for safety: We do not want to fill histograms wrongly by mistake
   if (!found) {
-    std::cout<<"No cut to be skipped exsists in seaerch region \""<<region<<"\" with name: \""<<cut_to_skip<<"\""<<std::endl;
+    std::cout<<"No cut to be skipped exsists in search region \""<<region<<"\" with name: \""<<cut_to_skip<<"\""<<std::endl;
     utils::error("Analysis - the second argument for apply_all_cuts_except() is a non-sensical cut");
   }
   return result;
@@ -2170,9 +2200,15 @@ TH2D* eff_fast_muon_looseip2d;
 TH2D* eff_fast_muon_tightip2d;
 
 //TGraphAsymmErrors* eff_trigger;
-TH2D* eff_trigger;
-TH2D* eff_trigger_up;
-TH2D* eff_trigger_down;
+TH2D* eff_trigger_veto;
+TH2D* eff_trigger_veto_up;
+TH2D* eff_trigger_veto_down;
+TH2D* eff_trigger_ele;
+TH2D* eff_trigger_ele_up;
+TH2D* eff_trigger_ele_down;
+TH2D* eff_trigger_mu;
+TH2D* eff_trigger_mu_up;
+TH2D* eff_trigger_mu_down;
 
 void AnalysisBase::init_syst_input() {
   TString Sample(sample);
@@ -2274,24 +2310,60 @@ void AnalysisBase::init_syst_input() {
   // eff_trigger = new TGraphAsymmErrors(pass, total);
 
   // 2D Trigger Efficiency (New) - Use combination of SingleElectron + MET datasets
-  TH2D* pass_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron_MET.root", "trigger2d_pass",   "trig1");
-  TH2D* total_2d = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron_MET.root", "trigger2d_total",  "trig2");
-  eff_trigger      = (TH2D*)total_2d->Clone("eff_trigger");      eff_trigger     ->Reset();
-  eff_trigger_up   = (TH2D*)total_2d->Clone("eff_trigger_up");   eff_trigger_up  ->Reset();
-  eff_trigger_down = (TH2D*)total_2d->Clone("eff_trigger_down"); eff_trigger_down->Reset();
-  for (int i=1; i<total_2d->GetNbinsX()+1; i++) for (int j=1; j<total_2d->GetNbinsY()+1; j++) {
-    int pass = pass_2d->GetBinContent(i,j), total = total_2d->GetBinContent(i,j);
-    if (total>0) {
-      TH1D p("p","",1,0,1); p.SetBinContent(1,pass);  p.SetBinError(1,std::sqrt(pass));
-      TH1D t("t","",1,0,1); t.SetBinContent(1,total); t.SetBinError(1,std::sqrt(total));
+  TH2D* veto_pass_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/MET.root",            "trigger2d_pass",   "trig1");
+  TH2D* veto_total_2d = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/MET.root",            "trigger2d_total",  "trig2");
+  TH2D* ele_pass_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_pass",   "trig3");
+  TH2D* ele_total_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_total",  "trig4");
+  TH2D* mu_pass_2d    = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleMuon.root",     "trigger2d_pass",   "trig5");
+  TH2D* mu_total_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleMuon.root",     "trigger2d_total",  "trig6");
+  eff_trigger_veto      = (TH2D*)veto_total_2d->Clone("eff_trigger_veto");      eff_trigger_veto     ->Reset();
+  eff_trigger_veto_up   = (TH2D*)veto_total_2d->Clone("eff_trigger_veto_up");   eff_trigger_veto_up  ->Reset();
+  eff_trigger_veto_down = (TH2D*)veto_total_2d->Clone("eff_trigger_veto_down"); eff_trigger_veto_down->Reset();
+  eff_trigger_ele       = (TH2D*)ele_total_2d ->Clone("eff_trigger_ele");       eff_trigger_ele      ->Reset();
+  eff_trigger_ele_up    = (TH2D*)ele_total_2d ->Clone("eff_trigger_ele_up");    eff_trigger_ele_up   ->Reset();
+  eff_trigger_ele_down  = (TH2D*)ele_total_2d ->Clone("eff_trigger_ele_down");  eff_trigger_ele_down ->Reset();
+  eff_trigger_mu        = (TH2D*)mu_total_2d  ->Clone("eff_trigger_mu");        eff_trigger_mu       ->Reset();
+  eff_trigger_mu_up     = (TH2D*)mu_total_2d  ->Clone("eff_trigger_mu_up");     eff_trigger_mu_up    ->Reset();
+  eff_trigger_mu_down   = (TH2D*)mu_total_2d  ->Clone("eff_trigger_mu_down");   eff_trigger_mu_down  ->Reset();
+  for (int i=1; i<veto_total_2d->GetNbinsX()+1; i++) for (int j=1; j<veto_total_2d->GetNbinsY()+1; j++) {
+    int veto_pass = veto_pass_2d->GetBinContent(i,j), veto_total = veto_total_2d->GetBinContent(i,j);
+    if (veto_total>0) {
+      TH1D p("p","",1,0,1); p.SetBinContent(1,veto_pass);  p.SetBinError(1,std::sqrt(veto_pass));
+      TH1D t("t","",1,0,1); t.SetBinContent(1,veto_total); t.SetBinError(1,std::sqrt(veto_total));
       double eff = 0, err_down = 0, err_up = 0;
       utils::geteff_AE(TGraphAsymmErrors(&p,&t), 0, eff, err_down, err_up);
       //std::cout<<"Trigger efficiency: "<<i<<" "<<j<<" "<<eff-err_down<<" "<<eff<<" "<<eff+err_up<<std::endl;
-      eff_trigger     ->SetBinContent(i,j,eff);
-      eff_trigger_up  ->SetBinContent(i,j,eff+err_up);
-      eff_trigger_down->SetBinContent(i,j,eff-err_down);
+      eff_trigger_veto     ->SetBinContent(i,j,eff);
+      eff_trigger_veto_up  ->SetBinContent(i,j,eff+err_up);
+      eff_trigger_veto_down->SetBinContent(i,j,eff-err_down);
       // SPECIAL: Set error to the total counts, so we know if a bin is not empty
-      eff_trigger     ->SetBinError(i,j,total);
+      eff_trigger_veto     ->SetBinError(i,j,veto_total);
+    }
+    int ele_pass = ele_pass_2d->GetBinContent(i,j), ele_total = ele_total_2d->GetBinContent(i,j);
+    if (ele_total>0) {
+      TH1D p("p","",1,0,1); p.SetBinContent(1,ele_pass);  p.SetBinError(1,std::sqrt(ele_pass));
+      TH1D t("t","",1,0,1); t.SetBinContent(1,ele_total); t.SetBinError(1,std::sqrt(ele_total));
+      double eff = 0, err_down = 0, err_up = 0;
+      utils::geteff_AE(TGraphAsymmErrors(&p,&t), 0, eff, err_down, err_up);
+      //std::cout<<"Trigger efficiency: "<<i<<" "<<j<<" "<<eff-err_down<<" "<<eff<<" "<<eff+err_up<<std::endl;
+      eff_trigger_ele     ->SetBinContent(i,j,eff);
+      eff_trigger_ele_up  ->SetBinContent(i,j,eff+err_up);
+      eff_trigger_ele_down->SetBinContent(i,j,eff-err_down);
+      // SPECIAL: Set error to the total counts, so we know if a bin is not empty
+      eff_trigger_ele     ->SetBinError(i,j,ele_total);
+    }
+    int mu_pass = mu_pass_2d->GetBinContent(i,j), mu_total = mu_total_2d->GetBinContent(i,j);
+    if (mu_total>0) {
+      TH1D p("p","",1,0,1); p.SetBinContent(1,mu_pass);  p.SetBinError(1,std::sqrt(mu_pass));
+      TH1D t("t","",1,0,1); t.SetBinContent(1,mu_total); t.SetBinError(1,std::sqrt(mu_total));
+      double eff = 0, err_down = 0, err_up = 0;
+      utils::geteff_AE(TGraphAsymmErrors(&p,&t), 0, eff, err_down, err_up);
+      //std::cout<<"Trigger efficiency: "<<i<<" "<<j<<" "<<eff-err_down<<" "<<eff<<" "<<eff+err_up<<std::endl;
+      eff_trigger_mu     ->SetBinContent(i,j,eff);
+      eff_trigger_mu_up  ->SetBinContent(i,j,eff+err_up);
+      eff_trigger_mu_down->SetBinContent(i,j,eff-err_down);
+      // SPECIAL: Set error to the total counts, so we know if a bin is not empty
+      eff_trigger_mu     ->SetBinError(i,j,mu_total);
     }
   }
 }
@@ -2639,15 +2711,29 @@ double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSi
   //  utils::geteff_AE(eff_trigger, AK4_Ht, eff, err_down, err_up);
   //  double w = get_syst_weight(eff, eff-err_down, eff+err_up, nSigmaTrigger);
   
+  // Check the presence of a lepton and apply different weights
+  TH2D *h      = eff_trigger_veto;
+  TH2D *h_up   = eff_trigger_veto_up;
+  TH2D *h_down = eff_trigger_veto_down;
+  if (nEleVeto>=1) {
+    h      = eff_trigger_ele;
+    h_up   = eff_trigger_ele_up;
+    h_down = eff_trigger_ele_down;
+  } else if (nMuVeto>=1) {
+    h      = eff_trigger_mu;
+    h_up   = eff_trigger_mu_up;
+    h_down = eff_trigger_mu_down;
+  }
+
   // 2D trigger efficiency (New)
   if (nJetAK8>0) {
     double eff = 0, total = 0;
-    utils::geteff2D(eff_trigger, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]], eff, total); // total was saved to histo error
+    utils::geteff2D(h, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]], eff, total); // total was saved to histo error
     // For the time being only weight the measurable phase space
     // Rest is 0 --> Could weight with the TGraphAsymmErrors::Efficiency value (0.5+-0.5)
     if (total>0) {
-      double eff_up   = utils::geteff2D(eff_trigger_up,   AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
-      double eff_down = utils::geteff2D(eff_trigger_down, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
+      double eff_up   = utils::geteff2D(h_up,   AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
+      double eff_down = utils::geteff2D(h_down, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
       double w = get_syst_weight(eff, eff_down, eff_up, nSigmaTrigger);
       return w;
     } else return 0;

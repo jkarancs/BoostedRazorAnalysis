@@ -1,4 +1,4 @@
-import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, ROOT
+import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, getpass, ROOT
 from optparse import OptionParser
 
 # ---------------------- Cmd Line  -----------------------
@@ -183,6 +183,7 @@ for filelist in input_filelists:
         JOB_NEVT = opt.NEVT
         # Further optimize this number
         # based on measured unskimmed to skimmed ratios (found in skim_ratios.txt)
+        otpim_found = False
         if opt.optim:
             samplename = filelist.split("/")[-1][:-4]
             # Skimming uses a text file (skim_ratios.txt)
@@ -193,6 +194,7 @@ for filelist in input_filelists:
                         #if samplename == column[2]:
                         if column[2] in samplename:
                             JOB_NEVT *= int(column[0])
+                            optim_found = True
                 if "FastSim" in samplename: JOB_NEVT /= 4
             # Other jobs use the results from a previous run
             else:
@@ -202,7 +204,7 @@ for filelist in input_filelists:
                         column = line.split()
                         if samplename == column[1]:
                             JOB_NEVT *= float(column[0]) * 0.8
-                
+                            optim_found = True
                 ##  # Get information from log files in opt.PREVDIR
                 ##  min_nps  = float(1e6)
                 ##  tot_nevt = float(0)
@@ -254,7 +256,10 @@ for filelist in input_filelists:
                 with open(tmp_filelist, "a") as job_filelist:
                     print>>job_filelist, files[i]
         if opt.optim:
-            print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created (MAX NEVT (optim) = "+str(JOB_NEVT)+")"
+            if optim_found:
+                print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created (MAX NEVT (optim) = "+str(JOB_NEVT)+")"
+            else:
+                print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created (MAX NEVT (optim) = "+str(JOB_NEVT)+") - sample not in job_ratios.txt"
         else:
             print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created"
     elif opt.NFILE != -1:
@@ -359,7 +364,17 @@ def analyzer_job((jobindex)):
     if opt.batch:
         logdirname = os.path.dirname(output_log)
         if logdirname != "" and not os.path.exists(logdirname): special_call(["mkdir", "-p", logdirname], 0)
-        cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd())+cmd
+        if os.getcwd().startswith("/afs"):
+            cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+        else:
+            # Currently bsub cannot send the log file to EOS, so in order to avoid annoying e-mails and LSFJOB directories,
+            # we send the output to a dummy afs file. The log output will be copied inside the script instead
+            #job_log = "/tmp/"+getpass.getuser()+"/"+os.path.dirname(opt.OUTDIR+"/").split("/")[-1]+"/"+os.path.basename(output_log)
+            job_log = "/tmp/"+os.path.basename(output_log)
+            #if not os.path.exists(os.path.dirname(job_log)):
+            #    special_call(["mkdir", "-p", os.path.dirname(job_log)], 0)
+            #    special_call(['chmod', '-R', '777', "/tmp/"+getpass.getuser()], 0)
+            cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
         special_call(cmd, not opt.run)
     else:
         if opt.NPROC>3: cmd = ['nice']+cmd

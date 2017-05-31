@@ -2153,7 +2153,7 @@ private:
   }
   
 public:
-  void DrawPlots(bool debug=1) {
+  void DrawPlots(bool debug=0) {
     if (debug) {
       std::cout<<name_<<" ";
       for (size_t i=0, n=pf_names_.size(); i<n; ++i) std::cout<<pf_names_[i]<<" ";

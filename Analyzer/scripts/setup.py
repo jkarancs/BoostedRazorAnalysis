@@ -34,8 +34,6 @@ LATEST_NTUPLE_GRID18="Skim_May19_1JetAK8_0p04R2"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 DIR = ANA_BASE+'/ntuple/Latest'
-USE_EOS_MOUNT=0
-
 
 if 'lxplus' in socket.gethostname():
     print 'Running on lxplus'
@@ -64,6 +62,15 @@ if 'lxplus' in socket.gethostname():
         for janos_subdir in os.listdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS):
             if os.path.isdir(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir):
                 source = os.path.realpath(ANA_BASE+'/ntuple/eos_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir)
+                target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
+                if os.path.islink(target): target += "_2"
+                os.symlink(source, target)
+        print 'Done.'
+    if os.path.exists(ANA_BASE+'/ntuple/eosuser_janos/'+LATEST_NTUPLE_EOS):
+        print 'Creating symlinks to the latest ntuples in Janos\' EOS USER folder: ntuple/eosuser_janos/'+LATEST_NTUPLE_EOS+'/ ... ',
+        for janos_subdir in os.listdir(ANA_BASE+'/ntuple/eosuser_janos/'+LATEST_NTUPLE_EOS):
+            if os.path.isdir(ANA_BASE+'/ntuple/eosuser_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir):
+                source = os.path.realpath(ANA_BASE+'/ntuple/eosuser_janos/'+LATEST_NTUPLE_EOS+'/'+janos_subdir)
                 target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
                 if os.path.islink(target): target += "_2"
                 os.symlink(source, target)
@@ -128,9 +135,11 @@ for directory in os.listdir(DIR):
                 flist = open(ANA_BASE+'/filelists/data/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
-                    if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
-                        filename = "root://eoscms/"+filename
-                        #filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                    if 'lxplus' in socket.gethostname():
+                        if filename.startswith("/eos/user"):
+                            filename = "root://eosuser/"+filename
+                        else:
+                            filename = "root://eoscms/"+filename
                     print>>flist, filename
             # Signals
             elif re.compile('.*T[1-9][t,b,c,q][t,b,c,q].*').match(directory):
@@ -139,9 +148,11 @@ for directory in os.listdir(DIR):
                 flist = open(ANA_BASE+'/filelists/signals/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
-                    if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
-                        filename = "root://eoscms/"+filename
-                        #filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                    if 'lxplus' in socket.gethostname():
+                        if filename.startswith("/eos/user"):
+                            filename = "root://eosuser/"+filename
+                        else:
+                            filename = "root://eoscms/"+filename
                     print>>flist, filename
             # Backgrounds
             else:
@@ -154,9 +165,11 @@ for directory in os.listdir(DIR):
                 flist = open(ANA_BASE+'/filelists/backgrounds/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
-                    if 'lxplus' in socket.gethostname() and not USE_EOS_MOUNT:
-                        filename = "root://eoscms/"+filename
-                        #filename = "root://eoscms//eos"+filename.split("eos_mount_dir")[1]
+                    if 'lxplus' in socket.gethostname():
+                        if filename.startswith("/eos/user"):
+                            filename = "root://eosuser/"+filename
+                        else:
+                            filename = "root://eoscms/"+filename
                     print>>flist, filename
 
 print "Creating temp file list directories (for batch and split jobs) ... ",

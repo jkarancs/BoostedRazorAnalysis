@@ -3,7 +3,7 @@
 // VER 2 - Moriond17 + 03Feb2017 ReMiniAOD datasets
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     2
-#define SKIM    0
+#define SKIM    0 // TODO: Fix totweight in next skim
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -54,7 +54,7 @@ struct settings {
     intLumi                  ( 35867 /* brilcalc - Dec02 Golden JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.026  ),
 #endif
-    useXSecFileForBkg        ( VER==1 ), // true: use file below, false: use value in the ntuple (evt_XSec)
+    useXSecFileForBkg        ( true   ), // true: use file below, false: use value in the ntuple (evt_XSec)
     xSecFileName             ( "common/BackGroundXSec.txt" )
   {
     totWeightHistoNamesSignal.push_back(runOnSkim ? "totweight_T1tttt" : "EventCounter/h_totweight_T1tttt"); // lsp mass vs gluino mass scan, also used for T5ttcc and T5tttt

@@ -1,9 +1,10 @@
 #!/bin/bash
 cwd=$1
-out=$3
-out_tmp=$PWD/`basename $3`
-to_run=`echo ${@:2} | sed "s;$out;$out_tmp;1"`
-USE_EOS_MOUNT=0
+log=$2
+out=$4
+log_tmp=$PWD/`basename $log`
+out_tmp=$PWD/`basename $out`
+to_run=`echo ${@:3} | sed "s;$out;$out_tmp;1"`
 
 echo -e "------------------- START --------------------"
 echo -e "---------------- Environments ----------------"
@@ -17,21 +18,25 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh
 echo -e "\n[2] cmsenv"
 eval `scramv1 runtime -sh`
 
-if (( $USE_EOS_MOUNT )); then
-    echo -e "\n[3] eosmount eos_mount_dir"
-    /afs/cern.ch/project/eos/installation/cms/bin/eos.select -b fuse mount eos_mount_dir
-fi
-
 echo -e "\n------------------ Analyzer ------------------"
 
-if (( $USE_EOS_MOUNT )); then
-    echo -e "\n[4] time $to_run && mv $out_tmp $cwd/$out"
+if (( `echo $cwd | grep '^/eos' | wc -l` )); then
+    echo -e "\n[3] time $to_run > $log 2>&1"
+    time $to_run > $log 2>&1
+    
+    echo -e "\n[4] mv $log_tmp $cwd/$log"
+    mv $log_tmp $cwd/$log
+    
+    echo -e "\n[5] mv $out_tmp $cwd/$out"
+    mv $out_tmp $cwd/$out
 else
-    echo -e "\n[3] time $to_run && mv $out_tmp $cwd/$out"
+    echo -e "\n[3] time $to_run "
+    time $to_run > $log 2>&1
+    
+    echo -e "\n[4] mv $out_tmp $cwd/$out"
+    mv $out_tmp $cwd/$out
 fi
-time $to_run && mv $out_tmp $cwd/$out
 
 echo -e "\n"
 echo -e "-------------------- END ---------------------\n"
-
 
