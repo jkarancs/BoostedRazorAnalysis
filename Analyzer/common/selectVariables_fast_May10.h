@@ -35,8 +35,8 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("met_Pt", data.met.Pt);
   stream.select("met_Phi", data.met.Phi);
   //stream.select("puppimet_size", data.puppimet.size);
-  //stream.select("puppimet_Pt", data.puppimet.Pt);
-  //stream.select("puppimet_Phi", data.puppimet.Phi);
+  stream.select("puppimet_Pt", data.puppimet.Pt);
+  stream.select("puppimet_Phi", data.puppimet.Phi);
   
   stream.select("pu_NtrueInt", data.pu.NtrueInt);
   
@@ -55,8 +55,8 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("metsyst_Pt", data.syst_met.Pt);
   stream.select("metsyst_Phi", data.syst_met.Phi);
   //stream.select("puppimetsyst_size", data.syst_puppimet.size);
-  //stream.select("puppimetsyst_Pt", data.syst_puppimet.Pt);
-  //stream.select("puppimetsyst_Phi", data.syst_puppimet.Phi);
+  stream.select("puppimetsyst_Pt", data.syst_puppimet.Pt);
+  stream.select("puppimetsyst_Phi", data.syst_puppimet.Phi);
   
   stream.select("Flag_BadPFMuonFilter", data.filter.BadPFMuonFilter);
   stream.select("Flag_BadChargedCandidateFilter", data.filter.BadChargedCandidateFilter);

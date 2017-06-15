@@ -1764,7 +1764,7 @@ private:
     leg->Draw("SAME");
   }
   
-  void add_stack_ratio_plot_(TCanvas*& c, double xmin, double xmax , bool remove=false) {
+  void add_stack_ratio_plot_(TCanvas*& c, double xmin, double xmax , bool remove=false, bool debug = 0) {
     // Canvas division sizes
     float mar_top    = 45;
     float y1         = 365;
@@ -1781,17 +1781,26 @@ private:
     float labelfontsize = 20;
     float titlefontsize = 32;
     float leg_y2 = 0.9; // not used values, read from orig
+    if (debug) std::cout<<"ok"<<std::endl;
     if (c->GetListOfPrimitives()->GetEntries()>2) {
       // Histos
+      if (debug) std::cout<<"ok1"<<std::endl;
       TH1D* Data = (TH1D*)c->GetListOfPrimitives()->At(0);
+      if (debug) std::cout<<"ok1"<<std::endl;
       THStack* MCstack = (THStack*)c->GetListOfPrimitives()->At(1);
+      if (debug) std::cout<<"ok1"<<std::endl;
       if (std::string(MCstack->GetTitle())!="0") {
         TH1D* ratio = (TH1D*)Data->Clone();
+	if (debug) std::cout<<"ok2"<<std::endl;
         TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
+	if (debug) std::cout<<"ok2"<<std::endl;
         for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) mc_sum->Add((TH1D*)MCstack->GetHists()->At(iStack)->Clone());
+	if (debug) std::cout<<"ok2"<<std::endl;
 	TH1D* den_err = (TH1D*)mc_sum->Clone("den_err");
+	if (debug) std::cout<<"ok2"<<std::endl;
 	// Instead of Divide(), scale the error of num, and plot error of den around 1
         ratio->Divide(mc_sum);
+	if (debug) std::cout<<"ok2"<<std::endl;
 	for (int bin=1; bin<=ratio->GetNbinsX(); ++bin) {
 	  if (mc_sum->GetBinContent(bin)!=0) {
 	    ratio  ->SetBinContent(bin, Data->GetBinContent(bin)/mc_sum->GetBinContent(bin));
@@ -1805,6 +1814,7 @@ private:
 	    den_err->SetBinError  (bin, 0);
 	  }
 	}
+	if (debug) std::cout<<"ok2"<<std::endl;
 	den_err->SetFillColor(1);
 	den_err->SetFillStyle(3004);
         // Legend
@@ -1813,6 +1823,7 @@ private:
         std::vector<TH1D*> rest;
         // indices:
         // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
+	if (debug) std::cout<<"ok2"<<std::endl;
         for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
           std::string prim_name = c->GetListOfPrimitives()->At(i)->GetName();
           if (prim_name=="TPave") {
@@ -1821,6 +1832,7 @@ private:
           } else if (!remove&&prim_name!=Data->GetName())
             rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
         }
+	if (debug) std::cout<<"ok2"<<std::endl;
         if (remove) {
           for (int i=leg->GetListOfPrimitives()->GetEntries(); i>0; --i) {
             bool match = 0;
@@ -1829,6 +1841,7 @@ private:
             if (!match) leg->GetListOfPrimitives()->RemoveAt(i);
           }
         }
+	if (debug) std::cout<<"ok2"<<std::endl;
         // Styles
 	float heightratio1 = padsize1/y_can;
         Data ->SetTitleSize  (Data->GetYaxis()->GetTitleSize()  /heightratio1,"y");
@@ -1839,31 +1852,39 @@ private:
         ratio->GetYaxis()->SetRangeUser(0,2);
         ratio->GetYaxis()->SetNdivisions(305);
         ratio->GetYaxis()->SetTitle("Data/MC");
+	if (debug) std::cout<<"ok2"<<std::endl;
 	float heightratio2 = padsize2/y_can;
         ratio->SetTitleOffset(ratio->GetYaxis()->GetTitleOffset()*heightratio2,"y");
         ratio->SetTitle("");
         ratio->SetMarkerStyle(20);
         ratio->SetMarkerColor(1);
         ratio->SetLineColor(1);
+	if (debug) std::cout<<"ok2"<<std::endl;
         // New Canvas
 	float left_mar = c->GetLeftMargin(), right_mar = c->GetRightMargin();
         bool logScale = c->GetLogy();
         c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), x_can+4,y_can+26); // 600, 600
         c->Divide(1,2);
+	if (debug) std::cout<<"ok2"<<std::endl;
         // Pad 1 (x: 90+500+20 x y: 45+350+10)
         TVirtualPad* p = c->cd(1);
+	if (debug) std::cout<<"ok2"<<std::endl;
         p->SetPad(0,padsize2/y_can,1,1);
         p->SetTopMargin(mar_top/(mar_top+y1+mid2));
         p->SetBottomMargin(0);
 	p->SetLeftMargin(left_mar);
 	p->SetRightMargin(right_mar);
+	if (debug) std::cout<<"ok2"<<std::endl;
         if (logScale) p->SetLogy(1);
         Data->Draw("PE1");
         MCstack->Draw("SAMEHIST");
+	if (debug) std::cout<<"ok2"<<std::endl;
         for (size_t i=0; i<rest.size(); ++i) rest[i]->Draw("SAMEHIST");
         Data->Draw("SAMEPE1");
         leg->Draw("SAME");
+	if (debug) std::cout<<"ok3"<<std::endl;
         gPad->Update();
+	if (debug) std::cout<<"ok3"<<std::endl;
         // Pad 2 (x: 90+500+20 x y: 60+150+10)
         p = c->cd(2);
         p->SetGrid(0,1);
@@ -1872,35 +1893,44 @@ private:
         p->SetBottomMargin(mar_bottom/padsize2);
 	p->SetLeftMargin(left_mar);
 	p->SetRightMargin(right_mar);
+	if (debug) std::cout<<"ok3"<<std::endl;
         ratio->Draw("PE1");
 	den_err->Draw("SAME E2");
+	if (debug) std::cout<<"ok3"<<std::endl;
 	if (xmin==xmax) {
 	  xmin = ratio->GetYaxis()->GetXmin();
 	  xmax = ratio->GetYaxis()->GetXmax();
 	}
+	if (debug) std::cout<<"ok3"<<std::endl;
 	TLine* l = new TLine(xmin, 1, xmax, 1);
 	l->SetLineWidth(2);
 	//l->SetLineColor(2);
 	l->SetLineStyle(2);
 	l->Draw();
+	if (debug) std::cout<<"ok3"<<std::endl;
       }
     }
+    if (debug) std::cout<<"ok4"<<std::endl;
     TPad* pad = (TPad*)c->GetListOfPrimitives()->At(0);
     // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), cms, era, data, legend
     int extra = 3;
     if (approval_/10>0) extra++;
     if (approval_%10>0) extra++;
+    if (debug) std::cout<<"ok4"<<std::endl;
     if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+extra) { 
       // Resize CMS label and era text
       extra = 1;
+      if (debug) std::cout<<"ok5"<<std::endl;
       if (approval_/10>0) {
 	TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
 	cms_lat->SetTextSize(cms_lat->GetTextSize()*(y1+y2)/y1);
       }
+      if (debug) std::cout<<"ok5"<<std::endl;
       if (approval_%10>0) {
 	TLatex* era_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
 	era_lat->SetTextSize(era_lat->GetTextSize()*(y1+y2)/y1);
       }
+      if (debug) std::cout<<"ok5"<<std::endl;
       // Resize Legend (Back to default)
       TLegend* leg = (TLegend*)pad->GetListOfPrimitives()->At(n_nostack_+(extra+=2));
       leg->SetTextSize(0.04);
