@@ -183,7 +183,7 @@ for filelist in input_filelists:
         JOB_NEVT = opt.NEVT
         # Further optimize this number
         # based on measured unskimmed to skimmed ratios (found in skim_ratios.txt)
-        otpim_found = False
+        optim_found = False
         if opt.optim:
             samplename = filelist.split("/")[-1][:-4]
             # Skimming uses a text file (skim_ratios.txt)
@@ -233,6 +233,7 @@ for filelist in input_filelists:
             totalevt = 0
             for i in range(0, len(files)):
                 # First get the number of events in the file
+                #print files[i]
                 f = ROOT.TFile.Open(files[i])
                 if not f:
                     print files[i]+" is not a root file"
@@ -278,6 +279,9 @@ for filelist in input_filelists:
         # In case of a single job/dataset
         ana_arguments.append([output_file, [EXEC_PATH+"/"+filelist], options, log_file])
 
+
+# for recovery (also uncomment backup, compile)
+#ana_arguments = ana_arguments[2833:]
 
 if opt.NEVT != -1: bad_files.close()
 

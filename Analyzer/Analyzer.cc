@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 					  "2016B", "2016C", "2016D", "2016E", 
 					  "2016F", "2016G", "2016H", "2016I", 
 					  "2016J", "2016K", "2016L", "2016M" };
-  std::vector<std::string> vname_signal = { "T1tttt", "T5ttcc", "T5tttt", "T2tt" }; // SMS
+  std::vector<std::string> vname_signal = { "T1tttt", "T1ttbb", "T5ttcc", "T5tttt", "T2tt" }; // SMS
 
   // ------------------------------
   // -- Parse command line stuff --
@@ -249,24 +249,23 @@ int main(int argc, char** argv) {
   if ( cmdline.isBkg ) {
     cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
-    cout << "useXSecFileForBkg (settings): " << ( settings.useXSecFileForBkg ? "true" : "false" ) << endl; // given in settings.h
-
     double xsec = 0, totweight = 0;
-    if (settings.useXSecFileForBkg) {
+    if (settings.useXSecFileForBkg&&settings.runOnSkim) {
+      cout << "useXSecFileForBkg (settings): true" << endl; // given in settings.h
       cout << "xSecFileName (settings): " << settings.xSecFileName << endl; // given in settings.h
       std::pair<double, double> values = ana.get_xsec_totweight_from_txt_file(settings.xSecFileName); // xSecFileName given in settings.h
       xsec = values.first;
       totweight = values.second;
-      cout << "xsec      (txt file): " << xsec << endl;      
-      cout << "totweight (txt file): " << totweight << endl;      
+      cout << "xsec      (txt file): " << xsec << endl;
+      cout << "totweight (txt file): " << totweight << endl;
     } else {
+      cout << "useXSecFileForBkg (settings): false" << endl; // given in settings.h
       xsec = ana.get_xsec_from_ntuple(cmdline.fileNames, settings.treeName); // treename given in settings.h
       cout << "xsec      (ntuple): " << xsec << endl;
       totweight = ana.get_totweight_from_ntuple(cmdline.allFileNames, settings.totWeightHistoName); // weight histo name given in settings.h
       cout << "totweight (ntuple): " << totweight << endl;
     }
     if ( xsec==0 || totweight==0 ) return 1;
-
 
     weightnorm = (settings.intLumi*xsec)/totweight;
     cout << "weightnorm (calc): " << weightnorm << endl;
@@ -280,7 +279,7 @@ int main(int argc, char** argv) {
     // Find the index of the current signal
     if (cmdline.fileNames.size()>0) for (size_t i=0, n=vname_signal.size(); i<n; ++i) 
       if (cmdline.fileNames[0].find(vname_signal[i])!=std::string::npos&&signal_index==-1) 
-	signal_index = (i>=3); // 0: T1tttt, T5ttcc, T5tttt; 1: T2tt
+	signal_index = (i>=4); // 0: T1tttt, T1ttbb, T5ttcc, T5tttt; 1: T2tt
   }
   if (debug) std::cout<<"Analyzer::main: calc lumi weight norm ok"<<std::endl;
 

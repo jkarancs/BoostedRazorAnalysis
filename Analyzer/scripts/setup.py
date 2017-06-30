@@ -158,6 +158,7 @@ for directory in os.listdir(DIR):
             # Backgrounds
             else:
                 txtname = directory
+                # Please synchronize the lines below with get_xsec_totweight_from_txt_file in AnalysisBase.h
                 if txtname.endswith('_2'):      txtname = txtname[:-2]
                 if txtname.endswith('_ext1'):   txtname = txtname[:-5]
                 if txtname.endswith('_ext2'):   txtname = txtname[:-5]

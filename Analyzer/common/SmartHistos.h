@@ -409,7 +409,7 @@ private:
     }
     h1d->SetEntries(h2d->GetEntries());
     if (savemother) mother_2d_[h1d]=h2d;
-    //if (h2d->GetNbinsY()==2&&h2d->GetYaxis()->GetBinCenter(1)==0&&h2d->GetYaxis()->GetBinCenter(2)==1) plot_asymm_err_=1;
+    if (h2d->GetNbinsY()==2&&h2d->GetYaxis()->GetBinCenter(1)==0&&h2d->GetYaxis()->GetBinCenter(2)==1) plot_asymm_err_=1;
   }
   
   //void calc_eff_2d_(TH2D* h2d, TH3D* h3d) {
@@ -1957,9 +1957,9 @@ private:
     //TGraphAsymmErrors* tgae = new TGraphAsymmErrors(eff);
     int n = 0;
     for (Int_t i=0; i<den->GetNbinsX(); ++i) if (den->GetBinContent(i+1)>0) n++;
-    TGraphAsymmErrors* tgae = new TGraphAsymmErrors(n+1); // added dummy point (see below)
-    int m = 0;
-    int Method = 1;
+    TGraphAsymmErrors* tgae = new TGraphAsymmErrors(n+2); // added 2 dummy points (see below)
+    int m = 1;
+    const int Method = 1;
     // Method 1
     // Calculate the asymmetric Wilson Score Interval
     if (Method==1) {
@@ -1992,12 +1992,17 @@ private:
     double xup  = eff->GetXaxis()->GetBinUpEdge(eff->GetXaxis()->GetLast());
     double ylow = eff->GetMinimum();
     double yup  = eff->GetMaximum();
-    // Add a dummy point (not visible) to make sure to be able to set X axis range
-    tgae->SetPoint(n,xup,ylow-(yup-ylow)*10);
-    tgae->SetPointEXlow (n,0);
-    tgae->SetPointEXhigh(n,0);
-    tgae->SetPointEYlow (n,0);
-    tgae->SetPointEYhigh(n,0);
+    // Add a 2 dummy points (not visible) to make sure to be able to set X axis range
+    tgae->SetPoint(0,xlow,ylow-(yup-ylow)*10);
+    tgae->SetPointEXlow (0,0);
+    tgae->SetPointEXhigh(0,0);
+    tgae->SetPointEYlow (0,0);
+    tgae->SetPointEYhigh(0,0);
+    tgae->SetPoint(n+1,xup,ylow-(yup-ylow)*10);
+    tgae->SetPointEXlow (n+1,0);
+    tgae->SetPointEXhigh(n+1,0);
+    tgae->SetPointEYlow (n+1,0);
+    tgae->SetPointEYhigh(n+1,0);
     tgae->GetXaxis()->SetRangeUser(xlow,xup);
     tgae->GetYaxis()->SetRangeUser(ylow,yup);
     tgae->SetMinimum(ylow);
