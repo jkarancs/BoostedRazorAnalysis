@@ -87,9 +87,9 @@ public:
 
   void init_syst_input();
 
-  double calc_top_tagging_sf(DataStruct&, const double&, const bool&);
+  double calc_top_tagging_sf(DataStruct&, const double&);
 
-  double calc_w_tagging_sf(DataStruct&, const double&, const bool&);
+  double calc_w_tagging_sf(DataStruct&, const double&);
 
   std::pair<double, double> calc_b_tagging_sf(DataStruct&, const double&, const bool&);
 
@@ -864,8 +864,6 @@ std::vector<bool> passHadTopTag;
 std::vector<bool> passHadTopMassTag;
 std::vector<bool> passHadTop0BMassTag;
 std::vector<bool> passHadTop0BAntiTag;
-std::vector<bool> hasGenW;
-std::vector<bool> hasGenTop;
 unsigned int nJetAK8;
 unsigned int nWMassTag;
 unsigned int nLooseWTag;
@@ -1559,18 +1557,18 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   } // End AK8 Jet Loop
   
   // Loop on generator particles
+  genHadWPassWTag.clear();
+  genTopPassTopTag.clear();
   iGenHadW  .clear();
   iGenHadTop.clear();
   iGenMassW  .clear();
   iGenMassTop.clear();
-  itGenHadW       .assign(data.gen.size, (size_t)-1);
-  itGenHadTop     .assign(data.gen.size, (size_t)-1);
-  itGenMassW      .assign(data.gen.size, (size_t)-1);
-  itGenMassTop    .assign(data.gen.size, (size_t)-1);
-  passGenHadW     .assign(data.gen.size, 0);
-  passGenHadTop   .assign(data.gen.size, 0);
-  genHadWPassWTag .assign(data.gen.size, 0);
-  genTopPassTopTag.assign(data.gen.size, 0);
+  itGenHadW    .assign(data.gen.size, (size_t)-1);
+  itGenHadTop  .assign(data.gen.size, (size_t)-1);
+  itGenMassW   .assign(data.gen.size, (size_t)-1);
+  itGenMassTop .assign(data.gen.size, (size_t)-1);
+  passGenHadW  .assign(data.gen.size, 0);
+  passGenHadTop.assign(data.gen.size, 0);
   nGenHadW = nGenHadTop = 0;
   nGenMassW = nGenMassTop = 0;
   npreWTag = nWTag = nmWTag = npreTopTag = nTopTag = nmTopTag = 0;
@@ -1586,9 +1584,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   //bool passTopTag = 0;
   //bool passpreTopTag = 0;
   TLorentzVector gentop_v4;
-  TLorentzVector jet_v4;
-  hasGenW            .assign(data.jetsAK8.size, 0);
-  hasGenTop          .assign(data.jetsAK8.size, 0);
+  TLorentzVector toptag_v4;
   while(data.gen.Loop()) {
     size_t i = data.gen.it;
     // Select only final version of the particles (their daughters have different IDs)
@@ -1602,8 +1598,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if ( passGenHadW[i] =
 	   ( abs(data.gen.ID[i])==24 &&
 	     ! (abs(data.gen.Dau0ID[i])>=11&&abs(data.gen.Dau0ID[i])<=16) ) ) {
-	iGenHadW.push_back(i);
-	itGenHadW[i] = nGenHadW++;
+	//iGenHadW.push_back(i);
+	//itGenHadW[i] = nGenHadW++;
 	//passWTag = 0;
 	//passpreWTag = 0;
 	genw_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
@@ -1613,27 +1609,18 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  wtag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
 	  dR = genw_v4.DeltaR(wtag_v4);
 	  if (dR<0.8) {
-	    hasGenW[j] = true;
 	    if (passTightWTag[j]) {
-	      genHadWPassWTag[i] = true;
-	      //iGenHadW.push_back(i);
 	      //passWTag = 1;
 	      nWTag=1;
-	      /*while(data.gen.Loop()) {
-		k = data.gen.it;
-		if((abs(data.gen.ID[k])==5)){
-		genb_v4.SetPtEtaPhiE(data.gen.Pt[k], data.gen.Eta[k], data.gen.Phi[k], data.gen.E[k]);
-	        dR1 = genb_v4.DeltaR(wtag_v4);
-	        if (dR1<0.8) nWTag=-1;
-		}
-		}
-	      */
 	    }
 	    //passpreWTag = 1;
 	    npreWTag++;
 	  }
 	}
+	//iGenHadW.push_back(passpreWTag);
+	//genHadWPassWTag.push_back(passWTag);
       }
+    }
       
       if(passGenHadTop[i] = (abs(data.gen.ID[i])==6)) {
 	//passTopTag = 0;
@@ -1641,27 +1628,30 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	gentop_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
 	while(data.jetsAK8.Loop()) {
 	  size_t j = data.jetsAK8.it;
-	  jet_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
-	  dR = gentop_v4.DeltaR(jet_v4);
-	  if (dR<0.8) {
-	    hasGenTop[j] = true;
-	    npreTopTag++;
-	    if (passHadTopTag[j]) {
-	      genTopPassTopTag[i] = true;
-	      iGenHadTop.push_back(i);
-	      itGenHadTop[j] = nTopTag++;
-	    }
-	    if (passHadTopMassTag[j]) {
-	      iGenMassTop.push_back(j);
-	      itGenMassTop[j] = nmTopTag++;
-	    }
+	  if (passHadTopTag[j]) {
+	    toptag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
+	    dR = gentop_v4.DeltaR(toptag_v4);
+      //dR1 = selected_genw_v4[j].DeltaR(toptag_v4);
+	    if (dR<0.8) {iGenHadTop.push_back(j); itGenHadTop[j] = nTopTag++;}
 	  }
+	  if (passHadTopMassTag[j]) {
+	    toptag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
+	    dR = gentop_v4.DeltaR(toptag_v4);
+      //dR1 = selected_genw_v4[j].DeltaR(toptag_v4);
+	    if (dR<0.8) {iGenMassTop.push_back(j); itGenMassTop[j] = nmTopTag++;}
+	  }
+	  toptag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
+	  dR = gentop_v4.DeltaR(toptag_v4);
+      //dR1 = selected_genw_v4[j].DeltaR(toptag_v4);
+	  if (dR<0.8) {npreTopTag++;}
 	}
+	//iGenHadTop.push_back(passpreTopTag);
+//	genTopPassTopTag.push_back(passTopTag);
       }
-    }
   }
   for(size_t i=0;i<selected_genw_v4.size();++i){
     for(size_t k=0;k<selected_genb_v4.size();++k){
+      if(selected_genw_v4[i].Pt()==0 || selected_genb_v4[k].Pt()==0) continue;
       while(data.jetsAK8.Loop()) {
 	size_t j = data.jetsAK8.it;
 	wtag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
@@ -1680,10 +1670,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    //dR1 = wtag_v4.DeltaR(selected_genb_v4[k]);
 	    dR1 = selected_genb_v4[k].DeltaR(wtag_v4);
 	    if (dR1<0.8) nWTag=-1;
-	    else{ 
-	      //iGenHadW.push_back(j); 
-	      //itGenHadW[j] = nGenHadW++;
-	    }
+	    else{iGenHadW.push_back(j); itGenHadW[j] = nGenHadW++;}
 	  }
 	  //passpreWTag = 1;
 	  npreWTag++;
@@ -1935,14 +1922,7 @@ AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
       nth_line>>primary_dataset;
       nth_line>>xsec;
       nth_line>>totweight;
-      // For skimmed samples, remove certain postfixes
-      // Please, synchronize with setup.py script
-      std::string dirname = sample;
-      for (std::string pf : { "_2", "_ext1", "_ext2", "_ext3", "_backup", "_unskimmed" }) {
-	size_t f = dirname.find(pf);
-	if (f!=std::string::npos) dirname.erase(f, pf.size());
-      }
-      if (dirname==shortname) {
+      if (sample==shortname) {
 	XSec = xsec;
 	Totweight = totweight;
       }
@@ -1965,7 +1945,7 @@ AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filename
   for (const auto& filename : filenames) {
     TFile* f = TFile::Open(filename.c_str());
     h_totweight->Add((TH1D*)f->Get(histoname.c_str()));
-    //std::cout<<f<<" "<<filename<<" "<<histoname.c_str()<<" "<<f->Get(histoname.c_str())<<" "<<h_totweight->GetBinContent(1)<<std::endl;
+    std::cout<<f<<" "<<filename<<" "<<histoname.c_str()<<" "<<f->Get(histoname.c_str())<<" "<<h_totweight->GetBinContent(1)<<std::endl;
     f->Close();
   }
   return h_totweight->GetBinContent(1);
@@ -1985,7 +1965,7 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
       signal_index = i;
       signal_name = vname_signal[i];
     }
-  signal_index = (signal_index>=4); // 0: Mlsp vs Mgluino - T1tttt, T1ttbb, T5ttcc, T5tttt; 1: Mlsp vs Mstop - T2tt
+  signal_index = (signal_index>=3); // 0: Mlsp vs Mgluino - T1tttt, T5ttcc, T5tttt; 1: Mlsp vs Mstop - T2tt
 
   // Merge totweight histos
   std::map<int, double> xsec_mother;
@@ -2433,15 +2413,6 @@ TH2D* eff_trigger_mu;
 TH2D* eff_trigger_mu_up;
 TH2D* eff_trigger_mu_down;
 
-TH1D* eff_full_aW;
-TH1D* eff_full_aTop;
-TH1D* eff_fast_W;
-TH1D* eff_fast_aW;
-TH1D* eff_fast_fakeW;
-TH1D* eff_fast_Top;
-TH1D* eff_fast_aTop;
-TH1D* eff_fast_fakeTop;
-
 void AnalysisBase::init_syst_input() {
   TString Sample(sample);
   
@@ -2606,71 +2577,28 @@ void AnalysisBase::init_syst_input() {
       eff_trigger_mu     ->SetBinError(i,j,mu_total);
     }
   }
-
-  // W/Top (anti-)tag (and fake rate) scale factors
-  eff_full_aW       = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "aW",  "full_aW");
-  eff_full_aTop     = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "aW",  "full_aTop");
-  eff_fast_W        = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimWTagSF",   "fast_W");
-  //NONAV  eff_fast_aW       = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "aW",                 "fast_aW");
-  //NONAV  eff_fast_fakeW    = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "fakeW",              "fast_fakeW");
-  eff_fast_Top      = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimTopTagSF", "fast_Top");
-  //NONAV  eff_fast_aTop     = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "aW",                 "fast_aTop");
-  //NONAV  eff_fast_fakeTop  = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "fakeW",              "fast_fakeW");
 }
 
 
-double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF, const bool& isFastSim) {
+double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF) {
   double w = 1;
-  while(data.jetsAK8.Loop()) {
-    size_t i = data.jetsAK8.it;
-    if (passHadTopTag[data.jetsAK8.it]) {
-      // Use POG scale factor for tag
-      w *= get_syst_weight(TOP_TAG_SF, TOP_TAG_SF+TOP_TAG_SF_ERR_UP, TOP_TAG_SF-TOP_TAG_SF_ERR_DOWN, nSigmaTopTagSF);
-      // Additionally use our scale factors for FastSim
-      if (isFastSim) {
-	if (hasGenTop[i]) w *= utils::geteff1D(eff_fast_Top,      data.jetsAK8.Pt[i]);
-        //NONAV  else              w *= utils::geteff1D(eff_fast_fakeTop, data.jetsAK8.Pt[i]);
-      }
-    } else if (passHadTop0BAntiTag[i]) {
-      // Use our anti-tag scale factor for jets without bs and reverted tau32 cut
-      w *= utils::geteff1D(eff_full_aTop, data.jetsAK8.Pt[i]);
-      // Additionally use our anti-tag scale factor for FastSim
-      //NONAV  if (isFastSim&&!hasGenTop[i])
-      //NONAV    w *= utils::geteff1D(eff_fast_aTop, data.jetsAK8.Pt[i]);
-    }
-  }
+  while(data.jetsAK8.Loop()) if (passHadTopTag[data.jetsAK8.it])
+    w *= get_syst_weight(TOP_TAG_SF, TOP_TAG_SF+TOP_TAG_SF_ERR_UP, TOP_TAG_SF-TOP_TAG_SF_ERR_DOWN, nSigmaTopTagSF);
 
   return w;
 }
 
 
-double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF, const bool& isFastSim) {
+double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF) {
   double w = 1.0;
 
   while(data.jetsAK8.Loop()) {
-    size_t i = data.jetsAK8.it;
-    if (passTightWTag[i]) {
-      // Use POG scale factor for tag (both truth and fake Ws)
+    if (passTightWTag[data.jetsAK8.it])
       w *= get_syst_weight(W_TAG_HP_SF, W_TAG_HP_SF_ERR, nSigmaWTagSF);
-      // Additionally use our scale factors for FastSim
-      if (isFastSim) {
-        if (hasGenW[i]) w *= utils::geteff1D(eff_fast_W,      data.jetsAK8.Pt[i]);
-        //NONAV  else            w *= utils::geteff1D(eff_fast_fakeW, data.jetsAK8.Pt[i]);
-      }
-    } else if (passTightWAntiTag[i]) {
-      if (nLooseBTag>=1)
-        // Use POG anti-tag scale factor for events with b-tag(s)
-        // Use veto b-tag to be more inclusive (doesn't really matter)
-        w *= get_syst_weight(W_TAG_LP_SF, W_TAG_LP_SF_ERR, nSigmaWTagSF);
-      else
-        // Use our anti-tag scale factor for events without bs
-        w *= utils::geteff1D(eff_full_aW, data.jetsAK8.Pt[i]);
-      // Additionally use our anti-tag scale factors for FastSim
-      //NONAV  if (isFastSim&&!hasGenW[i]) 
-      //NONAV    w *= utils::geteff1D(eff_fast_aW, data.jetsAK8.Pt[i]);
-    }
+    else if (passTightWAntiTag[data.jetsAK8.it])
+      w *= get_syst_weight(W_TAG_LP_SF, W_TAG_LP_SF_ERR, nSigmaWTagSF);
   }
-  
+
   return w;
 }
 
