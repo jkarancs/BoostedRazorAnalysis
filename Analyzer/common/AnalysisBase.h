@@ -87,9 +87,13 @@ public:
 
   void init_syst_input();
 
-  double calc_top_tagging_sf(DataStruct&, const double&);
+  double calc_top_tagging_sf(DataStruct&, const double&, const bool&);
+  double calc_fake_top_mass_tagging_sf(DataStruct&);
+  double calc_fake_top_anti_tagging_sf(DataStruct&);
 
-  double calc_w_tagging_sf(DataStruct&, const double&);
+  double calc_w_tagging_sf(DataStruct&, const double&, const bool&);
+  double calc_fake_w_mass_tagging_sf(DataStruct&);
+  double calc_fake_w_anti_tagging_sf(DataStruct&);
 
   std::pair<double, double> calc_b_tagging_sf(DataStruct&, const double&, const bool&);
 
@@ -374,7 +378,7 @@ Choose:
   [5] SUSY Loose/Tight IP2D (Use) - https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=172#ID_IP_ISO_AN1
   [6] POG  Tight - https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2?rev=41#Offline_selection_criteria
 
-  For Veto (All regions except Z) Choose:
+  For Veto (Regions except T/W/Z) Choose:
   - Spring15 Cut based Veto ID without relIso (EA) cut
   - Mini-Isolation (EA)/pt < 0.1 (Medium WP [4])
   - pt >= 5
@@ -387,7 +391,7 @@ Choose:
   - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
   - |d0| < 0.05, |dz| < 0.1 (Tight IP2D [5])
 
-  For Selection (Z) Choose:
+  For Selection (T/W/Z) Choose:
   - Spring15 Cut based Medium ID without relIso (EA) cut
   - Mini-Isolation (EA)/pt < 0.1 (Tight WP [4])
   - pt >= 10
@@ -864,6 +868,8 @@ std::vector<bool> passHadTopTag;
 std::vector<bool> passHadTopMassTag;
 std::vector<bool> passHadTop0BMassTag;
 std::vector<bool> passHadTop0BAntiTag;
+std::vector<bool> hasGenW;
+std::vector<bool> hasGenTop;
 unsigned int nJetAK8;
 unsigned int nWMassTag;
 unsigned int nLooseWTag;
@@ -929,15 +935,15 @@ std::vector<TLorentzVector> hemis_AK4;
 
 // gen particles
 std::vector<bool> passGenHadW;
-std::vector<bool> passGenHadTop;
+std::vector<bool> passGenTop;
 std::vector<bool> genHadWPassWTag;
 std::vector<bool> genTopPassTopTag;
 std::vector<size_t > iGenHadW,   itGenHadW;
-std::vector<size_t > iGenHadTop, itGenHadTop;
+std::vector<size_t > iGenTop,    itGenTop;
 std::vector<size_t > iGenMassW,   itGenMassW;
 std::vector<size_t > iGenMassTop, itGenMassTop;
 unsigned int nGenHadW;
-unsigned int nGenHadTop;
+unsigned int nGenTop;
 unsigned int nGenMassW;
 unsigned int nGenMassTop;
 int nWTag;
@@ -1557,19 +1563,19 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   } // End AK8 Jet Loop
   
   // Loop on generator particles
-  genHadWPassWTag.clear();
-  genTopPassTopTag.clear();
-  iGenHadW  .clear();
-  iGenHadTop.clear();
+  iGenHadW   .clear();
+  iGenTop    .clear();
   iGenMassW  .clear();
   iGenMassTop.clear();
-  itGenHadW    .assign(data.gen.size, (size_t)-1);
-  itGenHadTop  .assign(data.gen.size, (size_t)-1);
-  itGenMassW   .assign(data.gen.size, (size_t)-1);
-  itGenMassTop .assign(data.gen.size, (size_t)-1);
-  passGenHadW  .assign(data.gen.size, 0);
-  passGenHadTop.assign(data.gen.size, 0);
-  nGenHadW = nGenHadTop = 0;
+  itGenHadW       .assign(data.gen.size, (size_t)-1);
+  itGenTop        .assign(data.gen.size, (size_t)-1);
+  itGenMassW      .assign(data.gen.size, (size_t)-1);
+  itGenMassTop    .assign(data.gen.size, (size_t)-1);
+  passGenHadW     .assign(data.gen.size, 0);
+  passGenTop      .assign(data.gen.size, 0);
+  genHadWPassWTag .assign(data.gen.size, 0);
+  genTopPassTopTag.assign(data.gen.size, 0);
+  nGenHadW = nGenTop = 0;
   nGenMassW = nGenMassTop = 0;
   npreWTag = nWTag = nmWTag = npreTopTag = nTopTag = nmTopTag = 0;
   float dR;
@@ -1584,74 +1590,92 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   //bool passTopTag = 0;
   //bool passpreTopTag = 0;
   TLorentzVector gentop_v4;
-  TLorentzVector toptag_v4;
+  TLorentzVector jet_v4;
+  hasGenW            .assign(data.jetsAK8.size, 0);
+  hasGenTop          .assign(data.jetsAK8.size, 0);
   while(data.gen.Loop()) {
     size_t i = data.gen.it;
     // Select only final version of the particles (their daughters have different IDs)
+    // Apply cut |eta| < 2.4
     if (data.gen.Dau0ID[i]!=data.gen.ID[i]&&data.gen.Dau1ID[i]!=data.gen.ID[i]) {
-      // gen bs
-      if((abs(data.gen.ID[i])==5)){
-	genb_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
-	selected_genb_v4.push_back(genb_v4);
-      }
-      // Consider only hadronically decaying Ws
-      if ( passGenHadW[i] =
-	   ( abs(data.gen.ID[i])==24 &&
-	     ! (abs(data.gen.Dau0ID[i])>=11&&abs(data.gen.Dau0ID[i])<=16) ) ) {
-	//iGenHadW.push_back(i);
-	//itGenHadW[i] = nGenHadW++;
-	//passWTag = 0;
-	//passpreWTag = 0;
-	genw_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
-	selected_genw_v4.push_back(genw_v4);
-	while(data.jetsAK8.Loop()) {
-	  size_t j = data.jetsAK8.it;
-	  wtag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
-	  dR = genw_v4.DeltaR(wtag_v4);
-	  if (dR<0.8) {
-	    if (passTightWTag[j]) {
-	      //passWTag = 1;
-	      nWTag=1;
-	    }
-	    //passpreWTag = 1;
-	    npreWTag++;
-	  }
-	}
-	//iGenHadW.push_back(passpreWTag);
-	//genHadWPassWTag.push_back(passWTag);
+      if (fabs(data.gen.Eta[i])<2.4) {
+        // gen bs
+        if(abs(data.gen.ID[i])==5&&data.gen.Pt[i]>0) {
+          genb_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
+          selected_genb_v4.push_back(genb_v4);
+        }
+        
+	// gen Ws
+	// Consider only hadronically decaying Ws
+        if ( passGenHadW[i] =
+             ( abs(data.gen.ID[i])==24 &&
+               ! (abs(data.gen.Dau0ID[i])>=11&&abs(data.gen.Dau0ID[i])<=16) ) ) {
+          iGenHadW.push_back(i);
+          itGenHadW[i] = nGenHadW++;
+          //passWTag = 0;
+          //passpreWTag = 0;
+          genw_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
+          selected_genw_v4.push_back(genw_v4);
+          while(data.jetsAK8.Loop()) {
+            size_t j = data.jetsAK8.it;
+            wtag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
+            dR = genw_v4.DeltaR(wtag_v4);
+            if (dR<0.8) {
+              hasGenW[j] = true;
+              if (passTightWTag[j]) {
+                genHadWPassWTag[i] = true;
+                //iGenHadW.push_back(i);
+                //passWTag = 1;
+                nWTag=1;
+                /*while(data.gen.Loop()) {
+          	k = data.gen.it;
+          	if((abs(data.gen.ID[k])==5)){
+          	genb_v4.SetPtEtaPhiE(data.gen.Pt[k], data.gen.Eta[k], data.gen.Phi[k], data.gen.E[k]);
+                  dR1 = genb_v4.DeltaR(wtag_v4);
+                  if (dR1<0.8) nWTag=-1;
+          	}
+          	}
+                */
+              }
+              //passpreWTag = 1;
+              npreWTag++;
+            }
+          }
+        }
+      
+	// gen tops
+	// Consider also leptonic W decays, because lepton is usually energetic
+        if(passGenTop[i] = (abs(data.gen.ID[i])==6)) {
+          iGenTop.push_back(i);
+          itGenTop[i] = nGenTop++;
+
+          //passTopTag = 0;
+          //passpreTopTag = 0;
+          gentop_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
+          while(data.jetsAK8.Loop()) {
+            size_t j = data.jetsAK8.it;
+            jet_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
+            dR = gentop_v4.DeltaR(jet_v4);
+            if (dR<0.8) {
+              hasGenTop[j] = true;
+              npreTopTag++;
+              if (passHadTopTag[j]) {
+                genTopPassTopTag[i] = true;
+                //iGenTop.push_back(i);
+                //itGenTop[j] = nTopTag++;
+              }
+              if (passHadTopMassTag[j]) {
+                iGenMassTop.push_back(j);
+                itGenMassTop[j] = nmTopTag++;
+              }
+            }
+          }
+        }
       }
     }
-      
-      if(passGenHadTop[i] = (abs(data.gen.ID[i])==6)) {
-	//passTopTag = 0;
-	//passpreTopTag = 0;
-	gentop_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
-	while(data.jetsAK8.Loop()) {
-	  size_t j = data.jetsAK8.it;
-	  if (passHadTopTag[j]) {
-	    toptag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
-	    dR = gentop_v4.DeltaR(toptag_v4);
-      //dR1 = selected_genw_v4[j].DeltaR(toptag_v4);
-	    if (dR<0.8) {iGenHadTop.push_back(j); itGenHadTop[j] = nTopTag++;}
-	  }
-	  if (passHadTopMassTag[j]) {
-	    toptag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
-	    dR = gentop_v4.DeltaR(toptag_v4);
-      //dR1 = selected_genw_v4[j].DeltaR(toptag_v4);
-	    if (dR<0.8) {iGenMassTop.push_back(j); itGenMassTop[j] = nmTopTag++;}
-	  }
-	  toptag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
-	  dR = gentop_v4.DeltaR(toptag_v4);
-      //dR1 = selected_genw_v4[j].DeltaR(toptag_v4);
-	  if (dR<0.8) {npreTopTag++;}
-	}
-	//iGenHadTop.push_back(passpreTopTag);
-//	genTopPassTopTag.push_back(passTopTag);
-      }
   }
   for(size_t i=0;i<selected_genw_v4.size();++i){
     for(size_t k=0;k<selected_genb_v4.size();++k){
-      if(selected_genw_v4[i].Pt()==0 || selected_genb_v4[k].Pt()==0) continue;
       while(data.jetsAK8.Loop()) {
 	size_t j = data.jetsAK8.it;
 	wtag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
@@ -1670,7 +1694,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    //dR1 = wtag_v4.DeltaR(selected_genb_v4[k]);
 	    dR1 = selected_genb_v4[k].DeltaR(wtag_v4);
 	    if (dR1<0.8) nWTag=-1;
-	    else{iGenHadW.push_back(j); itGenHadW[j] = nGenHadW++;}
+	    else{ 
+	      //iGenHadW.push_back(j); 
+	      //itGenHadW[j] = nGenHadW++;
+	    }
 	  }
 	  //passpreWTag = 1;
 	  npreWTag++;
@@ -1922,7 +1949,14 @@ AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
       nth_line>>primary_dataset;
       nth_line>>xsec;
       nth_line>>totweight;
-      if (sample==shortname) {
+      // For skimmed samples, remove certain postfixes
+      // Please, synchronize with setup.py script
+      std::string dirname = sample;
+      for (std::string pf : { "_2", "_ext1", "_ext2", "_ext3", "_backup", "_unskimmed" }) {
+	size_t f = dirname.find(pf);
+	if (f!=std::string::npos) dirname.erase(f, pf.size());
+      }
+      if (dirname==shortname) {
 	XSec = xsec;
 	Totweight = totweight;
       }
@@ -1945,7 +1979,7 @@ AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filename
   for (const auto& filename : filenames) {
     TFile* f = TFile::Open(filename.c_str());
     h_totweight->Add((TH1D*)f->Get(histoname.c_str()));
-    std::cout<<f<<" "<<filename<<" "<<histoname.c_str()<<" "<<f->Get(histoname.c_str())<<" "<<h_totweight->GetBinContent(1)<<std::endl;
+    //std::cout<<f<<" "<<filename<<" "<<histoname.c_str()<<" "<<f->Get(histoname.c_str())<<" "<<h_totweight->GetBinContent(1)<<std::endl;
     f->Close();
   }
   return h_totweight->GetBinContent(1);
@@ -1965,7 +1999,7 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
       signal_index = i;
       signal_name = vname_signal[i];
     }
-  signal_index = (signal_index>=3); // 0: Mlsp vs Mgluino - T1tttt, T5ttcc, T5tttt; 1: Mlsp vs Mstop - T2tt
+  signal_index = (signal_index>=4); // 0: Mlsp vs Mgluino - T1tttt, T1ttbb, T5ttcc, T5tttt; 1: Mlsp vs Mstop - T2tt
 
   // Merge totweight histos
   std::map<int, double> xsec_mother;
@@ -2413,6 +2447,23 @@ TH2D* eff_trigger_mu;
 TH2D* eff_trigger_mu_up;
 TH2D* eff_trigger_mu_down;
 
+TH1D* eff_full_fake_aW;
+TH1D* eff_full_fake_aTop;
+TH1D* eff_full_fake_mW;
+TH1D* eff_full_fake_mTop;
+TH1D* eff_full_fake_W;
+TH1D* eff_full_fake_Top;
+TH1D* eff_fast_W;
+TH1D* eff_fast_Top;
+//TGraphAsymmErrors* eff_full_fake_aW;
+//TGraphAsymmErrors* eff_full_fake_aTop;
+//TGraphAsymmErrors* eff_full_fake_mW;
+//TGraphAsymmErrors* eff_full_fake_mTop;
+//TGraphAsymmErrors* eff_full_fake_W;
+//TGraphAsymmErrors* eff_full_fake_Top;
+//TGraphAsymmErrors* eff_fast_W;
+//TGraphAsymmErrors* eff_fast_Top;
+
 void AnalysisBase::init_syst_input() {
   TString Sample(sample);
   
@@ -2577,30 +2628,120 @@ void AnalysisBase::init_syst_input() {
       eff_trigger_mu     ->SetBinError(i,j,mu_total);
     }
   }
+
+  // W/Top (anti-)tag (and fake rate) scale factors
+  // From Changgi
+  eff_full_fake_W    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "W",                    "full_fake_W");
+  eff_full_fake_mW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "mW",                   "full_fake_mW");
+  eff_full_fake_aW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "aW",                   "full_fake_aW");
+  eff_full_fake_Top  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "Top",                  "full_fake_Top");
+  eff_full_fake_mTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "mTop",                 "full_fake_mTop");
+  eff_full_fake_aTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "aTop",                 "full_fake_aTop");
+  eff_fast_W         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimWTagSF",   "fast_W");
+  eff_fast_Top       = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimTopTagSF", "fast_Top");
+  // From Janos
+  //eff_full_fake_W    = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "WTagFakeRate_vs_JetAK8PtBins/Data_MC_F",              2, "full_fake_W");
+  //eff_full_fake_mW   = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "WMassTagFakeRate_vs_JetAK8PtBins/Data_MC_F",          2, "full_fake_mW");
+  //eff_full_fake_aW   = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "WAntiTagFakeRate_vs_JetAK8PtBins/Data_MC_F",          2, "full_fake_aW");
+  //eff_full_fake_Top  = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "TopTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b",     2, "full_fake_Top");
+  //eff_full_fake_mTop = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "TopMassTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b", 2, "full_fake_mTop");
+  //eff_full_fake_aTop = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "TopAntiTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b", 2, "full_fake_aTop");
+  //eff_fast_W         = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "", 2, "fast_W");
+  //eff_fast_Top       = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "", 2, "fast_Top");
 }
 
 
-double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF) {
+double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF, const bool& isFastSim) {
   double w = 1;
-  while(data.jetsAK8.Loop()) if (passHadTopTag[data.jetsAK8.it])
-    w *= get_syst_weight(TOP_TAG_SF, TOP_TAG_SF+TOP_TAG_SF_ERR_UP, TOP_TAG_SF-TOP_TAG_SF_ERR_DOWN, nSigmaTopTagSF);
-
-  return w;
-}
-
-
-double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF) {
-  double w = 1.0;
-
   while(data.jetsAK8.Loop()) {
-    if (passTightWTag[data.jetsAK8.it])
-      w *= get_syst_weight(W_TAG_HP_SF, W_TAG_HP_SF_ERR, nSigmaWTagSF);
-    else if (passTightWAntiTag[data.jetsAK8.it])
-      w *= get_syst_weight(W_TAG_LP_SF, W_TAG_LP_SF_ERR, nSigmaWTagSF);
+    size_t i = data.jetsAK8.it;
+    if (nGenTop>0) {
+      if (passHadTopTag[i]) {
+	// Use POG scale factor for tag
+	w *= get_syst_weight(TOP_TAG_SF, TOP_TAG_SF+TOP_TAG_SF_ERR_UP, TOP_TAG_SF-TOP_TAG_SF_ERR_DOWN, nSigmaTopTagSF);
+	// Additionally use our scale factors for FastSim
+	if (isFastSim&&hasGenTop[i]) w *= utils::geteff1D(eff_fast_Top, data.jetsAK8.Pt[i], 1);
+      }
+    } else {
+      // Top tagging fake rate scale factor
+      if (passHadTopTag[i]) w *= utils::geteff1D(eff_full_fake_Top, data.jetsAK8.Pt[i], 1);
+      //if (passHadTopTag[i]) w *= utils::geteff_AE(eff_full_fake_Top, data.jetsAK8.Pt[i]);
+    }
   }
 
   return w;
 }
+
+double AnalysisBase::calc_fake_top_mass_tagging_sf(DataStruct& data) {
+  double w = 1;
+  if (nGenTop==0) while(data.jetsAK8.Loop()) {
+    size_t i = data.jetsAK8.it;
+    if (passHadTop0BMassTag[i]) w *= utils::geteff1D(eff_full_fake_mTop, data.jetsAK8.Pt[i], 1);
+    //if (passHadTop0BMassTag[i]) w *= utils::geteff_AE(eff_full_fake_mTop, data.jetsAK8.Pt[i]);
+  }
+
+  return w;
+}
+
+double AnalysisBase::calc_fake_top_anti_tagging_sf(DataStruct& data) {
+  double w = 1;
+  if (nGenTop==0) while(data.jetsAK8.Loop()) {
+    size_t i = data.jetsAK8.it;
+    if (passHadTop0BAntiTag[i]) w *= utils::geteff1D(eff_full_fake_aTop, data.jetsAK8.Pt[i], 1);
+    //if (passHadTop0BAntiTag[i]) w *= utils::geteff_AE(eff_full_fake_aTop, data.jetsAK8.Pt[i]);
+  }
+
+  return w;
+}
+
+double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF, const bool& isFastSim) {
+  double w = 1.0;
+
+  while(data.jetsAK8.Loop()) {
+    size_t i = data.jetsAK8.it;
+    if (nGenHadW>0) {
+      if (passTightWTag[i]) {
+	// Use POG scale factor for tag (both truth and fake Ws)
+	w *= get_syst_weight(W_TAG_HP_SF, W_TAG_HP_SF_ERR, nSigmaWTagSF);
+	// Additionally use our scale factors for FastSim
+	if (isFastSim&&hasGenW[i]) w *= utils::geteff1D(eff_fast_W, data.jetsAK8.Pt[i], 1);
+      }
+    } else {
+      // W tagging fake rate scale factor
+      if (passTightWTag[i]) w *= utils::geteff1D(eff_full_fake_W, data.jetsAK8.Pt[i], 1);
+      //if (passTightWTag[i]) w *= utils::geteff_AE(eff_full_fake_W, data.jetsAK8.Pt[i]);
+    }
+  }
+  
+  return w;
+}
+
+double AnalysisBase::calc_fake_w_mass_tagging_sf(DataStruct& data) {
+  double w = 1.0;
+
+  while(data.jetsAK8.Loop()) {
+    size_t i = data.jetsAK8.it;
+    if (nGenHadW==0) {
+      if (passWMassTag[i]) w *= utils::geteff1D(eff_full_fake_mW, data.jetsAK8.Pt[i], 1);
+      //if (passWMassTag[i]) w *= utils::geteff_AE(eff_full_fake_mW, data.jetsAK8.Pt[i]);
+    }
+  }
+  
+  return w;
+}
+
+double AnalysisBase::calc_fake_w_anti_tagging_sf(DataStruct& data) {
+  double w = 1.0;
+
+  while(data.jetsAK8.Loop()) {
+    size_t i = data.jetsAK8.it;
+    if (passTightWAntiTag[i]) w *= utils::geteff1D(eff_full_fake_aW, data.jetsAK8.Pt[i], 1);
+    //if (passTightWAntiTag[i]) w *= utils::geteff_AE(eff_full_fake_aW, data.jetsAK8.Pt[i]);
+  }
+  
+  return w;
+}
+
 
 std::pair<double, double> AnalysisBase::calc_b_tagging_sf(DataStruct& data, const double& nSigmaBTagSF, const bool& isFastSim) {
 

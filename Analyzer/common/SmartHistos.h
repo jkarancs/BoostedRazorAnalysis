@@ -503,29 +503,51 @@ private:
   
   // ******************** DColEfficiency *********************
   void calc_dcol_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
-    std::string name =h1d->GetName();
-    // Check which Layer/Ring is plotted (or if it is a module plot)
-    bool mod_plot = (std::string(h1d->GetName()).find("Modules")!=std::string::npos);
-    int Lay = 0; // Assume layer 1 if no such postfix is given
-    for (int lay=0; lay<3; ++lay) {
-      std::stringstream ss; ss<<"Lay"<<lay+1;
-      if (name.find(ss.str())!=std::string::npos) Lay = lay;
+    // Old Phase 0 way: with hiteff to dcol function
+    //++  std::string name =h1d->GetName();
+    //++  // Check which Layer/Ring is plotted (or if it is a module plot)
+    //++  bool mod_plot = (std::string(h1d->GetName()).find("Modules")!=std::string::npos);
+    //++  int Lay = 0; // Assume layer 1 if no such postfix is given
+    //++  for (int lay=0; lay<3; ++lay) {
+    //++    std::stringstream ss; ss<<"Lay"<<lay+1;
+    //++    if (name.find(ss.str())!=std::string::npos) Lay = lay;
+    //++  }
+    //++  int Ring = -1;
+    //++  for (int ring=0; ring<4; ring++) {
+    //++    std::stringstream ss; ss<<"Mod"<<ring+1;
+    //++    if (name.find(ss.str())!=std::string::npos) Ring = ring;
+    //++  }
+    //++  // Get HitEfficiency and use hiteff_vs_dcol functions to get DCol Efficiency
+    //++  calc_eff_1d_(h1d, h2d, 1, savemother);
+    //++  for (int bin=1; bin<=h1d->GetNbinsX(); ++bin) {
+    //++    if (mod_plot) Ring = abs(bin-5)-1;
+    //++    if (Lay==0&&Ring==3) Ring = 2;
+    //++    double hiteff = h1d->GetBinContent(bin);
+    //++    double dcoleff = (Ring!=-1) ? ( hiteff>ring_fit_[Lay][Ring]->Eval(0.75) ? ring_fit_[Lay][Ring]->GetX(hiteff) : 0 ): 0;
+    //++    h1d->SetBinContent(bin, dcoleff);
+    //++    h1d->SetBinError(bin, 0);
+    //++  }
+    //++  h1d->SetEntries(h2d->GetEntries());
+    // Direct measurement in Phase 1
+    // Wilson Score Interval
+    double z = 1; // N Sigma confidence
+    for (int i=1; i<=h2d->GetNbinsX(); ++i) {
+      double even = h2d->GetBinContent(i,1), odd = h2d->GetBinContent(i,2);
+      if (even+odd>0) {
+	double eff = std::min(even>0 ? odd/even : 0, 1.0);
+	double n = odd + even;
+	double cen = (eff+(z*z/(2*n))) / (1.0 + (z*z/n));
+	double halfwidth = z*sqrt( eff*(1.0-eff)/n + (z*z/(4*n*n)) ) / (1.0 + (z*z/n));
+	double err = halfwidth + fabs(cen-eff);
+	//double err = z * std::sqrt(1.0/(odd+even)*eff*(1.0-eff)); // Normal approx interval
+	// Assymmetric error -> Choose larger for a conservative error estimate
+	h1d->SetBinContent(i,eff);
+	h1d->SetBinError(i,err);
+      }
     }
-    int Ring = -1;
-    for (int ring=0; ring<4; ring++) {
-      std::stringstream ss; ss<<"Mod"<<ring+1;
-      if (name.find(ss.str())!=std::string::npos) Ring = ring;
-    }
-    // Get HitEfficiency and use hiteff_vs_dcol functions to get DCol Efficiency
-    calc_eff_1d_(h1d, h2d, 1, savemother);
-    for (int bin=1; bin<=h1d->GetNbinsX(); ++bin) {
-      if (mod_plot) Ring = abs(bin-5)-1;
-      if (Lay==0&&Ring==3) Ring = 2;
-      double hiteff = h1d->GetBinContent(bin);
-      double dcoleff = (Ring!=-1) ? ( hiteff>ring_fit_[Lay][Ring]->Eval(0.75) ? ring_fit_[Lay][Ring]->GetX(hiteff) : 0 ): 0;
-      h1d->SetBinContent(bin, dcoleff);
-      h1d->SetBinError(bin, 0);
-    }
+    h1d->SetEntries(h2d->GetEntries());
+    if (savemother) mother_2d_[h1d]=h2d;
+    //if (h2d->GetNbinsY()==2&&h2d->GetYaxis()->GetBinCenter(1)==0&&h2d->GetYaxis()->GetBinCenter(2)==1) plot_asymm_err_=1;
     h1d->SetEntries(h2d->GetEntries());
   }
 
@@ -830,12 +852,13 @@ private:
     }
     for (size_t iaxis=0; iaxis<ndim_; ++iaxis) {
       TAxis* axis = iaxis==0 ? h->GetXaxis() : iaxis==1 ? h->GetYaxis() : h->GetZaxis();
-      bool set_opt = 0;
+      int set_opt = 0;
       for (auto pair : bin_labels_[iaxis]) { 
 	axis->SetBinLabel(pair.first, pair.second.c_str());
 	if (pair.second.size()>8) set_opt = 1;
       }
-      if (set_opt) axis->LabelsOption("d");
+      //if (set_opt==1) axis->LabelsOption("d"); // down 
+      if (set_opt==1) axis->LabelsOption("v"); // vertical
       axis->SetLabelSize(0.05);
     }
   }
@@ -1288,7 +1311,12 @@ public:
   void CalcSpecials() { calc_specials_(); }
 
   // Write histos in a file
-  void Write() {
+  void Write(const bool debug = 0) {
+    if (debug) {
+      std::cout<<name_<<" ";
+      for (size_t i=0, n=pf_names_.size(); i<n; ++i) std::cout<<pf_names_[i]<<" ";
+      std::cout<<std::endl;
+    }
     if (npf_==0) {
       if (h1d_0p_) write_(h1d_0p_);
       if (h2d_0p_) write_(h2d_0p_);
@@ -2038,6 +2066,7 @@ private:
   
   void asym_labels_(TH1D *orig, TGraphAsymmErrors* tgae, int hor_vert_up_down = 1) {
     int angle = hor_vert_up_down==0 ? 0 : hor_vert_up_down==1 ? 90 : hor_vert_up_down==2 ? 20 : -20 ;
+    if (binlabels_.size()>10) angle = 90;
     int align = hor_vert_up_down==0 ? 23 : hor_vert_up_down==1 ? 32 : hor_vert_up_down==2 ? 33 : 13;
     if (binlabels_.size()>0) tgae->GetXaxis()->SetLabelColor(0);
     double labelsize = orig->GetXaxis()->GetLabelSize();

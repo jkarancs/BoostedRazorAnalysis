@@ -344,8 +344,8 @@ def backup_files(backup_dir):
     print "Backing up files in: "+backup_dir
     print
     special_call(["mkdir", "-p", backup_dir])
-    #special_call(["cp", "-rp", "btag_eff", "pileup", "scale_factors", "trigger_eff", "common", "filelists", "filelists_tmp", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
-    special_call(["cp", "-rp", "pileup", "scale_factors", "common", "filelists", "filelists_tmp", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
+    #special_call(["cp", "-rp", "btag_eff", "pileup", "scale_factors", "trigger_eff", "common", "filelists", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
+    special_call(["cp", "-rp", "pileup", "scale_factors", "common", "filelists", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
     print
 
 
@@ -418,7 +418,9 @@ def analysis(ana_arguments, nproc):
                     output_file = ana_arguments[jobindex][0]
                     #output_log  = ana_arguments[jobindex][3]
                     if last_known_status[jobindex] == -1:
-                        if opt.recover and os.path.isfile(output_file):
+                        file_size = 0
+                        if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
+                        if opt.recover and file_size > 1000:
                             finished += 1
                             output_files.append(output_file)
                             last_known_status[jobindex] = 0
@@ -429,8 +431,10 @@ def analysis(ana_arguments, nproc):
                     elif last_known_status[jobindex] == 0:
                         finished += 1
                     else:
-                        # First check if output file exists
-                        if os.path.isfile(output_file):
+                        # First check if output file exists and size is larger than 1000 bytes
+                        file_size = 0
+                        if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
+                        if file_size > 1000:
                             finished += 1
                             output_files.append(output_file)
                             last_known_status[jobindex] = 0

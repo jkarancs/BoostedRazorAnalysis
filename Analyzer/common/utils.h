@@ -304,12 +304,14 @@ namespace utils {
   }
   
   // Get efficiency from a 2D histogram (for error use 2nd)
-  double geteff1D(TH1* h, double x) {
+  double geteff1D(TH1* h, double x, bool use_overflow=false) {
     double eff = 0;
     for (int i=1, n=h->GetNbinsX(); i<=n; i++) {
       eff = h->GetBinContent(i);
       if (h->GetXaxis()->GetBinUpEdge(i)>x) break;
     }
+    if (use_overflow&&x>=h->GetXaxis()->GetBinUpEdge(h->GetNbinsX())) 
+      eff = h->GetBinContent(h->GetNbinsX()+1);
     return eff;
   }
   void geteff1D(TH1* h, double x, double& eff, double& err) {
@@ -357,7 +359,15 @@ namespace utils {
       if (x<X+g.GetErrorXhigh(i)) break;
     }
   }
-
+  double geteff_AE(TGraphAsymmErrors* g, double x) {
+    double X, Y;
+    // If the bin is out of range, use the closest bin
+    for (int i=0, n=g->GetN(); i<n; ++i) {
+      g->GetPoint(i,X,Y);
+      if (x<X+g->GetErrorXhigh(i)) break;
+    }
+    return Y;
+  }
 
   // Get efficiency from a 2D histogram (for error use 2nd)
   double geteff2D(TH2* h, double x, double y)
@@ -436,6 +446,14 @@ namespace utils {
   TGraphAsymmErrors* getplot_TGraphAsymmErrors(const char* filename, const char* histoname, const char* clonename) {
     TFile f(filename, "READ");
     TGraphAsymmErrors *g = (TGraphAsymmErrors*)f.Get(histoname);
+    g = (TGraphAsymmErrors*)g->Clone(clonename);
+    return g;
+  }
+
+  TGraphAsymmErrors* getplot_TGraphAsymmErrors_fromCanvas(const char* filename, const char* canvasname, int index, const char* clonename) {
+    TFile f(filename, "READ");
+    TCanvas *c = (TCanvas*)f.Get(canvasname);
+    TGraphAsymmErrors *g = (TGraphAsymmErrors*)c->GetListOfPrimitives()->At(index);
     g = (TGraphAsymmErrors*)g->Clone(clonename);
     return g;
   }
