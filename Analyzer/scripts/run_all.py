@@ -6,27 +6,28 @@ from optparse import OptionParser
 # Read options from command line
 usage = "Usage: python %prog filelists [options]"
 parser = OptionParser(usage=usage)
-parser.add_option("--run",     dest="run",     action="store_true", default=False,   help="Without this option, script only prints cmds it would otherwise excecute")
-parser.add_option("--full",    dest="full",    action="store_true", default=False,   help="Run on all datasets found in filelists directory")
-parser.add_option("--test",    dest="test",    action="store_true", default=False,   help="Run only on some test files (jetht, ttbar, qcd, T5ttcc)")
-parser.add_option("--batch",   dest="batch",   action="store_true", default=False,   help="Send the jobs to batch")
-parser.add_option("--queue",   dest="QUEUE",   type="string",       default="1nh",   help="Specify which batch queue to use (Default=1nh)")
-parser.add_option("--optim",   dest="optim",   action="store_true", default=False,   help="Optimize job event number based log files in --prevdir, or measured skim ratios")
-parser.add_option("--prevdir", dest="PREVDIR", type="string",       default="",      help="Previous running directory used to optimize jobs (default=last dir in results/)")
-parser.add_option("--jobtime", dest="JOBTIME", type="int",          default=1500,    help="Desired job running time in s (default=1500)")
-parser.add_option("--quick",   dest="NQUICK",  type="int",          default=0,       help="Run only on a subset of events (1/NQUICK)")
-parser.add_option("--nevt",    dest="NEVT",    type="int",          default=-1,      help="Tells how many event to run as a maximum in a single job (Default=-1 all)")
-parser.add_option("--nfile",   dest="NFILE",   type="int",          default=-1,      help="Tells how many input files to run in a single job (Default=-1 all)")
-parser.add_option("--sleep",   dest="SLEEP",   type="int",          default=3,       help="Wait for this number of seconds between submitting each batch job (Default 3s)")
-parser.add_option("--useprev", dest="useprev", action="store_true", default=False,   help="Use previously created temporary filelists")
-parser.add_option("--nproc",   dest="NPROC",   type="int",          default=1,       help="Tells how many parallel interactive jobs to start (Default=3)")
-parser.add_option("--outdir",  dest="OUTDIR",  type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
-parser.add_option("--skimout", dest="SKIMOUT", type="string",       default="",      help="Output directory for skimming")
-parser.add_option("--skim",    dest="skim",    action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
-parser.add_option("--mirror",  dest="mirror",  action="store_true", default=False,   help="Also copy skim output to EOS")
-parser.add_option("--plot",    dest="plot",    action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
-parser.add_option("--replot",  dest="replot",  action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
-parser.add_option("--recover", dest="recover", action="store_true", default=False,   help="Recover stopped task (eg. due to some error)")
+parser.add_option("--run",         dest="run",         action="store_true", default=False,   help="Without this option, script only prints cmds it would otherwise excecute")
+parser.add_option("--full",        dest="full",        action="store_true", default=False,   help="Run on all datasets found in filelists directory")
+parser.add_option("--test",        dest="test",        action="store_true", default=False,   help="Run only on some test files (jetht, ttbar, qcd, T5ttcc)")
+parser.add_option("--batch",       dest="batch",       action="store_true", default=False,   help="Send the jobs to batch")
+parser.add_option("--queue",       dest="QUEUE",       type="string",       default="1nh",   help="Specify which batch queue to use (Default=1nh)")
+parser.add_option("--optim",       dest="optim",       action="store_true", default=False,   help="Optimize job event number based log files in --prevdir, or measured skim ratios")
+parser.add_option("--prevdir",     dest="PREVDIR",     type="string",       default="",      help="Previous running directory used to optimize jobs (default=last dir in results/)")
+parser.add_option("--jobtime",     dest="JOBTIME",     type="int",          default=1500,    help="Desired job running time in s (default=1500)")
+parser.add_option("--quick",       dest="NQUICK",      type="int",          default=0,       help="Run only on a subset of events (1/NQUICK)")
+parser.add_option("--nevt",        dest="NEVT",        type="int",          default=-1,      help="Tells how many event to run as a maximum in a single job (Default=-1 all)")
+parser.add_option("--nfile",       dest="NFILE",       type="int",          default=-1,      help="Tells how many input files to run in a single job (Default=-1 all)")
+parser.add_option("--sleep",       dest="SLEEP",       type="int",          default=3,       help="Wait for this number of seconds between submitting each batch job (Default 3s)")
+parser.add_option("--useprev",     dest="useprev",     action="store_true", default=False,   help="Use previously created temporary filelists")
+parser.add_option("--nproc",       dest="NPROC",       type="int",          default=1,       help="Tells how many parallel interactive jobs to start (Default=3)")
+parser.add_option("--outdir",      dest="OUTDIR",      type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
+parser.add_option("--skimout",     dest="SKIMOUT",     type="string",       default="",      help="Output directory for skimming")
+parser.add_option("--skim",        dest="skim",        action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
+parser.add_option("--mirror",      dest="mirror",      action="store_true", default=False,   help="Also copy skim output to EOS")
+parser.add_option("--mirror_user", dest="mirror_user", action="store_true", default=False,   help="Also copy skim output to Janos' EOS")
+parser.add_option("--plot",        dest="plot",        action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
+parser.add_option("--replot",      dest="replot",      action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
+parser.add_option("--recover",     dest="recover",     action="store_true", default=False,   help="Recover stopped task (eg. due to some error)")
 (opt,args) = parser.parse_args()
 
 # ----------------------  Settings -----------------------
@@ -49,13 +50,16 @@ if opt.skim:
         print "ERROR: Give a suitable --nfile, --nevt or --optim argument, otherwise output might become too large!"
         sys.exit()
     if opt.NQUICK>1:
-        if opt.mirror:
+        if opt.mirror or opt.mirror_user:
             print "ERROR: Please, don't mirror stuff to EOS, when testing!"
             sys.exit()
     else:
         if opt.mirror:
             # --mirror copies here
             EOS_JANOS  = "gsiftp://eoscmsftp.cern.ch//eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/"
+        elif opt.mirror_user:
+            # --mirror copies here
+            EOS_JANOS  = "root://eosuser.cern.ch//eos/user/j/jkarancs/B2GTTreeNtuple/"
         else:
             # If not, then makes a script for Viktor
             EOS_VIKTOR = "gsiftp://eoscmsftp.cern.ch//eos/cms/store/caf/user/veszpv/B2GTTreeNtuple/"
@@ -70,7 +74,7 @@ if opt.batch and opt.NEVT == -1 and not opt.optim and not opt.useprev:
     print "       If too many jobs fail, try lowering job runtime eg: --optim --jobtime=1200"
     print "       Or use --useprev option to run on previously created temporary filelists"
     sys.exit()
-if opt.optim and opt.PREVDIR == "":
+if opt.optim and not opt.skim and opt.PREVDIR == "":
     sorted_dirs = sorted(glob.glob("results/*/"), key=os.path.getmtime)
     if len(sorted_dirs):
         opt.PREVDIR = sorted_dirs[-1][:-1]
@@ -333,8 +337,12 @@ def compile(Ana = 1, Plotter = 1):
     saved_path = os.getcwd()
     if opt.run: os.chdir(EXEC_PATH)
     special_call(["make", "clean"])
-    if Ana: special_call(["make", "Analyzer"])
-    if Plotter: special_call(["make", "Plotter"])
+    if Ana:
+        special_call(["make", "Analyzer"])
+        special_call(["chmod", "777", "Analyzer"])
+    if Plotter:
+        special_call(["make", "Plotter"])
+        special_call(["chmod", "777", "Plotter"])
     if opt.run: os.chdir(saved_path)
     print "Compilation successful."
     print
@@ -387,7 +395,7 @@ def analyzer_job((jobindex)):
     if opt.batch: time.sleep(opt.SLEEP)
     elif opt.skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
-        if opt.mirror: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-f", "-r", output_file, EOS_JANOS+outpath], output_log)
+        if opt.mirror or opt.mirror_user: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-f", "-r", output_file, EOS_JANOS+outpath], output_log)
         elif opt.run and opt.NQUICK==0:
             with open(COPYSCRIPT, "a") as script:
                 print>>script, 'env --unset=LD_LIBRARY_PATH gfal-copy -r '+output_file+' '+EOS_VIKTOR+outpath
