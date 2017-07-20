@@ -2,7 +2,8 @@ import ROOT
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_20/src/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_24_patch1/src/B2GTTreeNtupleExtra_MC_80X.root")
-File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X.root")
+#File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X.root")
+File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X_GJets.root")
 tree = File.Get("B2GTTreeMaker/B2GTree")
 
 def printvars( varname, vartype, prefix, isvector, keep_prefix ):
@@ -122,6 +123,7 @@ printclass( tree, "SystPuppiMETUncData", "syst_puppimet",   ["puppimetsyst_"],  
 printclass( tree, "FilterData",          "filter",          ["Flag_"],           0 )
 printclass( tree, "HLTData",             "hlt",             ["HLT_"],            0 )
 printclass( tree, "GenVars",             "gen",             ["gen_"],            1 )
+printclass( tree, "PhotonVars",          "pho",             ["pho_"],            1 )
 printclass( tree, "ElectronVars",        "ele",             ["el_"],             1 )
 printclass( tree, "MuonVars",            "mu",              ["mu_"],             1 )
 printclass( tree, "AK4JetVars",          "jetsAK4",         ["jetAK4CHS_"],      1 )

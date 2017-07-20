@@ -530,12 +530,12 @@ private:
     //++  h1d->SetEntries(h2d->GetEntries());
     // Direct measurement in Phase 1
     // Wilson Score Interval
-    double z = 1; // N Sigma confidence
+    double z = 2; // N Sigma confidence
     for (int i=1; i<=h2d->GetNbinsX(); ++i) {
       double even = h2d->GetBinContent(i,1), odd = h2d->GetBinContent(i,2);
       if (even+odd>0) {
 	double eff = std::min(even>0 ? odd/even : 0, 1.0);
-	double n = odd + even;
+	double n = std::max(even,1.0);
 	double cen = (eff+(z*z/(2*n))) / (1.0 + (z*z/n));
 	double halfwidth = z*sqrt( eff*(1.0-eff)/n + (z*z/(4*n*n)) ) / (1.0 + (z*z/n));
 	double err = halfwidth + fabs(cen-eff);

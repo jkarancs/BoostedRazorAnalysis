@@ -108,3 +108,16 @@
          2   55 FastSim_SMS-T2tt_mStop-400to1200
          1   44 FastSim_SMS-T5ttcc
          1   35 FastSim_SMS-T5tttt
+         7    1 WJetsToLNu_Pt-100To250
+         1    1 WJetsToLNu_Pt-250To400
+         1    1 WJetsToLNu_Pt-400To600
+         1    1 WJetsToLNu_Pt-600ToInf
+      2219    1 WJetsToLNu_Wpt-0To50
+        96    1 WJetsToLNu_Wpt-50To100
+         8    1 WJetsToLNu_Wpt-100to200
+         1    1 WJetsToLNu_Wpt-200toInf
+     16619    1 GJets_HT-40To100
+       304    1 GJets_HT-100To200
+        13    1 GJets_HT-200To400
+         5    1 GJets_HT-400To600
+         9    1 GJets_HT-600ToInf

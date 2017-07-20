@@ -27,7 +27,6 @@ QCD_Pt_800to1000                                   QCD_Pt_800to1000_TuneCUETP8M1
 QCD_Pt_1000to1400                                  QCD_Pt_1000to1400_TuneCUETP8M1_13TeV_pythia8                                          9.418300 2999069.000000
 QCD_Pt_1400to1800                                  QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8                                          0.842650 396409.000000
 QCD_Pt_1800to2400                                  QCD_Pt_1800to2400_TuneCUETP8M1_13TeV_pythia8                                          0.121630 397660.000000
-QCD_Pt_2400to3200                                  QCD_Pt_2400to3200_TuneCUETP8M1_13TeV_pythia8                                          0.00682981 249457.000000
 QCD_Pt_3200toInf                                   QCD_Pt_3200toInf_TuneCUETP8M1_13TeV_pythia8                                           0.000165 391735.000000
 DYJetsToLL_M-50_HT-200to400                        DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                    50.417700 962195.000000
 DYJetsToLL_M-50_HT-400to600                        DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                    6.983940 1070454.000000

@@ -2,7 +2,8 @@ import ROOT
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/ntuple/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_20/src/B2GTTreeNtupleExtra_MC_25ns_80X_QCD.root")
 #File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_24_patch1/src/B2GTTreeNtupleExtra_MC_80X.root")
-File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X.root")
+#File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/Validation/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X.root")
+File = ROOT.TFile.Open("/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/CMSSW_8_0_26_patch2/src/B2GTTreeNtupleExtra_MC_80X_GJets.root")
 tree = File.Get("B2GTTreeMaker/B2GTree")
 
 def printvars( tree, name, prefix_list ):
@@ -42,6 +43,7 @@ printvars( tree, "syst_puppimet",   ["puppimetsyst_"] )
 printvars( tree, "filter",          ["Flag_"] )
 printvars( tree, "hlt",             ["HLT_"] )
 printvars( tree, "gen",             ["gen_"] )
+printvars( tree, "pho",             ["pho_"] )
 printvars( tree, "ele",             ["el_"] )
 printvars( tree, "mu",              ["mu_"] )
 printvars( tree, "jetsAK4",         ["jetAK4CHS_"] )

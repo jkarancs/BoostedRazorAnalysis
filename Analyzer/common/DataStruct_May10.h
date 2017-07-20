@@ -897,6 +897,88 @@ public:
     
   } gen;
   
+  class PhotonVars {
+  public:
+    PhotonVars() { init(); };
+    
+    unsigned int size;
+    std::vector<float> Pt;
+    std::vector<float> Eta;
+    std::vector<float> Phi;
+    std::vector<float> E;
+    std::vector<float> Charge;
+    std::vector<float> SCEta;
+    std::vector<float> SCPhi;
+    std::vector<float> SCRawE;
+    std::vector<float> HasPixelSeed;
+    std::vector<float> ElectronVeto;
+    std::vector<float> SigmaIEtaIEta;
+    std::vector<float> SigmaIEtaIPhi;
+    std::vector<float> SigmaIPhiIPhi;
+    std::vector<float> E1x5;
+    std::vector<float> E5x5;
+    std::vector<float> HoverE;
+    std::vector<float> R9;
+    std::vector<float> ChargedHadronIso;
+    std::vector<float> PhotonIso;
+    std::vector<float> NeutralHadronIso;
+    std::vector<float> PhotonIsoEAcorrectedsp15;
+    std::vector<float> NeutralHadronIsoEAcorrectedsp15;
+    std::vector<float> PassLooseID;
+    std::vector<float> PassMediumID;
+    std::vector<float> PassTightID;
+    std::vector<int> isPromptDirect;
+    std::vector<int> isPromptFrag;
+    std::vector<int> isFake;
+    
+    unsigned int it;
+    
+    void init() {
+      it = -1;
+      size=9999;
+      init_vec(Pt);
+      init_vec(Eta);
+      init_vec(Phi);
+      init_vec(E);
+      init_vec(Charge);
+      init_vec(SCEta);
+      init_vec(SCPhi);
+      init_vec(SCRawE);
+      init_vec(HasPixelSeed);
+      init_vec(ElectronVeto);
+      init_vec(SigmaIEtaIEta);
+      init_vec(SigmaIEtaIPhi);
+      init_vec(SigmaIPhiIPhi);
+      init_vec(E1x5);
+      init_vec(E5x5);
+      init_vec(HoverE);
+      init_vec(R9);
+      init_vec(ChargedHadronIso);
+      init_vec(PhotonIso);
+      init_vec(NeutralHadronIso);
+      init_vec(PhotonIsoEAcorrectedsp15);
+      init_vec(NeutralHadronIsoEAcorrectedsp15);
+      init_vec(PassLooseID);
+      init_vec(PassMediumID);
+      init_vec(PassTightID);
+      init_vec(isPromptDirect);
+      init_vec(isPromptFrag);
+      init_vec(isFake);
+    }
+    
+    bool Loop() {
+      if (size==9999) return 0;
+      ++it;
+      if (it<size) {
+        return 1;
+      } else {
+        it=-1;
+        return 0;
+      }
+    }
+    
+  } pho;
+  
   class ElectronVars {
   public:
     ElectronVars() { init(); };

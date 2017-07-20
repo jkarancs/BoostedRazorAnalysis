@@ -3,7 +3,7 @@
 // VER 2 - Moriond17 + 03Feb2017 ReMiniAOD datasets
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     2
-#define SKIM    0 // TODO: Fix totweight in next skim
+#define SKIM    0
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -23,9 +23,11 @@ struct settings {
 
 #elif VER == 2
 #if SKIM == 1
-#include "common/selectVariables_skim_May10.h"
+//#include "common/selectVariables_skim_May10.h"
+#include "common/selectVariables_skim_May10_photon.h"
 #else
 #include "common/selectVariables_fast_May10.h"
+//#include "common/selectVariables_fast_May10_photon.h"
 #endif
 #endif
 

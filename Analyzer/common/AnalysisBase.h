@@ -818,13 +818,13 @@ std::vector<size_t > itJet;
 std::vector<size_t > itLooseBTag;
 std::vector<size_t > itMediumBTag;
 std::vector<size_t > itTightBTag;
-std::vector<bool> passLooseJetInclLep;
 std::vector<bool> passLooseJet;
+std::vector<bool> passLooseJetNoLep;
 std::vector<bool> passLooseBTag;
 std::vector<bool> passMediumBTag;
 std::vector<bool> passTightBTag;
-unsigned int nJetInclLep;
 unsigned int nJet;
+unsigned int nJetNoLep;
 unsigned int nLooseBTag;
 unsigned int nMediumBTag;
 unsigned int nTightBTag;
@@ -1259,12 +1259,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   itLooseBTag        .assign(data.jetsAK4.size, (size_t)-1);
   itMediumBTag       .assign(data.jetsAK4.size, (size_t)-1);
   itTightBTag        .assign(data.jetsAK4.size, (size_t)-1);
-  passLooseJetInclLep.assign(data.jetsAK4.size, 0);
   passLooseJet       .assign(data.jetsAK4.size, 0);
+  passLooseJetNoLep  .assign(data.jetsAK4.size, 0);
   passLooseBTag      .assign(data.jetsAK4.size, 0);
   passMediumBTag     .assign(data.jetsAK4.size, 0);
   passTightBTag      .assign(data.jetsAK4.size, 0);
-  nJetInclLep = nJet = 0;
+  nJetNoLep = nJet = 0;
   nLooseBTag  = 0;
   nMediumBTag = 0;
   nTightBTag  = 0;
@@ -1276,11 +1276,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     size_t i = data.jetsAK4.it;
     TLorentzVector jet_v4; jet_v4.SetPtEtaPhiE(data.jetsAK4.Pt[i], data.jetsAK4.Eta[i], data.jetsAK4.Phi[i], data.jetsAK4.E[i]);
     // Jet ID
-    if ( passLooseJetInclLep[i] = 
+    if ( passLooseJet[i] = 
 	 ( data.jetsAK4.looseJetID[i] == 1 &&
 	   data.jetsAK4.Pt[i]         >= JET_AK4_PT_CUT &&
 	   std::abs(data.jetsAK4.Eta[i])  <  JET_AK4_ETA_CUT ) ) {
-      nJetInclLep++;
+      nJet++;
 
       // B tagging
       if (passLooseBTag[i]  = (data.jetsAK4.CSVv2[i] >= B_CSV_LOOSE_CUT ) ) {
@@ -1296,6 +1296,22 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	itTightBTag[i] = nTightBTag++;
       }
 
+      AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];
+
+      // minDeltaPhi
+      if (nJet<=4) {
+	double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4.Phi[i]));
+	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
+	// with added lepton pair
+	double dphi_metll = std::abs(TVector2::Phi_mpi_pi(met_ll.Phi() - data.jetsAK4.Phi[i]));
+	if (dphi_metll<minDeltaPhi_ll) minDeltaPhi_ll = dphi_metll;
+	// jet lep-pair angle
+	if (M_ll!=-9999) {
+	  double dphi_ll = std::abs(TVector2::Phi_mpi_pi(lep_pair.Phi() - data.jetsAK4.Phi[i]));
+	  if (dphi_ll<dPhi_ll_jet) dPhi_ll_jet = dphi_ll;
+	}
+      }
+
       // Exclude jets that have selected leptons in the isolation cone for the DeltaPhi calculation
       float minDR = 9999;
       float r_iso = -9999;
@@ -1307,26 +1323,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	}
       }
 
-      if (passLooseJet[i] = (minDR>=r_iso)) {
+      if (passLooseJetNoLep[i] = (minDR>=r_iso)) {
 	iJet.push_back(i);
-	itJet[i] = nJet++;
-	// minDeltaPhi
-	if (nJet<=4) {
-	  double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4.Phi[i]));
-	  if (dphi<minDeltaPhi) minDeltaPhi = dphi;
-	  // with added lepton pair
-	  double dphi_metll = std::abs(TVector2::Phi_mpi_pi(met_ll.Phi() - data.jetsAK4.Phi[i]));
-	  if (dphi_metll<minDeltaPhi_ll) minDeltaPhi_ll = dphi_metll;
-	  // jet lep-pair angle
-	  if (M_ll!=-9999) {
-	    double dphi_ll = std::abs(TVector2::Phi_mpi_pi(lep_pair.Phi() - data.jetsAK4.Phi[i]));
-	    if (dphi_ll<dPhi_ll_jet) dPhi_ll_jet = dphi_ll;
-	  }
-	}
+	itJet[i] = nJetNoLep++;
 	AK4_HtNoLep += data.jetsAK4.Pt[data.jetsAK4.it];
       }
 	
-      AK4_Ht += data.jetsAK4.Pt[data.jetsAK4.it];
     } // End Jet Selection
     
     // Online jet selection for HT (+ testing Additional Loose Jet ID)
@@ -2471,13 +2473,13 @@ void AnalysisBase::init_syst_input() {
   // Efficiencies (Oct31 - test)
   TFile* f;
   if (Sample.Contains("FastSim"))
-    f = TFile::Open("btag_eff/May19/FastSim_SMS-T5ttcc.root");
+    f = TFile::Open("btag_eff/May19_withLepJets/FastSim_SMS-T5ttcc.root");
   else if (Sample.Contains("WJetsToLNu")) 
-    f = TFile::Open("btag_eff/May19/WJetsToLNu.root");
+    f = TFile::Open("btag_eff/May19_withLepJets/WJetsToLNu.root");
   else if (Sample.Contains("TT")||Sample.Contains("ST")) 
-    f = TFile::Open("btag_eff/May19/TT_powheg-pythia8.root");
+    f = TFile::Open("btag_eff/May19_withLepJets/TT_powheg-pythia8.root");
   else 
-    f = TFile::Open("btag_eff/May19/QCD.root");
+    f = TFile::Open("btag_eff/May19_withLepJets/QCD.root");
   eff_btag_b_loose  = ((TH2D*)f->Get("btag_eff_b_loose"))->ProfileX();
   eff_btag_c_loose  = ((TH2D*)f->Get("btag_eff_c_loose"))->ProfileX();
   eff_btag_l_loose  = ((TH2D*)f->Get("btag_eff_l_loose"))->ProfileX();
