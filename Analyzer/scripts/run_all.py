@@ -258,8 +258,15 @@ for filelist in input_filelists:
                     ana_arguments.append(args)
                     totalevt = 0
                 totalevt += nevt
-                with open(tmp_filelist, "a") as job_filelist:
-                    print>>job_filelist, files[i]
+                while True:
+                    try:
+                        with open(tmp_filelist, "a") as job_filelist:
+                            print>>job_filelist, files[i]
+                    except:
+                        print "Warning: Could not write to disk (IOError), wait 10s and continue"
+                        time.sleep(10)
+                        continue
+                    break
         if opt.optim:
             if optim_found:
                 print "  "+filelist.replace("filelists","filelists_tmp").replace(".txt","_*.txt")+" created (MAX NEVT (optim) = "+str(JOB_NEVT)+")"
@@ -287,7 +294,15 @@ for filelist in input_filelists:
 # for recovery (also uncomment backup, compile)
 #ana_arguments = ana_arguments[2833:]
 
-if opt.NEVT != -1: bad_files.close()
+if opt.NEVT != -1:
+    while True:
+        try:
+            bad_files.close()
+        except:
+            print "Warning: Could not close file (IOError), wait 10s and continue"
+            time.sleep(10)
+            continue
+        break
 
 if opt.NFILE != -1 or opt.NEVT != -1 and not opt.useprev:
     print "All temporary filelist ready."
@@ -323,9 +338,16 @@ def logged_call(cmd, logfile):
     if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
     if opt.run:
-        with open(logfile, "a") as log:
-            proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
-            proc.wait()
+        while True:
+            try:
+                with open(logfile, "a") as log:
+                    proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
+                    proc.wait()
+            except:
+                print "Could not write to disk (IOError), wait 10s and continue"
+                time.sleep(10)
+                continue
+            break
     else:
         proc = subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
 
