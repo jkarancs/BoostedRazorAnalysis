@@ -518,6 +518,23 @@ Choose:
 #define MU_TIGHT_IP_SIG_CUT    4
 
 
+/*
+  Latest Photon IDs:
+  https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonIdentificationRun2?rev=36
+
+  For Selection Choose:
+  - Spring16 Cut based Medium photon ID
+  - Pass electron veto
+  - pt >= 80
+  - |eta| < 2.5
+
+*/
+
+
+#define PHOTON_SELECT_PT_CUT        80
+#define PHOTON_SELECT_ETA_CUT       2.5
+
+
 //_______________________________________________________
 //              Rescale jet 4-momenta
 
@@ -830,6 +847,7 @@ unsigned int nMediumBTag;
 unsigned int nTightBTag;
 double AK4_Ht, AK4_HtOnline, AK4_HtNoLep;
 double minDeltaPhi; // Min(DeltaPhi(Jet_i, MET)), i=1,2,3,4
+double dPhiRazor;
 
 // AK8 jets
 std::vector<size_t > iJetAK8;
@@ -929,7 +947,13 @@ unsigned int nLepVeto;
 unsigned int nLepLoose;
 unsigned int nLepSelect;
 unsigned int nLepTight;
-double MT, MT_vetolep, M_ll, MET_ll, MTR_ll, R_ll, R2_ll, minDeltaPhi_ll;
+std::vector<size_t > iPhotonSelect;
+std::vector<size_t > itPhotonSelect;
+std::vector<bool> passPhotonSelect;
+unsigned int nPhotonSelect;
+double MT, MT_vetolep;
+double MET_ll, MTR_ll, R_ll, R2_ll, minDeltaPhi_ll, M_ll;
+double MET_pho, MTR_pho, R_pho, R2_pho, minDeltaPhi_pho; 
 double dPhi_ll_met, dPhi_ll_jet;
 std::vector<TLorentzVector> hemis_AK4;
 
@@ -956,8 +980,8 @@ int npreTopTag;
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
-  std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons;
-  std::vector<float> r_iso_veto_leptons;
+  std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons, tight_leptons;
+  std::vector<float> r_iso_tight_leptons;
   TLorentzVector lep_pair;
   //std::vector<TLorentzVector> veto_muons_noiso, veto_muons, selected_muons;
   //std::vector<bool> veto_lep_in_jet;
@@ -1064,8 +1088,6 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  iEleVeto.push_back(i);
 	  itEleVeto[i] = nEleVeto++;
 	  veto_leptons.push_back(ele_v4);
-	  float r_iso = std::max(0.05, std::min(0.2, 10./pt));
-	  r_iso_veto_leptons.push_back(r_iso);
 	  //veto_lep_in_jet.push_back(data.ele.IsPartOfNearAK4Jet[i]);
 	}
       }
@@ -1100,8 +1122,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    absd0     <  ELE_TIGHT_IP_D0_CUT &&
 	    absdz     <  ELE_TIGHT_IP_DZ_CUT &&
 	    ipsig     <  ELE_TIGHT_IP_SIG_CUT) ) {
+	tight_leptons.push_back(ele_v4);
 	iEleTight.push_back(i);
 	itEleTight[i] = nEleTight++;
+	float r_iso = std::max(0.05, std::min(0.2, 10./pt));
+	r_iso_tight_leptons.push_back(r_iso);
       }
     }
 
@@ -1147,8 +1172,6 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  iMuVeto.push_back(i);
 	  itMuVeto[i] = nMuVeto++;
 	  veto_leptons.push_back(mu_v4);
-	  float r_iso = std::max(0.05, std::min(0.2, 10./pt));
-	  r_iso_veto_leptons.push_back(r_iso);
 	  //veto_muons.push_back(mu_v4);
 	  //veto_lep_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
 	  //veto_mu_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
@@ -1188,8 +1211,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	    absd0   <  MU_TIGHT_IP_D0_CUT &&
 	    absdz   <  MU_TIGHT_IP_DZ_CUT &&
 	    ipsig   <  MU_TIGHT_IP_SIG_CUT) ) {
+	tight_leptons.push_back(mu_v4);
 	iMuTight.push_back(i);
 	itMuTight[i] = nMuTight++;
+	float r_iso = std::max(0.05, std::min(0.2, 10./pt));
+	r_iso_tight_leptons.push_back(r_iso);
       }
     } // end of muon loop
 
@@ -1239,12 +1265,47 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
   } // end if (syst_index==0)
 
+  // Event Letpons
+  std::vector<TLorentzVector> selected_photons;
+  iPhotonSelect   .clear();
+  itPhotonSelect  .assign(data.pho.size, (size_t)-1);
+  passPhotonSelect.assign(data.pho.size, 0);
+  nPhotonSelect = 0;
+  while(data.pho.Loop()) {
+    size_t i = data.pho.it;
+    TLorentzVector pho_v4; pho_v4.SetPtEtaPhiE(data.pho.Pt[i], data.pho.Eta[i], data.pho.Phi[i], data.pho.E[i]);
+    float pt = data.pho.Pt[i];
+    float abseta = std::abs(data.pho.Eta[i]);
+    bool ele_veto = (data.pho.ElectronVeto[i]==1);
+    bool id_select = data.pho.PassMediumID[i];
+    // Select
+    if (passPhotonSelect[i] = 
+	( id_select &&
+	  ele_veto &&
+	  pt        >= PHOTON_SELECT_PT_CUT &&
+	  abseta    <  PHOTON_SELECT_ETA_CUT) ) {
+      selected_photons.push_back(pho_v4);
+      iPhotonSelect.push_back(i);
+      itPhotonSelect[i] = nPhotonSelect++;
+    }
+  }
+
+  // Add the lepton pair to MET
   TVector3 met_ll;
   met_ll.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
   if (M_ll!=-9999) {
     TVector3 lep_pair_met;
     lep_pair_met.SetPtEtaPhi(lep_pair.Pt(), 0, lep_pair.Phi());
     met_ll += lep_pair_met;
+  }
+
+  // Add the photon to MET
+  TVector3 met_pho;
+  met_pho.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
+  if (nPhotonSelect==1) {
+    TVector3 pho_met;
+    pho_met.SetPtEtaPhi(selected_photons[0].Pt(), 0, selected_photons[0].Phi());
+    met_pho += pho_met;
   }
 
   // Rest of the vairables need to be recalculated each time the jet energy is changed
@@ -1269,7 +1330,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   nMediumBTag = 0;
   nTightBTag  = 0;
   AK4_Ht = AK4_HtOnline = AK4_HtNoLep = 0;
-  minDeltaPhi = 9999, minDeltaPhi_ll = 9999, dPhi_ll_jet = 9999;
+  minDeltaPhi = minDeltaPhi_ll = minDeltaPhi_pho = dPhi_ll_jet = 9999;
   //std::vector<bool> add_lepton_to_ht(veto_leptons.size(),1);
   //std::vector<bool> remove_muon_from_ht(selected_muons.size(),0);
   while(data.jetsAK4.Loop()) {
@@ -1305,6 +1366,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	// with added lepton pair
 	double dphi_metll = std::abs(TVector2::Phi_mpi_pi(met_ll.Phi() - data.jetsAK4.Phi[i]));
 	if (dphi_metll<minDeltaPhi_ll) minDeltaPhi_ll = dphi_metll;
+	// with added photon
+	double dphi_metpho = std::abs(TVector2::Phi_mpi_pi(met_pho.Phi() - data.jetsAK4.Phi[i]));
+	if (dphi_metpho<minDeltaPhi_pho) minDeltaPhi_pho = dphi_metpho;
 	// jet lep-pair angle
 	if (M_ll!=-9999) {
 	  double dphi_ll = std::abs(TVector2::Phi_mpi_pi(lep_pair.Phi() - data.jetsAK4.Phi[i]));
@@ -1312,14 +1376,14 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	}
       }
 
-      // Exclude jets that have selected leptons in the isolation cone for the DeltaPhi calculation
+      // Exclude jets that have tight leptons in the isolation cone for the DeltaPhi calculation
       float minDR = 9999;
       float r_iso = -9999;
-      for (size_t i=0, n=veto_leptons.size(); i<n; ++i) {
-	double DR = veto_leptons[i].DeltaR(jet_v4);
+      for (size_t i=0, n=tight_leptons.size(); i<n; ++i) {
+	double DR = tight_leptons[i].DeltaR(jet_v4);
 	if (DR<minDR) {
 	  minDR=DR;
-	  r_iso = r_iso_veto_leptons[i];
+	  r_iso = r_iso_tight_leptons[i];
 	}
       }
 
@@ -1732,6 +1796,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     data.evt.MTR = -9999;
     data.evt.R   = -9999;
     data.evt.R2  = -9999;
+    dPhiRazor = 9999;
   } else {
     TVector3 shifted_met;
     shifted_met.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
@@ -1740,12 +1805,13 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     data.evt.MTR = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], shifted_met);
     data.evt.R   = data.evt.MTR/data.evt.MR;
     data.evt.R2  = data.evt.R*data.evt.R;
+    dPhiRazor = std::abs(TVector2::Phi_mpi_pi(hemis_AK4[0].Phi() - hemis_AK4[1].Phi()));
   }
-  // Recalculate Razor with MET + 2lep
-  MET_ll = -9999;
-  MTR_ll = -9999;
-  R_ll   = -9999;
-  R2_ll  = -9999;
+  // Recalculate Razor with MET + 2lep, and MET + pho
+  MET_ll = MET_pho = -9999;
+  MTR_ll = MTR_pho = -9999;
+  R_ll   = R_pho   = -9999;
+  R2_ll  = R2_pho  = -9999;
   if (hemis_AK4.size()!=2) {
     std::vector<TLorentzVector> selected_jets_AK4;
     while(data.jetsAK4.Loop()) {
@@ -1755,11 +1821,19 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
     if (selected_jets_AK4.size()>=2) hemis_AK4 = Razor::CombineJets(selected_jets_AK4);
   }
-  if (hemis_AK4.size()==2&&M_ll!=-9999) {
-    MET_ll = met_ll.Pt();
-    MTR_ll = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_ll);
-    R_ll   = MTR_ll/data.evt.MR;
-    R2_ll  = R_ll*R_ll;
+  if (hemis_AK4.size()==2) {
+    if (M_ll!=-9999) {
+      MET_ll = met_ll.Pt();
+      MTR_ll = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_ll);
+      R_ll   = MTR_ll/data.evt.MR;
+      R2_ll  = R_ll*R_ll;
+    }
+    if (nPhotonSelect==1) {
+      MET_pho = met_pho.Pt();
+      MTR_pho = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_pho);
+      R_pho   = MTR_pho/data.evt.MR;
+      R2_pho  = R_pho*R_pho;
+    }
   }
 }
 
@@ -1954,14 +2028,13 @@ AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
       // For skimmed samples, remove certain postfixes
       // Please, synchronize with setup.py script
       std::string dirname = sample;
-      for (std::string pf : { "_2", "_ext1", "_ext2", "_ext3", "_backup", "_unskimmed" }) {
-	size_t f = dirname.find(pf);
-	if (f!=std::string::npos) dirname.erase(f, pf.size());
-      }
+      for (std::string pf : { "_2", "_ext1", "_ext2", "_ext3", "_backup", "_unskimmed" })
+	if (TString(dirname).EndsWith(pf.c_str())) dirname.erase(dirname.size()-pf.size(), pf.size());
       if (dirname==shortname) {
 	XSec = xsec;
 	Totweight = totweight;
       }
+
     }
   }
   if (XSec == 0) {
@@ -2650,6 +2723,15 @@ void AnalysisBase::init_syst_input() {
   //eff_full_fake_aTop = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "TopAntiTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b", 2, "full_fake_aTop");
   //eff_fast_W         = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "", 2, "fast_W");
   //eff_fast_Top       = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "", 2, "fast_Top");
+  // pt binned QCD
+  //eff_full_fake_W    = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "WTagFakeRate_vs_JetAK8PtBins/Data_MC_F",              2, "full_fake_W");
+  //eff_full_fake_mW   = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "WMassTagFakeRate_vs_JetAK8PtBins/Data_MC_F",          2, "full_fake_mW");
+  //eff_full_fake_aW   = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "WAntiTagFakeRate_vs_JetAK8PtBins/Data_MC_F",          2, "full_fake_aW");
+  //eff_full_fake_Top  = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "TopTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b",     2, "full_fake_Top");
+  //eff_full_fake_mTop = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "TopMassTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b", 2, "full_fake_mTop");
+  //eff_full_fake_aTop = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "TopAntiTagFakeRate_vs_JetAK8PtBins/Data_MC_F_Excl0b", 2, "full_fake_aTop");
+  //eff_fast_W         = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "", 2, "fast_W");
+  //eff_fast_Top       = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_27.root", "", 2, "fast_Top");
 }
 
 

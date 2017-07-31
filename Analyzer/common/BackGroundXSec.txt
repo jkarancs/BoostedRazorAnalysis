@@ -27,6 +27,7 @@ QCD_Pt_800to1000                                   QCD_Pt_800to1000_TuneCUETP8M1
 QCD_Pt_1000to1400                                  QCD_Pt_1000to1400_TuneCUETP8M1_13TeV_pythia8                                          9.418300 2999069.000000
 QCD_Pt_1400to1800                                  QCD_Pt_1400to1800_TuneCUETP8M1_13TeV_pythia8                                          0.842650 396409.000000
 QCD_Pt_1800to2400                                  QCD_Pt_1800to2400_TuneCUETP8M1_13TeV_pythia8                                          0.121630 397660.000000
+QCD_Pt_2400to3200                                  QCD_Pt_2400to3200_TuneCUETP8M1_13TeV_pythia8                                          0.006830 249457.000000
 QCD_Pt_3200toInf                                   QCD_Pt_3200toInf_TuneCUETP8M1_13TeV_pythia8                                           0.000165 391735.000000
 DYJetsToLL_M-50_HT-200to400                        DYJetsToLL_M-50_HT-200to400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                    50.417700 962195.000000
 DYJetsToLL_M-50_HT-400to600                        DYJetsToLL_M-50_HT-400to600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                    6.983940 1070454.000000
@@ -81,3 +82,16 @@ WWW                                                WWW_4F_TuneCUETP8M1_13TeV-amc
 WWZ                                                WWZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8                                               0.165100 41171.809340
 WZZ                                                WZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8                                               0.055650 13736.420350
 ZZZ                                                ZZZ_TuneCUETP8M1_13TeV-amcatnlo-pythia8                                               0.013980 3499.446870
+WJetsToLNu_Pt-100To250                             WJetsToLNu_Pt-100To250_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        676.300000 14994454810.000000
+WJetsToLNu_Pt-250To400                             WJetsToLNu_Pt-250To400_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        23.940000 49731119.960000
+WJetsToLNu_Pt-400To600                             WJetsToLNu_Pt-400To600_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        3.031000 5599647.730000
+WJetsToLNu_Pt-600ToInf                             WJetsToLNu_Pt-600ToInf_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        0.452400 915145.730100
+WJetsToLNu_Wpt-0To50                               WJetsToLNu_Wpt-0To50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                          57280.000000 14094979380000.000000
+WJetsToLNu_Wpt-50To100                             WJetsToLNu_Wpt-50To100_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        3258.000000 522725968900.000000
+WJetsToLNu_Wpt-100to200                            WJetsToLNu_Wpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                        484.700000 19968915.000000
+WJetsToLNu_Wpt-200toInf                            WJetsToLNu_Wpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                        50.710000 5884226.000000
+GJets_HT-40To100                                   GJets_HT-40To100_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                               20730.000000 4467985.000000
+GJets_HT-100To200                                  GJets_HT-100To200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              9226.000000 5131873.000000
+GJets_HT-200To400                                  GJets_HT-200To400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              2300.000000 10036487.000000
+GJets_HT-400To600                                  GJets_HT-400To600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              277.400000 2529729.000000
+GJets_HT-600ToInf                                  GJets_HT-600ToInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              93.380000 2463946.000000

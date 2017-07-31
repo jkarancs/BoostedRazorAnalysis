@@ -380,6 +380,12 @@ int main(int argc, char** argv) {
       // Only analyze events that are in the JSON file
       if (settings.useJSON ? json_run_ls[data.evt.RunNumber][data.evt.LumiBlock] : 1) {
 
+	// Calculate variables that do not exist in the ntuple
+	ana.calculate_common_variables(data, syst.index);
+	if (debug>1) std::cout<<"Analyzer::main: calculate_common_variables ok"<<std::endl;
+	ana.calculate_variables(data, syst.index);
+	if (debug>1) std::cout<<"Analyzer::main: calculate_variables ok"<<std::endl;
+
 	// If option (saveSkimmedNtuple) is specified save all 
 	// skimmed events selected by the analysis to the output file
 	// tree is copied and current weight is saved as "eventWeight"
@@ -387,12 +393,6 @@ int main(int argc, char** argv) {
 	  if (ana.pass_skimming(data)) ofile->addEvent(w);
 	  if (debug>1) std::cout<<"Analyzer::main: adding skimmed event ok"<<std::endl;
 	} else {
-
-	  // Calculate variables that do not exist in the ntuple
-	  ana.calculate_common_variables(data, syst.index);
-	  if (debug>1) std::cout<<"Analyzer::main: calculate_common_variables ok"<<std::endl;
-	  ana.calculate_variables(data, syst.index);
-	  if (debug>1) std::cout<<"Analyzer::main: calculate_variables ok"<<std::endl;
 
 	  // Save counts (after each baseline cuts)
 	  ofile->count("NoCuts", w);
@@ -458,6 +458,18 @@ int main(int argc, char** argv) {
       // Background and Signal MCs
 
       if ( settings.saveSkimmedNtuple ) {
+
+	// Scale and Smear Jets and MET
+	ana.rescale_smear_jet_met(data, settings.applySmearing, syst.index, syst.nSigmaJES[syst.index],
+				  syst.nSigmaJER[syst.index], syst.nSigmaRestMET[syst.index]);
+	if (debug>1) std::cout<<"Analyzer::main: rescale_smear_jet_met ok"<<std::endl;
+
+	// Calculate variables that do not exist in the ntuple
+	ana.calculate_common_variables(data, syst.index);
+	if (debug>1) std::cout<<"Analyzer::main: calculate_common_variables ok"<<std::endl;
+	ana.calculate_variables(data, syst.index);
+	if (debug>1) std::cout<<"Analyzer::main: calculate_variables ok"<<std::endl;
+
 	// If option (saveSkimmedNtuple) is specified save all 
 	// skimmed events selected by the analysis to the output file
 	// tree is copied and current weight is saved as "eventWeight"

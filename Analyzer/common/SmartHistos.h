@@ -1528,6 +1528,7 @@ private:
       if (app==6) text = "CMS Simulation";
       if (app==7) text = "CMS #scale[0.7]{#font[52]{Work in progress 2016}}";
       if (app==8) text = "CMS #scale[0.7]{#font[52]{Preliminary 2016}}";
+      if (app==9) text = "CMS #scale[0.7]{#font[52]{Preliminary 2017}}";
       double x = in ? xmin+(xmax-xmin)/20.0 : xmin;
       double y = in ? ymax-(ymax-ymin)/10.0 : ymax+(ymax-ymin)/40.0;
       if (log_&&ymin>0) y = in ? std::exp(std::log(ymax)-(std::log(ymax)-std::log(ymin))/10.0) : 

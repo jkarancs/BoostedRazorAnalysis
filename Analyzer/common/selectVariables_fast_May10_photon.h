@@ -362,7 +362,7 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //stream.select("pho_SCPhi", data.pho.SCPhi);
   //stream.select("pho_SCRawE", data.pho.SCRawE);
   //stream.select("pho_HasPixelSeed", data.pho.HasPixelSeed);
-  //stream.select("pho_ElectronVeto", data.pho.ElectronVeto);
+  stream.select("pho_ElectronVeto", data.pho.ElectronVeto);
   //stream.select("pho_SigmaIEtaIEta", data.pho.SigmaIEtaIEta);
   //stream.select("pho_SigmaIEtaIPhi", data.pho.SigmaIEtaIPhi);
   //stream.select("pho_SigmaIPhiIPhi", data.pho.SigmaIPhiIPhi);
