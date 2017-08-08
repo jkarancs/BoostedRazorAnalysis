@@ -235,7 +235,6 @@ AnalysisBase::define_preselections(const DataStruct& data)
   - Loose jet ID
   - pt > 30
   - |eta| < 2.4
-  - No isolated lepton within the mini-isolation cone
 
   For AK8 Jet Selection Choose:
   - Loose jet ID

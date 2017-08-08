@@ -124,12 +124,12 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
-    std::vector<double> nSigmaHT          = std::vector<double>(1,0);
-    std::vector<std::vector<double> > nSigmaSFs = 
-      std::vector<std::vector<double> >(settings.nSigmaScaleFactors, std::vector<double>(1,0));
+    //std::vector<double> nSigmaHT          = std::vector<double>(1,0);
     std::vector<double> nSigmaJES         = std::vector<double>(1,0);
     std::vector<double> nSigmaJER         = std::vector<double>(1,0);
     std::vector<double> nSigmaRestMET     = std::vector<double>(1,0);
+    std::vector<std::vector<double> > nSigmaSFs = 
+      std::vector<std::vector<double> >(settings.nSigmaScaleFactors, std::vector<double>(1,0));
     std::vector<unsigned int> numScale    = std::vector<unsigned int>(1,0);
     std::vector<unsigned int> numPdf      = std::vector<unsigned int>(1,0);
   } syst;
@@ -155,13 +155,13 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
-      for (int i=0; i<settings.nSigmaScaleFactors; ++i) {
-	nth_line>>dbl; syst.nSigmaSFs[i].push_back(dbl);
-      }
+      //nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJES.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJER.push_back(dbl);
       nth_line>>dbl; syst.nSigmaRestMET.push_back(dbl);
+      for (int i=0; i<settings.nSigmaScaleFactors; ++i) {
+	nth_line>>dbl; syst.nSigmaSFs[i].push_back(dbl);
+      }
       nth_line>>uint; syst.numScale.push_back(uint);
       nth_line>>uint; syst.numPdf.push_back(uint);
       std::cout<<" line "<<syst.nSyst<<": "<<line<<std::endl;

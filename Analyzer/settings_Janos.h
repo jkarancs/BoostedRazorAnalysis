@@ -43,8 +43,8 @@ struct settings {
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 10    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 1 W, 1 b, 1 top
-    varySystematics          ( false ),
-    systematicsFileName      ( "systematics/2016_10_31_1SigmaUpDown_NoPdf.txt" ),
+    varySystematics          ( true  ),
+    systematicsFileName      ( "systematics/2017_08_08_1SigmaUpDown_NoPdf.txt" ),
     treeName                 ( runOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( runOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName        ( runOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple

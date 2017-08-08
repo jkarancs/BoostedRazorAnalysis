@@ -95,3 +95,5 @@ GJets_HT-100To200                                  GJets_HT-100To200_TuneCUETP8M
 GJets_HT-200To400                                  GJets_HT-200To400_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              2300.000000 10036487.000000
 GJets_HT-400To600                                  GJets_HT-400To600_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              277.400000 2529729.000000
 GJets_HT-600ToInf                                  GJets_HT-600ToInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              93.380000 2463946.000000
+ZJetsToNuNu_Zpt-100to200                           ZJetsToNuNu_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                       35.410000 5077952.000000
+ZJetsToNuNu_Zpt-200toInf                           ZJetsToNuNu_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                       4.298000 1986102.000000

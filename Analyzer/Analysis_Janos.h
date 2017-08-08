@@ -108,7 +108,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['s'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
   analysis_cuts['s'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
   //analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return minDeltaPhi<0.5;                  }});
-  analysis_cuts['S'].push_back({ .name="InvmDPhi",   .func = []    { return dPhiRazor>=2.8;                    }});
+  analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return dPhiRazor>=2.8;                    }});
 
   // Q: QCD enriched control sample
   analysis_cuts['Q'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); // Similar to pt>200, one AK8 jet has pt>200
@@ -161,7 +161,7 @@ Analysis::define_selections(const DataStruct& d)
   analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
   analysis_cuts['W'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
   //analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
-  analysis_cuts['T'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
+  analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
   analysis_cuts['W'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
 
   // Z: Z->ll enriched control sample
@@ -243,7 +243,7 @@ Analysis::apply_scale_factors(DataStruct& data, const unsigned int& s, const std
 
   // Don't forget to specify the total number of sigmas you use in settings_*.h !
 
-  // Electron SFs (5 sigmas - reco, fullsim id/iso, fastsim)
+  // Electron SFs (4 sigmas - reco, id, iso, fastsim)
   double sf_ele_veto, sf_ele_loose, sf_ele_medium;
   std::tie(sf_ele_veto, sf_ele_loose, sf_ele_medium) = calc_ele_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s], isFastSim);
   i+=4;
@@ -487,8 +487,9 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
 			      //"WJetsToLNu_HT-600To800", "WJetsToLNu_HT-800To1200", "WJetsToLNu_HT-1200To2500", "WJetsToLNu_HT-2500ToInf"
 			    } });
   bkg_nonttbars.push_back({ .postfix="ZToNuNu",    .legend="Z(#rightarrow#nu#nu)",                    .color="401",/*Yellow*/ .dirs={ 
-			      "ZJetsToNuNu_HT-100To200", "ZJetsToNuNu_HT-200To400", "ZJetsToNuNu_HT-400To600", "ZJetsToNuNu_HT-600To800", 
-			      "ZJetsToNuNu_HT-800To1200", "ZJetsToNuNu_HT-1200To2500", "ZJetsToNuNu_HT-2500ToInf"
+			      "ZJetsToNuNu_Zpt-100to200", "ZJetsToNuNu_Zpt-200toInf"
+			      //"ZJetsToNuNu_HT-100To200", "ZJetsToNuNu_HT-200To400", "ZJetsToNuNu_HT-400To600", "ZJetsToNuNu_HT-600To800", 
+			      //"ZJetsToNuNu_HT-800To1200", "ZJetsToNuNu_HT-1200To2500", "ZJetsToNuNu_HT-2500ToInf"
 			    } });
   bkg_nonttbars.push_back({ .postfix="Multiboson", .legend="VV(V)+t#bar{t}X",                         .color="601",/*Blue*/   .dirs={
         		      "WWTo2L2Nu", "WWToLNuQQ", /*"WWToLNuQQ_ext1",*/
@@ -1090,7 +1091,7 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   sh.AddNewFillParam("Mu1JetDPhi",      { .nbin=MDP.size()-1, .bins=MDP,      .fill=[&d] { return nMuSelect<1 ? -9999 : muJetDPhi[iMuSelect[0]]; }, .axis_title="#Delta#phi (1st muon, jet)"});
   sh.AddNewFillParam("Mu2JetDPhi",      { .nbin=MDP.size()-1, .bins=MDP,      .fill=[&d] { return nMuSelect<2 ? -9999 : muJetDPhi[iMuSelect[1]]; }, .axis_title="#Delta#phi (2nd muon, jet)"});
 
-  sh.AddNewFillParam("PhotonPt",        { .nbin= 100, .bins={     0,   1000}, .fill=[&d] { return d.pho.Pt[d.pho.it];                   }, .axis_title="Photon p_{T} (GeV)", .def_range={20,500}});
+  sh.AddNewFillParam("PhotonPt",        { .nbin=  50, .bins={     0,   1000}, .fill=[&d] { return d.pho.Pt[d.pho.it];                   }, .axis_title="Photon p_{T} (GeV)", .def_range={50,1000}});
   sh.AddNewFillParam("PhotonEta",       { .nbin=  40, .bins={    -4,      4}, .fill=[&d] { return d.pho.Eta[d.pho.it];                  }, .axis_title="Photon #eta (GeV)",  .def_range={-2.5,2.5}});
 
   /*
@@ -1210,7 +1211,7 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
 
   // SPECIAL
   // Special Y/Z axis parameters:
-  sh.AddSpecial({ .name="Counts",                         .name_plus_1d="Syst",                          .axis="Counts (Incl Syst Unc)",              .axis_plus_1d="Systematics variation index"});
+  sh.AddSpecial({ .name="Counts", .name_plus_1d="Syst", .axis="Counts (Incl Syst Unc)", .axis_plus_1d="Systematics variation index"});
   /*
     sh.AddSpecial({ .name="MergedTopFraction",              .name_plus_1d="IsGenTopMerged",                .axis="Fraction of Merged Tops",             .axis_plus_1d="Gen. b and W Merged in R<0.8 (bool)"});
     sh.AddSpecial({ .name="JetFindingEfficiency",           .name_plus_1d="HasJet",                        .axis="Jet finding Efficiency",              .axis_plus_1d="Found AK8 jet (bool)"});
@@ -1343,16 +1344,17 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistoType("mu veto", "Veto muons");
   sh.AddHistoType("pho",     "Photons");
   sh.AddHistoType("evt",     "Events");
-  sh.AddHistoType("syst",    "Systematic variations");
+  sh.AddHistoType("syst evt","Events");
 
   // Histo options
   std::string d = "HISTE1";
   std::string o_stk_d = "LogSumw2Stack5AddRatioTwoCol58AddIntApproval15";
   std::string o_stk_s = "LogSumw2Stack5AddRatioTwoCol58AddIntApproval45";
-  //if (photon_only) {
-  //  o_stk_d = "LogSumw2Stack5TwoCol58AddIntApproval15";
-  //  o_stk_s = "LogSumw2Stack5TwoCol58AddIntApproval45";
-  //}
+  std::string o_stk_sys = "LogSumw2Stack5TwoCol58AddIntApproval45";
+  if (photon_only) {
+    o_stk_d = "LogSumw2Stack5TwoCol58AddIntApproval15";
+    o_stk_s = "LogSumw2Stack5TwoCol58AddIntApproval45";
+  }
   std::string o_1or2d_d = "Sumw2Approval15";
   std::string o_1or2d_s = "Sumw2Approval45";
   std::string o_norm_d = "Sumw2NormApproval15";
@@ -1571,10 +1573,10 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   o_stk_d = "LogSumw2Stack5AddRatioTwoCol58AddIntApproval16";
   o_stk_s = "LogSumw2Stack5AddRatioTwoCol58AddIntApproval46";
-  //if (photon_only) {
-  //  o_stk_d = "LogSumw2Stack5TwoCol58AddIntApproval16";
-  //  o_stk_s = "LogSumw2Stack5TwoCol58AddIntApproval46";
-  //}
+  if (photon_only) {
+    o_stk_d = "LogSumw2Stack5TwoCol58AddIntApproval16";
+    o_stk_s = "LogSumw2Stack5TwoCol58AddIntApproval46";
+  }
   o_1or2d_d = "Sumw2Approval16";
   o_1or2d_s = "Sumw2Approval46";
   o_norm_d = "Sumw2NormApproval16";
@@ -1928,7 +1930,6 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","S",         "NoWTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","S",         "NoWTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","S",  "NoWTagSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-
   
   // -------------------------------------------------------------------------
   //                       QCD enriched Region: Q and Q'
@@ -2164,6 +2165,14 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","T",           "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","T",           "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","T",    "NoEleSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
+
+  // Systematics
+  sh.AddHistos("syst evt", { .fill="MR",                  .pfs={Stack,"JetHT","T","Syst"}, .cuts={},.draw=d,.opt=o_stk_sys,.ranges=r_stk});
+  sh.AddHistos("syst evt", { .fill="R2",                  .pfs={Stack,"JetHT","T","Syst"}, .cuts={},.draw=d,.opt=o_stk_sys,.ranges=r_stk});
+  sh.AddHistos("syst evt", { .fill="RazorBins",           .pfs={Stack,"JetHT","T","Syst"}, .cuts={},.draw=d,.opt=o_stk_sys,.ranges=r_stk});
+  sh.AddHistos("syst evt", { .fill="Counts_vs_MR",        .pfs={Stack,"JetHT","T"},        .cuts={},.draw=d,.opt=o_stk_d,  .ranges=r_stk});
+  sh.AddHistos("syst evt", { .fill="Counts_vs_R2",        .pfs={Stack,"JetHT","T"},        .cuts={},.draw=d,.opt=o_stk_d,  .ranges=r_stk});
+  sh.AddHistos("syst evt", { .fill="Counts_vs_RazorBins", .pfs={Stack,"JetHT","T"},        .cuts={},.draw=d,.opt=o_stk_d,  .ranges=r_stk});
 
   // -------------------------------------------------------------------------
   //                          W enriched Region: W
@@ -2519,10 +2528,10 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   o_stk_d = "LogSumw2Stack5AddRatioTwoCol58AddIntApproval17";
   o_stk_s = "LogSumw2Stack5AddRatioTwoCol58AddIntApproval47";
-  //if (photon_only) {
-  //  o_stk_d = "LogSumw2Stack5TwoCol58AddIntApproval17";
-  //  o_stk_s = "LogSumw2Stack5TwoCol58AddIntApproval47";
-  //}
+  if (photon_only) {
+    o_stk_d = "LogSumw2Stack5TwoCol58AddIntApproval17";
+    o_stk_s = "LogSumw2Stack5TwoCol58AddIntApproval47";
+  }
   o_1or2d_d = "Sumw2Approval17";
   o_1or2d_s = "Sumw2Approval47";
   o_norm_d = "Sumw2NormApproval17";
@@ -3172,7 +3181,7 @@ Analysis::fill_analysis_histos(DataStruct& d, const unsigned int& syst_index, co
     while(d.gen.Loop())     if (passGenTop       [d.gen.it])     sh.Fill("gen top");
     sh.Fill("evt");
   }
-  sh.Fill("syst");
+  sh.Fill("syst evt");
 
   //// W fake rate scale factors
   //double w = sf_weight['F'];

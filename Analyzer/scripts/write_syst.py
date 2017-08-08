@@ -2,7 +2,7 @@ import random as rd
 import sys
 import datetime
 
-ngaus      =   9 # Number of gaussians to generate
+ngaus      =  18 # Number of gaussians to generate (8 sigma for syst, 10 sigma for SF)
 nmax_scale =   3 # Number of scale variations to consider
 nmax_pdf   = 100 # Number of pdfs to consider
 
