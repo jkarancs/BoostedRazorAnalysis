@@ -97,3 +97,10 @@ GJets_HT-400To600                                  GJets_HT-400To600_TuneCUETP8M
 GJets_HT-600ToInf                                  GJets_HT-600ToInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                              93.380000 2463946.000000
 ZJetsToNuNu_Zpt-100to200                           ZJetsToNuNu_Zpt-100to200_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                       35.410000 5077952.000000
 ZJetsToNuNu_Zpt-200toInf                           ZJetsToNuNu_Zpt-200toInf_TuneCUETP8M1_13TeV-madgraphMLM-pythia8                       4.298000 1986102.000000
+DYJetsToNuNu_Zpt-0To50                             DYJetsToNuNu_Zpt-0To50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        3483.000000 468823823500.000000
+DYJetsToNuNu_Zpt-50To100                           DYJetsToNuNu_Zpt-50To100_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                      233.600000 8806394638.000000
+DYJetsToNuNu_PtZ-50To100                           DYJetsToNuNu_PtZ-50To100_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                      593.900000 13590145350.000000
+DYJetsToNuNu_PtZ-100To250                          DYJetsToNuNu_PtZ-100To250_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                     55.030000 722592833.600000
+DYJetsToNuNu_PtZ-250To400                          DYJetsToNuNu_PtZ-250To400_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                     2.082000 5163758.925000
+DYJetsToNuNu_PtZ-400To650                          DYJetsToNuNu_PtZ-400To650_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                     0.281600 683789.168100
+DYJetsToNuNu_PtZ-650ToInf                          DYJetsToNuNu_PtZ-650ToInf_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                     0.026390 62293.540110

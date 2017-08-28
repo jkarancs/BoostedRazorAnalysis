@@ -121,10 +121,10 @@ int main(int argc, char** argv) {
     unsigned int nSyst = 0;
     std::vector<double> nSigmaLumi        = std::vector<double>(1,0);
     std::vector<double> nSigmaPU          = std::vector<double>(1,0);
-    std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
     //std::vector<double> nSigmaHT          = std::vector<double>(1,0);
+    std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaJES         = std::vector<double>(1,0);
     std::vector<double> nSigmaJER         = std::vector<double>(1,0);
     std::vector<double> nSigmaRestMET     = std::vector<double>(1,0);
@@ -152,10 +152,10 @@ int main(int argc, char** argv) {
       nth_line<<line;
       nth_line>>dbl; syst.nSigmaLumi.push_back(dbl);
       nth_line>>dbl; syst.nSigmaPU.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
       //nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJES.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJER.push_back(dbl);
       nth_line>>dbl; syst.nSigmaRestMET.push_back(dbl);
@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
 
     cout << "Normalization variables:" << endl;
     ana.calc_weightnorm_histo_from_ntuple(cmdline.allFileNames, settings.intLumi, vname_signal,
-					  settings.totWeightHistoNamesSignal); // histo names given in settings.h
+					  settings.totWeightHistoNamesSignal, out_dir); // histo names given in settings.h
 
     // Find the index of the current signal
     if (cmdline.fileNames.size()>0) for (size_t i=0, n=vname_signal.size(); i<n; ++i) 
@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
   // Pile-up reweighting
   if ( !cmdline.isData && settings.doPileupReweighting ) {
     cout << "doPileupReweighting (settings): true" << endl;
-    ana.init_pileup_reweightin(settings.pileupDir, settings.mcPileupHistoName, cmdline.allFileNames);
+    ana.init_pileup_reweighting(settings.pileupDir, settings.mcPileupHistoName, cmdline.allFileNames);
   } else cout << "doPileupReweighting (settings): false" << endl;
   if (debug) std::cout<<"Analyzer::main: init_pileup_reweighting ok"<<std::endl;
 
@@ -494,7 +494,8 @@ int main(int argc, char** argv) {
 	  // Normalize to chosen luminosity, also consider symmeteric up/down variation in lumi uncertainty
 	  
 	  w *= (ana.all_weights[0] = ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]));
-	  ofile->count("w_lumi", w);
+	  if (syst.index==0) ofile->count("w_lumi", w);
+	  if (debug==-1) std::cout<<syst.index<<" lumi = "<<ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: apply lumi weight ok"<<std::endl;
 
 	  // Pileup reweighting (Currently only do for Background)
@@ -505,7 +506,8 @@ int main(int argc, char** argv) {
 	    w *= (ana.all_weights[1] = 1);
 	  }
 	  if (syst.index == 0) h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
-	  ofile->count("w_pileup", w);
+	  if (syst.index==0) ofile->count("w_pileup", w);
+	  if (debug==-1) std::cout<<" pileup = "<<ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: apply pileup weight ok"<<std::endl;
 
 	  // Theory weights
@@ -519,7 +521,8 @@ int main(int argc, char** argv) {
 	  // If vector was not filled (LO samples), not doing any weighting
 	  if ( data.syst_alphas.Weights.size() == 2 )
 	    w *= (ana.all_weights[2] = ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS[syst.index], data.evt.LHA_PDF_ID));
-	  ofile->count("w_alphas", w);
+	  if (syst.index==0) ofile->count("w_alphas", w);
+	  if (debug==-1) std::cout<<" alpha_s = "<<ana.get_alphas_weight(data.syst_alphas.Weights, syst.nSigmaAlphaS[syst.index], data.evt.LHA_PDF_ID);
 	  if (debug>1) std::cout<<"Analyzer::main: apply alphas weight ok"<<std::endl;
 
 	  // Scale variations
@@ -527,8 +530,8 @@ int main(int argc, char** argv) {
 	  // If numScale=0 is specified, not doing any weighting
 	  if ( syst.numScale[syst.index] >= 1 && syst.numScale[syst.index] <= 3 )
 	    w *= (ana.all_weights[3] = ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]));
-	  ofile->count("w_scale", w);
-
+	  if (syst.index==0) ofile->count("w_scale", w);
+	  if (debug==-1) std::cout<<" scale = "<<ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
 	  // PDF weights
 	  // A set of 100 weights for the nominal PDF
 	  // If numPdf=0 is specified, not doing any weighting
@@ -536,7 +539,8 @@ int main(int argc, char** argv) {
 	    w *= (ana.all_weights[4] = data.syst_pdf.Weights[syst.numPdf[syst.index]-1]);
 	  else if ( syst.numPdf[syst.index] > data.syst_pdf.Weights.size() )
 	    utils::error("numPdf (syst) specified is larger than the number of PDF weights in the ntuple");
-	  ofile->count("w_pdf", w);
+	  if (syst.index==0) ofile->count("w_pdf", w);
+	  if (debug==-1) std::cout<<" pdf = "<<(syst.numPdf[syst.index]>0 ? data.syst_pdf.Weights[syst.numPdf[syst.index]-1] : 1);
 	  if (debug>1) std::cout<<"Analyzer::main: apply pwd weight ok"<<std::endl;
 
 	  // Scale QCD to match data in QCD dominated region
@@ -565,7 +569,8 @@ int main(int argc, char** argv) {
 
 	  // Apply Trigger Efficiency Scale Factor
 	  w *= (ana.all_weights[5] = ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]));
-	  ofile->count("w_trigger", w);
+	  if (syst.index==0) ofile->count("w_trigger", w);
+	  if (debug==-1) std::cout<<" trigger = "<<ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: apply trigger weight ok"<<std::endl;
 
 	  // Apply Object Scale Factors
@@ -586,10 +591,10 @@ int main(int argc, char** argv) {
 	  // eg. MET filters, baseline event selection etc.
 	  bool pass_all_baseline_cuts = true;
 	  if (syst.index == 0) {
-	    ofile->count("NoCuts", w);
+	    if (syst.index==0) ofile->count("NoCuts", w);
 	    for (const auto& cut : ana.baseline_cuts) {
 	      if ( !(pass_all_baseline_cuts = cut.func()) ) break; 
-	      ofile->count(cut.name, w);
+	      if (syst.index==0) ofile->count(cut.name, w);
 	    }
 	  }
 	  if (debug>1) std::cout<<"Analyzer::main: counting baseline events ok"<<std::endl;
@@ -612,24 +617,27 @@ int main(int argc, char** argv) {
 	      bool pass_all_regional_cuts = true;
 	      for (const auto& cut : search_region.second) {
 		if ( !(pass_all_regional_cuts = cut.func()) ) break;
-		ofile->count(std::string(1,search_region.first)+"_cut_"+cut.name, w);
+		if (syst.index==0) ofile->count(std::string(1,search_region.first)+"_cut_"+cut.name, w);
 	      }
 	      // Then apply scale factors
 	      if (settings.applyScaleFactors && pass_all_regional_cuts) {
 		double sf_w = w;
 		for (size_t i=0, n=ana.scale_factors[search_region.first].size(); i<n; ++i) {
 		  sf_w *= ana.scale_factors[search_region.first][i];
-		  ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i+1), sf_w);
+		  if (syst.index==0) ofile->count(std::string(1,search_region.first)+"_sf_"+std::to_string(i+1), sf_w);
+		  if (debug==-1) std::cout<<", "<<sf_w;
 		}
 	      }
 	    }
 	    if (debug>1) std::cout<<"Analyzer::main: counting analysis events, scale factors ok"<<std::endl;
+	    if (debug==-1) std::cout<<"  w = "<<w<<std::endl;
 
 	  }
 	} // end systematics loop
       } // end not skimming
       if (debug>1) std::cout<<"Analyzer::main: end mc event"<<std::endl;
     } // end Background/Signal MC
+    if (debug==-1) std::cout<<"---------------------------------------"<<std::endl<<std::endl;
 
     // Measure speed (useful info for batch/parallel jobs)
     ana.job_monitoring(entry, nevents, stream.filename());

@@ -3,7 +3,7 @@
 // VER 2 - Moriond17 + 03Feb2017 ReMiniAOD datasets
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     2
-#define SKIM    0 // TODO: Fix totweight in next skim
+#define SKIM    0
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -23,9 +23,11 @@ struct settings {
 
 #elif VER == 2
 #if SKIM == 1
-#include "common/selectVariables_skim_May10.h"
+//#include "common/selectVariables_skim_May10.h"
+#include "common/selectVariables_skim_May10_photon.h"
 #else
 #include "common/selectVariables_fast_May10.h"
+//#include "common/selectVariables_fast_May10_photon.h"
 #endif
 #endif
 
@@ -40,9 +42,10 @@ struct settings {
     doHTReweighting          ( false ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
-    nSigmaScaleFactors       ( 10    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 1 W, 1 b, 1 top
-    varySystematics          ( false ),
-    systematicsFileName      ( "systematics/2017_08_08_1SigmaUpDown_NoPdf.txt" ),
+    nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 2 W, 2 b, 2 top
+    varySystematics          ( true  ),
+    systematicsFileName      ( "systematics/2017_08_22_1SigmaUpDown_NoPdf.txt" ),
+    //systematicsFileName      ( "systematics/test.txt" ),
     treeName                 ( runOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( runOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
     mcPileupHistoName        ( runOnSkim ? "pileup_mc" : "EventCounter/pileup" ),    // saved in ntuple

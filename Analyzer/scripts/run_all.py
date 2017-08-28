@@ -28,6 +28,7 @@ parser.add_option("--mirror_user", dest="mirror_user", action="store_true", defa
 parser.add_option("--plot",        dest="plot",        action="store_true", default=False,   help="Make plots after running using Plotter (Janos)")
 parser.add_option("--replot",      dest="replot",      action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
 parser.add_option("--recover",     dest="recover",     action="store_true", default=False,   help="Recover stopped task (eg. due to some error)")
+parser.add_option("--nohadd",      dest="nohadd",      action="store_true", default=False,   help="Disable hadding output files")
 (opt,args) = parser.parse_args()
 
 # ----------------------  Settings -----------------------
@@ -258,6 +259,7 @@ for filelist in input_filelists:
                     ana_arguments.append(args)
                     totalevt = 0
                 totalevt += nevt
+                ntry = 0
                 while True:
                     try:
                         with open(tmp_filelist, "a") as job_filelist:
@@ -265,6 +267,8 @@ for filelist in input_filelists:
                     except:
                         print "Warning: Could not write to disk (IOError), wait 10s and continue"
                         time.sleep(10)
+                        ntry += 1
+                        if ntry == 20: sys.exit()
                         continue
                     break
         if opt.optim:
@@ -290,17 +294,19 @@ for filelist in input_filelists:
         # In case of a single job/dataset
         ana_arguments.append([output_file, [EXEC_PATH+"/"+filelist], options, log_file])
 
-
 # for recovery (also uncomment backup, compile)
 #ana_arguments = ana_arguments[2833:]
 
 if opt.NEVT != -1:
+    ntry = 0
     while True:
         try:
             bad_files.close()
         except:
             print "Warning: Could not close file (IOError), wait 10s and continue"
             time.sleep(10)
+            ntry += 1
+            if ntry == 20: sys.exit()
             continue
         break
 
@@ -320,6 +326,7 @@ def special_call(cmd, verbose=1):
         for i in xrange(len(cmd)): print cmd[i],
         print ""
     if opt.run:
+        ntry = 0
         while True:
             try:
                 if subprocess.call(cmd):
@@ -336,6 +343,8 @@ def special_call(cmd, verbose=1):
                 print ""
                 print "Wait 10s and continue"
                 time.sleep(10)
+                ntry += 1
+                if ntry == 20: sys.exit()
                 continue
             break
         if verbose: print ""
@@ -349,6 +358,7 @@ def logged_call(cmd, logfile):
     if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
     if opt.run:
+        ntry = 0
         while True:
             try:
                 with open(logfile, "a") as log:
@@ -357,6 +367,8 @@ def logged_call(cmd, logfile):
             except:
                 print "Could not write to disk (IOError), wait 10s and continue"
                 time.sleep(10)
+                ntry += 1
+                if ntry == 20: sys.exit()
                 continue
             break
     else:
@@ -494,7 +506,38 @@ def analysis(ana_arguments, nproc):
                                 #        print "Job "+jobname+" is pending/running"
                             os.remove('jobstatus_'+jobname+'.txt')
                             last_known_status[jobindex] = time.time()
-                # Finally print status
+                # Check list of files ready to be merged (with hadd)
+                prev_sample = ""
+                mergeables = []
+                all_mergeables = []
+                for i in range(0, njob):
+                    job_index = ana_arguments[i][0][:-5].split("_")[-1]
+                    sample = ana_arguments[i][0][:-(6+len(job_index))]
+                    if sample != prev_sample:
+                        prev_sample = sample
+                        ready_to_merge = True
+                        if len(mergeables)>1: all_mergeables.append(mergeables)
+                        mergeables = [sample.rsplit("/",1)[0]+"/hadd/"+sample.rsplit("/",1)[1]+".root"]
+                    if ready_to_merge:
+                        if last_known_status[i]==0:
+                            mergeables.append(ana_arguments[i][0])
+                        else:
+                            ready_to_merge = False
+                            mergeables = []
+                if ready_to_merge: all_mergeables.append(mergeables)
+                # Merge them if they are ready
+                for i in range(0, len(all_mergeables)):
+                    if not os.path.exists(all_mergeables[i][0]):
+                        if len(all_mergeables[i])>2:
+                            print str(len(all_mergeables[i])-1)+" files for "+all_mergeables[i][0]+" are ready to be merged"
+                            while not os.path.exists(all_mergeables[i][0]):
+                                logged_call(["hadd", "-f", "-v"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"))
+                                if os.path.isfile(all_mergeables[i][0]):
+                                    if os.path.getsize(all_mergeables[i][0]) < 1000: os.remove(all_mergeables[i][0])
+                        else:
+                            print "File for "+all_mergeables[i][0]+" is ready"
+                            special_call(["cp","-p"]+[all_mergeables[i][1]]+[all_mergeables[i][0]], 0)
+                # Print status
                 print "Analyzer jobs on batch (Done/All): "+str(finished)+"/"+str(njob)+"   \r",
                 sys.stdout.flush()
             print "\nAll batch jobs finished."
@@ -543,6 +586,7 @@ else:
         compile(1, opt.plot)
     plotter_input_files = analysis(ana_arguments, opt.NPROC)
     if opt.plot:
+        if opt.nohadd: plotter_input_files = glob.glob(opt.OUTDIR+"/hadd/*.root")
         plotter(plotter_input_files, PLOTTER_OUT)
         #if not 'lxplus' in socket.gethostname():
         #    show_result(PLOTTER_OUT)

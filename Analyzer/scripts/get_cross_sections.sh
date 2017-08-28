@@ -10,8 +10,10 @@ xsecfile="/data/jkarancs/CMSSW/ntuple/Analysis/B2GTTrees/test/crab3/cross_sectio
 #ntuple="/data_6tb/gridout/jkarancs/SusyAnalysis/B2G/TTreeNtuple/May10/"
 #datasets="/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/CMSSW_8_0_26_patch2/src/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_May10_part5_input.txt"
 #ntuple="/data/gridout/jkarancs/SusyAnalysis/B2G/TTreeNtuple/May10_part5/"
-datasets="/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/CMSSW_8_0_26_patch2/src/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_May10_part6_input.txt"
-ntuple="/data_6tb/gridout/jkarancs/SusyAnalysis/B2G/TTreeNtuple/May10_part6/"
+#datasets="/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/CMSSW_8_0_26_patch2/src/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_May10_part6_input.txt"
+#ntuple="/data_6tb/gridout/jkarancs/SusyAnalysis/B2G/TTreeNtuple/May10_part6/"
+datasets="/data/jkarancs/CMSSW/SusyAnalysis/Ntuples/CMSSW_8_0_26_patch2/src/Analysis/B2GTTrees/test/crab3/MINIAODv2_80X_May10_part7_input.txt"
+ntuple="/data_6tb/gridout/jkarancs/SusyAnalysis/B2G/TTreeNtuple/May10_part7/"
 
 echo -n "" > BackGroundXSec.txt
 while read short dataset; do

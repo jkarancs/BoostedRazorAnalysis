@@ -200,6 +200,7 @@ public:
     dates_ = opt.find("Dates")!=std::string::npos;
     twocol_ = opt.find("TwoCol")!=std::string::npos;
     addint_ = opt.find("AddInt")!=std::string::npos;
+    syst_ = name.find("Counts_vs_")!=std::string::npos;
     n_nostack_ = 0;
     if (stack_)    { std::stringstream ss; ss<<opt.substr(opt.find("Stack")   +5,1); ss>>n_nostack_; }
     if (twocol_)   { std::stringstream ss; ss<<opt.substr(opt.find("TwoCol")  +6,2); ss>>twocol_; }
@@ -267,6 +268,7 @@ private:
   bool addint_;  // Add plot integrals to a separate column in the legend
   size_t n_nostack_; // Do no stack first n plots
   bool plot_asymm_err_; // Decide automatically if histo should be plotted with asymmetric errors (Using TGraphAE)
+  bool syst_;
   
   // axis ranges: xlow, xhigh, ylow, yhigh, zlow, zhigh
   // if low==high -> do not set
@@ -553,19 +555,10 @@ private:
 
   // ************** Systematic Unc. Calculation **************
   void calc_syst_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
+    std::vector<double> v_up, v_down;
     for (int binx=1; binx<=h2d->GetNbinsX(); ++binx) {
-      double mean = h2d->GetBinContent(binx, 1);
-      // Statistical error
-      double variance = h2d->GetBinError(binx, 1)*h2d->GetBinError(binx, 1);
-      // Add systematic error to statistical error in quadrature
-      if (h2d->GetNbinsY()>=2) {
-	if (h2d->Integral(binx,binx,2,h2d->GetNbinsY())!=0) for (int biny=2; biny<=h2d->GetNbinsY(); ++biny) {
-	  double cont = h2d->GetBinContent(binx, biny);
-	  variance += (mean-cont)*(mean-cont)/(h2d->GetNbinsY()-1);
-	}
-      }
-      h1d->SetBinContent(binx, mean);
-      h1d->SetBinError  (binx, sqrt(variance));
+      h1d->SetBinContent(binx, h2d->GetBinContent(binx, 1));
+      h1d->SetBinError  (binx, h2d->GetBinError(binx, 1));
     }
     h1d->SetEntries(h2d->GetEntries());
     if (savemother) mother_2d_[h1d]=h2d;
@@ -807,7 +800,7 @@ private:
         for (size_t k=0; k<h2d_4p_[i][j].size(); ++k) for (size_t l=0; l<h2d_4p_[i][j][k].size(); ++l) load_(f,h2d_4p_[i][j][k][l],add);
       for (size_t i=0; i<h3d_4p_.size(); ++i) for (size_t j=0; j<h3d_4p_[i].size(); ++j) 
         for (size_t k=0; k<h3d_4p_[i][j].size(); ++k) for (size_t l=0; l<h3d_4p_[i][j][k].size(); ++l) load_(f,h3d_4p_[i][j][k][l],add);
-    } else if (npf_==4) {
+    } else if (npf_==5) {
       for (size_t i=0; i<h1d_5p_.size(); ++i) for (size_t j=0; j<h1d_5p_[i].size(); ++j) 
         for (size_t k=0; k<h1d_5p_[i][j].size(); ++k) for (size_t l=0; l<h1d_5p_[i][j][k].size(); ++l) 
 	  for (size_t m=0; m<h1d_5p_[i][j][k][l].size(); ++m) load_(f,h1d_5p_[i][j][k][l][m],add);
@@ -1822,10 +1815,18 @@ private:
         TH1D* ratio = (TH1D*)Data->Clone();
 	if (debug) std::cout<<"ok2"<<std::endl;
         TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
+        TH2D* mc_sum_syst = 0;
+	if (syst_) mc_sum_syst = (TH2D*)mother_2d_[(TH1D*)MCstack->GetHists()->At(0)]->Clone();
 	if (debug) std::cout<<"ok2"<<std::endl;
-        for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) mc_sum->Add((TH1D*)MCstack->GetHists()->At(iStack)->Clone());
+        for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) {
+	  TH1D* h = (TH1D*)MCstack->GetHists()->At(iStack);
+	  mc_sum->Add((TH1D*)h->Clone());
+	  if (syst_) mc_sum_syst->Add(mother_2d_[h]);
+	}
 	if (debug) std::cout<<"ok2"<<std::endl;
-	TH1D* den_err = (TH1D*)mc_sum->Clone("den_err");
+	TH1D* den_stat_err = (TH1D*)mc_sum->Clone("den_stat_err");
+	TH1D* den_all_up_err = (TH1D*)mc_sum->Clone("den_all_up_err");
+	TH1D* den_all_down_err = (TH1D*)mc_sum->Clone("den_all_down_err");
 	if (debug) std::cout<<"ok2"<<std::endl;
 	// Instead of Divide(), scale the error of num, and plot error of den around 1
         ratio->Divide(mc_sum);
@@ -1834,18 +1835,53 @@ private:
 	  if (mc_sum->GetBinContent(bin)!=0) {
 	    ratio  ->SetBinContent(bin, Data->GetBinContent(bin)/mc_sum->GetBinContent(bin));
 	    ratio  ->SetBinError  (bin, Data->GetBinError(bin)  /mc_sum->GetBinContent(bin));
-	    den_err->SetBinContent(bin, 1);
-	    den_err->SetBinError  (bin, mc_sum->GetBinError(bin)  /mc_sum->GetBinContent(bin));
+	    den_stat_err->SetBinContent(bin, 1);
+	    den_stat_err->SetBinError  (bin, mc_sum->GetBinError(bin)  /mc_sum->GetBinContent(bin));
+	    if (syst_) {
+	      // Loop on systematics bins and look for std dev of up/down variations
+	      double var_up = 0, var_down = 0, n_up = 0, n_down = 0;
+	      double mean = mc_sum_syst->GetBinContent(bin,1);
+	      for (int biny=2; biny<=mc_sum_syst->GetNbinsY(); ++biny) /*if (biny<12||biny>13)*/ {
+		double cont = mc_sum_syst->GetBinContent(bin,biny);
+		if (cont>mean) {
+		  var_up += (cont-mean)*(cont-mean);
+		  n_up++;
+		} else if (cont<mean) {
+		  var_down += (cont-mean)*(cont-mean);
+		  n_down++;
+		}
+	      }
+	      double up_err = n_up>0 ? std::sqrt(var_up) : 0;
+	      double down_err = n_down>0 ? std::sqrt(var_down) : 0;
+	      // add stat error
+	      up_err   = std::sqrt(up_err*up_err + mc_sum->GetBinError(bin)*mc_sum->GetBinError(bin));
+	      down_err = std::sqrt(down_err*down_err + mc_sum->GetBinError(bin)*mc_sum->GetBinError(bin));
+	      up_err   /= mc_sum->GetBinContent(bin);
+	      down_err /= mc_sum->GetBinContent(bin);
+	      // Maximize the error to the visible range*2
+	      up_err   = std::min(up_err,  1.999);
+	      down_err = std::min(down_err,1.999);
+	      den_all_up_err  ->SetBinContent(bin, 1+up_err/2);
+	      den_all_down_err->SetBinContent(bin, 1-down_err/2);
+	      den_all_up_err  ->SetBinError(bin, up_err/2);
+	      den_all_down_err->SetBinError(bin, down_err/2);
+	    }
 	  } else {
 	    ratio  ->SetBinContent(bin, 0);
 	    ratio  ->SetBinError  (bin, 0);
-	    den_err->SetBinContent(bin, 1);
-	    den_err->SetBinError  (bin, 0);
+	    den_stat_err->SetBinContent(bin, 1);
+	    den_stat_err->SetBinError  (bin, 0);
 	  }
 	}
 	if (debug) std::cout<<"ok2"<<std::endl;
-	den_err->SetFillColor(1);
-	den_err->SetFillStyle(3004);
+	den_stat_err->SetFillColor(1);
+	den_stat_err->SetFillStyle(3004);
+	if (syst_) {
+	  den_all_up_err->SetFillColor(kGray);
+	  den_all_up_err->SetFillStyle(1001);
+	  den_all_down_err->SetFillColor(kGray);
+	  den_all_down_err->SetFillStyle(1001);
+	}
         // Legend
         TLegend* leg = 0;
         // Remove Non-Data non-stack plots (eg. signal)
@@ -1924,7 +1960,12 @@ private:
 	p->SetRightMargin(right_mar);
 	if (debug) std::cout<<"ok3"<<std::endl;
         ratio->Draw("PE1");
-	den_err->Draw("SAME E2");
+	if (syst_) {
+	  den_all_up_err->Draw("SAME E2");
+	  den_all_down_err->Draw("SAME E2");
+	}
+	den_stat_err->Draw("SAME E2");
+        ratio->Draw("SAME PE1");
 	if (debug) std::cout<<"ok3"<<std::endl;
 	if (xmin==xmax) {
 	  xmin = ratio->GetYaxis()->GetXmin();
@@ -2440,7 +2481,7 @@ public:
   typedef struct HistoParamsNew { std::string fill; std::vector<std::string> pfs; std::vector<std::string> cuts; std::string draw; std::string opt; std::vector<double> ranges={}; } HistoParamsNew;
   
   void AddHistos(std::string name, HistoParams hp, bool AddCutsToTitle = true, const bool debug = 0) {
-    if (debug) std::cout<<"Start adding: "<<name<<std::endl;
+    if (debug) std::cout<<"Start adding: "<<name<<" "<<hp.fill<<std::endl;
     if (sh_.count(name)) {
       std::pair<std::vector<std::string>, std::vector<FillParams> > hp_vec = get_hp_vec_(hp.fill);
       bool valid = 1;

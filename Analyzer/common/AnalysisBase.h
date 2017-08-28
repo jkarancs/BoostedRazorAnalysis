@@ -38,6 +38,23 @@ public:
     sw_1k_  = new TStopwatch;
     sw_10k_ = new TStopwatch;
     sw_job_ = new TStopwatch;
+
+    syst = {
+      "lumi", "pileup", "alphas",
+      "facscale", "renscale", "facrenscale", 
+      "trigger", "jes", "jer", "met", 
+      /*"ees",*/ "elereco", "eleid", "eleiso", "elefastsim",
+      /*"mes",*/ "muontrk", "muonidiso", "muonfastsim",
+      "btag", "btagfastsim",
+      "wtag", "wtagfastsim",
+      "toptag", "toptagfastsim",
+      "genmetvspfmet", "isr"
+    };
+    //for (int i=1; i<=100; ++i) {
+    //  std::stringsteam ss;
+    //  ss<<"pdf"<<i;
+    //  bkg_syst.push_bask(ss.str());
+    //}
   }
   ~AnalysisBase() {
     delete sw_1_;
@@ -65,9 +82,9 @@ public:
   double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
 
   void calc_weightnorm_histo_from_ntuple(const std::vector<std::string>&, const double&, const std::vector<std::string>&,
-					 const std::vector<std::string>&, bool);
+					 const std::vector<std::string>&, TDirectory*, bool);
 
-  void init_pileup_reweightin(const std::string&, const std::string&, const std::vector<std::string>&);
+  void init_pileup_reweighting(const std::string&, const std::string&, const std::vector<std::string>&);
 
   double get_pileup_weight(const int&, const double&);
 
@@ -87,15 +104,15 @@ public:
 
   void init_syst_input();
 
-  double calc_top_tagging_sf(DataStruct&, const double&, const bool&);
+  double calc_top_tagging_sf(DataStruct&, const double&, const double&, const bool&);
   double calc_fake_top_mass_tagging_sf(DataStruct&);
   double calc_fake_top_anti_tagging_sf(DataStruct&);
 
-  double calc_w_tagging_sf(DataStruct&, const double&, const bool&);
+  double calc_w_tagging_sf(DataStruct&, const double&, const double&, const bool&);
   double calc_fake_w_mass_tagging_sf(DataStruct&);
   double calc_fake_w_anti_tagging_sf(DataStruct&);
 
-  std::pair<double, double> calc_b_tagging_sf(DataStruct&, const double&, const bool&);
+  std::pair<double, double> calc_b_tagging_sf(DataStruct&, const double&, const double&, const bool&);
 
   std::tuple<double, double, double> calc_ele_sf(DataStruct&, const double&, const double&, const double&, const double&, const bool&);
 
@@ -110,8 +127,24 @@ public:
   const bool isData;
   const bool isSignal;
   const std::string sample;
+  std::vector<std::string> syst;
+
+  std::map<char, std::vector<Cut> > analysis_cuts;
+
+  bool apply_cut(char, std::string);
+  bool apply_cut(char, unsigned int);
+  bool apply_ncut(char, std::string);
+  bool apply_ncut(char, unsigned int);
+  bool apply_cuts(char, std::vector<std::string>);
+  bool apply_cuts(char, std::vector<unsigned int>);
+  bool apply_all_cuts(char);
+  bool apply_all_cuts_except(char, std::string);
+  bool apply_all_cuts_except(char, unsigned int);
+  bool apply_all_cuts_except(char, std::vector<std::string>);
+  bool apply_all_cuts_except(char, std::vector<unsigned int>);
 
 private:
+
   TStopwatch *sw_1_, *sw_1k_, *sw_10k_, *sw_job_;
   TRandom3 rnd_;
   std::map<std::string, int> bad_files;
@@ -159,20 +192,7 @@ public:
 
   void save_analysis_histos(bool);
 
-  std::map<char, std::vector<Cut> > analysis_cuts;
-
 private:
-  bool apply_cut(char, std::string);
-  bool apply_cut(char, unsigned int);
-  bool apply_ncut(char, std::string);
-  bool apply_ncut(char, unsigned int);
-  bool apply_cuts(char, std::vector<std::string>);
-  bool apply_cuts(char, std::vector<unsigned int>);
-  bool apply_all_cuts(char);
-  bool apply_all_cuts_except(char, std::string);
-  bool apply_all_cuts_except(char, unsigned int);
-  bool apply_all_cuts_except(char, std::vector<std::string>);
-  bool apply_all_cuts_except(char, std::vector<unsigned int>);
 
   typedef struct Sample { std::string postfix; std::string legend; std::string color; std::vector<std::string> dirs; } Sample;
   typedef struct PostfixOptions { size_t index; std::string postfixes; std::string legends; std::string colors; } PostfixOptions;
@@ -1836,6 +1856,109 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   }
 }
 
+//_______________________________________________________
+//  Apply analysis cuts in the specified search region
+
+bool
+AnalysisBase::apply_all_cuts(char region) {
+  return apply_ncut(region, analysis_cuts[region].size());
+}
+
+bool
+AnalysisBase::apply_ncut(char region, unsigned int ncut) {
+  if (ncut>analysis_cuts[region].size()) return 0;
+  for (unsigned int i=0; i<ncut; ++i) if ( ! analysis_cuts[region][i].func() ) return 0;
+  return 1;
+}
+
+// Cuts to apply/exclude by cut name
+bool
+AnalysisBase::apply_cut(char region, std::string cut_name) {
+  for (const auto& cut : analysis_cuts[region]) if (cut_name == cut.name) return cut.func();
+  return 0;
+}
+
+bool
+AnalysisBase::apply_cuts(char region, std::vector<std::string> cuts) {
+  for (const auto& cut_in_region : analysis_cuts[region]) for (const auto& cut : cuts) 
+    if (cut == cut_in_region.name) if (!cut_in_region.func()) return 0;
+  return 1;
+}
+
+bool
+AnalysisBase::apply_all_cuts_except(char region, std::string cut_to_skip) {
+  bool result = true, found = false;
+  for (const auto& cut : analysis_cuts[region]) {
+    if (cut.name == cut_to_skip) { 
+      found = true;
+      continue;
+    }
+    if (!cut.func()) result = false;
+  }
+  // If a certain cut meant to be skipped (N-1) is not found for some reason
+  // eg. mistyped, then end the job with ar error
+  // This is for safety: We do not want to fill histograms wrongly by mistake
+  if (!found) {
+    std::cout<<"No cut to be skipped exsists in search region \""<<region<<"\" with name: \""<<cut_to_skip<<"\""<<std::endl;
+    utils::error("AnalysisBase - the second argument for apply_all_cuts_except() is a non-sensical cut");
+  }
+  return result;
+}
+
+bool
+AnalysisBase::apply_all_cuts_except(char region, std::vector<std::string> cuts_to_skip) {
+  bool result = true;
+  unsigned int found = 0;
+  for (const auto& cut : analysis_cuts[region]) {
+    for (const auto& cut_to_skip : cuts_to_skip) if (cut.name==cut_to_skip) { 
+      ++found;
+      continue;
+    }
+    if (!cut.func()) result = false;
+  }
+  // If a certain cut meant to be skipped is not found for some reason
+  // eg. mistyped, then end the job with ar error
+  // This is for safety: We do not want to fill histograms wrongly by mistake
+  if (found!=cuts_to_skip.size()) {
+    std::cout<<"A cut to be skipped does not exsist in seaerch region \""<<region<<"\" with names: ";
+    for (const auto& cut : cuts_to_skip) std::cout<<cut<<", "; std::cout<<std::endl;
+    utils::error("AnalysisBase - the second argument for apply_all_cuts_except() contains at least one non-sensical cut");
+  }
+  return result;
+}
+
+
+// Same functions but with cut index which is faster (can use an enum, to make it nicer)
+bool
+AnalysisBase::apply_cut(char region, unsigned int cut_index) { return analysis_cuts[region][cut_index].func(); }
+
+bool
+AnalysisBase::apply_cuts(char region, std::vector<unsigned int> cuts) {
+  for (const unsigned int& cut : cuts) if ( ! analysis_cuts[region][cut].func() ) return 0;
+  return 1;
+}
+
+bool
+AnalysisBase::apply_all_cuts_except(char region, unsigned int cut_to_skip) {
+  if (cut_to_skip>=analysis_cuts[region].size()) {
+    std::cout<<"Index ("<<cut_to_skip<<") is too high for the cut to be skipped in search region '"<<region<<"'"<<std::endl;
+    utils::error("AnalysisBase::apply_all_cuts_except(char region, unsigned int cut_to_skip)");
+  }
+  for (unsigned int i=0, n=analysis_cuts[region].size(); i<n; ++i) {
+    if (i==cut_to_skip) continue;
+    if ( ! analysis_cuts[region][i].func() ) return 0;
+  }
+  return 1;
+}
+
+bool
+AnalysisBase::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_skip) {
+  for (unsigned int i=0, n=analysis_cuts[region].size(); i<n; ++i) {
+    for (const unsigned int& cut_to_skip : cuts_to_skip) if (i!=cut_to_skip) 
+      if ( ! analysis_cuts[region][i].func() ) return 0;
+  }
+  return 1;
+}
 
 //_______________________________________________________
 //                 List of Histograms
@@ -1874,6 +1997,16 @@ TH2D* h_trigger2d_pass;
 TH2D* h_trigger2d_total;
 TH2D* h_trigger2d_nolep_pass;
 TH2D* h_trigger2d_nolep_total;
+
+std::vector<TH1D*> vh_MRR2_data;
+std::vector<TH1D*> vh_MRR2_data_nj35;
+std::vector<TH1D*> vh_MRR2_data_nj6;
+std::vector<std::vector<TH1D*> > vvh_MRR2_bkg;
+std::vector<std::vector<TH1D*> > vvh_MRR2_bkg_nj35;
+std::vector<std::vector<TH1D*> > vvh_MRR2_bkg_nj6;
+std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig;
+std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig_nj35;
+std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig_nj6;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -1928,6 +2061,90 @@ AnalysisBase::init_common_histos()
   h_trigger2d_total             = new TH2D("trigger2d_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
   h_trigger2d_nolep_pass        = new TH2D("trigger2d_nolep_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
   h_trigger2d_nolep_total       = new TH2D("trigger2d_nolep_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
+
+  std::vector<std::string> regions = {"S", "s", "T", "W", "Q", "q", "Z", "G"}; 
+
+  // Backgrounds
+  for (size_t i=0; i<regions.size(); ++i) {
+    // Data
+    vh_MRR2_data     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    vh_MRR2_data_nj35.push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    vh_MRR2_data_nj6 .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    // Background
+    vvh_MRR2_bkg     .push_back(std::vector<TH1D*>());
+    vvh_MRR2_bkg_nj35.push_back(std::vector<TH1D*>());
+    vvh_MRR2_bkg_nj6 .push_back(std::vector<TH1D*>());
+    vvh_MRR2_bkg[i]     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    vvh_MRR2_bkg_nj35[i].push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    vvh_MRR2_bkg_nj6[i] .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    for (size_t j=0; j<syst.size(); ++j) {
+      std::stringstream ss;
+      ss<<"MRR2_"<<regions[i]<<"_bkg_"<<syst[j];
+      vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      std::stringstream ss2;
+      ss2<<"MRR2_"<<regions[i]<<"_bkg_nj35_"<<syst[j];
+      vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss2.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss2.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      std::stringstream ss3;
+      ss3<<"MRR2_"<<regions[i]<<"_bkg_nj6_"<<syst[j];
+      vvh_MRR2_bkg_nj6[i].push_back(new TH1D((ss3.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      vvh_MRR2_bkg_nj6[i].push_back(new TH1D((ss3.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    }
+  }
+  // Signals
+  // Declare them later after the signal weight calculation
+  // in calc_weightnorm_histo_from_ntuple()
+
+  /*
+ 0 "novariation"
+ 1 "lumiUp",
+ 2 "lumiDown",
+ 3 "pileupUp",
+ 4 "pileupDown",
+ 5 "alphasUp",
+ 6 "alphasDown",
+ 7 "facscaleUp",
+ 8 "facscaleDown",
+ 9 "renscaleUp",
+10 "renscaleDown",
+11 "facrenscaleUp", 
+12 "facrenscaleDown", 
+13 "triggerUp",
+14 "triggerDown",
+15 "jesUp",
+16 "jesDown",
+17 "jerUp",
+18 "jerDown",
+19 "metUp", 
+20 "metDown", 
+21 "elerecoUp",
+22 "elerecoDown",
+23 "eleidUp",
+24 "eleidDown",
+25 "eleisoUp",
+26 "eleisoDown",
+27 "elefastsimUp",
+28 "elefastsimDown",
+29 "muontrkUp",
+30 "muontrkDown",
+31 "muonidisoUp",
+32 "muonidisoDown",
+33 "muonfastsimUp",
+34 "muonfastsimDown",
+35 "btagUp",
+36 "btagDown",
+37 "btagfastsimUp",
+38 "btagfastsimDown",
+39 "wtagUp",
+40 "wtagDown",
+41 "wtagfastsimUp",
+42 "wtagfastsimDown",
+43 "toptagUp",
+44 "toptagDown",
+45 "toptagfastsimUp",
+46 "toptagfastsimDown",
+  */
 }
 
 //_______________________________________________________
@@ -1975,6 +2192,52 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
 	h_trigger_total   ->Fill(AK4_Ht);
 	h_trigger2d_total ->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
 	h_trigger2d_nolep_total ->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
+      }
+    }
+  }
+
+  // Fill plots for systematics
+  int MRR2_bin = -1;
+  if (d.evt.MR>=800&&d.evt.R2>=0.08) {
+    MRR2_bin = 0;
+    for (const auto& r2 : { 0.12, 0.16, 0.24, 0.5, 1.0 }) {
+      if (d.evt.R2<r2) break;
+      ++MRR2_bin;
+    }
+    if (MRR2_bin<5) {
+      for (const auto& mr : { 1000, 1200, 1600, 2000, 4000}) {
+	if (d.evt.MR<mr) break;
+	MRR2_bin+=5;
+      }
+    } else MRR2_bin=9999;
+  }
+  const std::vector<char> regions = {'S', 's', 'T','W','Q', 'q', 'Z', 'G'};
+  if (isData) {
+    if (TString(sample).Contains("JetHT")) {
+      for (size_t i=0; i<regions.size(); ++i) {
+	if (this->apply_all_cuts(regions[i])) {
+	  vh_MRR2_data[i]->Fill(MRR2_bin);
+	  if (nJet<6) vh_MRR2_data_nj35[i]->Fill(MRR2_bin);
+	  else        vh_MRR2_data_nj6[i] ->Fill(MRR2_bin);
+	}
+      }
+    }
+  } else if (isSignal) {
+    if (apply_all_cuts('S')) {
+      uint32_t mMother = TString(sample).Contains("T2tt") ? std::round(d.evt.SUSY_Stop_Mass/5.0)*5 : std::round(d.evt.SUSY_Gluino_Mass/25.0)*25;
+      uint32_t mLSP    = TString(sample).Contains("T2tt") ? std::round(d.evt.SUSY_LSP_Mass /5.0)*5 : std::round(d.evt.SUSY_LSP_Mass   /25.0)*25;
+      uint32_t signal_bin = mMother * 10000 + mLSP;
+      m_vh_MRR2_sig[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+      if (nJet<6) m_vh_MRR2_sig_nj35[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+      else        m_vh_MRR2_sig_nj6 [signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+    }
+  } else {
+    // Backgrounds
+    for (size_t i=0; i<regions.size(); ++i) {
+      if (apply_all_cuts(regions[i])) {
+	vvh_MRR2_bkg[i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+	if (nJet<6) vvh_MRR2_bkg_nj35[i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+	else        vvh_MRR2_bkg_nj6 [i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
       }
     }
   }
@@ -2063,7 +2326,7 @@ AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filename
 //       Calculate weight normalization for signal
 void
 AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& filenames, const double& intLumi, const std::vector<std::string>& vname_signal,
-						const std::vector<std::string>& vname_totweight, bool verbose=1)
+						const std::vector<std::string>& vname_totweight, TDirectory* dir, bool verbose=1)
 {
   // Find the index of the current signal
   int signal_index = -1;
@@ -2097,6 +2360,7 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
   // weightnorm = (settings.intLumi*xsec)/totweight;
   // Divide(h1,h2,c1,c2) --> c1*h1/(c2*h2)
   vh_weightnorm_signal[signal_index]->Divide(vh_xsec_signal[signal_index], vh_totweight_signal[signal_index], intLumi);
+  std::map<uint32_t, std::string> signal_bins;
   if (verbose) {
     std::cout<<"- Signal: "<<signal_name<<std::endl;
     for (int binx=1, nbinx=vh_xsec_signal[signal_index]->GetNbinsX(); binx<=nbinx; ++binx) 
@@ -2106,9 +2370,39 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
         double xsec  = vh_xsec_signal[signal_index]      ->GetBinContent(binx, biny);
         double totw  = vh_totweight_signal[signal_index] ->GetBinContent(binx, biny);
         double wnorm = vh_weightnorm_signal[signal_index]->GetBinContent(binx, biny);
-        if (totw>0) std::cout<<(signal_index?"  Bin: M(s~)=":"  Bin: M(g~)=")<<mMother<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
+        if (totw>0) {
+	  std::cout<<(signal_index?"  Bin: M(s~)=":"  Bin: M(g~)=")<<mMother<<" M(LSP)="<<mLSP<<":   xsec="<<xsec<<" totweight="<<totw<<" weightnorm="<<wnorm<<std::endl;
+	  uint32_t bin = mMother * 10000 + mLSP;
+	  std::stringstream ss;
+	  ss<<"_"<<mMother<<"_"<<mLSP;
+	  signal_bins[bin] = ss.str();
+	}
       }
     std::cout<<std::endl;
+  }
+
+  dir->cd();
+  // Declare signal plots for systematics
+  // Signals
+  for (const auto& bin : signal_bins) {
+    m_vh_MRR2_sig     [bin.first] = std::vector<TH1D*>();
+    m_vh_MRR2_sig_nj35[bin.first] = std::vector<TH1D*>();
+    m_vh_MRR2_sig_nj6 [bin.first] = std::vector<TH1D*>();
+    m_vh_MRR2_sig     [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second).c_str(),         ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+    m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj35").c_str(), ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+    m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj6").c_str(),  ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+    for (size_t j=0; j<syst.size(); ++j) {
+      std::stringstream ss1, ss2, ss3;
+      ss1<<"MRR2_S_signal"<<bin.second<<"_"<<syst[j];
+      ss2<<"MRR2_S_signal"<<bin.second<<"_nj35_"<<syst[j];
+      ss3<<"MRR2_S_signal"<<bin.second<<"_nj6_"<<syst[j];
+      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss1.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss1.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss2.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss2.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss3.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss3.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+    }
   }
 }
 
@@ -2116,7 +2410,7 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
 //_______________________________________________________
 //             Load pile-up reweighting infos
 void
-AnalysisBase::init_pileup_reweightin(const std::string& pileupDir, const std::string& mcPileupHistoName, const std::vector<std::string>& filenames)
+AnalysisBase::init_pileup_reweighting(const std::string& pileupDir, const std::string& mcPileupHistoName, const std::vector<std::string>& filenames)
 {
   // Get data histogram (generated by pileupCalc.py script)
   TFile* f_pileup_data = TFile::Open((pileupDir+"data_pileup.root").c_str());
@@ -2312,111 +2606,6 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
   w_scale = get_syst_weight(w_scale, w_scale_up, w_scale_down, nSigmaScale);
   return w_scale;
 }
-
-//_______________________________________________________
-//    Apply analysis cuts in the specified search region
-
-bool
-Analysis::apply_all_cuts(char region) {
-  return apply_ncut(region, analysis_cuts[region].size());
-}
-
-bool
-Analysis::apply_ncut(char region, unsigned int ncut) {
-  if (ncut>analysis_cuts[region].size()) return 0;
-  for (unsigned int i=0; i<ncut; ++i) if ( ! analysis_cuts[region][i].func() ) return 0;
-  return 1;
-}
-
-// Cuts to apply/exclude by cut name
-bool
-Analysis::apply_cut(char region, std::string cut_name) {
-  for (const auto& cut : analysis_cuts[region]) if (cut_name == cut.name) return cut.func();
-  return 0;
-}
-
-bool
-Analysis::apply_cuts(char region, std::vector<std::string> cuts) {
-  for (const auto& cut_in_region : analysis_cuts[region]) for (const auto& cut : cuts) 
-    if (cut == cut_in_region.name) if (!cut_in_region.func()) return 0;
-  return 1;
-}
-
-bool
-Analysis::apply_all_cuts_except(char region, std::string cut_to_skip) {
-  bool result = true, found = false;
-  for (const auto& cut : analysis_cuts[region]) {
-    if (cut.name == cut_to_skip) { 
-      found = true;
-      continue;
-    }
-    if (!cut.func()) result = false;
-  }
-  // If a certain cut meant to be skipped (N-1) is not found for some reason
-  // eg. mistyped, then end the job with ar error
-  // This is for safety: We do not want to fill histograms wrongly by mistake
-  if (!found) {
-    std::cout<<"No cut to be skipped exsists in search region \""<<region<<"\" with name: \""<<cut_to_skip<<"\""<<std::endl;
-    utils::error("Analysis - the second argument for apply_all_cuts_except() is a non-sensical cut");
-  }
-  return result;
-}
-
-bool
-Analysis::apply_all_cuts_except(char region, std::vector<std::string> cuts_to_skip) {
-  bool result = true;
-  unsigned int found = 0;
-  for (const auto& cut : analysis_cuts[region]) {
-    for (const auto& cut_to_skip : cuts_to_skip) if (cut.name==cut_to_skip) { 
-      ++found;
-      continue;
-    }
-    if (!cut.func()) result = false;
-  }
-  // If a certain cut meant to be skipped is not found for some reason
-  // eg. mistyped, then end the job with ar error
-  // This is for safety: We do not want to fill histograms wrongly by mistake
-  if (found!=cuts_to_skip.size()) {
-    std::cout<<"A cut to be skipped does not exsist in seaerch region \""<<region<<"\" with names: ";
-    for (const auto& cut : cuts_to_skip) std::cout<<cut<<", "; std::cout<<std::endl;
-    utils::error("Analysis - the second argument for apply_all_cuts_except() contains at least one non-sensical cut");
-  }
-  return result;
-}
-
-
-// Same functions but with cut index which is faster (can use an enum, to make it nicer)
-bool
-Analysis::apply_cut(char region, unsigned int cut_index) { return analysis_cuts[region][cut_index].func(); }
-
-bool
-Analysis::apply_cuts(char region, std::vector<unsigned int> cuts) {
-  for (const unsigned int& cut : cuts) if ( ! analysis_cuts[region][cut].func() ) return 0;
-  return 1;
-}
-
-bool
-Analysis::apply_all_cuts_except(char region, unsigned int cut_to_skip) {
-  if (cut_to_skip>=analysis_cuts[region].size()) {
-    std::cout<<"Index ("<<cut_to_skip<<") is too high for the cut to be skipped in search region '"<<region<<"'"<<std::endl;
-    utils::error("Analysis::apply_all_cuts_except(char region, unsigned int cut_to_skip)");
-  }
-  for (unsigned int i=0, n=analysis_cuts[region].size(); i<n; ++i) {
-    if (i==cut_to_skip) continue;
-    if ( ! analysis_cuts[region][i].func() ) return 0;
-  }
-  return 1;
-}
-
-bool
-Analysis::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_to_skip) {
-  for (unsigned int i=0, n=analysis_cuts[region].size(); i<n; ++i) {
-    for (const unsigned int& cut_to_skip : cuts_to_skip) if (i!=cut_to_skip) 
-      if ( ! analysis_cuts[region][i].func() ) return 0;
-  }
-  return 1;
-}
-
 
 //_______________________________________________________
 //                Benchmarking (batch) jobs
@@ -2734,7 +2923,7 @@ void AnalysisBase::init_syst_input() {
 }
 
 
-double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF, const bool& isFastSim) {
+double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaTopTagSF, const double& nSigmaTopTagFastSimSF, const bool& isFastSim) {
   double w = 1;
   while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
@@ -2743,9 +2932,13 @@ double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaT
 	// Use POG scale factor for tag
 	w *= get_syst_weight(TOP_TAG_SF, TOP_TAG_SF+TOP_TAG_SF_ERR_UP, TOP_TAG_SF-TOP_TAG_SF_ERR_DOWN, nSigmaTopTagSF);
 	// Additionally use our scale factors for FastSim
-	if (isFastSim&&hasGenTop[i]) w *= utils::geteff1D(eff_fast_Top, data.jetsAK8.Pt[i], 1);
+	if (isFastSim&&hasGenTop[i]) {
+	  double eff, err;
+	  utils::geteff1D(eff_fast_Top, data.jetsAK8.Pt[i], eff, err);
+	  w *= get_syst_weight(eff, eff+err, eff-err, nSigmaTopTagFastSimSF);
+	}
       }
-    } else {
+    } else if (!isFastSim) {
       // Top tagging fake rate scale factor
       if (passHadTopTag[i]) w *= utils::geteff1D(eff_full_fake_Top, data.jetsAK8.Pt[i], 1);
       //if (passHadTopTag[i]) w *= utils::geteff_AE(eff_full_fake_Top, data.jetsAK8.Pt[i]);
@@ -2777,7 +2970,7 @@ double AnalysisBase::calc_fake_top_anti_tagging_sf(DataStruct& data) {
   return w;
 }
 
-double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF, const bool& isFastSim) {
+double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTagSF, const double& nSigmaWTagFastSimSF, const bool& isFastSim) {
   double w = 1.0;
 
   while(data.jetsAK8.Loop()) {
@@ -2787,9 +2980,13 @@ double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTa
 	// Use POG scale factor for tag (both truth and fake Ws)
 	w *= get_syst_weight(W_TAG_HP_SF, W_TAG_HP_SF_ERR, nSigmaWTagSF);
 	// Additionally use our scale factors for FastSim
-	if (isFastSim&&hasGenW[i]) w *= utils::geteff1D(eff_fast_W, data.jetsAK8.Pt[i], 1);
+	if (isFastSim&&hasGenW[i]) {
+	  double eff, err;
+	  utils::geteff1D(eff_fast_W, data.jetsAK8.Pt[i], eff, err);
+	  w *= get_syst_weight(eff, eff+err, eff-err, nSigmaWTagFastSimSF);
+	}
       }
-    } else {
+    } else if (!isFastSim) {
       // W tagging fake rate scale factor
       if (passTightWTag[i]) w *= utils::geteff1D(eff_full_fake_W, data.jetsAK8.Pt[i], 1);
       //if (passTightWTag[i]) w *= utils::geteff_AE(eff_full_fake_W, data.jetsAK8.Pt[i]);
@@ -2826,7 +3023,7 @@ double AnalysisBase::calc_fake_w_anti_tagging_sf(DataStruct& data) {
 }
 
 
-std::pair<double, double> AnalysisBase::calc_b_tagging_sf(DataStruct& data, const double& nSigmaBTagSF, const bool& isFastSim) {
+std::pair<double, double> AnalysisBase::calc_b_tagging_sf(DataStruct& data, const double& nSigmaBTagSF, const double& nSigmaBTagFastSimSF,  const bool& isFastSim) {
 
   double pMC_loose = 1, pData_loose = 1;
   double pMC_medium = 1, pData_medium = 1;
@@ -2873,8 +3070,8 @@ std::pair<double, double> AnalysisBase::calc_b_tagging_sf(DataStruct& data, cons
 	sf_medium_up   = btag_sf_fast_medium_->eval_auto_bounds("up",      FLAV, eta, pt);
 	sf_medium_down = btag_sf_fast_medium_->eval_auto_bounds("down",    FLAV, eta, pt); 
 
-	sf_loose      *= get_syst_weight(sf_loose_cen,  sf_loose_up,  sf_loose_down,  nSigmaBTagSF);
-	sf_medium     *= get_syst_weight(sf_medium_cen, sf_medium_up, sf_medium_down, nSigmaBTagSF);
+	sf_loose      *= get_syst_weight(sf_loose_cen,  sf_loose_up,  sf_loose_down,  nSigmaBTagFastSimSF);
+	sf_medium     *= get_syst_weight(sf_medium_cen, sf_medium_up, sf_medium_down, nSigmaBTagFastSimSF);
       }
       
       // Working points
