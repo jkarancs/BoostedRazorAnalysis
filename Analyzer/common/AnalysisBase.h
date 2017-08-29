@@ -1610,6 +1610,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       // _______________________________________________________
       //                  Hadronic Top Tag definition
 
+      minDeltaR_W_b = 9999;
       if (passHadTopMassTag[i] = 
 	  ( pt          >= TOP_PT_CUT && 
 	    sd_mass_top >= TOP_SD_MASS_CUT_LOW &&
@@ -1625,9 +1626,19 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  }
 #if USE_BTAG == 1
 	} else {
-	  passHadTop0BMassTag[i] = 1;
-	  itHadTop0BMassTag[i] = nHadTop0BMassTag++;
-	  iHadTop0BMassTag.push_back(i);
+    while(data.jetsAK4.Loop()) {
+      size_t i = data.jetsAK4.it;
+      TLorentzVector AK4_v4; AK4_v4.SetPtEtaPhiE(data.jetsAK4.Pt[i], data.jetsAK4.Eta[i], data.jetsAK4.Phi[i], data.jetsAK4.E[i]);
+      if (passMediumBTag[i]) {
+        double dR = AK4_v4.DeltaR(AK8_v4);
+        if (dR<minDeltaR_W_b) minDeltaR_W_b = dR;
+      }    
+    }    
+    if(minDeltaR_W_b < 0.8) {
+      passHadTop0BMassTag[i] = 1; 
+      itHadTop0BMassTag[i] = nHadTop0BMassTag++;
+      iHadTop0BMassTag.push_back(i);
+    }
 	  if (passHadTop0BAntiTag[i] = (tau_32 >= TOP_TAU32_CUT) ) {
 	    itHadTop0BAntiTag[i] = nHadTop0BAntiTag++;
 	    iHadTop0BAntiTag.push_back(i);
