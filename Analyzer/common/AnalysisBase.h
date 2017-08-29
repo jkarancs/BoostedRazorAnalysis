@@ -1634,7 +1634,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
         if (dR<minDeltaR_W_b) minDeltaR_W_b = dR;
       }    
     }    
-    if(minDeltaR_W_b < 0.8) {
+    if(minDeltaR_W_b > 0.8) {
       passHadTop0BMassTag[i] = 1; 
       itHadTop0BMassTag[i] = nHadTop0BMassTag++;
       iHadTop0BMassTag.push_back(i);
