@@ -480,6 +480,8 @@ if opt.nocards:
     print "Reusing previous data cards"
 else:
     print "Looping on Signal points and creating data cards"
+    if not os.path.exists("syst_"+opt.dir+"/cards"):
+        special_call(["mkdir", "-p", "syst_"+opt.dir+"/cards"], 0)
 
 cards = []
 for signal_syst in S_signal:

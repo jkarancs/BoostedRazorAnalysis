@@ -398,6 +398,7 @@ if __name__ == '__main__':
         haddOutputs.append(haddOutput)
 
     os.system("hadd -f %s/xsecUL_Asymptotic_%s.root %s"%(directory+"/results",box," ".join(haddOutputs)))
+    os.system("rm %s"%(" ".join(haddOutputs)))
 
     if model=="T1bri":
         xsecFile = rt.TFile.Open("%s/smoothXsecUL_%s.root"%(directory+"/results",box))
