@@ -6,10 +6,19 @@ from optparse import OptionParser
 # Read options from command line
 usage = "Usage: python %prog filelists [options]"
 parser = OptionParser(usage=usage)
-parser.add_option("--run",         dest="run",         action="store_true", default=False,   help="Without this option, script only prints cmds it would otherwise excecute")
-parser.add_option("--inputdir",    dest="INPUTDIR",     type="string",       default="",      help="Input directory (output of Analyzer)")
-parser.add_option("--bin",         dest="BIN",          type="string",       default="",      help="Analysis bin, eg. _nj35 (default="")")
+parser.add_option('-d','--dir',    dest="dir",         type="string",       default="",         help="Input/output directory (use output of Analyzer)")
+parser.add_option('-b','--box',    dest="box",         type="string",       default="WAna_nj6", help='Analysis box, eg. TopAna (default="WAna_nj6")')
+parser.add_option('-m','--model',  dest="model",       type="string",       default="T5ttcc",   help='Signal model (default="T5ttcc")')
+parser.add_option('--nohadd',      dest="nohadd",      action="store_true", default=False,      help='Do not merge input files (default=merge them)')
+parser.add_option('--nocards',     dest="nocards",     action="store_true", default=False,      help='Do not create data cards, i.e. run on existing ones (default=create them)')
+parser.add_option('--nocombine',   dest="nocombine",   action="store_true", default=False,      help='Do not rerun combine, i.e. run on existing results (default=run combine)')
+parser.add_option('--test',        dest="TEST",        type="int",          default=0,          help="Run only on a N signal points (default=0 - all)")
+parser.add_option('--nproc',       dest="NPROC",       type="int",          default=6,          help="Tells how many parallel combine to start (Default=6)")
 (opt,args) = parser.parse_args()
+
+BIN = ""
+if "_nj35" in opt.box: BIN = "_nj35"
+if "_nj6"  in opt.box: BIN = "_nj6"
 
 # ---------------------- Settings ------------------------
 
@@ -25,10 +34,25 @@ data = [
     "JetHT_Run2016H_03Feb2017_v3"
 ]
 
-signal = [
-    "FastSim_SMS-T5ttcc",
-    "FastSim_SMS-T5ttcc_mGluino1750to2300"
-]
+signal = []
+if opt.model == "T1tttt":
+    signal.append("FastSim_SMS-T1tttt")
+elif opt.model == "T1ttbb":
+    signal.append("FastSim_SMS-T1ttbb")
+elif opt.model == "T2tt":
+    signal.append("FastSim_SMS-T2tt_mStop-150to250")
+    signal.append("FastSim_SMS-T2tt_mStop-350to400")
+    signal.append("FastSim_SMS-T2tt_mStop-250to350")
+    signal.append("FastSim_SMS-T2tt_mStop-400to1200")
+    signal.append("FastSim_SMS-T5ttcc_mGluino1750to2300")
+elif opt.model == "T5tttt":
+    signal.append("FastSim_SMS-T5tttt")
+elif opt.model == "T5ttcc":
+    signal.append("FastSim_SMS-T5ttcc")
+    signal.append("FastSim_SMS-T5ttcc_mGluino1750to2300")
+else:
+    "Error: unknown signal model: "+opt.model
+    sys.exit()
 
 top = [
     # single top
@@ -170,60 +194,53 @@ icommand=0
 def special_call(cmd, verbose=1):
     global icommand, opt
     if verbose:
-        if opt.run:
-            print("[%d]" % icommand),
-        else:
-            print("[dry]"),
+        print("[%d]" % icommand),
         for i in xrange(len(cmd)): print cmd[i],
         print ""
-    if opt.run:
-        ntry = 0
-        while True:
-            try:
-                if subprocess.call(cmd):
-                    print "ERROR: Problem executing command:"
-                    print("[%d]" % icommand)
-                    for i in xrange(len(cmd)): print cmd[i],
-                    print ""
-                    print "exiting."
-                    sys.exit()
-            except:
-                print "Could not excecute command: "
+    ntry = 0
+    while True:
+        try:
+            if subprocess.call(cmd):
+                print "ERROR: Problem executing command:"
                 print("[%d]" % icommand)
                 for i in xrange(len(cmd)): print cmd[i],
                 print ""
-                print "Wait 10s and continue"
-                time.sleep(10)
-                ntry += 1
-                if ntry == 20: sys.exit()
-                continue
-            break
-        if verbose: print ""
+                print "exiting."
+                sys.exit()
+        except:
+            print "Could not excecute command: "
+            print("[%d]" % icommand)
+            for i in xrange(len(cmd)): print cmd[i],
+            print ""
+            print "Wait 10s and continue"
+            time.sleep(10)
+            ntry += 1
+            if ntry == 20: sys.exit()
+            continue
+        break
+    if verbose: print ""
     sys.stdout.flush()
     icommand+=1
 
 # Run command with stdout/stderr saved to logfile
-def logged_call(cmd, logfile):
+def logged_call(cmd, logfile, append=False):
     global opt
     dirname = os.path.dirname(logfile)
     if dirname != "" and not os.path.exists(dirname):
         special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
-    if opt.run:
-        ntry = 0
-        while True:
-            try:
-                with open(logfile, "a") as log:
-                    proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
-                    proc.wait()
-            except:
-                print "Could not write to disk (IOError), wait 10s and continue"
-                time.sleep(10)
-                ntry += 1
-                if ntry == 20: sys.exit()
-                continue
-            break
-    else:
-        proc = subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
+    ntry = 0
+    while True:
+        try:
+            with open(logfile, "a" if append else "w") as log:
+                proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
+                proc.wait()
+        except:
+            print "Could not write to disk (IOError), wait 10s and continue"
+            time.sleep(10)
+            ntry += 1
+            if ntry == 20: sys.exit()
+            continue
+        break
 
 def load(f, name, pf=""):
     h = f.Get(name)
@@ -236,45 +253,97 @@ def load(f, name, pf=""):
     return h_new
 
 def bg_est(name, data, sub, mult, div):
-    est = data.Clone(name)
+    est   = data.Clone(name)
+    mult2 = mult.Clone(name+"_mult")
+    div2  = div .Clone(name+"_div")
     for hist in sub:
         est.Add(hist, -1)
-    est.Multiply(mult)
-    est.Divide(div)
+    # Zero bins with negative counts
+    # Coming from NLO generator scale variations (flipped sign)
+    # See thread: https://hypernews.cern.ch/HyperNews/CMS/get/generators/3510.html
+    # TODO: Should we zero the event weight during filling of a histogram if original event weight was positive?
+    for binx in range(1, est.GetNbinsX()+1):
+        if est.GetBinContent(binx)<0:
+            est.SetBinContent(binx,0)
+            est.SetBinError(binx,0)
+        if mult2.GetBinContent(binx)<0:
+            mult2.SetBinContent(binx,0)
+            mult2.SetBinError(binx,0)
+        if div2.GetBinContent(binx)<0:
+            div2.SetBinContent(binx,0)
+            div2.SetBinError(binx,0)
+    est.Multiply(mult2)
+    est.Divide(div2)
+    #if "Top_MJ_est" in name:
+    for binx in range(1, est.GetNbinsX()+1):
+        if est.GetBinContent(binx)<0:
+            print "2nd pass, negative bin content: "+name+" binx="+str(binx)+" cont="+str(est.GetBinContent(binx))
+            print " - mult: "+str(mult.GetBinContent(binx))
+            print " - div : "+str(div .GetBinContent(binx))
     return est
-    
+
+# Run a single Combine instance (on a single input list, i.e. one dataset)
+combine_cmds = []
+def combine_job((jobindex)):
+    global combine_cmds, opt
+    cmd = combine_cmds[jobindex][0]
+    log = combine_cmds[jobindex][1]
+    print "Starting Combine, expected output: "+log
+    if not os.path.exists(os.path.dirname(log)):
+        special_call(["mkdir", "-p", os.path.dirname(log)], 0)
+    #if opt.NPROC>3: cmd = ['nice']+cmd
+    logged_call(cmd, log)
+    return log
+
+# Run all Combine jobs in parallel
+def run_combine(combine_cmds, nproc):
+    global opt
+    njob = len(combine_cmds)
+    if njob<nproc: nproc = njob
+    print "Running "+str(njob)+" instances of Combine jobs:"
+    print
+    # Use the N CPUs in parallel on the current computer to run combine for all jobs
+    workers = multiprocessing.Pool(processes=nproc)
+    output_files = workers.map(combine_job, range(njob), chunksize=1)
+    workers.close()
+    workers.join()
+    print "All Combine jobs finished."
+    print
+    return output_files
+
 # ----------------- Merge histograms --------------------
 
-print "Merging histograms from directory: "+opt.INPUTDIR
-
-data_files = []
-for name in data: data_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-
-signal_files = []
-for name in signal: signal_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-
-data_files = []
-for name in data: data_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-signal_files = []
-for name in signal: signal_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-multijet_files = []
-for name in multijet: multijet_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-top_files = []
-for name in top: top_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-wjets_files = []
-for name in wjets: wjets_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-ztoinv_files = []
-for name in ztoinv: ztoinv_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-other_files = []
-for name in other: other_files.append(opt.INPUTDIR+"/hadd/"+name+".root")
-
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/data.root"]+data_files,         "syst_"+opt.INPUTDIR+"/hadd/log/data.log")
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/signal.root"]+signal_files,     "syst_"+opt.INPUTDIR+"/hadd/log/signal.log")
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/multijet.root"]+multijet_files, "syst_"+opt.INPUTDIR+"/hadd/log/multijet.log")
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/top.root"]+top_files,           "syst_"+opt.INPUTDIR+"/hadd/log/top.log")
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/wjets.root"]+wjets_files,       "syst_"+opt.INPUTDIR+"/hadd/log/wjets.log")
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/ztoinv.root"]+ztoinv_files,     "syst_"+opt.INPUTDIR+"/hadd/log/ztoinv.log")
-logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/other.root"]+other_files,       "syst_"+opt.INPUTDIR+"/hadd/log/other.log")
+if not opt.nohadd:
+    print "Merging histograms from directory: "+opt.dir
+    
+    data_files = []
+    for name in data: data_files.append(opt.dir+"/hadd/"+name+".root")
+    
+    signal_files = []
+    for name in signal: signal_files.append(opt.dir+"/hadd/"+name+".root")
+    
+    data_files = []
+    for name in data: data_files.append(opt.dir+"/hadd/"+name+".root")
+    signal_files = []
+    for name in signal: signal_files.append(opt.dir+"/hadd/"+name+".root")
+    multijet_files = []
+    for name in multijet: multijet_files.append(opt.dir+"/hadd/"+name+".root")
+    top_files = []
+    for name in top: top_files.append(opt.dir+"/hadd/"+name+".root")
+    wjets_files = []
+    for name in wjets: wjets_files.append(opt.dir+"/hadd/"+name+".root")
+    ztoinv_files = []
+    for name in ztoinv: ztoinv_files.append(opt.dir+"/hadd/"+name+".root")
+    other_files = []
+    for name in other: other_files.append(opt.dir+"/hadd/"+name+".root")
+    
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/data.root"]+data_files,         "syst_"+opt.dir+"/hadd/log/data.log")
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/signal.root"]+signal_files,     "syst_"+opt.dir+"/hadd/log/signal.log")
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/multijet.root"]+multijet_files, "syst_"+opt.dir+"/hadd/log/multijet.log")
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/top.root"]+top_files,           "syst_"+opt.dir+"/hadd/log/top.log")
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/wjets.root"]+wjets_files,       "syst_"+opt.dir+"/hadd/log/wjets.log")
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/ztoinv.root"]+ztoinv_files,     "syst_"+opt.dir+"/hadd/log/ztoinv.log")
+    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/other.root"]+other_files,       "syst_"+opt.dir+"/hadd/log/other.log")
 
 # ----------------- Harvest histograms -------------------
 
@@ -286,16 +355,15 @@ logged_call(["hadd", "-f", "-v", "syst_"+opt.INPUTDIR+"/hadd/other.root"]+other_
 
 print "Loading histograms"
 
-
 # Data
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/data.root")
-Q_data = load(f,"MRR2_Q_data"+opt.BIN,"_data")
-W_data = load(f,"MRR2_W_data"+opt.BIN,"_data")
-T_data = load(f,"MRR2_T_data"+opt.BIN,"_data")
-S_data = load(f,"MRR2_S_data"+opt.BIN,"_data")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
+Q_data = load(f,"MRR2_Q_data"+BIN,"_data")
+W_data = load(f,"MRR2_W_data"+BIN,"_data")
+T_data = load(f,"MRR2_T_data"+BIN,"_data")
+S_data = load(f,"MRR2_S_data"+BIN,"_data")
 
 # Signal
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/signal.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal.root")
 S_signal = []
 counter = 0
 for ikey in range(0, f.GetListOfKeys().GetEntries()):
@@ -305,67 +373,68 @@ for ikey in range(0, f.GetListOfKeys().GetEntries()):
             counter+=1
             S_syst = []
             for syst in systematics:
-                S_syst.append(load(f, name+opt.BIN+syst, "_sig"))
+                S_syst.append(load(f, name+BIN+syst, "_sig"))
             S_signal.append(S_syst)
-    #if counter>10:
-    #    break
+    if opt.TEST>0:
+        if counter==opt.TEST:
+            break
 
 # Background
 # top
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/top.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/top.root")
 Q_TT = []
 W_TT = []
 T_TT = []
 S_TT = []
 for syst in systematics:
-    Q_TT.append(load(f,"MRR2_Q_bkg"+opt.BIN+syst,"_TT"))
-    W_TT.append(load(f,"MRR2_W_bkg"+opt.BIN+syst,"_TT"))
-    T_TT.append(load(f,"MRR2_T_bkg"+opt.BIN+syst,"_TT"))
-    S_TT.append(load(f,"MRR2_S_bkg"+opt.BIN+syst,"_TT"))
+    Q_TT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_TT"))
+    W_TT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_TT"))
+    T_TT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_TT"))
+    S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT"))
 # multijet
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/multijet.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/multijet.root")
 Q_MJ = []
 W_MJ = []
 T_MJ = []
 S_MJ = []
 for syst in systematics:
-    Q_MJ.append(load(f,"MRR2_Q_bkg"+opt.BIN+syst,"_MJ"))
-    W_MJ.append(load(f,"MRR2_W_bkg"+opt.BIN+syst,"_MJ"))
-    T_MJ.append(load(f,"MRR2_T_bkg"+opt.BIN+syst,"_MJ"))
-    S_MJ.append(load(f,"MRR2_S_bkg"+opt.BIN+syst,"_MJ"))
+    Q_MJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_MJ"))
+    W_MJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_MJ"))
+    T_MJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_MJ"))
+    S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ"))
 # wjets
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/wjets.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/wjets.root")
 Q_WJ = []
 W_WJ = []
 T_WJ = []
 S_WJ = []
 for syst in systematics:
-    Q_WJ.append(load(f,"MRR2_Q_bkg"+opt.BIN+syst,"_WJ"))
-    W_WJ.append(load(f,"MRR2_W_bkg"+opt.BIN+syst,"_WJ"))
-    T_WJ.append(load(f,"MRR2_T_bkg"+opt.BIN+syst,"_WJ"))
-    S_WJ.append(load(f,"MRR2_S_bkg"+opt.BIN+syst,"_WJ"))
+    Q_WJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_WJ"))
+    W_WJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_WJ"))
+    T_WJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_WJ"))
+    S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ"))
 # ztoinv
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/ztoinv.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
 Q_ZI = []
 W_ZI = []
 T_ZI = []
 S_ZI = []
 for syst in systematics:
-    Q_ZI.append(load(f,"MRR2_Q_bkg"+opt.BIN+syst,"_ZI"))
-    W_ZI.append(load(f,"MRR2_W_bkg"+opt.BIN+syst,"_ZI"))
-    T_ZI.append(load(f,"MRR2_T_bkg"+opt.BIN+syst,"_ZI"))
-    S_ZI.append(load(f,"MRR2_S_bkg"+opt.BIN+syst,"_ZI"))
+    Q_ZI.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_ZI"))
+    W_ZI.append(load(f,"MRR2_W_bkg"+BIN+syst,"_ZI"))
+    T_ZI.append(load(f,"MRR2_T_bkg"+BIN+syst,"_ZI"))
+    S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI"))
 # other
-f = ROOT.TFile.Open("syst_"+opt.INPUTDIR+"/hadd/other.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/other.root")
 Q_OT = []
 W_OT = []
 T_OT = []
 S_OT = []
 for syst in systematics:
-    Q_OT.append(load(f,"MRR2_Q_bkg"+opt.BIN+syst,"_OT"))
-    W_OT.append(load(f,"MRR2_W_bkg"+opt.BIN+syst,"_OT"))
-    T_OT.append(load(f,"MRR2_T_bkg"+opt.BIN+syst,"_OT"))
-    S_OT.append(load(f,"MRR2_S_bkg"+opt.BIN+syst,"_OT"))
+    Q_OT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_OT"))
+    W_OT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_OT"))
+    T_OT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_OT"))
+    S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT"))
 
 
 # --------------- Background Estimation ------------------
@@ -407,21 +476,147 @@ for i in range(0, len(systematics)):
     Other_est   .append(S_OT_est)
 
 # Now save a different root file for each signal point
-print "Looping on Signal points"
+if opt.nocards:
+    print "Reusing previous data cards"
+else:
+    print "Looping on Signal points and creating data cards"
 
+cards = []
 for signal_syst in S_signal:
-    scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","")
-    filename = "syst_"+opt.INPUTDIR+"/RazorBoost_lumi-35.9_WAna"+opt.BIN+"_T5ttcc_"+scan_point+".root"
-    fout = ROOT.TFile.Open(filename,"recreate")
-    print " - Creating root file: "+filename
-    # Add signal systematics
-    for i in range(0, len(systematics)):
-        signal_syst[i].Write("Signal"+systematics[i])
-    # Add background estimates
-    for bkg in [Top_est, MultiJet_est, WJets_est, ZInv_est, Other_est]:
-        for syst_var in bkg:
-            syst_var.Write()
-    # Add data counts
-    S_data.Write("data_obs")
+    scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
+    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_T5ttcc_"+scan_point+".root"
+    if not opt.nocards:
+        fout = ROOT.TFile.Open(root_filename,"recreate")
+        print "  Creating root file: "+root_filename
+        # Add signal systematics
+        for i in range(0, len(systematics)):
+            signal_syst[i].Write("Signal"+systematics[i])
+        # Add background estimates
+        for bkg in [Top_est, MultiJet_est, WJets_est, ZInv_est, Other_est]:
+            for syst_var in bkg:
+                syst_var.Write()
+        # Add data counts
+        S_data.Write("data_obs")
+    card_filename = root_filename.replace(".root",".txt")
+    cards.append(card_filename)
+    if not opt.nocards:
+        print "  Creating data card: "+card_filename
+        card=open(card_filename, 'w+')
+        card.write(
+    '''imax 1 number of channels
+    jmax 5 number of backgrounds
+    kmax * number of nuisance parameters
+    ------------------------------------------------------------
+    observation	''')
+        card.write(str(S_data.Integral()))
+        card.write(
+    '''
+    ------------------------------------------------------------
+    shapes * * ''')
+        card.write(root_filename)
+        card.write(
+    ''' $PROCESS $PROCESS_$SYSTEMATIC
+    ------------------------------------------------------------
+    bin		''')
+        card.write("%s\t%s\t%s\t%s\t%s\t%s" % (opt.box, opt.box, opt.box, opt.box, opt.box, opt.box))
+        card.write(
+    '''
+    process		Signal	Top	MultiJet	WJets	ZInv	Other
+    process		0	1	2	3	4	5
+    rate		''')
+        card.write("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f" % (signal_syst[0].Integral(), Top_est[0].Integral(), MultiJet_est[0].Integral(), WJets_est[0].Integral(), ZInv_est[0].Integral(), Other_est[0].Integral()) )
+        card.write(
+    '''
+    ------------------------------------------------------------
+    lumi		lnN	1.026	1.026	1.026	1.026	1.026	1.026
+    pileup		shape	-	1.0	1.0	1.0	1.0	1.0
+    jes		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    jer 		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    met		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    trigger		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    facscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
+    renscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
+    facrenscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
+    alphas		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    elereco		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    eleid		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    eleiso		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    elefastsim	shape	1.0	-	-	-	-	-
+    muontrk		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    muonidiso	shape	1.0	1.0	1.0	1.0	1.0	1.0
+    muonfastsim	shape	1.0	-	-	-	-	-
+    btag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    btagfastsim	shape	1.0	-	-	-	-	-
+    wtag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    wtagfastsim	shape	1.0	-	-	-	-	-
+    toptag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+    toptagfastsim	shape	1.0	-	-	-	-	-
+    '''
+        )
+        card.close()
 
+time.sleep(10)
+
+if opt.nocombine:
+    print "Reusing previous combine results"
+else:
+    print "All data cards ready, running combine"
+    
+results = []
+combine_cmds = []
+for card in cards:
+    combine_out_filename = card.replace("cards/RazorBoost","combine/RazorBoost").replace(".txt",".log")
+    results.append(combine_out_filename)
+    if  not opt.nocombine:
+        combine_cmds.append((["combine", "-M", "AsymptoticLimits", "-d", card], combine_out_filename))
+
+run_combine(combine_cmds, opt.NPROC)
+
+##    print "Creating summary plots"
+##    
+##    
+##    if not os.path.exists("syst_"+opt.dir+"/results"):
+##        special_call(["mkdir", "-p", "syst_"+opt.dir+"/results"], 0)
+##    fout = ROOT.TFile.Open("syst_"+opt.dir+"/results/limits.root","recreate")
+##    # limit histo(s)
+##    obs_limit_T5ttcc       = ROOT.TH2D("obs_limit_T5ttcc",      "T5ttcc;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Observed Limit",  201,-12.5,5012.5, 201,-12.5,5012.5)
+##    exp_limit_2Down_T5ttcc = ROOT.TH2D("exp_limit_2Down_T5ttcc","T5ttcc;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Observed Limit",  201,-12.5,5012.5, 201,-12.5,5012.5)
+##    exp_limit_1Down_T5ttcc = ROOT.TH2D("exp_limit_1Down_T5ttcc","T5ttcc;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Observed Limit",  201,-12.5,5012.5, 201,-12.5,5012.5)
+##    exp_limit_T5ttcc       = ROOT.TH2D("exp_limit_T5ttcc",      "T5ttcc;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Observed Limit",  201,-12.5,5012.5, 201,-12.5,5012.5)
+##    exp_limit_1Up_T5ttcc   = ROOT.TH2D("exp_limit_1Up_T5ttcc",  "T5ttcc;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Observed Limit",  201,-12.5,5012.5, 201,-12.5,5012.5)
+##    exp_limit_2Up_T5ttcc   = ROOT.TH2D("exp_limit_2Up_T5ttcc",  "T5ttcc;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Observed Limit",  201,-12.5,5012.5, 201,-12.5,5012.5)
+##    
+##    for result in results:
+##        with open(result) as log:
+##            mMother = result[:-4].split("_")[-2:][0]
+##            mLSP    = result[:-4].split("_")[-2:][1]
+##            for line in log:
+##                if "Observed Limit:" in line:
+##                    obs_limit = line.split()[4]
+##                    print "Limit for "+mMother+", "+mLSP+": "+obs_limit
+##                    obs_limit_T5ttcc.Fill(float(mMother),float(mLSP),float(obs_limit))
+##                elif "Expected  2.5%:" in line:
+##                    exp_limit_2Down = line.split()[4]
+##                    exp_limit_2Down_T5ttcc.Fill(float(mMother),float(mLSP),float(exp_limit_2Down))
+##                elif "Expected 16.0%:" in line:
+##                    exp_limit_1Down = line.split()[4]
+##                    exp_limit_1Down_T5ttcc.Fill(float(mMother),float(mLSP),float(exp_limit_1Down))
+##                elif "Expected 50.0%:" in line:
+##                    exp_limit = line.split()[4]
+##                    exp_limit_T5ttcc.Fill(float(mMother),float(mLSP),float(exp_limit))
+##                elif "Expected 84.0%:" in line:
+##                    exp_limit_1Up = line.split()[4]
+##                    exp_limit_1Up_T5ttcc.Fill(float(mMother),float(mLSP),float(exp_limit_1Up))
+##                elif "Expected 97.5%:" in line:
+##                    exp_limit_2Up = line.split()[4]
+##                    exp_limit_2Up_T5ttcc.Fill(float(mMother),float(mLSP),float(exp_limit_2Up))
+##    
+##    obs_limit_T5ttcc.Write()
+##    exp_limit_2Down_T5ttcc.Write()
+##    exp_limit_1Down_T5ttcc.Write()
+##    exp_limit_T5ttcc.Write()
+##    exp_limit_1Up_T5ttcc.Write()
+##    exp_limit_2Up_T5ttcc.Write()
+##    
+##    time.sleep(120)
 print "Done."
