@@ -504,7 +504,7 @@ for signal_syst in S_signal:
         print "  Creating data card: "+card_filename
         card=open(card_filename, 'w+')
         card.write(
-    '''imax 1 number of channels
+    '''    imax 1 number of channels
     jmax 5 number of backgrounds
     kmax * number of nuisance parameters
     ------------------------------------------------------------

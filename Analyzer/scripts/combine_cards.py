@@ -116,8 +116,8 @@ for card in glob.glob(opt.dir+"/cards/RazorBoost_"+boxes[0]+"_"+opt.model+"_*.tx
         cmd.append(boxes[i]+"="+opt.dir+"/cards/RazorBoost_"+boxes[i]+"_"+opt.model+"_"+mg+"_"+mchi+".txt")
     combined_card = opt.dir+"/cards/RazorBoost_combined_"+opt.model+"_"+mg+"_"+mchi+".txt"
     logged_call(cmd, combined_card)
+    special_call(["sed","-i","s;"+opt.dir+"/cards/;;1",combined_card],0)
     cards.append(combined_card)
-
 
 time.sleep(10)
 
