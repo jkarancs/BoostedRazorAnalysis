@@ -41,10 +41,9 @@ elif opt.model == "T1ttbb":
     signal.append("FastSim_SMS-T1ttbb")
 elif opt.model == "T2tt":
     signal.append("FastSim_SMS-T2tt_mStop-150to250")
-    signal.append("FastSim_SMS-T2tt_mStop-350to400")
     signal.append("FastSim_SMS-T2tt_mStop-250to350")
+    signal.append("FastSim_SMS-T2tt_mStop-350to400")
     signal.append("FastSim_SMS-T2tt_mStop-400to1200")
-    signal.append("FastSim_SMS-T5ttcc_mGluino1750to2300")
 elif opt.model == "T5tttt":
     signal.append("FastSim_SMS-T5tttt")
 elif opt.model == "T5ttcc":
@@ -486,7 +485,7 @@ else:
 cards = []
 for signal_syst in S_signal:
     scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
-    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_T5ttcc_"+scan_point+".root"
+    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
     if not opt.nocards:
         fout = ROOT.TFile.Open(root_filename,"recreate")
         print "  Creating root file: "+root_filename

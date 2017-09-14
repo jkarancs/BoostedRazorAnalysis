@@ -11,6 +11,7 @@ from scipy.interpolate import Rbf, interp1d
 import itertools
 #from GChiPairs import gchipairs
 import operator
+import subprocess
 
 
 #from limits.SMSConfig import sms_models
@@ -376,7 +377,7 @@ if __name__ == '__main__':
     # Make a xsec tree first
     haddOutputs = []
     gchipairs = []
-    for result in glob.glob(directory+'/combine/RazorBoost_lumi-35.9_'+options.box+'_'+model+'_*.log'):
+    for result in glob.glob(directory+'/combine/RazorBoost_'+options.box+'_'+model+'_*.log'):
         mg   = float(result.replace(".log","").split("_")[-2:][0])
         mchi = float(result.replace(".log","").split("_")[-2:][1])
         gchipairs.append((mg,mchi))
@@ -397,6 +398,7 @@ if __name__ == '__main__':
         haddOutput = writeXsecTree(box, model, directory, mg, mchi, [xsecULObs], [xsecULExpPlus2], [xsecULExpPlus], [xsecULExp], [xsecULExpMinus], [xsecULExpMinus2])
         haddOutputs.append(haddOutput)
 
+    if not os.path.exists(directory+"/results"): subprocess.call(["mkdir", "-p", directory+"/results"])
     os.system("hadd -f %s/xsecUL_Asymptotic_%s.root %s"%(directory+"/results",box," ".join(haddOutputs)))
     os.system("rm %s"%(" ".join(haddOutputs)))
 
