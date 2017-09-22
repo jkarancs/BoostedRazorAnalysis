@@ -11,7 +11,7 @@ parser.add_option('-b','--box',    dest="box",         type="string",       defa
 parser.add_option('-m','--model',  dest="model",       type="string",       default="T5ttcc",   help='Signal model (default="T5ttcc")')
 parser.add_option('--nohadd',      dest="nohadd",      action="store_true", default=False,      help='Do not merge input files (default=merge them)')
 parser.add_option('--nocards',     dest="nocards",     action="store_true", default=False,      help='Do not create data cards, i.e. run on existing ones (default=create them)')
-parser.add_option('--nocombine',   dest="nocombine",   action="store_true", default=False,      help='Do not rerun combine, i.e. run on existing results (default=run combine)')
+#parser.add_option('--nocombine',   dest="nocombine",   action="store_true", default=False,      help='Do not rerun combine, i.e. run on existing results (default=run combine)')
 parser.add_option('--test',        dest="TEST",        type="int",          default=0,          help="Run only on a N signal points (default=0 - all)")
 parser.add_option('--nproc',       dest="NPROC",       type="int",          default=6,          help="Tells how many parallel combine to start (Default=6)")
 (opt,args) = parser.parse_args()
@@ -271,14 +271,17 @@ def bg_est(name, data, sub, mult, div):
         if div2.GetBinContent(binx)<0:
             div2.SetBinContent(binx,0)
             div2.SetBinError(binx,0)
+    # bin-by-bin k factor
     est.Multiply(mult2)
     est.Divide(div2)
+    # common k factor
+    #est.Scale(mult.Integral()/div.Integral())
     #if "Top_MJ_est" in name:
-    for binx in range(1, est.GetNbinsX()+1):
-        if est.GetBinContent(binx)<0:
-            print "2nd pass, negative bin content: "+name+" binx="+str(binx)+" cont="+str(est.GetBinContent(binx))
-            print " - mult: "+str(mult.GetBinContent(binx))
-            print " - div : "+str(div .GetBinContent(binx))
+    #for binx in range(1, est.GetNbinsX()+1):
+    #    if est.GetBinContent(binx)<0:
+    #        print "2nd pass, negative bin content: "+name+" binx="+str(binx)+" cont="+str(est.GetBinContent(binx))
+    #        print " - mult: "+str(mult.GetBinContent(binx))
+    #        print " - div : "+str(div .GetBinContent(binx))
     return est
 
 # Run a single Combine instance (on a single input list, i.e. one dataset)
@@ -321,10 +324,6 @@ if not opt.nohadd:
     signal_files = []
     for name in signal: signal_files.append(opt.dir+"/hadd/"+name+".root")
     
-    data_files = []
-    for name in data: data_files.append(opt.dir+"/hadd/"+name+".root")
-    signal_files = []
-    for name in signal: signal_files.append(opt.dir+"/hadd/"+name+".root")
     multijet_files = []
     for name in multijet: multijet_files.append(opt.dir+"/hadd/"+name+".root")
     top_files = []
@@ -335,14 +334,25 @@ if not opt.nohadd:
     for name in ztoinv: ztoinv_files.append(opt.dir+"/hadd/"+name+".root")
     other_files = []
     for name in other: other_files.append(opt.dir+"/hadd/"+name+".root")
-    
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/data.root"]+data_files,         "syst_"+opt.dir+"/hadd/log/data.log")
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/signal.root"]+signal_files,     "syst_"+opt.dir+"/hadd/log/signal.log")
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/multijet.root"]+multijet_files, "syst_"+opt.dir+"/hadd/log/multijet.log")
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/top.root"]+top_files,           "syst_"+opt.dir+"/hadd/log/top.log")
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/wjets.root"]+wjets_files,       "syst_"+opt.dir+"/hadd/log/wjets.log")
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/ztoinv.root"]+ztoinv_files,     "syst_"+opt.dir+"/hadd/log/ztoinv.log")
-    logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/other.root"]+other_files,       "syst_"+opt.dir+"/hadd/log/other.log")
+
+    if not os.path.exists("syst_"+opt.dir+"/hadd/data.root"):
+        logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/data.root"]+data_files,               "syst_"+opt.dir+"/hadd/log/data.log")
+    if not os.path.exists("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"):
+        if len(signal_files)>1:
+            logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"]+signal_files, "syst_"+opt.dir+"/hadd/log/signal_"+opt.model+".log")
+        else:
+            print (["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"])
+            logged_call(["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"], "syst_"+opt.dir+"/hadd/log/signal_"+opt.model+".log")
+    if not os.path.exists("syst_"+opt.dir+"/hadd/multijet.root"):
+        logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/multijet.root"]+multijet_files,       "syst_"+opt.dir+"/hadd/log/multijet.log")
+    if not os.path.exists("syst_"+opt.dir+"/hadd/top.root"):
+        logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/top.root"]+top_files,                 "syst_"+opt.dir+"/hadd/log/top.log")
+    if not os.path.exists("syst_"+opt.dir+"/hadd/wjets.root"):
+        logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/wjets.root"]+wjets_files,             "syst_"+opt.dir+"/hadd/log/wjets.log")
+    if not os.path.exists("syst_"+opt.dir+"/hadd/ztoinv.root"):
+        logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/ztoinv.root"]+ztoinv_files,           "syst_"+opt.dir+"/hadd/log/ztoinv.log")
+    if not os.path.exists("syst_"+opt.dir+"/hadd/other.root"):
+        logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/other.root"]+other_files,             "syst_"+opt.dir+"/hadd/log/other.log")
 
 # ----------------- Harvest histograms -------------------
 
@@ -362,7 +372,7 @@ T_data = load(f,"MRR2_T_data"+BIN,"_data")
 S_data = load(f,"MRR2_S_data"+BIN,"_data")
 
 # Signal
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root")
 S_signal = []
 counter = 0
 for ikey in range(0, f.GetListOfKeys().GetEntries()):
@@ -461,11 +471,11 @@ MultiJet_est = []
 WJets_est    = []
 ZInv_est     = []
 Other_est    = []
+T_MJ_est = bg_est("Top_MJ_est",         Q_data, [Q_TT[0],            Q_WJ[0], Q_ZI[0], Q_OT[0]], T_MJ[0], Q_MJ[0])
 for i in range(0, len(systematics)):
-    T_MJ_est = bg_est("Top_MJ_est",                  Q_data, [Q_TT[i],            Q_WJ[i], Q_ZI[i], Q_OT[i]], T_MJ[i], Q_MJ[i])
-    S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ_est, T_WJ[i], T_ZI[i], T_OT[i]], S_TT[i], T_TT[i])
-    S_MJ_est = bg_est("MultiJet"    +systematics[i], Q_data, [Q_TT[i],            Q_WJ[i], Q_ZI[i], Q_OT[i]], S_MJ[i], Q_MJ[i])
-    S_WJ_est = bg_est("WJets"       +systematics[i], W_data, [W_TT[i],  W_MJ[i],           W_ZI[i], W_OT[i]], S_WJ[i], W_WJ[i])
+    S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], S_TT[i], T_TT[i])
+    S_MJ_est = bg_est("MultiJet"    +systematics[i], Q_data, [Q_TT[0],            Q_WJ[0], Q_ZI[0], Q_OT[0]], S_MJ[i], Q_MJ[i])
+    S_WJ_est = bg_est("WJets"       +systematics[i], W_data, [W_TT[0],  W_MJ[0],           W_ZI[0], W_OT[0]], S_WJ[i], W_WJ[i])
     S_ZI_est = S_ZI[i].Clone("ZInv" +systematics[i])
     S_OT_est = S_OT[i].Clone("Other"+systematics[i])
     Top_est     .append(S_TT_est)
@@ -485,7 +495,8 @@ else:
 cards = []
 for signal_syst in S_signal:
     scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
-    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
+    #root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
+    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_"+scan_point+"_"+opt.box+".root"
     if not opt.nocards:
         fout = ROOT.TFile.Open(root_filename,"recreate")
         print "  Creating root file: "+root_filename
@@ -504,74 +515,75 @@ for signal_syst in S_signal:
         print "  Creating data card: "+card_filename
         card=open(card_filename, 'w+')
         card.write(
-    '''    imax 1 number of channels
-    jmax 5 number of backgrounds
-    kmax * number of nuisance parameters
-    ------------------------------------------------------------
-    observation	''')
+'''imax 1 number of channels
+jmax 5 number of backgrounds
+kmax * number of nuisance parameters
+------------------------------------------------------------
+observation	'''
+            )
         card.write(str(S_data.Integral()))
         card.write(
-    '''
-    ------------------------------------------------------------
-    shapes * * ''')
+'''
+------------------------------------------------------------
+shapes * * '''
+            )
         card.write(root_filename)
         card.write(
-    ''' $PROCESS $PROCESS_$SYSTEMATIC
-    ------------------------------------------------------------
-    bin		''')
+''' $PROCESS $PROCESS_$SYSTEMATIC
+------------------------------------------------------------
+bin		'''
+            )
         card.write("%s\t%s\t%s\t%s\t%s\t%s" % (opt.box, opt.box, opt.box, opt.box, opt.box, opt.box))
         card.write(
-    '''
-    process		Signal	Top	MultiJet	WJets	ZInv	Other
-    process		0	1	2	3	4	5
-    rate		''')
+'''
+process		Signal	Top	MultiJet	WJets	ZInv	Other
+process		0	1	2	3	4	5
+rate		'''
+            )
         card.write("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f" % (signal_syst[0].Integral(), Top_est[0].Integral(), MultiJet_est[0].Integral(), WJets_est[0].Integral(), ZInv_est[0].Integral(), Other_est[0].Integral()) )
         card.write(
-    '''
-    ------------------------------------------------------------
-    lumi		lnN	1.026	1.026	1.026	1.026	1.026	1.026
-    pileup		shape	-	1.0	1.0	1.0	1.0	1.0
-    jes		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    jer 		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    met		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    trigger		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    facscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
-    renscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
-    facrenscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
-    alphas		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    elereco		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    eleid		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    eleiso		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    elefastsim	shape	1.0	-	-	-	-	-
-    muontrk		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    muonidiso	shape	1.0	1.0	1.0	1.0	1.0	1.0
-    muonfastsim	shape	1.0	-	-	-	-	-
-    btag		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    btagfastsim	shape	1.0	-	-	-	-	-
-    wtag		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    wtagfastsim	shape	1.0	-	-	-	-	-
-    toptag		shape	1.0	1.0	1.0	1.0	1.0	1.0
-    toptagfastsim	shape	1.0	-	-	-	-	-
-    '''
-        )
+'''
+------------------------------------------------------------
+lumi		lnN	1.026	1.026	1.026	1.026	1.026	1.026
+pileup		shape	-	1.0	1.0	1.0	1.0	1.0
+jes		shape	1.0	1.0	1.0	1.0	1.0	1.0
+jer 		shape	1.0	1.0	1.0	1.0	1.0	1.0
+met		shape	1.0	1.0	1.0	1.0	1.0	1.0
+trigger		shape	1.0	1.0	1.0	1.0	1.0	1.0
+facscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
+renscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
+facrenscale	shape	1.0	1.0	1.0	1.0	1.0	1.0
+alphas		shape	1.0	1.0	1.0	1.0	1.0	1.0
+elereco		shape	1.0	1.0	1.0	1.0	1.0	1.0
+eleid		shape	1.0	1.0	1.0	1.0	1.0	1.0
+eleiso		shape	1.0	1.0	1.0	1.0	1.0	1.0
+elefastsim	shape	1.0	-	-	-	-	-
+muontrk		shape	1.0	1.0	1.0	1.0	1.0	1.0
+muonidiso	shape	1.0	1.0	1.0	1.0	1.0	1.0
+muonfastsim	shape	1.0	-	-	-	-	-
+btag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+btagfastsim	shape	1.0	-	-	-	-	-
+wtag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+wtagfastsim	shape	1.0	-	-	-	-	-
+toptag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+toptagfastsim	shape	1.0	-	-	-	-	-
+'''
+            )
         card.close()
 
 time.sleep(10)
 
-if opt.nocombine:
-    print "Reusing previous combine results"
-else:
-    print "All data cards ready, running combine"
-    
-results = []
-combine_cmds = []
-for card in cards:
-    combine_out_filename = card.replace("cards/RazorBoost","combine/RazorBoost").replace(".txt",".log")
-    results.append(combine_out_filename)
-    if  not opt.nocombine:
-        combine_cmds.append((["combine", "-M", "AsymptoticLimits", "-d", card], combine_out_filename))
+print "All data cards ready"
 
-run_combine(combine_cmds, opt.NPROC)
+#results = []
+#combine_cmds = []
+#for card in cards:
+#    combine_out_filename = card.replace("cards/RazorBoost","combine/RazorBoost").replace(".txt",".log")
+#    results.append(combine_out_filename)
+#    if  not opt.nocombine:
+#        combine_cmds.append((["combine", "-M", "AsymptoticLimits", "-d", card], combine_out_filename))
+#
+#run_combine(combine_cmds, opt.NPROC)
 
 ##    print "Creating summary plots"
 ##    
@@ -620,4 +632,4 @@ run_combine(combine_cmds, opt.NPROC)
 ##    exp_limit_2Up_T5ttcc.Write()
 ##    
 ##    time.sleep(120)
-print "Done."
+#print "Done."

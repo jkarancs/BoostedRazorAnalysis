@@ -87,7 +87,7 @@ sms_models = {
 
 # --------------- Also import from GetCombine -----------
 def writeXsecTree(box, model, directory, mg, mchi, xsecULObs, xsecULExpPlus2, xsecULExpPlus, xsecULExp, xsecULExpMinus, xsecULExpMinus2):
-    outputFileName = "%s/xsecUL_mg_%s_mchi_%s_%s.root" %(directory, mg, mchi, box)
+    outputFileName = "%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box)
     print "INFO: xsec UL values being written to %s"%outputFileName
     fileOut = rt.TFile.Open(outputFileName, "recreate")
     
@@ -374,42 +374,34 @@ if __name__ == '__main__':
     smoothing = sms.smoothing
     fixLSP0 = sms.fixLSP0
 
-    # Make a xsec tree first
+    # Make a xsec tree first578
+    
     haddOutputs = []
     gchipairs = []
-    for result in glob.glob(directory+'/combine/RazorBoost_'+options.box+'_'+model+'_*.log'):
-        mg   = float(result.replace(".log","").split("_")[-2:][0])
-        mchi = float(result.replace(".log","").split("_")[-2:][1])
+    #for result in glob.glob(directory+'/combine/RazorBoost_'+box+'_'+model+'_*.log'):
+    #    mg   = float(result.replace(".log","").split("_")[-2:][0])
+    #    mchi = float(result.replace(".log","").split("_")[-2:][1])
+    #    gchipairs.append((mg,mchi))
+    #    haddOutputs.append("%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box))
+    for result in glob.glob(directory+"/"+model+"_xsecUL_*_"+box+".root"):
+        haddOutputs.append(result)
+        mg   = float(result.replace("_"+box+".root","").split("_")[-3])
+        mchi = float(result.replace("_"+box+".root","").split("_")[-1])
         gchipairs.append((mg,mchi))
-        with open(result) as log:
-            for line in log:
-                if "Observed Limit:" in line:
-                    xsecULObs = float(line.split()[4])
-                elif "Expected  2.5%:" in line:
-                    xsecULExpPlus2 = float(line.split()[4])
-                elif "Expected 16.0%:" in line:
-                    xsecULExpPlus = float(line.split()[4])
-                elif "Expected 50.0%:" in line:
-                    xsecULExp = float(line.split()[4])
-                elif "Expected 84.0%:" in line:
-                    xsecULExpMinus = float(line.split()[4])
-                elif "Expected 97.5%:" in line:
-                    xsecULExpMinus2 = float(line.split()[4])
-        haddOutput = writeXsecTree(box, model, directory, mg, mchi, [xsecULObs], [xsecULExpPlus2], [xsecULExpPlus], [xsecULExp], [xsecULExpMinus], [xsecULExpMinus2])
-        haddOutputs.append(haddOutput)
 
+    print directory+"/"+model+"_xsecUL_*_"+box+".root"
     if not os.path.exists(directory+"/results"): subprocess.call(["mkdir", "-p", directory+"/results"])
-    os.system("hadd -f %s/xsecUL_Asymptotic_%s.root %s"%(directory+"/results",box," ".join(haddOutputs)))
-    os.system("rm %s"%(" ".join(haddOutputs)))
+    os.system("hadd -f %s/%s_xsecUL_Asymptotic_%s.root %s"%(directory+"/results",model,box," ".join(haddOutputs)))
+    #os.system("rm %s"%(" ".join(haddOutputs)))
 
     if model=="T1bri":
         xsecFile = rt.TFile.Open("%s/smoothXsecUL_%s.root"%(directory+"/results",box))
         xsecTree = xsecFile.Get("smoothXsecTree")
     else: 
         if doHybridNew:
-            xsecFile = rt.TFile.Open("%s/xsecUL_HybridNew_%s.root"%(directory+"/results",box))
+            xsecFile = rt.TFile.Open("%s/%s_xsecUL_HybridNew_%s.root"%(directory+"/results",model,box))
         else: 
-            xsecFile = rt.TFile.Open("%s/xsecUL_Asymptotic_%s.root"%(directory+"/results",box))
+            xsecFile = rt.TFile.Open("%s/%s_xsecUL_Asymptotic_%s.root"%(directory+"/results",model,box))
         xsecTree = xsecFile.Get("xsecTree")
     xsecGluino =  rt.TH2D("xsecGluino","xsecGluino",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
     xsecGluinoPlus =  rt.TH2D("xsecGluinoPlus","xsecGluinoPlus",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
@@ -471,15 +463,15 @@ if __name__ == '__main__':
     
     xyPairExp = {}
     for clsType in clsTypes:
-        xsecUL[clsType] = rt.TH2D("xsecUL_%s"%clsType,"xsecUL_%s"%clsType,int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
-        xsecTree.Project("xsecUL_%s"%clsType,"mchi:mg",whichCLsVar[clsType])
+        xsecUL[clsType] = rt.TH2D("xsecUL_%s_%s"%(model,clsType),"xsecUL_%s_%s"%(model,clsType),int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
+        xsecTree.Project("xsecUL_%s_%s"%(model,clsType),"mchi:mg",whichCLsVar[clsType])
         if model=="T1bri":
             brValues = [(0.00, 1.00), (0.25, 0.25), (0.50, 0.00), (0.00, 0.50), (0.00, 0.00), (0.25, 0.50), (0.50, 0.50), (0.50, 0.25)]
             tempXsecUL = {}
             for (x, y) in brValues:
                 brString = ('x%.2fy%.2f'%(x,y)).replace('.','p')
-                tempXsecUL[(x,y)] = rt.TH2D("xsecUL_%s_%s"%(clsType,brString),"xsecUL_%s_%s"%(clsType,brString),int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
-                xsecTree.Project("xsecUL_%s_%s"%(clsType,brString),"mchi:mg","%s*(x==%.2f && y==%.2f)"%(whichCLsVar[clsType],x,y))
+                tempXsecUL[(x,y)] = rt.TH2D("xsecUL_%s_%s_%s"%(model,clsType,brString),"xsecUL_%s_%s_%s"%(model,clsType,brString),int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
+                xsecTree.Project("xsecUL_%s_%s_%s"%(model,clsType,brString),"mchi:mg","%s*(x==%.2f && y==%.2f)"%(whichCLsVar[clsType],x,y))
             for iBin in range(1,xsecUL[clsType].GetNbinsX()+1):
                 for jBin in range(1,xsecUL[clsType].GetNbinsY()+1):
                     allValues = {}
@@ -579,14 +571,14 @@ if __name__ == '__main__':
         
         c.SetLogz(1)
         c.Print("%s/%s_INTERP_%s_%s.png"%(directory+"/results",model,box,clsType))
-
+    
     outFile = rt.TFile.Open("%s/%s_%s_results.root"%(directory+"/results",model,box),"recreate")
     for clsType in clsTypes:
         contourFinal[clsType].Write()
         xsecUL[clsType].Write()
-
-    smoothOutFile = rt.TFile.Open("%s/smoothXsecUL_%s_%s.root"%(directory+"/results",model,box), "recreate")
-
+    
+    smoothOutFile = rt.TFile.Open("%s/%s_smoothXsecUL_%s.root"%(directory+"/results",model,box), "recreate")
+    
     smoothXsecTree = rt.TTree("smoothXsecTree", "smoothXsecTree")
     myStructCmd = "struct MyStruct2{Double_t mg;Double_t mchi;Double_t x;Double_t y;"
     ixsecUL = 0
