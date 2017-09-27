@@ -37,14 +37,15 @@ struct settings {
   settings() :
     runOnSkim                ( 1-SKIM),
     saveSkimmedNtuple        ( SKIM  ),
+    doTopPtReweighting       ( true  ),
     doPileupReweighting      ( true  ),
     scaleQCD                 ( false ),
     doHTReweighting          ( false ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 2 W, 2 b, 2 top
-    varySystematics          ( true  ),
-    systematicsFileName      ( "systematics/2017_08_22_1SigmaUpDown_NoPdf.txt" ),
+    varySystematics          ( false ),
+    systematicsFileName      ( "systematics/2017_09_27_1SigmaUpDown_NoPdf.txt" ),
     //systematicsFileName      ( "systematics/test.txt" ),
     treeName                 ( runOnSkim ? "B2GTree"   : "B2GTTreeMaker/B2GTree" ),
     totWeightHistoName       ( runOnSkim ? "totweight" : "EventCounter/totweight" ), // saved in ntuple
@@ -55,7 +56,7 @@ struct settings {
 			       "Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.txt" ),
     pileupDir                ( "pileup/Dec02_Golden_JSON/" ),
     intLumi                  ( 35867 /* brilcalc - Dec02 Golden JSON */ ), // Tot int lumi in (pb^-1),
-    lumiUncertainty          ( 0.026  ),
+    lumiUncertainty          ( 0.025  ),
 #endif
     useXSecFileForBkg        ( true   ), // true: use file below, false: use value in the ntuple (evt_XSec)
     xSecFileName             ( "common/BackGroundXSec.txt" )
@@ -67,6 +68,7 @@ struct settings {
 
   const bool runOnSkim;
   const bool saveSkimmedNtuple;
+  const bool doTopPtReweighting;
   const bool doPileupReweighting;
   const bool scaleQCD;
   const bool doHTReweighting;

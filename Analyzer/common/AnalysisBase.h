@@ -86,6 +86,8 @@ public:
 
   void init_pileup_reweighting(const std::string&, const std::string&, const std::vector<std::string>&);
 
+  double get_toppt_weight(DataStruct&, const double&);
+
   double get_pileup_weight(const int&, const double&);
 
   void rescale_smear_jet_met(DataStruct&, const bool&, const unsigned int&, const double&, const double&, const double&);
@@ -2483,6 +2485,32 @@ AnalysisBase::get_syst_weight(const double& weight_nominal, const double& uncert
   return w;
 }
 
+//_______________________________________________________
+//                  Top pt reweighting
+double
+AnalysisBase::get_toppt_weight(DataStruct& data, const double& nSigmaTopPt)
+{
+  double w_nom = 1;//, n=0;
+  while(data.gen.Loop()) {
+    size_t i = data.gen.it;
+    // Select last copy of the particles only (i.e. their daughters are different)
+    if (data.gen.Dau0ID[i]!=data.gen.ID[i]&&data.gen.Dau1ID[i]!=data.gen.ID[i]) {
+      if(abs(data.gen.ID[i])==6) {
+	double a = 0.0615, b = -0.0005;
+	w_nom *= std::exp(a + b * data.gen.Pt[i]);
+	//std::cout<<"evt="<<data.evt.EventNumber<<" i="<<i<<" top id="<<data.gen.ID[i]<<" dau0 id="<<data.gen.Dau0ID[i]<<" dau1 id="<<data.gen.Dau1ID[i]<<" pt="<<data.gen.Pt[i]<<" w="<<w_nom<<std::endl;
+	//n+=1;
+      }
+    }
+  }
+  w_nom = std::sqrt(w_nom);
+  //std::cout<<"N top = "<<n<<" w_nom = "<<w_nom<<std::endl<<std::endl;
+  double w_toppt_up = 1;
+  double w_toppt = std::sqrt(w_nom);
+  double w_toppt_down = w_nom; // Nominal weight is typically below 1 (below top pt>123) --> use as down variation
+  double w = get_syst_weight(w_toppt, w_toppt_up, w_toppt_down, nSigmaTopPt);
+  return w;
+}
 
 //_______________________________________________________
 //                  Get pile-up weight

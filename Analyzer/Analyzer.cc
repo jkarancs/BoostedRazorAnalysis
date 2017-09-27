@@ -120,6 +120,7 @@ int main(int argc, char** argv) {
     unsigned int index = 0;
     unsigned int nSyst = 0;
     std::vector<double> nSigmaLumi        = std::vector<double>(1,0);
+    std::vector<double> nSigmaTopPt       = std::vector<double>(1,0);
     std::vector<double> nSigmaPU          = std::vector<double>(1,0);
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
@@ -151,6 +152,7 @@ int main(int argc, char** argv) {
       std::stringstream nth_line;
       nth_line<<line;
       nth_line>>dbl; syst.nSigmaLumi.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaTopPt.push_back(dbl);
       nth_line>>dbl; syst.nSigmaPU.push_back(dbl);
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
@@ -287,6 +289,15 @@ int main(int argc, char** argv) {
   // --- ScaleFectors/Reweighting        ---
   // ---------------------------------------
   
+  // Top pt reweighting
+  bool doTopPtReweighting = false;
+  if ( settings.doTopPtReweighting && TString(cmdline.dirname).Contains("TT_powheg-pythia8")) {
+    cout << "doTopPtReweighting (settings): true" << endl;    
+    doTopPtReweighting = true;
+  } else {
+    cout << "doTopPtReweighting (settings): false" << endl;
+  }
+
   // Pile-up reweighting
   if ( !cmdline.isData && settings.doPileupReweighting ) {
     cout << "doPileupReweighting (settings): true" << endl;
@@ -325,6 +336,7 @@ int main(int argc, char** argv) {
   // Counts after each reweighting step
   if ( ! cmdline.isData ) {
     ofile->count("w_lumi",    0);
+    ofile->count("w_toppt",  0);
     ofile->count("w_pileup",  0);
     ofile->count("w_alphas",  0);
     ofile->count("w_scale",   0);
@@ -498,6 +510,12 @@ int main(int argc, char** argv) {
 	  if (debug==-1) std::cout<<syst.index<<" lumi = "<<ana.get_syst_weight(data.evt.Gen_Weight*weightnorm, settings.lumiUncertainty, syst.nSigmaLumi[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: apply lumi weight ok"<<std::endl;
 
+	  // Top pt reweighting
+	  if (doTopPtReweighting) {
+	    w *= (ana.all_weights[1] = ana.get_toppt_weight(data, syst.nSigmaTopPt[syst.index]));	    
+	  }
+	  if (syst.index==0) ofile->count("w_toppt", w);
+
 	  // Pileup reweighting (Currently only do for Background)
 	  if (syst.index == 0) h_nvtx->Fill(data.evt.NGoodVtx, w);
 	  if ( settings.doPileupReweighting && !cmdline.isSignal ) {
@@ -505,8 +523,10 @@ int main(int argc, char** argv) {
 	  } else {
 	    w *= (ana.all_weights[1] = 1);
 	  }
-	  if (syst.index == 0) h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
-	  if (syst.index==0) ofile->count("w_pileup", w);
+	  if (syst.index==0) {
+	    h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
+	    ofile->count("w_pileup", w);
+	  }
 	  if (debug==-1) std::cout<<" pileup = "<<ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: apply pileup weight ok"<<std::endl;
 
