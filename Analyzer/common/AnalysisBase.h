@@ -3084,6 +3084,7 @@ double AnalysisBase::calc_fake_w_mass_tagging_sf(DataStruct& data) {
 	  w *= utils::geteff1D(eff_full_fake_emW, data.jetsAK8.Pt[i], 1);
 	}
       //if (passWMassTag[i]) w *= utils::geteff_AE(eff_full_fake_mW, data.jetsAK8.Pt[i]);
+      }
     }
   }
   
