@@ -2749,12 +2749,18 @@ TH2D* eff_trigger_mu;
 TH2D* eff_trigger_mu_up;
 TH2D* eff_trigger_mu_down;
 
-TH1D* eff_full_fake_aW;
-TH1D* eff_full_fake_aTop;
-TH1D* eff_full_fake_mW;
-TH1D* eff_full_fake_mTop;
-TH1D* eff_full_fake_W;
-TH1D* eff_full_fake_Top;
+TH1D* eff_full_fake_bW;
+TH1D* eff_full_fake_eW;
+TH1D* eff_full_fake_baW;
+TH1D* eff_full_fake_eaW;
+TH1D* eff_full_fake_bmW;
+TH1D* eff_full_fake_emW;
+TH1D* eff_full_fake_bTop;
+TH1D* eff_full_fake_eTop;
+TH1D* eff_full_fake_baTop;
+TH1D* eff_full_fake_eaTop;
+TH1D* eff_full_fake_bmTop;
+TH1D* eff_full_fake_emTop;
 TH1D* eff_fast_W;
 TH1D* eff_fast_Top;
 //TGraphAsymmErrors* eff_full_fake_aW;
@@ -2933,12 +2939,18 @@ void AnalysisBase::init_syst_input() {
 
   // W/Top (anti-)tag (and fake rate) scale factors
   // From Changgi
-  eff_full_fake_W    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "W",                    "full_fake_W");
-  eff_full_fake_mW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "mW",                   "full_fake_mW");
-  eff_full_fake_aW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "aW",                   "full_fake_aW");
-  eff_full_fake_Top  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "Top",                  "full_fake_Top");
-  eff_full_fake_mTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "mTop",                 "full_fake_mTop");
-  eff_full_fake_aTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "aTop",                 "full_fake_aTop");
+  eff_full_fake_bW    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bW",                    "full_fake_W_barrel");
+  eff_full_fake_eW    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "eW",                    "full_fake_W_endcap");
+  eff_full_fake_bmW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bmW",                   "full_fake_mW_barrel");
+  eff_full_fake_emW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "emW",                   "full_fake_mW_endcap");
+  eff_full_fake_baW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "baW",                   "full_fake_aW_barrel");
+  eff_full_fake_eaW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "baW",                   "full_fake_aW_endcap");
+  eff_full_fake_bTop  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bTop",                  "full_fake_Top_barrel");
+  eff_full_fake_eTop  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "eTop",                  "full_fake_Top_endcap");
+  eff_full_fake_bmTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bmTop",                 "full_fake_mTop_barrel");
+  eff_full_fake_emTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "emTop",                 "full_fake_mTop_endcap");
+  eff_full_fake_baTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "baTop",                 "full_fake_aTop_barrel");
+  eff_full_fake_eaTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "eaTop",                 "full_fake_aTop_endcap");
   eff_fast_W         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimWTagSF",   "fast_W");
   eff_fast_Top       = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimTopTagSF", "fast_Top");
   // From Janos
@@ -2979,7 +2991,13 @@ double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaT
       }
     } else if (!isFastSim) {
       // Top tagging fake rate scale factor
-      if (passHadTopTag[i]) w *= utils::geteff1D(eff_full_fake_Top, data.jetsAK8.Pt[i], 1);
+      if (passHadTopTag[i]) {
+	if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	  w *= utils::geteff1D(eff_full_fake_bTop, data.jetsAK8.Pt[i], 1);
+	} else {
+	  w *= utils::geteff1D(eff_full_fake_eTop, data.jetsAK8.Pt[i], 1);	  
+	}
+      }
       //if (passHadTopTag[i]) w *= utils::geteff_AE(eff_full_fake_Top, data.jetsAK8.Pt[i]);
     }
   }
@@ -2991,7 +3009,13 @@ double AnalysisBase::calc_fake_top_mass_tagging_sf(DataStruct& data) {
   double w = 1;
   if (nGenTop==0) while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
-    if (passHadTop0BMassTag[i]) w *= utils::geteff1D(eff_full_fake_mTop, data.jetsAK8.Pt[i], 1);
+    if (passHadTop0BMassTag[i]) {
+      if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	w *= utils::geteff1D(eff_full_fake_bmTop, data.jetsAK8.Pt[i], 1);
+      } else {
+	w *= utils::geteff1D(eff_full_fake_emTop, data.jetsAK8.Pt[i], 1);	
+      }
+    }
     //if (passHadTop0BMassTag[i]) w *= utils::geteff_AE(eff_full_fake_mTop, data.jetsAK8.Pt[i]);
   }
 
@@ -3002,7 +3026,13 @@ double AnalysisBase::calc_fake_top_anti_tagging_sf(DataStruct& data) {
   double w = 1;
   if (nGenTop==0) while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
-    if (passHadTop0BAntiTag[i]) w *= utils::geteff1D(eff_full_fake_aTop, data.jetsAK8.Pt[i], 1);
+    if (passHadTop0BAntiTag[i]) {
+      if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	w *= utils::geteff1D(eff_full_fake_baTop, data.jetsAK8.Pt[i], 1);
+      } else {
+	w *= utils::geteff1D(eff_full_fake_eaTop, data.jetsAK8.Pt[i], 1);
+      }
+    }
     //if (passHadTop0BAntiTag[i]) w *= utils::geteff_AE(eff_full_fake_aTop, data.jetsAK8.Pt[i]);
   }
 
@@ -3027,7 +3057,13 @@ double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTa
       }
     } else if (!isFastSim) {
       // W tagging fake rate scale factor
-      if (passTightWTag[i]) w *= utils::geteff1D(eff_full_fake_W, data.jetsAK8.Pt[i], 1);
+      if (passTightWTag[i]) {
+	if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	  w *= utils::geteff1D(eff_full_fake_bW, data.jetsAK8.Pt[i], 1);
+	} else {
+	  w *= utils::geteff1D(eff_full_fake_eW, data.jetsAK8.Pt[i], 1);
+	}
+      }
       //if (passTightWTag[i]) w *= utils::geteff_AE(eff_full_fake_W, data.jetsAK8.Pt[i]);
     }
   }
@@ -3041,7 +3077,12 @@ double AnalysisBase::calc_fake_w_mass_tagging_sf(DataStruct& data) {
   while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
     if (nGenHadW==0) {
-      if (passWMassTag[i]) w *= utils::geteff1D(eff_full_fake_mW, data.jetsAK8.Pt[i], 1);
+      if (passWMassTag[i]) {
+	if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	  w *= utils::geteff1D(eff_full_fake_bmW, data.jetsAK8.Pt[i], 1);
+	} else {
+	  w *= utils::geteff1D(eff_full_fake_emW, data.jetsAK8.Pt[i], 1);
+	}
       //if (passWMassTag[i]) w *= utils::geteff_AE(eff_full_fake_mW, data.jetsAK8.Pt[i]);
     }
   }
@@ -3054,7 +3095,13 @@ double AnalysisBase::calc_fake_w_anti_tagging_sf(DataStruct& data) {
 
   while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
-    if (passTightWAntiTag[i]) w *= utils::geteff1D(eff_full_fake_aW, data.jetsAK8.Pt[i], 1);
+    if (passTightWAntiTag[i]) {
+      if (std::abs(data.jetsAK8.Eta[i])<1.5) {      
+	w *= utils::geteff1D(eff_full_fake_baW, data.jetsAK8.Pt[i], 1);
+      } else {
+	w *= utils::geteff1D(eff_full_fake_eaW, data.jetsAK8.Pt[i], 1);
+      }
+    }
     //if (passTightWAntiTag[i]) w *= utils::geteff_AE(eff_full_fake_aW, data.jetsAK8.Pt[i]);
   }
   
