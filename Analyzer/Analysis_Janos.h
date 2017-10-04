@@ -42,9 +42,11 @@ Analysis::calculate_variables(DataStruct& data, const unsigned int& syst_index)
 //                Define Skimming cuts
 //   (Not needed, unless you want to skim the ntuple)
 
+
 bool
 Analysis::pass_skimming(DataStruct& data)
 {
+  // Count AK8 jets
   int NJetAK8 = 0;
   while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
@@ -55,7 +57,203 @@ Analysis::pass_skimming(DataStruct& data)
     }
   }
   if (!(NJetAK8>=1)) return 0;
-  if (!(data.evt.R2>=0.04||R2_ll>=0.04||R2_pho>=0.04)) return 0;
+  if (!isSignal) {
+    // Count veto electrons
+    int NEleVeto = 0, NEleSelect = 0;
+    while(data.ele.Loop()) {
+      size_t i = data.ele.it;
+      float pt = data.ele.Pt[i];
+      float abseta = std::abs(data.ele.Eta[i]);
+      float miniIso = data.ele.MiniIso[i]/data.ele.Pt[i];
+      float absd0 = std::abs(data.ele.Dxy[i]);
+      float absdz = std::abs(data.ele.Dz[i]);
+#if USE_MVA_ID == 1
+      // https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=210#Electrons
+      //VLoose WP, pT > 10 GeV. A/B values are -0.48/-0.85, -0.67/-0.91, -0.49/-0.83 for |eta| [0, 0.8], [0.8, 1.479], [1.479, 2.5]
+      //  In addition, for pT 5-10, the following values are used on the HZZ MVA: 0.46, -0.03, 0.06 for |eta| [0, 0.8], [0.8, 1.479], [1.479, 2.5] 
+      int categ = data.ele.vidMvaHZZcateg[i];
+      double mva = categ<3 ? data.ele.vidMvaHZZvalue[i] : data.ele.vidMvaGPvalue[i];
+      std::vector<double> cut = { 
+        // pt<10
+        0.46, -0.03, 0.06, 
+        // pt>=10
+        std::min(-0.48, std::max(-0.85 , -0.48 + (-0.85 - -0.48)/10.0*(pt-15))),
+        std::min(-0.67, std::max(-0.91 , -0.67 + (-0.91 - -0.67)/10.0*(pt-15))),
+        std::min(-0.49, std::max(-0.83 , -0.49 + (-0.83 - -0.49)/10.0*(pt-15)))
+      };
+      bool id_veto_noiso = (mva>cut[categ]);
+#else
+      bool id_veto_noiso = (data.ele.vidVetonoiso[i] == 1.0);
+#endif
+      bool id_select_noiso = (data.ele.vidMediumnoiso[i] == 1.0);
+      // Veto
+      if ( id_veto_noiso &&
+  	 pt      >= ELE_VETO_PT_CUT &&
+  	 abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
+  	 absd0   <  ELE_VETO_IP_D0_CUT &&
+  	 absdz   <  ELE_VETO_IP_DZ_CUT &&
+  	 miniIso <  ELE_VETO_MINIISO_CUT ) {
+        NEleVeto++;
+      }
+      // Select
+      if ( id_select_noiso &&
+  	 pt        >= ELE_SELECT_PT_CUT &&
+  	 abseta    <  ELE_SELECT_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
+  	 miniIso   <  ELE_SELECT_MINIISO_CUT &&
+  	 absd0     <  ELE_SELECT_IP_D0_CUT &&
+  	 absdz     <  ELE_SELECT_IP_DZ_CUT ) {
+        NEleSelect++;
+      }
+    }
+    // Count veto muons
+    int NMuVeto = 0, NMuSelect = 0;
+    while(data.mu.Loop()) {
+      size_t i = data.mu.it;
+      float pt = data.mu.Pt[i];
+      float abseta = std::abs(data.mu.Eta[i]);
+      float miniIso = data.mu.MiniIso[i]/data.mu.Pt[i];
+      float absd0 = std::abs(data.mu.Dxy[i]);
+      float absdz = std::abs(data.mu.Dz[i]);
+      bool id_veto_noiso   = (data.mu.IsLooseMuon[i] == 1.0);
+      bool id_select_noiso = (data.mu.IsMediumMuon[i] == 1.0);
+      // Veto
+      if ( id_veto_noiso &&
+  	 pt      >= MU_VETO_PT_CUT &&
+  	 abseta  <  MU_VETO_ETA_CUT &&
+  	 absd0   <  MU_VETO_IP_D0_CUT &&
+  	 absdz   <  MU_VETO_IP_DZ_CUT &&
+  	 miniIso <  MU_VETO_MINIISO_CUT ) {
+        NMuVeto++;
+      }
+      // Select
+      if ( id_select_noiso &&
+  	 pt      >= MU_SELECT_PT_CUT &&
+  	 abseta  <  MU_SELECT_ETA_CUT &&
+  	 miniIso <  MU_SELECT_MINIISO_CUT &&
+  	 absd0   <  MU_SELECT_IP_D0_CUT &&
+  	 absdz   <  MU_SELECT_IP_DZ_CUT ) {
+        NMuSelect++;
+      }
+    }
+    // Do a first loop to reverse engineer the rho value (which is used later)
+    double rho_from_other_iso = 0;
+    while(data.pho.Loop()) {
+      size_t i = data.pho.it;
+      float abseta = std::abs(data.pho.Eta[i]);
+      double EA_neu = 0, EA_pho = 0;
+      if (abseta>0.0 && abseta<=1.0) {
+        EA_neu = 0.0597;
+        EA_pho = 0.1210;
+      } else if (abseta>1.0 && abseta<=1.479) {
+        EA_neu = 0.0807;
+        EA_pho = 0.1107;
+      } else if (abseta>1.479 && abseta<=2.0) {
+        EA_neu = 0.0629;
+        EA_pho = 0.0699;
+      } else if (abseta>2.0 && abseta<=2.2) {
+        EA_neu = 0.0197;
+        EA_pho = 0.1056;
+      } else if (abseta>2.2 && abseta<=2.3) {
+        EA_neu = 0.0184;
+        EA_pho = 0.1457;
+      } else if (abseta>2.3 && abseta<=2.4) {
+        EA_neu = 0.0284;
+        EA_pho = 0.1719;
+      } else if (abseta>2.4 && abseta<=5.0) {
+        EA_neu = 0.0591;
+        EA_pho = 0.1998;
+      }
+      // rho was not saved either, but can be deduced from the corrected and uncorrected iso
+      double rho = 0;
+      if (data.pho.NeutralHadronIsoEAcorrectedsp15[i]>0) {
+        rho = (data.pho.NeutralHadronIso[i] - data.pho.NeutralHadronIsoEAcorrectedsp15[i])/EA_neu;
+      } else if (data.pho.PhotonIsoEAcorrectedsp15[i]) {
+        rho = (data.pho.PhotonIso[i] - data.pho.PhotonIsoEAcorrectedsp15[i])/EA_pho;
+      }
+      if (rho_from_other_iso==0&&rho>0) rho_from_other_iso = rho;
+    }
+  
+    // Count photons
+    int NPhotonNoSieie = 0;
+    while(data.pho.Loop()) {
+      size_t i = data.pho.it;
+      float pt = data.pho.Pt[i];
+      float abseta = std::abs(data.pho.Eta[i]);
+      bool ele_veto = (data.pho.ElectronVeto[i]==1);
+      //bool id_select = data.pho.PassMediumID[i];
+      // EA corrected value was not saved for Charged isolation, so calculate it (used for ID cuts by hand)
+      double EA_ch = 0;
+      if      (abseta>0.0 && abseta<=1.0)   EA_ch  = 0.0360;
+      else if (abseta>1.0 && abseta<=1.479) EA_ch  = 0.0377;
+      else if (abseta>1.479 && abseta<=2.0) EA_ch  = 0.0306;
+      else if (abseta>2.0 && abseta<=2.2)   EA_ch  = 0.0283;
+      else if (abseta>2.2 && abseta<=2.3)   EA_ch  = 0.0254;
+      else if (abseta>2.3 && abseta<=2.4)   EA_ch  = 0.0217;
+      else if (abseta>2.4 && abseta<=5.0)   EA_ch  = 0.0167;
+      double ChargedHadronIsoEACorr = std::max(0., data.pho.ChargedHadronIso[i] - rho_from_other_iso*EA_ch);
+      // Implementing cuts for Spring16 v2.2 Medium ID
+      // https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonIdentificationRun2?rev=36#Recommended_Working_points_for_2
+      // Using the table, not the presentation, same as this VID cfg:
+      // https://github.com/ikrav/cmssw/blob/65fa87654e6744efdff2e16d55a5b86bbdccd48d/RecoEgamma/PhotonIdentification/python/Identification/cutBasedPhotonID_Spring16_V2p2_cff.py#L50-L78
+      // Exclude Sigma_ietaieta cut in order to measure QCD background
+      bool id_noSieie = false;
+      if ( std::abs(data.pho.SCEta[i])<1.479 ) {
+        // Barrel cuts (EB)
+        id_noSieie = 
+  	data.pho.HoverE[i]                          < 0.0396 &&
+  	//data.pho.SigmaIEtaIEta[i]                   < 0.01022 &&
+  	ChargedHadronIsoEACorr                      < 0.441 &&
+  	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 2.725+0.0148*pt+0.000017*pt*pt &&
+  	data.pho.PhotonIsoEAcorrectedsp15[i]        < 2.571+0.0047*pt;
+      } else {
+        // Encap cuts (EE)
+        id_noSieie = 
+  	data.pho.HoverE[i]                          < 0.0219 &&
+  	//data.pho.SigmaIEtaIEta[i]                   < 0.03001 &&
+  	ChargedHadronIsoEACorr                      < 0.442 &&
+  	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 1.715+0.0163*pt+0.000014*pt*pt &&
+  	data.pho.PhotonIsoEAcorrectedsp15[i]        < 3.863+0.0034*pt;
+      }
+  
+      //if (id != id_select) {
+      //  std::cout<<id_select<<" POG ID"<<std::endl;
+      //  std::cout<<"  rho="<<rho_from_other_iso<<std::endl;
+      //  if (std::abs(data.pho.SCEta[i]) < 1.479) {
+      //    std::cout<<(std::abs(data.pho.SCEta[i])<1.479                                             )<<" SCEta="<<std::abs(data.pho.SCEta[i])<<std::endl;
+      //    std::cout<<(data.pho.HoverE[i] < 0.0396                                                   )<<" HoverE="<<data.pho.HoverE[i]<<std::endl;
+      //    std::cout<<(data.pho.SigmaIEtaIEta[i] < 0.01022                                           )<<" SigmaIEtaIEta="<<data.pho.SigmaIEtaIEta[i]<<std::endl;   
+      //    std::cout<<(data.pho.ChargedHadronIso[i] < 0.441                                          )<<" ChargedHadronIso="<<data.pho.ChargedHadronIso[i]<<std::endl;
+      //    std::cout<<(ChargedHadronIsoEACorr < 0.441                                                )<<" ChargedHadronIsoEACorr="<<ChargedHadronIsoEACorr<<std::endl;
+      //    std::cout<<(data.pho.NeutralHadronIsoEAcorrectedsp15[i] < (2.725+0.0148*pt+0.000017*pt*pt))<<" NeutralHadronIsoEAcorrectedsp15="<<data.pho.NeutralHadronIsoEAcorrectedsp15[i]<<" cut="<<(2.725+0.0148*pt+0.000017*pt*pt)<<std::endl;
+      //    std::cout<<(data.pho.PhotonIsoEAcorrectedsp15[i] < 2.571+0.0047*pt                        )<<" PhotonIsoEAcorrectedsp15="<<data.pho.PhotonIsoEAcorrectedsp15[i]<<" cut="<<(2.571+0.0047*pt)<<std::endl<<std::endl;
+      //  } else {
+      //    std::cout<<(std::abs(data.pho.SCEta[i])>=1.479                                            )<<" SCEta="<<std::abs(data.pho.SCEta[i])<<std::endl;
+      //    std::cout<<(data.pho.HoverE[i] < 0.0219                                                   )<<" HoverE="<<data.pho.HoverE[i]<<std::endl;
+      //    std::cout<<(data.pho.SigmaIEtaIEta[i] < 0.03001                                           )<<" SigmaIEtaIEta="<<data.pho.SigmaIEtaIEta[i]<<std::endl;   
+      //    std::cout<<(data.pho.ChargedHadronIso[i] < 0.442                                          )<<" ChargedHadronIso="<<data.pho.ChargedHadronIso[i]<<std::endl;
+      //    std::cout<<(ChargedHadronIsoEACorr < 0.442                                                )<<" ChargedHadronIsoEACorr="<<ChargedHadronIsoEACorr<<std::endl;
+      //    std::cout<<(data.pho.NeutralHadronIsoEAcorrectedsp15[i] < (1.715+0.0163*pt+0.000014*pt*pt))<<" NeutralHadronIsoEAcorrectedsp15="<<data.pho.NeutralHadronIsoEAcorrectedsp15[i]<<" cut="<<(2.725+0.0148*pt+0.000017*pt*pt)<<std::endl;
+      //    std::cout<<(data.pho.PhotonIsoEAcorrectedsp15[i] < 3.863+0.0034*pt                        )<<" PhotonIsoEAcorrectedsp15="<<data.pho.PhotonIsoEAcorrectedsp15[i]<<" cut="<<(2.571+0.0047*pt)<<std::endl<<std::endl;
+      //  }
+      //}
+  
+      // Medium ID without Sigma_ietaieta (and pt) cut
+      if ( id_noSieie &&
+  	 ele_veto &&
+  	 //pt        >= PHOTON_SELECT_PT_CUT &&
+  	 abseta    <  PHOTON_SELECT_ETA_CUT ) {
+        NPhotonNoSieie++;
+      }
+    }
+    // Let events with exactly 1 or more ele/mu
+    // or exactly 1 photon pass
+    if (NMuVeto >0 && NEleVeto==0) return 1;
+    if (NEleVeto>0 && NMuVeto==0)  return 1;
+    // Accept events for Photon enriched region
+    if (NPhotonNoSieie==1) return 1;
+  }
+  // R2 without added photon/lepton/lepton pair
+  if (!(data.evt.R2>=0.04)) return 0;
   return 1;
 }
 
@@ -1912,12 +2110,12 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos(s+"evt",  { .fill=c+"NVtx",        .pfs={Stack,"JetHT","S_6Cuts"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"NVtx",        .pfs={Stack,"JetHT","S"},       .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   // Same plots with no pile-up reweighting
-  sh.SetHistoWeights({ [this] { return w_nm1['S'][1]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['S'][3]; } });
   sh.AddHistos("evt",  { .fill="NVtx",        .pfs={Stack,"JetHT","S_3Cuts","NoPUWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NVtx",        .pfs={Stack,"JetHT","S_6Cuts","NoPUWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NVtx",        .pfs={Stack,"JetHT","S"      ,"NoPUWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   // No trigger efficiency
-  sh.SetHistoWeights({ [this] { return w_nm1['S'][5]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['S'][7]; } });
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","S_Excl3JetHLT",   "NoTrigWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","S_ExclHLT",       "NoTrigWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="MET",         .pfs={Stack,"JetHT","S_ExclHLT",       "NoTrigWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -1927,7 +2125,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","S_ExclHLT",       "NoTrigWeight"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","S_ExclHLT","NoTrigWeight"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
   // No scale factors
-  sh.SetHistoWeights({ [this] { return w_nm1['S'][6]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['S'][8]; } });
   sh.AddHistos("evt",  { .fill="NEleVeto",    .pfs={Stack,"JetHT","S_Excl0Ele","NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","S_Excl3Jet","NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","S",         "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -1937,7 +2135,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","S",         "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","S",         "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","S",  "NoEleSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-  sh.SetHistoWeights({ [this] { return w_nm1['S'][7]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['S'][9]; } });
   sh.AddHistos("evt",  { .fill="NMuVeto",     .pfs={Stack,"JetHT","S_Excl0Mu", "NoMuonSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","S_Excl3Jet","NoMuonSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","S",         "NoMuonSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -1947,7 +2145,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","S",         "NoMuonSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","S",         "NoMuonSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","S",  "NoMuonSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-  sh.SetHistoWeights({ [this] { return w_nm1['S'][8]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['S'][10]; } });
   sh.AddHistos("evt",  { .fill="NBTag",       .pfs={Stack,"JetHT","S_Excl1b",  "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","S_Excl3Jet","NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","S",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -1957,7 +2155,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","S",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","S",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","S",  "NoBTagSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-  sh.SetHistoWeights({ [this] { return w_nm1['S'][9]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['S'][11]; } });
   sh.AddHistos("evt",  { .fill="NW",          .pfs={Stack,"JetHT","S_Excl1W",  "NoWTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","S_Excl3Jet","NoWTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","S",         "NoWTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2074,7 +2272,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //sh.AddHistos("syst evt", { .fill="Counts_vs_RazorBins", .pfs={Stack,"JetHT","q"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
 
   // N-1 weights
-  sh.SetHistoWeights({ [this] { return w_nm1['Q'][8]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['Q'][10]; } });
   sh.AddHistos("evt",  { .fill="NLooseBTag",  .pfs={Stack,"JetHT","Q_Excl0b",  "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","Q_Excl3Jet","NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","Q",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2084,7 +2282,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","Q",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","Q",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","Q",  "NoBTagSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-  sh.SetHistoWeights({ [this] { return w_nm1['Q'][6]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['Q'][8]; } });
   sh.AddHistos("evt",  { .fill="NEleVeto",    .pfs={Stack,"JetHT","Q_Excl0Ele0IsoTrk","NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","Q_Excl3Jet",       "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","Q",                "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2204,7 +2402,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //sh.AddHistos("syst evt", { .fill="Counts_vs_RazorBins", .pfs={Stack,"JetHT","T"},        .cuts={},.draw=d,.opt=o_stk_d,  .ranges=r_stk});
 
   // N-1 weights
-  sh.SetHistoWeights({ [this] { return w_nm1['T'][8]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['T'][10]; } });
   sh.AddHistos("evt",  { .fill="NBTag",       .pfs={Stack,"JetHT","T_Excl1b",  "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","T_Excl3Jet","NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","T",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2214,7 +2412,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","T",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","T",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","T",  "NoBTagSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-  sh.SetHistoWeights({ [this] { return w_nm1['T'][6]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['T'][8]; } });
   sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"JetHT","T_Excl1LepMT","NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","T_Excl3Jet",  "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","T",           "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2334,7 +2532,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //sh.AddHistos("syst evt", { .fill="Counts_vs_RazorBins", .pfs={Stack,"JetHT","W"},        .cuts={},.draw=d,.opt=o_stk_d,  .ranges=r_stk});
 
   // N-1 weights
-  sh.SetHistoWeights({ [this] { return w_nm1['W'][8]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['W'][10]; } });
   sh.AddHistos("evt",  { .fill="NLooseBTag",  .pfs={Stack,"JetHT","W_Excl0b",  "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","W_Excl3Jet","NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","W",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2344,7 +2542,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",  { .fill="R2",          .pfs={Stack,"JetHT","W",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="RazorBins",   .pfs={Stack,"JetHT","W",         "NoBTagSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="R2_vs_MR",    .pfs={"Signals_Background","W",  "NoBTagSF"}, .cuts={},.draw="COLZ",.opt=o_1or2d_s+"Log",.ranges={}});
-  sh.SetHistoWeights({ [this] { return w_nm1['W'][6]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['W'][8]; } });
   sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"JetHT","W_Excl1LepMT","NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","W_Excl3Jet",  "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","W",           "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2470,7 +2668,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   //sh.AddHistos("syst evt", { .fill="Counts_vs_RazorBins", .pfs={Stack,"JetHT","Z"},        .cuts={},.draw=d,.opt=o_stk_d,  .ranges=r_stk});
 
   // N-1 weights
-  sh.SetHistoWeights({ [this] { return w_nm1['Z'][6]; } });
+  sh.SetHistoWeights({ [this] { return w_nm1['Z'][8]; } });
   sh.AddHistos("evt",  { .fill="NEle",        .pfs={Stack,"JetHT","Z_ExclR2ll2Lep","NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="NJet",        .pfs={Stack,"JetHT","Z_Excl3Jet",    "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
   sh.AddHistos("evt",  { .fill="HT",          .pfs={Stack,"JetHT","Z",             "NoEleSF"}, .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -2558,7 +2756,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("AK8", { .fill="WAntiTagFakeRate_vs_JetAK8PtBins",   .pfs={"Data_MC","F"},         .cuts={},.draw="PE1",.opt=o_1or2d_d+"AddRatio",.ranges={}});
 
     // Top fakes (remove b-veto)
-    sh.SetHistoWeights({ [this] { return w_nm1['F'][2]; } });
+    sh.SetHistoWeights({ [this] { return w_nm1['F'][4]; } });
     sh.AddHistos("AK8", { .fill="TopTagFakeRate_vs_JetAK8PtBins",     .pfs={"Data_MC","F_Excl0b"},  .cuts={},.draw="PE1",.opt=o_1or2d_d+"AddRatio",.ranges={}});
     sh.AddHistos("AK8", { .fill="TopMassTagFakeRate_vs_JetAK8PtBins", .pfs={"Data_MC","F_Excl0b"},  .cuts={},.draw="PE1",.opt=o_1or2d_d+"AddRatio",.ranges={}});
     sh.AddHistos("AK8", { .fill="TopAntiTagFakeRate_vs_JetAK8PtBins", .pfs={"Data_MC","F_Excl0b"},  .cuts={},.draw="PE1",.opt=o_1or2d_d+"AddRatio",.ranges={}});
@@ -3298,7 +3496,7 @@ Analysis::fill_analysis_histos(DataStruct& d, const unsigned int& syst_index, co
   //}
   //// Top fake rate scale factors
   //// Remove b-tag veto (subjet b-tag is within top-tag)
-  //w = w_nm1['F'][2];
+  //w = w_nm1['F'][4];
   //if (apply_all_cuts_except('F', F_0b)) {
   //  for (size_t i=0; i<data.jetsAK8.size; ++i) {
   //    // numerators

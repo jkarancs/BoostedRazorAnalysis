@@ -197,8 +197,8 @@ for filelist in input_filelists:
                     for line in ratios:
                         column = line.split()
                         #if samplename == column[2]:
-                        if column[2] in samplename:
-                            JOB_NEVT *= int(column[0])
+                        if column[1] in samplename:
+                            JOB_NEVT = int(float(column[0])*JOB_NEVT)
                             optim_found = True
                 if "FastSim" in samplename: JOB_NEVT /= 4
             # Other jobs use the results from a previous run

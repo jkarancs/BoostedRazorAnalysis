@@ -79,32 +79,33 @@ Analysis::define_selections(const DataStruct& d)
 
 
   // cut0: signal mass region
-bool isT2tt = TString(sample).Contains("T2tt");
-  if(isT2tt){ 
-  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
-            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
-            //return d.evt.SUSY_Gluino_Mass==2000 && d.evt.SUSY_LSP_Mass==300;
-            return d.evt.SUSY_Stop_Mass==850 && d.evt.SUSY_LSP_Mass==100;
-	    } });}
-bool isT5tttt = TString(sample).Contains("T5tttt");
-  if(isT5tttt){ 
-  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
-            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
-            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
-            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
-	    } });}
-bool isT1tttt = TString(sample).Contains("T1tttt");
-  if(isT1tttt){ 
-  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
-            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
-	    } });}
-bool isT5ttcc = TString(sample).Contains("T5ttcc");
-  if(isT5ttcc){ 
-  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
-            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
-            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
-            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
-} });}
+//bool isT2tt = TString(sample).Contains("T2tt");
+//  if(isT2tt){ 
+//  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+//            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
+//            //return d.evt.SUSY_Gluino_Mass==2000 && d.evt.SUSY_LSP_Mass==300;
+//            return d.evt.SUSY_Stop_Mass==850 && d.evt.SUSY_LSP_Mass==100;
+//	    } });}
+//bool isT5tttt = TString(sample).Contains("T5tttt");
+//  if(isT5tttt){ 
+//  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+//            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
+//            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
+//            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
+//	    } });}
+//bool isT1tttt = TString(sample).Contains("T1tttt");
+//  if(isT1tttt){ 
+//  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+//            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
+//	    } });}
+//bool isT5ttcc = TString(sample).Contains("T5ttcc");
+//  if(isT5ttcc){ 
+//  baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
+//            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
+//            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
+//            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
+
+//} });}
 
 
   // Define here cuts that are common in all Signal/Control regions
@@ -223,7 +224,7 @@ i+=2;
 
   // b tagging SFs (2 sigma - fullsim, fastsim)
   std::pair<double, double> sf_btag = calc_b_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
-  double sf_btag_loose = sf_btag.first, sf_btag_medium = sf_btag.second;
+  double sf_btag_loose = sf_btag.first;//, sf_btag_medium = sf_btag.second;
 i+=2;
 
   // top tagging SF (2 sigma - fullsim, fastsim)
@@ -236,7 +237,7 @@ i+=2;
   scale_factors['S'].push_back(sf_ele_veto);
   scale_factors['S'].push_back(sf_muon_veto);
   scale_factors['S'].push_back(sf_top);
-  scale_factors['S'].push_back(sf_btag_medium);
+  //scale_factors['S'].push_back(sf_btag_medium);
 
   scale_factors['s'] = scale_factors['S'];
 
@@ -250,7 +251,7 @@ i+=2;
   scale_factors['T'].push_back(sf_ele_veto);
   scale_factors['T'].push_back(sf_muon_veto);
   scale_factors['T'].push_back(sf_w);
-  scale_factors['T'].push_back(sf_btag_medium);
+  //scale_factors['T'].push_back(sf_btag_medium);
 
   scale_factors['W'].push_back(sf_ele_veto);
   scale_factors['W'].push_back(sf_muon_veto);
@@ -275,7 +276,7 @@ i+=2;
 
 bool
 Analysis::signal_selection(const DataStruct& d) {
- return apply_all_cuts('S');
+  //return apply_all_cuts('S');
  return 0;
 }
 

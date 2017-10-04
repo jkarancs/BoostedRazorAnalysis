@@ -40,15 +40,14 @@ public:
     sw_job_ = new TStopwatch;
 
     syst = {
-      "lumi", "pileup", "alphas",
-      "facscale", "renscale", "facrenscale", 
+      "lumi", "toppt", "isr", "pileup",
+      "alphas", "facscale", "renscale", "facrenscale", 
       "trigger", "jes", "jer", "met", 
-      /*"ees",*/ "elereco", "eleid", "eleiso", "elefastsim",
-      /*"mes",*/ "muontrk", "muonidiso", "muonfastsim",
+      "elereco", "eleid", "eleiso", "elefastsim",
+      "muontrk", "muonidiso", "muonfastsim",
       "btag", "btagfastsim",
       "wtag", "wtagfastsim",
-      "toptag", "toptagfastsim",
-      "genmetvspfmet", "isr"
+      "toptag", "toptagfastsim"
     };
     //for (int i=1; i<=100; ++i) {
     //  std::stringsteam ss;
@@ -71,24 +70,26 @@ public:
 
   void calculate_common_variables(DataStruct&, const unsigned int&);
 
-  void init_common_histos();
+  void init_common_histos(const bool&);
 
-  void fill_common_histos(DataStruct&, const unsigned int&, const double&);
+  void fill_common_histos(DataStruct&, const bool&, const bool&, const unsigned int&, const double&);
 
-  double get_xsec_from_ntuple(const std::vector<std::string>&, const std::string&);
+  double get_xsec_from_ntuple(const std::vector<std::string>&, const bool&);
 
   std::pair<double, double> get_xsec_totweight_from_txt_file(const std::string&);
 
-  double get_totweight_from_ntuple(const std::vector<std::string>&, const std::string&);
+  double get_totweight_from_ntuple(const std::vector<std::string>&, const bool&);
 
   void calc_weightnorm_histo_from_ntuple(const std::vector<std::string>&, const double&, const std::vector<std::string>&,
-					 const std::vector<std::string>&, TDirectory*, bool);
+					 const bool&, const bool&, TDirectory*, bool);
 
-  void init_pileup_reweighting(const std::string&, const std::string&, const std::vector<std::string>&);
+  void init_pileup_reweighting(const std::string&, const bool&, const std::vector<std::string>&);
 
-  double get_toppt_weight(DataStruct&, const double&);
+  double get_toppt_weight(DataStruct&, const double&, const unsigned int&, const bool&);
 
-  double get_pileup_weight(const int&, const double&);
+  double get_isr_weight(DataStruct&, const double&, const unsigned int&, const bool&);
+
+  double get_pileup_weight(const int&, const double&, const unsigned int&, const bool&);
 
   void rescale_smear_jet_met(DataStruct&, const bool&, const unsigned int&, const double&, const double&, const double&);
 
@@ -808,14 +809,32 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
   TVector3 dmet(0,0,0);
 #if VER > 0
   // MET Uncertainties
-  if (nSigmaJES   >=0) dmet += std::abs(nSigmaJES) * dmet_JESUp;
-  else                 dmet += std::abs(nSigmaJES) * dmet_JESDown;
-  if (applySmearing) {
-    if (nSigmaJER   >=0) dmet += std::abs(nSigmaJES) * dmet_JERUp;
-    else                 dmet += std::abs(nSigmaJES) * dmet_JERDown;
+  if (!isSignal) {
+    // Background
+    if (nSigmaJES   >=0) dmet += std::abs(nSigmaJES) * dmet_JESUp;
+    else                 dmet += std::abs(nSigmaJES) * dmet_JESDown;
+    if (applySmearing) {
+      if (nSigmaJER   >=0) dmet += std::abs(nSigmaJER) * dmet_JERUp;
+      else                 dmet += std::abs(nSigmaJER) * dmet_JERDown;
+    }
+    if (nSigmaRestMET>=0) dmet += std::abs(nSigmaRestMET) * dmet_RestUp;
+    else                  dmet += std::abs(nSigmaRestMET) * dmet_RestDown;
   }
-  if (nSigmaRestMET>=0) dmet += std::abs(nSigmaJES) * dmet_RestUp;
-  else                  dmet += std::abs(nSigmaJES) * dmet_RestDown;
+#if VER > 2
+  else {
+    // Signal - Use only a one sided variation
+    // Take the gen MET as the Up variation
+    // and use the PF MET as the nominal/down variation -> i.e do nothing for Sigma < 0
+    // --> In the end use the average of the acceptances as the nominal value
+    // But do not use the average PF/gen met as the nominal value
+    if (nSigmaRestMET>0) {
+      TVector3 genmet;
+      genmet.SetPtEtaPhi(data.met.genPt, 0, data.met.genPhi);
+      dmet = genmet - met;
+      dmet = std::abs(nSigmaRestMET) * dmet;
+    }
+  }
+#endif
 #endif
   TVector3 shifted_met = met + dmet;
   data.met.Pt[0]  = shifted_met.Pt();
@@ -969,9 +988,13 @@ unsigned int nLepLoose;
 unsigned int nLepSelect;
 unsigned int nLepTight;
 std::vector<size_t > iPhotonSelect;
+std::vector<size_t > iPhotonNoSieie;
 std::vector<size_t > itPhotonSelect;
+std::vector<size_t > itPhotonNoSieie;
 std::vector<bool> passPhotonSelect;
-unsigned int nPhotonSelect;
+std::vector<bool> passPhotonNoSieie;
+std::vector<double> ChargedHadronIsoEACorr;
+unsigned int nPhotonSelect, nPhotonNoSieie;
 double MT, MT_vetolep;
 double MET_ll, MTR_ll, R_ll, R2_ll, minDeltaPhi_ll, M_ll;
 double MET_pho, MTR_pho, R_pho, R2_pho, minDeltaPhi_pho; 
@@ -1287,27 +1310,109 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   } // end if (syst_index==0)
 
   // Event Letpons
+  // Do a first loop to reverse engineer the rho value (which is used later)
+  double rho_from_other_iso = 0;
+  while(data.pho.Loop()) {
+    size_t i = data.pho.it;
+    float abseta = std::abs(data.pho.Eta[i]);
+    double EA_neu = 0, EA_pho = 0;
+    if (abseta>0.0 && abseta<=1.0) {
+      EA_neu = 0.0597;
+      EA_pho = 0.1210;
+    } else if (abseta>1.0 && abseta<=1.479) {
+      EA_neu = 0.0807;
+      EA_pho = 0.1107;
+    } else if (abseta>1.479 && abseta<=2.0) {
+      EA_neu = 0.0629;
+      EA_pho = 0.0699;
+    } else if (abseta>2.0 && abseta<=2.2) {
+      EA_neu = 0.0197;
+      EA_pho = 0.1056;
+    } else if (abseta>2.2 && abseta<=2.3) {
+      EA_neu = 0.0184;
+      EA_pho = 0.1457;
+    } else if (abseta>2.3 && abseta<=2.4) {
+      EA_neu = 0.0284;
+        EA_pho = 0.1719;
+    } else if (abseta>2.4 && abseta<=5.0) {
+      EA_neu = 0.0591;
+      EA_pho = 0.1998;
+    }
+    // rho was not saved either, but can be deduced from the corrected and uncorrected iso
+    double rho = 0;
+    if (data.pho.NeutralHadronIsoEAcorrectedsp15[i]>0) {
+      rho = (data.pho.NeutralHadronIso[i] - data.pho.NeutralHadronIsoEAcorrectedsp15[i])/EA_neu;
+    } else if (data.pho.PhotonIsoEAcorrectedsp15[i]) {
+      rho = (data.pho.PhotonIso[i] - data.pho.PhotonIsoEAcorrectedsp15[i])/EA_pho;
+    }
+    if (rho_from_other_iso==0&&rho>0) rho_from_other_iso = rho;
+  }
+  // Count photons
   std::vector<TLorentzVector> selected_photons;
-  iPhotonSelect   .clear();
-  itPhotonSelect  .assign(data.pho.size, (size_t)-1);
-  passPhotonSelect.assign(data.pho.size, 0);
-  nPhotonSelect = 0;
+  iPhotonSelect    .clear();
+  iPhotonNoSieie   .clear();
+  itPhotonSelect   .assign(data.pho.size, (size_t)-1);
+  itPhotonNoSieie  .assign(data.pho.size, (size_t)-1);
+  passPhotonSelect .assign(data.pho.size, 0);
+  passPhotonNoSieie.assign(data.pho.size, 0);
+  ChargedHadronIsoEACorr.clear();
+  nPhotonSelect = nPhotonNoSieie = 0;
   while(data.pho.Loop()) {
     size_t i = data.pho.it;
     TLorentzVector pho_v4; pho_v4.SetPtEtaPhiE(data.pho.Pt[i], data.pho.Eta[i], data.pho.Phi[i], data.pho.E[i]);
     float pt = data.pho.Pt[i];
     float abseta = std::abs(data.pho.Eta[i]);
     bool ele_veto = (data.pho.ElectronVeto[i]==1);
-    bool id_select = data.pho.PassMediumID[i];
-    // Select
-    if (passPhotonSelect[i] = 
-	( id_select &&
-	  ele_veto &&
-	  pt        >= PHOTON_SELECT_PT_CUT &&
-	  abseta    <  PHOTON_SELECT_ETA_CUT) ) {
-      selected_photons.push_back(pho_v4);
-      iPhotonSelect.push_back(i);
-      itPhotonSelect[i] = nPhotonSelect++;
+    //bool id_select = data.pho.PassMediumID[i];
+    // For cut based ID, need all cut variables at hand
+    // But the EA corrected value was not saved for the Charged isolation
+    // --> so calculate it
+    double EA_ch = 0;
+    if      (abseta>0.0 && abseta<=1.0)   EA_ch  = 0.0360;
+    else if (abseta>1.0 && abseta<=1.479) EA_ch  = 0.0377;
+    else if (abseta>1.479 && abseta<=2.0) EA_ch  = 0.0306;
+    else if (abseta>2.0 && abseta<=2.2)   EA_ch  = 0.0283;
+    else if (abseta>2.2 && abseta<=2.3)   EA_ch  = 0.0254;
+    else if (abseta>2.3 && abseta<=2.4)   EA_ch  = 0.0217;
+    else if (abseta>2.4 && abseta<=5.0)   EA_ch  = 0.0167;
+    double ChargedHadronIsoEACorrSpring16 = std::max(0., data.pho.ChargedHadronIso[i] - rho_from_other_iso*EA_ch);
+    ChargedHadronIsoEACorr.push_back(ChargedHadronIsoEACorrSpring16);
+    // Implementing cuts for Spring16 v2.2 Medium ID
+    // https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedPhotonIdentificationRun2?rev=36#Recommended_Working_points_for_2
+    // Using the table, not the presentation, same as this VID cfg:
+    // https://github.com/ikrav/cmssw/blob/65fa87654e6744efdff2e16d55a5b86bbdccd48d/RecoEgamma/PhotonIdentification/python/Identification/cutBasedPhotonID_Spring16_V2p2_cff.py#L50-L78
+    // Exclude Sigma_ietaieta cut in order to be able to measure QCD background
+    bool id_noSieie = false;
+    if ( std::abs(data.pho.SCEta[i])<1.479 ) {
+      // Barrel cuts (EB)
+      id_noSieie = 
+  	data.pho.HoverE[i]                          < 0.0396 &&
+  	//data.pho.SigmaIEtaIEta[i]                   < 0.01022 &&
+  	ChargedHadronIsoEACorr[i]                   < 0.441 &&
+  	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 2.725+0.0148*pt+0.000017*pt*pt &&
+  	data.pho.PhotonIsoEAcorrectedsp15[i]        < 2.571+0.0047*pt;
+    } else {
+      // Encap cuts (EE)
+      id_noSieie = 
+  	data.pho.HoverE[i]                          < 0.0219 &&
+  	//data.pho.SigmaIEtaIEta[i]                   < 0.03001 &&
+  	ChargedHadronIsoEACorr[i]                   < 0.442 &&
+  	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 1.715+0.0163*pt+0.000014*pt*pt &&
+  	data.pho.PhotonIsoEAcorrectedsp15[i]        < 3.863+0.0034*pt;
+    }
+    // Medium ID without Sigma_ietaieta (and pt) cut
+    if ( id_noSieie &&
+	 ele_veto &&
+	 pt        >= PHOTON_SELECT_PT_CUT &&
+	 abseta    <  PHOTON_SELECT_ETA_CUT ) {
+      iPhotonNoSieie.push_back(i);
+      itPhotonNoSieie[i] = nPhotonNoSieie++;
+      // Photons passing full ID
+      if ( data.pho.SigmaIEtaIEta[i] < (std::abs(data.pho.SCEta[i])<1.479 ? 0.01022 : 0.03001) ) {
+	selected_photons.push_back(pho_v4);
+	iPhotonSelect.push_back(i);
+	itPhotonSelect[i] = nPhotonSelect++;
+      }
     }
   }
 
@@ -1977,9 +2082,17 @@ AnalysisBase::apply_all_cuts_except(char region, std::vector<unsigned int> cuts_
 //                 List of Histograms
 
 TH1D* h_totweight;
+TH1D* h_totweight_toppt;
+TH1D* h_totweight_pileup;
 std::vector<TH2D*> vh_totweight_signal;
 std::vector<TH2D*> vh_xsec_signal;
 std::vector<TH2D*> vh_weightnorm_signal;
+TH1D* h_nisrjets;
+TH1D* h_totweight_isr;
+std::vector<TH3D*> vh_nisrjets_signal;
+std::vector<TH3D*> vh_totweight_signal_isr;
+TH1D* h_npvLowHigh_data;
+std::vector<TH3D*> vh_npvLowHigh_signal;
 TH1D* h_pileup_data;
 TH1D* h_pileup_data_down;
 TH1D* h_pileup_data_up;
@@ -2024,17 +2137,36 @@ std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig_nj6;
 //_______________________________________________________
 //              Define Histograms here
 void
-AnalysisBase::init_common_histos()
+AnalysisBase::init_common_histos(const bool& varySystematics)
 {
+  // bins
+  Double_t gluinoBins[202]; for (int i=0; i<202; ++i) gluinoBins[i] = (i-0.5)*25; 
+  Double_t stopBins[402];   for (int i=0; i<402; ++i) stopBins[i] = (i-0.5)*5; 
+  Double_t npvLowHighBins[3] = { 0,20,100 };
+  Double_t isrWeightBins[3] = {0,1,2};
+  Double_t isrJetBins[17]; for (int i=0; i<17; ++i) isrJetBins[i] = i-0.5; 
   // total weight
-  h_totweight                  = new TH1D("totweight",          "MC;;Total (generator) event weight", 1,0,1);
+  h_totweight                     = new TH1D("totweight",           "MC;;Total (generator) event weight", 1,0,1);
+  h_totweight_toppt               = new TH1D("totweight_toppt",     "MC;;Total toppt weight",             2,0,2);
+  h_totweight_pileup              = new TH1D("totweight_pileup",    "MC;;Total pileup weight",            2,0,2);
+  vh_totweight_signal    .push_back(new TH2D("totweight_T1tttt",    "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,gluinoBins, 201,gluinoBins));
+  vh_totweight_signal    .push_back(new TH2D("totweight_T2tt",      "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        401,stopBins, 401,stopBins));
+  // ISR reweighting
+  h_nisrjets                      = new TH1D("nisrjets",            ";N_{ISR jets}", 16,isrJetBins);
+  h_totweight_isr                 = new TH1D("totweight_isr",       "MC;;Total (generator) event weight", 2,isrWeightBins);
+  vh_nisrjets_signal     .push_back(new TH3D("nisrjets_T1tttt",     ";M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight;N_{ISR jets}", 201,gluinoBins, 201,gluinoBins, 16,isrJetBins));
+  vh_nisrjets_signal     .push_back(new TH3D("nisrjets_T2tt",       ";M_{#tilde{t}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight;N_{ISR jets}", 401,stopBins,  401,stopBins,    16,isrJetBins));
+  vh_totweight_signal_isr.push_back(new TH3D("totweight_isr_T1tttt","T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,gluinoBins, 201,gluinoBins, 2,isrWeightBins));
+  vh_totweight_signal_isr.push_back(new TH3D("totweight_isr_T2tt",  "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",                              401,stopBins,   401,stopBins,   2,isrWeightBins));
   // signal weight
-  vh_totweight_signal .push_back(new TH2D("totweight_T1tttt",   "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        201,-12.5,5012.5, 201,-12.5,5012.5));
-  vh_xsec_signal      .push_back(new TH2D("xsec_T1tttt",        "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  201,-12.5,5012.5, 201,-12.5,5012.5));
-  vh_weightnorm_signal.push_back(new TH2D("weightnorm_T1tttt",  "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,-12.5,5012.5, 201,-12.5,5012.5));
-  vh_totweight_signal .push_back(new TH2D("totweight_T2tt",     "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Total Weight",        401,-2.5,2002.5, 401,-2.5,2002.5));
-  vh_xsec_signal      .push_back(new TH2D("xsec_T2tt",          "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  401,-2.5,2002.5, 401,-2.5,2002.5));
-  vh_weightnorm_signal.push_back(new TH2D("weightnorm_T2tt",    "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 401,-2.5,2002.5, 401,-2.5,2002.5));
+  vh_xsec_signal         .push_back(new TH2D("xsec_T1tttt",         "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  201,gluinoBins, 201,gluinoBins));
+  vh_weightnorm_signal   .push_back(new TH2D("weightnorm_T1tttt",   "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 201,gluinoBins, 201,gluinoBins));
+  vh_xsec_signal         .push_back(new TH2D("xsec_T2tt",           "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Cross-section (pb)",  401,stopBins, 401,stopBins));
+  vh_weightnorm_signal   .push_back(new TH2D("weightnorm_T2tt",     "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);weight norm. factor", 401,stopBins, 401,stopBins));
+  // npv for extrapolations
+  h_npvLowHigh_data               = new TH1D("npvLowHigh_data",     "Number of vertices - Data;N_{Vertices}", 2,npvLowHighBins);
+  vh_npvLowHigh_signal   .push_back(new TH3D("npvLowHigh_T1tttt",   "T1tttt or T5ttcc or T5tttt;M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);N_{vertex}", 201,gluinoBins, 201,gluinoBins, 2,npvLowHighBins));
+  vh_npvLowHigh_signal   .push_back(new TH3D("npvLowHigh_T2tt",     "T2tt;M_{#tilde{s}} (GeV);M_{#tilde{#chi}^{0}} (GeV);N_{vertex}",                       401,stopBins, 401,stopBins,     2,npvLowHighBins));
   // pileup
   h_pileup_data                = new TH1D("pileup_data",        "Pile-up distribution - Data (Nominal);Pile-up", 100,0,100);
   h_pileup_data_down           = new TH1D("pileup_data_down",   "Pile-up distribution - Data (down);Pile-up",    100,0,100);
@@ -2077,180 +2209,227 @@ AnalysisBase::init_common_histos()
 
   std::vector<std::string> regions = {"S", "s", "T", "W", "Q", "q", "Z", "G"}; 
 
-  // Backgrounds
-  for (size_t i=0; i<regions.size(); ++i) {
-    // Data
-    vh_MRR2_data     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-    vh_MRR2_data_nj35.push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-    vh_MRR2_data_nj6 .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-    // Background
-    vvh_MRR2_bkg     .push_back(std::vector<TH1D*>());
-    vvh_MRR2_bkg_nj35.push_back(std::vector<TH1D*>());
-    vvh_MRR2_bkg_nj6 .push_back(std::vector<TH1D*>());
-    vvh_MRR2_bkg[i]     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-    vvh_MRR2_bkg_nj35[i].push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-    vvh_MRR2_bkg_nj6[i] .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-    for (size_t j=0; j<syst.size(); ++j) {
-      std::stringstream ss;
-      ss<<"MRR2_"<<regions[i]<<"_bkg_"<<syst[j];
-      vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      std::stringstream ss2;
-      ss2<<"MRR2_"<<regions[i]<<"_bkg_nj35_"<<syst[j];
-      vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss2.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss2.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      std::stringstream ss3;
-      ss3<<"MRR2_"<<regions[i]<<"_bkg_nj6_"<<syst[j];
-      vvh_MRR2_bkg_nj6[i].push_back(new TH1D((ss3.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      vvh_MRR2_bkg_nj6[i].push_back(new TH1D((ss3.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+  if (varySystematics) {
+    for (size_t i=0; i<regions.size(); ++i) {
+      if (isData) {
+	// Data
+	vh_MRR2_data     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	vh_MRR2_data_nj35.push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	vh_MRR2_data_nj6 .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      } else if (!isSignal) {
+	// Background
+	vvh_MRR2_bkg     .push_back(std::vector<TH1D*>());
+	vvh_MRR2_bkg_nj35.push_back(std::vector<TH1D*>());
+	vvh_MRR2_bkg_nj6 .push_back(std::vector<TH1D*>());
+	vvh_MRR2_bkg[i]     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	vvh_MRR2_bkg_nj35[i].push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	vvh_MRR2_bkg_nj6[i] .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	for (size_t j=0; j<syst.size(); ++j) {
+	  std::stringstream ss;
+	  ss<<"MRR2_"<<regions[i]<<"_bkg_"<<syst[j];
+	  vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	  vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	  std::stringstream ss2;
+	  ss2<<"MRR2_"<<regions[i]<<"_bkg_nj35_"<<syst[j];
+	  vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss2.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	  vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss2.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	  std::stringstream ss3;
+	  ss3<<"MRR2_"<<regions[i]<<"_bkg_nj6_"<<syst[j];
+	  vvh_MRR2_bkg_nj6[i].push_back(new TH1D((ss3.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	  vvh_MRR2_bkg_nj6[i].push_back(new TH1D((ss3.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	}
+      }
     }
   }
-  // Signals
-  // Declare them later after the signal weight calculation
+  // Signals --> Declare them later after the signal weight calculation
   // in calc_weightnorm_histo_from_ntuple()
 
   /*
- 0 "novariation"
+ 0 "nominal"
  1 "lumiUp",
  2 "lumiDown",
- 3 "pileupUp",
- 4 "pileupDown",
- 5 "alphasUp",
- 6 "alphasDown",
- 7 "facscaleUp",
- 8 "facscaleDown",
- 9 "renscaleUp",
-10 "renscaleDown",
-11 "facrenscaleUp", 
-12 "facrenscaleDown", 
-13 "triggerUp",
-14 "triggerDown",
-15 "jesUp",
-16 "jesDown",
-17 "jerUp",
-18 "jerDown",
-19 "metUp", 
-20 "metDown", 
-21 "elerecoUp",
-22 "elerecoDown",
-23 "eleidUp",
-24 "eleidDown",
-25 "eleisoUp",
-26 "eleisoDown",
-27 "elefastsimUp",
-28 "elefastsimDown",
-29 "muontrkUp",
-30 "muontrkDown",
-31 "muonidisoUp",
-32 "muonidisoDown",
-33 "muonfastsimUp",
-34 "muonfastsimDown",
-35 "btagUp",
-36 "btagDown",
-37 "btagfastsimUp",
-38 "btagfastsimDown",
-39 "wtagUp",
-40 "wtagDown",
-41 "wtagfastsimUp",
-42 "wtagfastsimDown",
-43 "toptagUp",
-44 "toptagDown",
-45 "toptagfastsimUp",
-46 "toptagfastsimDown",
+ 3 "TopPtUp",
+ 4 "TopPtDown",
+ 5 "ISRUp",
+ 6 "ISRDown",
+ 7 "pileupUp",
+ 8 "pileupDown",
+ 9 "alphasUp",
+10 "alphasDown",
+11 "facscaleUp",
+12 "facscaleDown",
+13 "renscaleUp",
+14 "renscaleDown",
+15 "facrenscaleUp", 
+16 "facrenscaleDown", 
+17 "triggerUp",
+18 "triggerDown",
+19 "jesUp",
+20 "jesDown",
+21 "jerUp",
+22 "jerDown",
+23 "metUp", 
+24 "metDown", 
+25 "elerecoUp",
+26 "elerecoDown",
+27 "eleidUp",
+28 "eleidDown",
+29 "eleisoUp",
+30 "eleisoDown",
+31 "elefastsimUp",
+32 "elefastsimDown",
+33 "muontrkUp",
+34 "muontrkDown",
+35 "muonidisoUp",
+36 "muonidisoDown",
+37 "muonfastsimUp",
+38 "muonfastsimDown",
+39 "btagUp",
+40 "btagDown",
+41 "btagfastsimUp",
+42 "btagfastsimDown",
+43 "wtagUp",
+44 "wtagDown",
+45 "wtagfastsimUp",
+46 "wtagfastsimDown",
+47 "toptagUp",
+48 "toptagDown",
+49 "toptagfastsimUp",
+50 "toptagfastsimDown",
+
   */
 }
 
 //_______________________________________________________
 //               Fill Histograms here
 void
-AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, const double& weight)
+AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, const bool& runOnSkim, const unsigned int& syst_index, const double& weight)
 {
-  if (syst_index == 0) {
-    // btag efficiency - No event selection cuts to be applied
-    // When making this plot, should remove all baseline cuts
-    while(d.jetsAK4.Loop()) {
-      size_t i = d.jetsAK4.it;
-      if (passLooseJet[i]) {
-	if (d.jetsAK4.HadronFlavour[i]==5) {
-	  h_btag_eff_b_loose ->Fill(d.jetsAK4.Pt[i], passLooseBTag[i]);
-	  h_btag_eff_b_medium->Fill(d.jetsAK4.Pt[i], passMediumBTag[i]);
-	} else if (d.jetsAK4.HadronFlavour[i]==4) {
-	  h_btag_eff_c_loose ->Fill(d.jetsAK4.Pt[i], passLooseBTag[i]);
-	  h_btag_eff_c_medium->Fill(d.jetsAK4.Pt[i], passMediumBTag[i]);
-	} else {
-	  h_btag_eff_l_loose ->Fill(d.jetsAK4.Pt[i], passLooseBTag[i]);
-	  h_btag_eff_l_medium->Fill(d.jetsAK4.Pt[i], passMediumBTag[i]);
-	}
+  if (runOnSkim) {
+    if (syst_index == 0) {
+      // btag efficiency - No event selection cuts to be applied
+      // When making this plot, should remove all baseline cuts
+      while(d.jetsAK4.Loop()) {
+        size_t i = d.jetsAK4.it;
+        if (passLooseJet[i]) {
+          if (d.jetsAK4.HadronFlavour[i]==5) {
+            h_btag_eff_b_loose ->Fill(d.jetsAK4.Pt[i], passLooseBTag[i]);
+            h_btag_eff_b_medium->Fill(d.jetsAK4.Pt[i], passMediumBTag[i]);
+          } else if (d.jetsAK4.HadronFlavour[i]==4) {
+            h_btag_eff_c_loose ->Fill(d.jetsAK4.Pt[i], passLooseBTag[i]);
+            h_btag_eff_c_medium->Fill(d.jetsAK4.Pt[i], passMediumBTag[i]);
+          } else {
+            h_btag_eff_l_loose ->Fill(d.jetsAK4.Pt[i], passLooseBTag[i]);
+            h_btag_eff_l_medium->Fill(d.jetsAK4.Pt[i], passMediumBTag[i]);
+          }
+        }
+      }
+      // trigger efficiency, measured in single lepton datasets
+      // SingleElectron dataset: Pass HLT_Ele27_WPTight_Gsf && 1 Tight Electron
+      // SingleMuon     dataset: Pass HLT_IsoMu24 && 1 tight Muon
+      // Baseline cuts to be applied: 3 jets, 1 AK8 jet, MR & R^2
+      bool pass_aux_trigger = 0;
+      if (TString(sample).Contains("SingleElectron")) {
+        if ((d.hlt.Ele23_WPLoose_Gsf==1||d.hlt.Ele27_WPTight_Gsf==1)&&nEleTight>=1&&nMuVeto==0) pass_aux_trigger = 1;
+      } else if (TString(sample).Contains("SingleMuon")) {
+        if (d.hlt.IsoMu24==1&&nMuTight>=1&&nEleVeto==0) pass_aux_trigger = 1;
+      } else if (TString(sample).Contains("MET")) {
+        if (d.hlt.PFMET120_PFMHT120_IDTight==1&&d.met.Pt[0]>200&&nLepVeto==0&&d.evt.NIsoTrk==0) pass_aux_trigger = 1;      
+      }
+      if (pass_aux_trigger) {
+        if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
+          if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) {
+            h_trigger_pass  ->Fill(AK4_Ht);
+            h_trigger2d_pass->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
+            h_trigger2d_nolep_pass->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
+          }
+          h_trigger_total   ->Fill(AK4_Ht);
+          h_trigger2d_total ->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
+          h_trigger2d_nolep_total ->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
+        }
       }
     }
-    // trigger efficiency, measured in single lepton datasets
-    // SingleElectron dataset: Pass HLT_Ele27_WPTight_Gsf && 1 Tight Electron
-    // SingleMuon     dataset: Pass HLT_IsoMu24 && 1 tight Muon
-    // Baseline cuts to be applied: 3 jets, 1 AK8 jet, MR & R^2
-    bool pass_aux_trigger = 0;
-    if (TString(sample).Contains("SingleElectron")) {
-      if ((d.hlt.Ele23_WPLoose_Gsf==1||d.hlt.Ele27_WPTight_Gsf==1)&&nEleTight>=1&&nMuVeto==0) pass_aux_trigger = 1;
-    } else if (TString(sample).Contains("SingleMuon")) {
-      if (d.hlt.IsoMu24==1&&nMuTight>=1&&nEleVeto==0) pass_aux_trigger = 1;
-    } else if (TString(sample).Contains("MET")) {
-      if (d.hlt.PFMET120_PFMHT120_IDTight==1&&d.met.Pt[0]>200&&nLepVeto==0&&d.evt.NIsoTrk==0) pass_aux_trigger = 1;      
-    }
-    if (pass_aux_trigger) {
-      if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
-	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) {
-	  h_trigger_pass  ->Fill(AK4_Ht);
-	  h_trigger2d_pass->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
-	  h_trigger2d_nolep_pass->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
-	}
-	h_trigger_total   ->Fill(AK4_Ht);
-	h_trigger2d_total ->Fill(AK4_Ht, d.jetsAK8.Pt[iJetAK8[0]]);
-	h_trigger2d_nolep_total ->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
-      }
-    }
-  }
 
-  // Fill plots for systematics
-  int MRR2_bin = -1;
-  if (d.evt.MR>=800&&d.evt.R2>=0.08) {
-    MRR2_bin = 0;
-    for (const auto& r2 : { 0.12, 0.16, 0.24, 0.5, 1.0 }) {
-      if (d.evt.R2<r2) break;
-      ++MRR2_bin;
-    }
-    if (MRR2_bin<5) {
-      for (const auto& mr : { 1000, 1200, 1600, 2000, 4000}) {
-	if (d.evt.MR<mr) break;
-	MRR2_bin+=5;
+    if (varySystematics) {
+      // Fill plots for systematics
+      int MRR2_bin = -1;
+      if (d.evt.MR>=800&&d.evt.R2>=0.08) {
+        MRR2_bin = 0;
+        for (const auto& r2 : { 0.12, 0.16, 0.24, 0.5, 1.0 }) {
+          if (d.evt.R2<r2) break;
+          ++MRR2_bin;
+        }
+        if (MRR2_bin<5) {
+          for (const auto& mr : { 1000, 1200, 1600, 2000, 4000}) {
+          if (d.evt.MR<mr) break;
+          MRR2_bin+=5;
+          }
+        } else MRR2_bin=9999;
       }
-    } else MRR2_bin=9999;
-  }
-  const std::vector<char> regions = {'S', 's', 'T','W','Q', 'q', 'Z', 'G'};
-  if (isData) {
-    if (TString(sample).Contains("JetHT")) {
-      for (size_t i=0; i<regions.size(); ++i) {
-	if (this->apply_all_cuts(regions[i])) {
-	  vh_MRR2_data[i]->Fill(MRR2_bin);
-	  if (nJet<6) vh_MRR2_data_nj35[i]->Fill(MRR2_bin);
-	  else        vh_MRR2_data_nj6[i] ->Fill(MRR2_bin);
-	}
+      const std::vector<char> regions = {'S', 's', 'T','W','Q', 'q', 'Z', 'G'};
+      if (isData) {
+        if (TString(sample).Contains("JetHT")) {
+          for (size_t i=0; i<regions.size(); ++i) {
+            if (this->apply_all_cuts(regions[i])) {
+              vh_MRR2_data[i]->Fill(MRR2_bin);
+              if (nJet<6) vh_MRR2_data_nj35[i]->Fill(MRR2_bin);
+              else        vh_MRR2_data_nj6[i] ->Fill(MRR2_bin);
+            }
+          }
+        }
+      } else if (isSignal) {
+        if (apply_all_cuts('S')) {
+          uint32_t mMother = TString(sample).Contains("T2tt") ? std::round(d.evt.SUSY_Stop_Mass/5.0)*5 : std::round(d.evt.SUSY_Gluino_Mass/25.0)*25;
+          uint32_t mLSP    = TString(sample).Contains("T2tt") ? std::round(d.evt.SUSY_LSP_Mass /5.0)*5 : std::round(d.evt.SUSY_LSP_Mass   /25.0)*25;
+          uint32_t signal_bin = mMother * 10000 + mLSP;
+          m_vh_MRR2_sig[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+          if (nJet<6) m_vh_MRR2_sig_nj35[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+          else        m_vh_MRR2_sig_nj6 [signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+        }
+      } else {
+        // Backgrounds
+        for (size_t i=0; i<regions.size(); ++i) {
+          if (apply_all_cuts(regions[i])) {
+            vvh_MRR2_bkg[i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+            if (nJet<6) vvh_MRR2_bkg_nj35[i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+            else        vvh_MRR2_bkg_nj6 [i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+          }
+        }
       }
-    }
-  } else if (isSignal) {
-    if (apply_all_cuts('S')) {
-      uint32_t mMother = TString(sample).Contains("T2tt") ? std::round(d.evt.SUSY_Stop_Mass/5.0)*5 : std::round(d.evt.SUSY_Gluino_Mass/25.0)*25;
-      uint32_t mLSP    = TString(sample).Contains("T2tt") ? std::round(d.evt.SUSY_LSP_Mass /5.0)*5 : std::round(d.evt.SUSY_LSP_Mass   /25.0)*25;
-      uint32_t signal_bin = mMother * 10000 + mLSP;
-      m_vh_MRR2_sig[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
-      if (nJet<6) m_vh_MRR2_sig_nj35[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
-      else        m_vh_MRR2_sig_nj6 [signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
     }
   } else {
-    // Backgrounds
-    for (size_t i=0; i<regions.size(); ++i) {
-      if (apply_all_cuts(regions[i])) {
-	vvh_MRR2_bkg[i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
-	if (nJet<6) vvh_MRR2_bkg_nj35[i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
-	else        vvh_MRR2_bkg_nj6 [i][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+    nJet = nJetAK8 = 0;
+    while(d.jetsAK4.Loop()) {
+      size_t i = d.jetsAK4.it;
+      // Jet ID
+      if ( d.jetsAK4.looseJetID[i] == 1 &&
+	   d.jetsAK4.Pt[i]         >= JET_AK4_PT_CUT &&
+	   std::abs(d.jetsAK4.Eta[i])  <  JET_AK4_ETA_CUT ) {
+	nJet++;
+      }
+    }
+    while(d.jetsAK8.Loop()) {
+      size_t i = d.jetsAK8.it;
+      // Jet ID
+      if ( d.jetsAK8.looseJetID[i] == 1 &&
+	   d.jetsAK8.Pt[i]         >= JET_AK8_PT_CUT &&
+	   std::abs(d.jetsAK8.Eta[i])  <  JET_AK8_ETA_CUT ) {
+	nJetAK8++;
+      }
+    }
+    // Save the number of vertices in Data and Signal
+    if (isData) {
+      // Use baseline selection
+      if (nJetAK8>=1 && nJet>=3 && d.evt.MR>=800 && d.evt.R2>=0.08) {
+	if (d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1) {
+	  h_npvLowHigh_data->Fill(d.evt.NGoodVtx);
+	}
+      }
+    } else if (isSignal) {
+      if (TString(sample).Contains("T2tt")) {
+	vh_npvLowHigh_signal[1]->Fill(d.evt.SUSY_Stop_Mass,   d.evt.SUSY_LSP_Mass, d.evt.NGoodVtx);
+      } else {
+	vh_npvLowHigh_signal[0]->Fill(d.evt.SUSY_Gluino_Mass, d.evt.SUSY_LSP_Mass, d.evt.NGoodVtx);
       }
     }
   }
@@ -2259,12 +2438,12 @@ AnalysisBase::fill_common_histos(DataStruct& d, const unsigned int& syst_index, 
 //_______________________________________________________
 //           Read cross-section from ntuple
 double
-AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const std::string& treename)
+AnalysisBase::get_xsec_from_ntuple(const std::vector<std::string>& filenames, const bool& runOnSkim)
 {
   float evt_XSec=0, prev_XSec=0;
   for (const auto& filename : filenames) {
     TFile *f = TFile::Open(filename.c_str());
-    TTree* tree = (TTree*)f->Get(treename.c_str());
+    TTree* tree = (TTree*)f->Get(runOnSkim ? "B2GTree" : "B2GTTreeMaker/B2GTree");
     tree->GetBranch("evt_XSec")->SetAddress(&evt_XSec);
     tree->GetEntry(0);
     f->Close();
@@ -2323,13 +2502,19 @@ AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
 //_______________________________________________________
 //          Read total weight from ntuple histos
 double
-AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filenames, const std::string& histoname)
+AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filenames, const bool& runOnSkim)
 {
   // Merging totweight histos
   for (const auto& filename : filenames) {
     TFile* f = TFile::Open(filename.c_str());
-    h_totweight->Add((TH1D*)f->Get(histoname.c_str()));
+    h_totweight->Add((TH1D*)f->Get(runOnSkim ? "totweight" : "EventCounter/totweight"));
     //std::cout<<f<<" "<<filename<<" "<<histoname.c_str()<<" "<<f->Get(histoname.c_str())<<" "<<h_totweight->GetBinContent(1)<<std::endl;
+#if VER > 2
+    // Get also total ISR jet info
+    if (runOnSkim) {
+      h_totweight_isr->Add((TH1D*)f->Get("totweight_isr"));
+    }
+#endif
     f->Close();
   }
   return h_totweight->GetBinContent(1);
@@ -2339,7 +2524,7 @@ AnalysisBase::get_totweight_from_ntuple(const std::vector<std::string>& filename
 //       Calculate weight normalization for signal
 void
 AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& filenames, const double& intLumi, const std::vector<std::string>& vname_signal,
-						const std::vector<std::string>& vname_totweight, TDirectory* dir, bool verbose=1)
+						const bool& runOnSkim, const bool& varySystematics, TDirectory* dir, bool verbose=1)
 {
   // Find the index of the current signal
   int signal_index = -1;
@@ -2356,8 +2541,21 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
   for (const auto& filename : filenames) {
     TFile* f = TFile::Open(filename.c_str());
     // Get total weight
-    TH2D* totweight = (TH2D*)f->Get(vname_totweight[signal_index].c_str());
-    vh_totweight_signal[signal_index]->Add(totweight);
+    if (signal_index==0) {
+      vh_totweight_signal[signal_index]->Add((TH2D*)f->Get(runOnSkim ? "totweight_T1tttt" : "EventCounter/h_totweight_T1tttt"));
+    } else {
+      vh_totweight_signal[signal_index]->Add((TH2D*)f->Get(runOnSkim ? "totweight_T2tt" :   "EventCounter/h_totweight_T2tt"));
+    }
+#if VER > 2
+    // Get also total ISR jet weight
+    if (runOnSkim) {
+      if (signal_index==0) {
+	vh_totweight_signal_isr[signal_index]->Add((TH3D*)f->Get("totweight_isr_T1tttt"));
+      } else {
+	vh_totweight_signal_isr[signal_index]->Add((TH3D*)f->Get("totweight_isr_T2tt"));
+      }
+    }
+#endif
     f->Close();
   }
 
@@ -2394,27 +2592,28 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
     std::cout<<std::endl;
   }
 
-  dir->cd();
-  // Declare signal plots for systematics
-  // Signals
-  for (const auto& bin : signal_bins) {
-    m_vh_MRR2_sig     [bin.first] = std::vector<TH1D*>();
-    m_vh_MRR2_sig_nj35[bin.first] = std::vector<TH1D*>();
-    m_vh_MRR2_sig_nj6 [bin.first] = std::vector<TH1D*>();
-    m_vh_MRR2_sig     [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second).c_str(),         ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
-    m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj35").c_str(), ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
-    m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj6").c_str(),  ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
-    for (size_t j=0; j<syst.size(); ++j) {
-      std::stringstream ss1, ss2, ss3;
-      ss1<<"MRR2_S_signal"<<bin.second<<"_"<<syst[j];
-      ss2<<"MRR2_S_signal"<<bin.second<<"_nj35_"<<syst[j];
-      ss3<<"MRR2_S_signal"<<bin.second<<"_nj6_"<<syst[j];
-      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss1.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss1.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss2.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss2.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss3.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss3.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+  if (varySystematics&&isSignal) {
+    dir->cd();
+    // Declare systematics histos for Signals
+    for (const auto& bin : signal_bins) {
+      m_vh_MRR2_sig     [bin.first] = std::vector<TH1D*>();
+      m_vh_MRR2_sig_nj35[bin.first] = std::vector<TH1D*>();
+      m_vh_MRR2_sig_nj6 [bin.first] = std::vector<TH1D*>();
+      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second).c_str(),         ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj35").c_str(), ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj6").c_str(),  ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+      for (size_t j=0; j<syst.size(); ++j) {
+	std::stringstream ss1, ss2, ss3;
+	ss1<<"MRR2_S_signal"<<bin.second<<"_"<<syst[j];
+	ss2<<"MRR2_S_signal"<<bin.second<<"_nj35_"<<syst[j];
+	ss3<<"MRR2_S_signal"<<bin.second<<"_nj6_"<<syst[j];
+	m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss1.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss1.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss2.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss2.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss3.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+	m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss3.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      }
     }
   }
 }
@@ -2423,7 +2622,7 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
 //_______________________________________________________
 //             Load pile-up reweighting infos
 void
-AnalysisBase::init_pileup_reweighting(const std::string& pileupDir, const std::string& mcPileupHistoName, const std::vector<std::string>& filenames)
+AnalysisBase::init_pileup_reweighting(const std::string& pileupDir, const bool& runOnSkim, const std::vector<std::string>& filenames)
 {
   // Get data histogram (generated by pileupCalc.py script)
   TFile* f_pileup_data = TFile::Open((pileupDir+"data_pileup.root").c_str());
@@ -2444,7 +2643,7 @@ AnalysisBase::init_pileup_reweighting(const std::string& pileupDir, const std::s
   // std::cout<<h_pileup_mc->GetEntries()<<std::endl;
   // for (const auto& filename : filenames) {
   //   TFile* f_pileup_mc = TFile::Open(filename.c_str());
-  //   h_pileup_mc->Add((TH1D*)f_pileup_mc->Get(mcPileupHistoName.c_str()));
+  //   h_pileup_mc->Add((TH1D*)f_pileup_mc->Get(runOnSkim ? "pileup_mc" : "EventCounter/pileup"));
   //   f_pileup_mc->Close();
   //   std::cout<<h_pileup_mc->GetEntries()<<std::endl;
   // }
@@ -2488,7 +2687,7 @@ AnalysisBase::get_syst_weight(const double& weight_nominal, const double& uncert
 //_______________________________________________________
 //                  Top pt reweighting
 double
-AnalysisBase::get_toppt_weight(DataStruct& data, const double& nSigmaTopPt)
+AnalysisBase::get_toppt_weight(DataStruct& data, const double& nSigmaTopPt, const unsigned int& syst_index, const bool& runOnSkim)
 {
   double w_nom = 1;//, n=0;
   while(data.gen.Loop()) {
@@ -2509,19 +2708,66 @@ AnalysisBase::get_toppt_weight(DataStruct& data, const double& nSigmaTopPt)
   double w_toppt = std::sqrt(w_nom);
   double w_toppt_down = w_nom; // Nominal weight is typically below 1 (below top pt>123) --> use as down variation
   double w = get_syst_weight(w_toppt, w_toppt_up, w_toppt_down, nSigmaTopPt);
+  if (syst_index==0&&!runOnSkim) {
+    h_totweight_toppt->Fill(0);
+    h_totweight_toppt->Fill(1, w_toppt);
+  }
+  return w;
+}
+
+//_______________________________________________________
+//                    ISR reweighting
+double
+AnalysisBase::get_isr_weight(DataStruct& data, const double& nSigmaISR, const unsigned int& syst_index, const bool& runOnSkim)
+{
+  // Implementing the reweighting in this presentation:
+  // https://indico.cern.ch/event/592621/contributions/2398559/attachments/1383909/2105089/16-12-05_ana_manuelf_isr.pdf
+  // Using the values found on slide 8 (T2tt and T1tttt)
+  double w = 1;
+  // ttbar ISR reweighting not needed, we do top pt reweighting!
+  if (isSignal) {
+    double d = TString(sample).Contains("T2tt") ? 1.121 : 1.143;
+    int n = data.evt.NISRJets;
+    double w_nom = 0;
+    if      (n==0) w_nom = d;
+    else if (n==1) w_nom = d * 0.920;
+    else if (n==2) w_nom = d * 0.821;
+    else if (n==3) w_nom = d * 0.715;
+    else if (n==4) w_nom = d * 0.662;
+    else if (n==5) w_nom = d * 0.561;
+    else           w_nom = d * 0.511;
+    double err = (1-w_nom)/2;
+    double w_isr_up   = w_nom + err;
+    double w_isr      = w_nom;
+    double w_isr_down = w_nom - err;
+    w = get_syst_weight(w_isr, w_isr_up, w_isr_down, nSigmaISR);
+    if (syst_index==0&&!runOnSkim) {
+      if (TString(sample).Contains("T2tt")) {
+	vh_totweight_signal_isr[1]->Fill(data.evt.SUSY_Stop_Mass,   data.evt.SUSY_LSP_Mass, 0);
+	vh_totweight_signal_isr[1]->Fill(data.evt.SUSY_Stop_Mass,   data.evt.SUSY_LSP_Mass, 1, w_isr);
+      } else {
+	vh_totweight_signal_isr[0]->Fill(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass, 0);
+	vh_totweight_signal_isr[0]->Fill(data.evt.SUSY_Gluino_Mass, data.evt.SUSY_LSP_Mass, 1, w_isr);
+      }
+    }
+  }
   return w;
 }
 
 //_______________________________________________________
 //                  Get pile-up weight
 double
-AnalysisBase::get_pileup_weight(const int& NtrueInt, const double& nSigmaPU)
+AnalysisBase::get_pileup_weight(const int& NtrueInt, const double& nSigmaPU, const unsigned int& syst_index, const bool& runOnSkim)
 {
   int pu_bin = NtrueInt+1; // eg. pileup 0, is filled in bin 1
   double w_pileup = h_pileup_weight->GetBinContent(pu_bin);
   double w_pileup_up = h_pileup_weight_up->GetBinContent(pu_bin);
   double w_pileup_down = h_pileup_weight_down->GetBinContent(pu_bin);
   double w = get_syst_weight(w_pileup, w_pileup_up, w_pileup_down, nSigmaPU);
+  if (syst_index==0&&!runOnSkim) {
+    h_totweight_pileup->Fill(0);
+    h_totweight_pileup->Fill(1, w_pileup);
+  }
   return w;
 }
 
@@ -2630,15 +2876,18 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const do
   double w_scale_up = 1;   // Corresponds to 0.5 (More signal events)
   double w_scale_down = 1; // Corresponds to 2.0 (Less signal events)
   if (numScale==1) {
+    // Vary factorization scale
     // fix mu_r = 1.0, vary mu_f = 0,5, 2.0
     w_scale_up   = scale_Weights[1];
     w_scale_down = scale_Weights[0];
   } else if (numScale==2) {
+    // Vary renormalization scale
     // fix mu_f = 1.0, vary mu_r = 0,5, 2.0
     w_scale_up   = scale_Weights[4];
     w_scale_down = scale_Weights[2];
   } else if (numScale==3) {
-    // vary simulataneously mu_r = mu_f = 0,5, 2.0
+    // Vary both simulatneously
+    // mu_r = mu_f = 0,5, 2.0
     w_scale_up   = scale_Weights[5];
     w_scale_down = scale_Weights[3];
   }
@@ -2761,8 +3010,10 @@ TH1D* eff_full_fake_baTop;
 TH1D* eff_full_fake_eaTop;
 TH1D* eff_full_fake_bmTop;
 TH1D* eff_full_fake_emTop;
-TH1D* eff_fast_W;
-TH1D* eff_fast_Top;
+TH1D* eff_fast_bW;
+TH1D* eff_fast_eW;
+TH1D* eff_fast_bTop;
+TH1D* eff_fast_eTop;
 //TGraphAsymmErrors* eff_full_fake_aW;
 //TGraphAsymmErrors* eff_full_fake_aTop;
 //TGraphAsymmErrors* eff_full_fake_mW;
@@ -2939,20 +3190,22 @@ void AnalysisBase::init_syst_input() {
 
   // W/Top (anti-)tag (and fake rate) scale factors
   // From Changgi
-  eff_full_fake_bW    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bW",                    "full_fake_W_barrel");
-  eff_full_fake_eW    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "eW",                    "full_fake_W_endcap");
-  eff_full_fake_bmW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bmW",                   "full_fake_mW_barrel");
-  eff_full_fake_emW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "emW",                   "full_fake_mW_endcap");
-  eff_full_fake_baW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "baW",                   "full_fake_aW_barrel");
-  eff_full_fake_eaW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "baW",                   "full_fake_aW_endcap");
-  eff_full_fake_bTop  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bTop",                  "full_fake_Top_barrel");
-  eff_full_fake_eTop  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "eTop",                  "full_fake_Top_endcap");
-  eff_full_fake_bmTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "bmTop",                 "full_fake_mTop_barrel");
-  eff_full_fake_emTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "emTop",                 "full_fake_mTop_endcap");
-  eff_full_fake_baTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "baTop",                 "full_fake_aTop_barrel");
-  eff_full_fake_eaTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                "eaTop",                 "full_fake_aTop_endcap");
-  eff_fast_W         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimWTagSF",   "fast_W");
-  eff_fast_Top       = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF.root", "hFullFastSimTopTagSF", "fast_Top");
+  eff_full_fake_bW    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "bW",     "full_fake_W_barrel");
+  eff_full_fake_eW    = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "eW",     "full_fake_W_endcap");
+  eff_full_fake_bmW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "bmW",    "full_fake_mW_barrel");
+  eff_full_fake_emW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "emW",    "full_fake_mW_endcap");
+  eff_full_fake_baW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "baW",    "full_fake_aW_barrel");
+  eff_full_fake_eaW   = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "baW",    "full_fake_aW_endcap");
+  eff_full_fake_bTop  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "bTop",   "full_fake_Top_barrel");
+  eff_full_fake_eTop  = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "eTop",   "full_fake_Top_endcap");
+  eff_full_fake_bmTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "bmTop",  "full_fake_mTop_barrel");
+  eff_full_fake_emTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "emTop",  "full_fake_mTop_endcap");
+  eff_full_fake_baTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "baTop",  "full_fake_aTop_barrel");
+  eff_full_fake_eaTop = utils::getplot_TH1D("scale_factors/w_top_tag/WTopTagSF.root",                             "eaTop",  "full_fake_aTop_endcap");
+  eff_fast_bW         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap.root", "bWFF",   "fast_bW");
+  eff_fast_eW         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap.root", "eWFF",   "fast_eW");
+  eff_fast_bTop       = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap.root", "bTopFF", "fast_bTop");
+  eff_fast_eTop       = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap.root", "bTopFF", "fast_eTop");
   // From Janos
   //eff_full_fake_W    = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "WTagFakeRate_vs_JetAK8PtBins/Data_MC_F",              2, "full_fake_W");
   //eff_full_fake_mW   = utils::getplot_TGraphAsymmErrors_fromCanvas("scale_factors/w_top_tag/Plotter_out_2017_07_08_FakeRates.root", "WMassTagFakeRate_vs_JetAK8PtBins/Data_MC_F",          2, "full_fake_mW");
@@ -2985,7 +3238,11 @@ double AnalysisBase::calc_top_tagging_sf(DataStruct& data, const double& nSigmaT
 	// Additionally use our scale factors for FastSim
 	if (isFastSim&&hasGenTop[i]) {
 	  double eff, err;
-	  utils::geteff1D(eff_fast_Top, data.jetsAK8.Pt[i], eff, err);
+	  if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	    utils::geteff1D(eff_fast_bTop, data.jetsAK8.Pt[i], eff, err);
+	  } else {
+	    utils::geteff1D(eff_fast_eTop, data.jetsAK8.Pt[i], eff, err);
+	  }
 	  w *= get_syst_weight(eff, eff+err, eff-err, nSigmaTopTagFastSimSF);
 	}
       }
@@ -3051,7 +3308,11 @@ double AnalysisBase::calc_w_tagging_sf(DataStruct& data, const double& nSigmaWTa
 	// Additionally use our scale factors for FastSim
 	if (isFastSim&&hasGenW[i]) {
 	  double eff, err;
-	  utils::geteff1D(eff_fast_W, data.jetsAK8.Pt[i], eff, err);
+	  if (std::abs(data.jetsAK8.Eta[i])<1.5) {
+	    utils::geteff1D(eff_fast_bW, data.jetsAK8.Pt[i], eff, err);
+	  } else {
+	    utils::geteff1D(eff_fast_eW, data.jetsAK8.Pt[i], eff, err);
+	  }
 	  w *= get_syst_weight(eff, eff+err, eff-err, nSigmaWTagFastSimSF);
 	}
       }
