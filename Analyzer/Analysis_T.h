@@ -193,6 +193,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['L'].push_back({ .name="Razor",     .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;     }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
   analysis_cuts['L'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['L'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});   
+  //analysis_cuts['L'].push_back({ .name="1Lep",       .func = []        { return (nEleSelect==1&&nMuVeto==0)||(nMuSelect==1&&nEleVeto==0); }});
   
 
 
@@ -205,6 +206,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['M'].push_back({ .name="Razor" ,      .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;  }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
   analysis_cuts['M'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['M'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});
+  //analysis_cuts['M'].push_back({ .name="1Lep",       .func = []        { return (nEleSelect==1&&nMuVeto==0)||(nMuSelect==1&&nEleVeto==0); }});
   
 
   //m: + jets for W Analysis
@@ -217,6 +219,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['m'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['m'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});
 
+   //analysis_cuts['m'].push_back({ .name="1Lep",       .func = []        { return (nEleSelect==1&&nMuVeto==0)||(nMuSelect==1&&nEleVeto==0); }});
   
 
 }//End of define_selections
