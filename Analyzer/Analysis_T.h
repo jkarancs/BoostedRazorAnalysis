@@ -74,7 +74,7 @@ Analysis::define_selections(const DataStruct& d)
 {
   analysis_cuts.clear();
 
- // Define here cuts that are common in all Signal/Control regions
+// Define here cuts that are common in all Signal/Control regions
   // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
 
 
@@ -107,92 +107,117 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
 } });}
 
 
-  // Define here cuts that are common in all Signal/Control regions
-  // MET Filters, etc. are already applied in AnalysisBase.h, See baseline_cuts
-
-
-
-  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  baseline_cuts.push_back({ .name="Skim_1JetAK8",    .func = []        { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
   
   // Q: QCD enriched control sample
-  analysis_cuts['Q'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
-  analysis_cuts['Q'].push_back({ .name="MRR2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['Q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['Q'].push_back({ .name="1aTop",      .func = []    { return nHadTop0BAntiTag>=1;              }});
-  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }}); // AK4 CSVv2 Loose for veto
-  analysis_cuts['Q'].push_back({ .name="DPhiHemi",.func = []    { return dPhiRazor>=2.8;                  }});
+  analysis_cuts['Q'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }});
+  analysis_cuts['Q'].push_back({ .name="MRR2",       .func = [&d]      { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['Q'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []        { return nEleVeto==0;                      }});
+  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []        { return nMuVeto==0;                       }});
+  analysis_cuts['Q'].push_back({ .name="0IsoTrk",    .func = [&d]      { return d.evt.NIsoTrk==0;                 }});
+  analysis_cuts['Q'].push_back({ .name="1aTop",      .func = []        { return nHadTop0BAntiTag>=1;              }});
+  analysis_cuts['Q'].push_back({ .name="0b",         .func = []        { return nLooseBTag==0;                    }}); // AK4 CSVv2 Loose for veto
+  analysis_cuts['Q'].push_back({ .name="DPhiHemi",   .func = []        { return dPhiRazor>=2.8;                  }});
 
   // Q': Dphi Control region of QCD enriched sample
-  analysis_cuts['q'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
-  analysis_cuts['q'].push_back({ .name="MRR2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['q'].push_back({ .name="0b",          .func = [] { return nLooseBTag==0;                      }});
-  analysis_cuts['q'].push_back({ .name="1aTop",      .func = []    { return nHadTop0BAntiTag>=1;              }});
-  analysis_cuts['q'].push_back({ .name="DPhiHemi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['q'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }});
+  analysis_cuts['q'].push_back({ .name="MRR2",       .func = [&d]      { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['q'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['q'].push_back({ .name="0Ele",       .func = []        { return nEleVeto==0;                      }});
+  analysis_cuts['q'].push_back({ .name="0Mu",        .func = []        { return nMuVeto==0;                       }});
+  analysis_cuts['q'].push_back({ .name="0IsoTrk",    .func = [&d]      { return d.evt.NIsoTrk==0;                 }});
+  analysis_cuts['q'].push_back({ .name="0b",         .func = []        { return nLooseBTag==0;                      }});
+  analysis_cuts['q'].push_back({ .name="1aTop",      .func = []        { return nHadTop0BAntiTag>=1;              }});
+  analysis_cuts['q'].push_back({ .name="DPhiHemi",   .func = []        { return dPhiRazor<2.8;                 }});
 
   // T: Region Top enriched control sample 
-  analysis_cuts['T'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
-  analysis_cuts['T'].push_back({ .name="MRR2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
-  analysis_cuts['T'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
-  analysis_cuts['T'].push_back({ .name="DPhiHemi",      .func = []    { return dPhiRazor<2.8;                 }});
-  analysis_cuts['T'].push_back({ .name="MT",         .func = []    { return MT_vetolep<100;                   }});
+  analysis_cuts['T'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }});
+  analysis_cuts['T'].push_back({ .name="MRR2",       .func = [&d]      { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['T'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []        { return nLepVeto==1;                      }});
+  analysis_cuts['T'].push_back({ .name="1Top",       .func = []        { return nHadTopTag>=1;                    }});
+  analysis_cuts['T'].push_back({ .name="DPhiHemi",   .func = []        { return dPhiRazor<2.8;                 }});
+  analysis_cuts['T'].push_back({ .name="MT",         .func = []        { return MT_vetolep<100;                   }});
 
   // W: W enriched control sample
-  analysis_cuts['W'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
-  analysis_cuts['W'].push_back({ .name="MRR2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
-  analysis_cuts['W'].push_back({ .name="1mTop",      .func = []    { return nHadTop0BMassTag>=1;              }});
-  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  analysis_cuts['W'].push_back({ .name="DPhiHemi",      .func = []    { return dPhiRazor<2.8;                }});
-  analysis_cuts['W'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
+  analysis_cuts['W'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }});
+  analysis_cuts['W'].push_back({ .name="MRR2",       .func = [&d]      { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['W'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []        { return nLepVeto==1;                      }});
+  analysis_cuts['W'].push_back({ .name="1mTop",      .func = []        { return nHadTop0BMassTag>=1;              }});
+  analysis_cuts['W'].push_back({ .name="0b",         .func = []        { return nLooseBTag==0;                    }});
+  analysis_cuts['W'].push_back({ .name="DPhiHemi",   .func = []        { return dPhiRazor<2.8;                }});
+  analysis_cuts['W'].push_back({ .name="MT",         .func = []        { return MT_vetolep>=30 && MT_vetolep<100; }});
 
   // S: >=1 Boosted Top Signal region
-  analysis_cuts['S'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['S'].push_back({ .name="MRR2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['S'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
-  analysis_cuts['S'].push_back({ .name="DPhiHemi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['S'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['S'].push_back({ .name="MRR2",       .func = [&d]      { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['S'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []        { return nEleVeto==0;                      }});
+  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []        { return nMuVeto==0;                       }});
+  analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]      { return d.evt.NIsoTrk==0;                 }});
+  analysis_cuts['S'].push_back({ .name="1Top",       .func = []        { return nHadTopTag>=1;                    }});
+  analysis_cuts['S'].push_back({ .name="DPhiHemi",   .func = []        { return dPhiRazor<2.8;                 }});
 
  // S': DPhi Control region of Signal region
-  analysis_cuts['s'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['s'].push_back({ .name="MRR2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['s'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
-  analysis_cuts['s'].push_back({ .name="DPhiHemi",   .func = []    { return dPhiRazor>=2.8;                  }});
+  analysis_cuts['s'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['s'].push_back({ .name="MRR2",       .func = [&d]      { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['s'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []        { return nEleVeto==0;                      }});
+  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []        { return nMuVeto==0;                       }});
+  analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]      { return d.evt.NIsoTrk==0;                 }});
+  analysis_cuts['s'].push_back({ .name="1Top",       .func = []        { return nHadTopTag>=1;                    }});
+  analysis_cuts['s'].push_back({ .name="DPhiHemi",   .func = []        { return dPhiRazor>=2.8;                  }});
 
-  // Z: Z->ll enriched control sample
-  analysis_cuts['Z'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['Z'].push_back({ .name="MRR2ll",    .func = [&d]  { return d.evt.MR>=800 && R2_ll>=0.08;     }});
-  analysis_cuts['Z'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['Z'].push_back({ .name="2Lep",       .func = []    { return (nEleSelect==2&&nMuVeto==0)||(nMuSelect==2&&nEleVeto==0); }});
-  analysis_cuts['Z'].push_back({ .name="OppCharge",  .func = [&d]  { 
+  // Z: Z->ll enriched control region
+  analysis_cuts['Z'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['Z'].push_back({ .name="MRR2ll",     .func = [&d]      { return d.evt.MR>=800 && R2_ll>=0.08;     }});
+  analysis_cuts['Z'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['Z'].push_back({ .name="2Lep",       .func = []        { return (nEleSelect==2&&nMuVeto==0)||(nMuSelect==2&&nEleVeto==0); }});
+  analysis_cuts['Z'].push_back({ .name="OppCharge",  .func = [&d]      { 
 				   if (nEleSelect==2) return (d.ele.Charge[iEleSelect[0]] + d.ele.Charge[iEleSelect[1]])==0;
 				   else if (nMuSelect==2) return (d.mu.Charge[iMuSelect[0]] + d.mu.Charge[iMuSelect[1]])==0;
 				   return false;
 				 }});
-  analysis_cuts['Z'].push_back({ .name="nHTop0BMassTag",        .func = []    { return nHadTop0BMassTag>=1;                     }});
-  analysis_cuts['Z'].push_back({ .name="DPhiHemill",    .func = []    { return dPhiRazor<2.8;              }});
-  analysis_cuts['Z'].push_back({ .name="Mll", .func = [] { return std::abs(M_ll-91.2)<10; }});
+  analysis_cuts['Z'].push_back({ .name="nHTop0BMassTag", .func = []    { return nHadTop0BMassTag>=1;                     }});
+  analysis_cuts['Z'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
+  analysis_cuts['Z'].push_back({ .name="Mll",            .func = []    { return std::abs(M_ll-91.2)<10; }});
+
+  // L: W->lv enriched control region for Top Analysis
+  analysis_cuts['L'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['L'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['L'].push_back({ .name="0b",         .func = []        { return nLooseBTag==0;                    }});
+  analysis_cuts['L'].push_back({ .name="1mTop",      .func = []        { return nHadTop0BMassTag>=1;              }});
+  analysis_cuts['L'].push_back({ .name="1Lep",       .func = []        { return nLepSelect==1; }}); //Lepton's pt are defined here. Check the AnalysisBase.h
+  analysis_cuts['L'].push_back({ .name="Razor",     .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;     }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
+  analysis_cuts['L'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
+  analysis_cuts['L'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});   
+  
 
 
+  //M: W->lv enriched control region for W Analysis
+  analysis_cuts['M'].push_back({ .name="3Jet",       .func = []        { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['M'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['M'].push_back({ .name="0b",         .func = []        { return nLooseBTag==0;                    }});
+  analysis_cuts['M'].push_back({ .name="1mW",        .func = []        { return nWMassTag>=1; }}); 
+  analysis_cuts['M'].push_back({ .name="1Lep",       .func = []        { return nLepSelect==1; }}); //Lepton's pt are defined here. Check the AnalysisBase.h
+  analysis_cuts['M'].push_back({ .name="Razor" ,      .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;  }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
+  analysis_cuts['M'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
+  analysis_cuts['M'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});
+  
 
+  //m: + jets for W Analysis
+  analysis_cuts['m'].push_back({ .name="4Jet",       .func = []        { return nJet>=4;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['m'].push_back({ .name="HLT",        .func = [this,&d] { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['m'].push_back({ .name="0b",         .func = []        { return nLooseBTag==0;                    }});
+  analysis_cuts['m'].push_back({ .name="1mW",        .func = []        { return nWMassTag>=1; }}); 
+  analysis_cuts['m'].push_back({ .name="1Lep",       .func = []        { return nLepSelect==1; }}); //Lepton's pt are defined here. Check the AnalysisBase.h
+  analysis_cuts['m'].push_back({ .name="Razor" ,      .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;  }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
+  analysis_cuts['m'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
+  analysis_cuts['m'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});
 
-
+  
 
 }//End of define_selections
 
@@ -223,7 +248,7 @@ i+=2;
 
   // b tagging SFs (2 sigma - fullsim, fastsim)
   std::pair<double, double> sf_btag = calc_b_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
-  double sf_btag_loose = sf_btag.first, sf_btag_medium = sf_btag.second;
+ double sf_btag_loose = sf_btag.first;
 i+=2;
 
   // top tagging SF (2 sigma - fullsim, fastsim)
@@ -236,7 +261,7 @@ i+=2;
   scale_factors['S'].push_back(sf_ele_veto);
   scale_factors['S'].push_back(sf_muon_veto);
   scale_factors['S'].push_back(sf_top);
-  scale_factors['S'].push_back(sf_btag_medium);
+  //scale_factors['S'].push_back(sf_btag_medium);
 
   scale_factors['s'] = scale_factors['S'];
 
@@ -250,7 +275,7 @@ i+=2;
   scale_factors['T'].push_back(sf_ele_veto);
   scale_factors['T'].push_back(sf_muon_veto);
   scale_factors['T'].push_back(sf_w);
-  scale_factors['T'].push_back(sf_btag_medium);
+  //scale_factors['T'].push_back(sf_btag_medium);
 
   scale_factors['W'].push_back(sf_ele_veto);
   scale_factors['W'].push_back(sf_muon_veto);
@@ -261,12 +286,12 @@ i+=2;
   scale_factors['Z'].push_back(sf_muon_medium);
   scale_factors['Z'].push_back(sf_top);
 
-  // Top analysis
-/*
-  scale_factors['t'].push_back(sf_ele_veto);
-  scale_factors['t'].push_back(sf_muon_veto);
-  scale_factors['t'].push_back(sf_top);
-*/
+  ////////////////////////////////////////////////////////////////
+ ///        NEW SCALE FACTORS for NEW C.R. REGIONS (L & M)     //
+////////////////////////////////////////////////////////////////
+
+
+
 }
 
 //_______________________________________________________
@@ -318,6 +343,10 @@ TH2D* h_Z_MRR2_nj3;
 TH2D* h_Z_MRR2_nj35;
 TH2D* h_Z_MRR2_nj5;
 
+TH2D* h_L_MRR2;
+TH2D* h_M_MRR2;
+TH2D* h_m_MRR2;
+
 TH1D* h_MR_Z;
 TH1D* h_R2_Z;
 TH1D* h_MR_T;
@@ -332,12 +361,21 @@ TH1D* h_MR_S;
 TH1D* h_R2_S;
 TH1D* h_MR_s;
 TH1D* h_R2_s;
+TH1D* h_MR_L;
+TH1D* h_R2_L;
+TH1D* h_MR_M;
+TH1D* h_R2_M;
+TH1D* h_MR_m;
+TH1D* h_R2_m;
 
 TH1D* h_njet_S;
 TH1D* h_njet_Q;
 TH1D* h_njet_T;  // number of jets 
 TH1D* h_njet_W;
 TH1D* h_njet_Z;
+TH1D* h_njet_L;
+TH1D* h_njet_M;
+TH1D* h_njet_m;
 
 TH1D* h_S_HT;
 TH1D* h_Q_HT;
@@ -481,7 +519,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   Double_t bn_MR_tmp[] = {0.,600.,800.,1000.,1200.,1600.,2000.,4000.};
   Double_t* bn_MR = 0;
   bn_MR = utils::getVariableBinEdges(nbn_MR+1,bn_MR_tmp);
-  Double_t bn_R2_tmp[] = {0.08,0.12,0.16,0.24,0.5,1.};
+  Double_t bn_R2_tmp[] = {0.,0.04,0.08,0.12,0.16,0.24,0.5,1.};
   Double_t* bn_R2 = 0;
   bn_R2 = utils:: getVariableBinEdges(nbn_R2+1,bn_R2_tmp); 
 
@@ -552,20 +590,31 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     h_Z_MRR2_nj5     = new TH2D("Z_MRR2_nj5", ";MR;R2", nbn_MR, bn_MR, nbn_R2, bn_R2 );
     h_Z_MRR2 = new TH2D("Z_MRR2", ";MR;R2",nbn_MR,bn_MR,nbn_R2,bn_R2);
 
+    h_L_MRR2 = new TH2D("L_MRR2", ";MR;R2",nbn_MR,bn_MR,nbn_R2,bn_R2);
+    h_M_MRR2 = new TH2D("M_MRR2", ";MR;R2",nbn_MR,bn_MR,nbn_R2,bn_R2);
+    h_m_MRR2 = new TH2D("m_MRR2", ";MR;R2",nbn_MR,bn_MR,nbn_R2,bn_R2);
+
    h_MR_Z = new TH1D("MR_Z", ";Z_MR", nbn_MR, bn_MR);
    h_R2_Z = new TH1D("R2_Z", ";Z_R2", nbn_R2,bn_R2);
-   h_MR_T = new TH1D("MR_T", ";Z_MR", nbn_MR, bn_MR);
-   h_R2_T = new TH1D("R2_T", ";Z_R2", nbn_R2,bn_R2);
-   h_MR_W = new TH1D("MR_W", ";Z_MR", nbn_MR, bn_MR);
-   h_R2_W = new TH1D("R2_W", ";Z_R2", nbn_R2,bn_R2);
-   h_MR_Q = new TH1D("MR_Q", ";Z_MR", nbn_MR, bn_MR);
-   h_R2_Q = new TH1D("R2_Q", ";Z_R2", nbn_R2,bn_R2);
-   h_MR_q = new TH1D("MR_q", ";Z_MR", nbn_MR, bn_MR);
-   h_R2_q = new TH1D("R2_q", ";Z_R2", nbn_R2,bn_R2);
-   h_MR_S = new TH1D("MR_S", ";Z_MR", nbn_MR, bn_MR);
-   h_R2_S = new TH1D("R2_S", ";Z_R2", nbn_R2,bn_R2);
-   h_MR_s = new TH1D("MR_s", ";Z_MR", nbn_MR, bn_MR);
-   h_R2_s = new TH1D("R2_s", ";Z_R2", nbn_R2,bn_R2);
+   h_MR_T = new TH1D("MR_T", ";T_MR", nbn_MR, bn_MR);
+   h_R2_T = new TH1D("R2_T", ";T_R2", nbn_R2,bn_R2);
+   h_MR_W = new TH1D("MR_W", ";W_MR", nbn_MR, bn_MR);
+   h_R2_W = new TH1D("R2_W", ";W_R2", nbn_R2,bn_R2);
+   h_MR_Q = new TH1D("MR_Q", ";Q_MR", nbn_MR, bn_MR);
+   h_R2_Q = new TH1D("R2_Q", ";Q_R2", nbn_R2,bn_R2);
+   h_MR_q = new TH1D("MR_q", ";q_MR", nbn_MR, bn_MR);
+   h_R2_q = new TH1D("R2_q", ";q_R2", nbn_R2,bn_R2);
+   h_MR_S = new TH1D("MR_S", ";S_MR", nbn_MR, bn_MR);
+   h_R2_S = new TH1D("R2_S", ";S_R2", nbn_R2,bn_R2);
+   h_MR_s = new TH1D("MR_s", ";s_MR", nbn_MR, bn_MR);
+   h_R2_s = new TH1D("R2_s", ";s_R2", nbn_R2,bn_R2);
+   h_MR_L = new TH1D("MR_L", ";L_MR", nbn_MR, bn_MR);
+   h_R2_L = new TH1D("R2_L", ";L_R2", nbn_R2,bn_R2);
+   h_MR_M = new TH1D("MR_M", ";M_MR", nbn_MR, bn_MR);
+   h_R2_M = new TH1D("R2_M", ";M_R2", nbn_R2,bn_R2);
+   h_MR_m = new TH1D("MR_m", ";m_MR", nbn_MR, bn_MR);
+   h_R2_m = new TH1D("R2_m", ";m_R2", nbn_R2,bn_R2);
+    
     
 
    h_njet_S = new TH1D("njet_S",         ";N_{jet}",                20, 0,  20);
@@ -573,6 +622,9 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
    h_njet_T = new TH1D("njet_T",         ";N_{jet}",                20, 0,  20);
    h_njet_W = new TH1D("njet_W",         ";N_{jet}",                20, 0,  20);
    h_njet_Z = new TH1D("njet_Z",         ";N_{jet}",                20, 0,  20);
+   h_njet_L = new TH1D("njet_L",         ";N_{jet}",                20, 0,  20);
+   h_njet_M = new TH1D("njet_M",         ";N_{jet}",                20, 0,  20);
+   h_njet_m = new TH1D("njet_m",         ";N_{jet}",                20, 0,  20);
 
    h_S_HT           = new TH1D("S_HT",";S_H_{T}", 15, HT_bins);
    h_Q_HT           = new TH1D("Q_HT",";Q_H_{T}", 15, HT_bins);
@@ -686,6 +738,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 void
 Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index, const double& weight)
 {
+    double w = weight;
+
   if (syst_index == 0) {
     // syst_index should only be non-0 if settings.varySystematics is true
     // in case of studying systematics, one should fill a different histogram for each syst_index
@@ -744,7 +798,8 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 
    
 
-  double w = sf_weight['S'];
+      w = sf_weight['S'];
+
       if (apply_all_cuts('S')) {
           
           if(nJet>=3){
@@ -1026,8 +1081,8 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
      }
    if (apply_all_cuts_except('Z',"DPhiHemill" )) h_DPhi_Z->Fill(dPhiRazor, w);
    if (apply_all_cuts('Z')) h_MR_Z->Fill(data.evt.MR, w);
-   if (apply_all_cuts('Z')) h_R2_Z->Fill(data.evt.R2, w);
-   if (apply_all_cuts('Z')) h_Z_MRR2-> Fill(data.evt.MR, data.evt.R2, w);
+   if (apply_all_cuts('Z')) h_R2_Z->Fill(R2_ll, w);
+   if (apply_all_cuts('Z')) h_Z_MRR2-> Fill(data.evt.MR, R2_ll, w);
    if (apply_all_cuts('Z'))h_MTR_Z->Fill(data.evt.MTR, w);
    if (apply_all_cuts('Z')) h_AK8Jet1Pt_mTop_Z->Fill(data.jetsAK8.Pt[iHadTop0BMassTag[0]], w);
    if (apply_all_cuts('Z')) h_AK8Jet1Eta_mTop_Z->Fill(data.jetsAK8.Eta[iHadTop0BMassTag[0]], w);
@@ -1035,9 +1090,31 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 
 
 
-
+// L enriched region
 
   
+
+
+   if (apply_all_cuts('L')) h_MR_L->Fill(data.evt.MR, w);
+   if (apply_all_cuts('L')) h_R2_L->Fill(R2_1l, w);
+   if (apply_all_cuts('L')) h_L_MRR2-> Fill(data.evt.MR, R2_1l, w);
+   if (apply_all_cuts('L')) h_njet_L->Fill(nJet,w);
+
+// M enriched region
+
+  
+   if (apply_all_cuts('M')) h_MR_M->Fill(data.evt.MR, w);
+   if (apply_all_cuts('M')) h_R2_M->Fill(R2_1l, w);
+   if (apply_all_cuts('M')) h_M_MRR2-> Fill(data.evt.MR, R2_1l, w);
+   if (apply_all_cuts('M')) h_njet_M->Fill(nJet, w);
+
+
+// m region 4 jets   for W analysis
+
+  if (apply_all_cuts('m')) h_m_MRR2-> Fill(data.evt.MR, R2_1l, w);
+  if (apply_all_cuts('m')) h_MR_m->Fill(data.evt.MR, w);
+  if (apply_all_cuts('m')) h_R2_m->Fill(R2_1l, w);
+  if (apply_all_cuts('m')) h_njet_m->Fill(nJet, w);
  
 }
 }
