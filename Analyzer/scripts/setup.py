@@ -22,7 +22,8 @@ import os, re, sys, glob, socket, subprocess
 #LATEST_NTUPLE_EOS="Skim_Feb26_1JetAK8_0p04R2"
 #LATEST_NTUPLE_EOS="Skim_Mar09_1JetAK8_0p04R2"
 #LATEST_NTUPLE_EOS="Skim_May19_1JetAK8_0p04R2"
-LATEST_NTUPLE_EOS="Skim_Sep26"
+#LATEST_NTUPLE_EOS="Skim_Sep26"
+LATEST_NTUPLE_EOS="Skim_Oct11"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Oct24"
@@ -101,7 +102,6 @@ elif 'grid18.kfki.hu' in socket.gethostname():
     #        target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
     #        os.symlink(source, target)
 
-    print os.path.islink(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/QCD_HT1000to1500')
     if os.path.exists(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
         print 'Creating symlinks to the latest ntuples in /data drive: ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/ ... ',
         for data_subdir in os.listdir(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):

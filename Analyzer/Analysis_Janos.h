@@ -174,7 +174,7 @@ Analysis::pass_skimming(DataStruct& data)
     }
   
     // Count photons
-    int NPhotonNoSieie = 0;
+    int NPhotonNoSieieNoPhoIso = 0;
     while(data.pho.Loop()) {
       size_t i = data.pho.it;
       float pt = data.pho.Pt[i];
@@ -196,25 +196,25 @@ Analysis::pass_skimming(DataStruct& data)
       // Using the table, not the presentation, same as this VID cfg:
       // https://github.com/ikrav/cmssw/blob/65fa87654e6744efdff2e16d55a5b86bbdccd48d/RecoEgamma/PhotonIdentification/python/Identification/cutBasedPhotonID_Spring16_V2p2_cff.py#L50-L78
       // Exclude Sigma_ietaieta cut in order to measure QCD background
-      bool id_noSieie = false;
+      bool id_noSieieNoPhoIso = false;
       if ( std::abs(data.pho.SCEta[i])<1.479 ) {
         // Barrel cuts (EB)
-        id_noSieie = 
-  	data.pho.HoverE[i]                          < 0.0396 &&
-  	//data.pho.SigmaIEtaIEta[i]                   < 0.01022 &&
-  	ChargedHadronIsoEACorr                      < 0.441 &&
-  	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 2.725+0.0148*pt+0.000017*pt*pt &&
-  	data.pho.PhotonIsoEAcorrectedsp15[i]        < 2.571+0.0047*pt;
+        id_noSieieNoPhoIso = 
+	  data.pho.HoverE[i]                          < 0.0396 &&
+	  //data.pho.SigmaIEtaIEta[i]                   < 0.01022 &&
+	  ChargedHadronIsoEACorr                      < 0.441 &&
+	  data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 2.725+0.0148*pt+0.000017*pt*pt;// &&
+	//data.pho.PhotonIsoEAcorrectedsp15[i]        < 2.571+0.0047*pt;
       } else {
         // Encap cuts (EE)
-        id_noSieie = 
-  	data.pho.HoverE[i]                          < 0.0219 &&
-  	//data.pho.SigmaIEtaIEta[i]                   < 0.03001 &&
-  	ChargedHadronIsoEACorr                      < 0.442 &&
-  	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 1.715+0.0163*pt+0.000014*pt*pt &&
-  	data.pho.PhotonIsoEAcorrectedsp15[i]        < 3.863+0.0034*pt;
+        id_noSieieNoPhoIso = 
+	  data.pho.HoverE[i]                          < 0.0219 &&
+	  //data.pho.SigmaIEtaIEta[i]                   < 0.03001 &&
+	  ChargedHadronIsoEACorr                      < 0.442 &&
+	  data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 1.715+0.0163*pt+0.000014*pt*pt;// &&
+	//data.pho.PhotonIsoEAcorrectedsp15[i]        < 3.863+0.0034*pt;
       }
-  
+      
       //if (id != id_select) {
       //  std::cout<<id_select<<" POG ID"<<std::endl;
       //  std::cout<<"  rho="<<rho_from_other_iso<<std::endl;
@@ -238,11 +238,11 @@ Analysis::pass_skimming(DataStruct& data)
       //}
   
       // Medium ID without Sigma_ietaieta (and pt) cut
-      if ( id_noSieie &&
-  	 ele_veto &&
-  	 //pt        >= PHOTON_SELECT_PT_CUT &&
-  	 abseta    <  PHOTON_SELECT_ETA_CUT ) {
-        NPhotonNoSieie++;
+      if ( id_noSieieNoPhoIso &&
+	   ele_veto &&
+	   pt        >= 20 &&
+	   abseta    <  PHOTON_SELECT_ETA_CUT ) {
+        NPhotonNoSieieNoPhoIso++;
       }
     }
     // Let events with exactly 1 or more ele/mu
@@ -250,7 +250,7 @@ Analysis::pass_skimming(DataStruct& data)
     if (NMuVeto >0 && NEleVeto==0) return 1;
     if (NEleVeto>0 && NMuVeto==0)  return 1;
     // Accept events for Photon enriched region
-    if (NPhotonNoSieie==1) return 1;
+    if (NPhotonNoSieieNoPhoIso>0) return 1;
   }
   // R2 without added photon/lepton/lepton pair
   if (!(data.evt.R2>=0.04)) return 0;
