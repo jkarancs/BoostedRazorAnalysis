@@ -193,7 +193,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['L'].push_back({ .name="Razor",     .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;     }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
   analysis_cuts['L'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['L'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});   
-  //analysis_cuts['L'].push_back({ .name="1Lep",       .func = []        { return (nEleSelect==1&&nMuVeto==0)||(nMuSelect==1&&nEleVeto==0); }});
+
   
 
 
@@ -206,7 +206,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['M'].push_back({ .name="Razor" ,      .func = [&d]      { return d.evt.MR>=800 && R2_1l>=0.08;  }}); //Determine Razor cuts for this specific region. Only difference is R2 for this specific region, because only razor variable which use MET is R2. We add lepton pt to MET so R2 must be redefined.
   analysis_cuts['M'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['M'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});
-  //analysis_cuts['M'].push_back({ .name="1Lep",       .func = []        { return (nEleSelect==1&&nMuVeto==0)||(nMuSelect==1&&nEleVeto==0); }});
+
   
 
   //m: + jets for W Analysis
@@ -219,7 +219,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['m'].push_back({ .name="DPhiHemill",     .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['m'].push_back({ .name="MT",         .func = []        { return MT>=30 && MT<100; }});
 
-   //analysis_cuts['m'].push_back({ .name="1Lep",       .func = []        { return (nEleSelect==1&&nMuVeto==0)||(nMuSelect==1&&nEleVeto==0); }});
+
   
 
 }//End of define_selections
@@ -249,7 +249,9 @@ i+=3;
   double sf_w = calc_w_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
 i+=2;
 
-  // b tagging SFs (2 sigma - fullsim, fastsim)
+   // fake W tagging SFs (no varriation of systematics)
+  double sf_fake_mW = calc_fake_w_mass_tagging_sf(data);
+
   std::pair<double, double> sf_btag = calc_b_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
  double sf_btag_loose = sf_btag.first;
 i+=2;
@@ -257,6 +259,13 @@ i+=2;
   // top tagging SF (2 sigma - fullsim, fastsim)
   double sf_top = calc_top_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
 i+=2;
+ 
+// fakes; mass top tagging and Anti-top tagiing scale factors
+ 
+  double sf_fake_mTop = calc_fake_top_mass_tagging_sf(data);
+  double sf_fake_aTop = calc_fake_top_anti_tagging_sf(data);
+
+
 
   // Select scale factors to use
   for (auto& sf : scale_factors) sf.second.clear();
@@ -264,13 +273,13 @@ i+=2;
   scale_factors['S'].push_back(sf_ele_veto);
   scale_factors['S'].push_back(sf_muon_veto);
   scale_factors['S'].push_back(sf_top);
-  //scale_factors['S'].push_back(sf_btag_medium);
+  
 
   scale_factors['s'] = scale_factors['S'];
 
   scale_factors['Q'].push_back(sf_ele_veto);
   scale_factors['Q'].push_back(sf_muon_veto);
-  scale_factors['Q'].push_back(sf_top); // We only have SF for the tag
+  scale_factors['Q'].push_back(sf_fake_aTop);  // We only have SF for the tag
   scale_factors['Q'].push_back(sf_btag_loose);
 
   scale_factors['q'] = scale_factors['Q'];
@@ -278,16 +287,36 @@ i+=2;
   scale_factors['T'].push_back(sf_ele_veto);
   scale_factors['T'].push_back(sf_muon_veto);
   scale_factors['T'].push_back(sf_w);
-  //scale_factors['T'].push_back(sf_btag_medium);
+  
 
   scale_factors['W'].push_back(sf_ele_veto);
   scale_factors['W'].push_back(sf_muon_veto);
-  scale_factors['W'].push_back(sf_top); // We only have SF for the tag
+  scale_factors['W'].push_back(sf_fake_mTop); // We only have SF for the tag
   scale_factors['W'].push_back(sf_btag_loose);
 
   scale_factors['Z'].push_back(sf_ele_medium);
   scale_factors['Z'].push_back(sf_muon_medium);
   scale_factors['Z'].push_back(sf_top);
+
+
+  scale_factors['L'].push_back(sf_ele_veto);
+  scale_factors['L'].push_back(sf_muon_veto);
+  scale_factors['L'].push_back(sf_fake_mTop);
+  scale_factors['L'].push_back(sf_btag_loose);
+
+
+
+  scale_factors['M'].push_back(sf_ele_medium);
+  scale_factors['M'].push_back(sf_muon_medium);
+  scale_factors['M'].push_back(sf_btag_loose);
+  scale_factors['M'].push_back(sf_fake_mW);
+ 
+
+  scale_factors['m'].push_back(sf_ele_medium);
+  scale_factors['m'].push_back(sf_muon_medium);
+  scale_factors['m'].push_back(sf_btag_loose);
+  scale_factors['m'].push_back(sf_fake_mW);
+
 
   ////////////////////////////////////////////////////////////////
  ///        NEW SCALE FACTORS for NEW C.R. REGIONS (L & M)     //
@@ -1096,7 +1125,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 // L enriched region
 
   
-
+   w = sf_weight['L'];
 
    if (apply_all_cuts('L')) h_MR_L->Fill(data.evt.MR, w);
    if (apply_all_cuts('L')) h_R2_L->Fill(R2_1l, w);
@@ -1105,7 +1134,8 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 
 // M enriched region
 
-  
+   w = sf_weight['M'];
+
    if (apply_all_cuts('M')) h_MR_M->Fill(data.evt.MR, w);
    if (apply_all_cuts('M')) h_R2_M->Fill(R2_1l, w);
    if (apply_all_cuts('M')) h_M_MRR2-> Fill(data.evt.MR, R2_1l, w);
@@ -1113,6 +1143,8 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 
 
 // m region 4 jets   for W analysis
+
+   w = sf_weight['m'];  
 
   if (apply_all_cuts('m')) h_m_MRR2-> Fill(data.evt.MR, R2_1l, w);
   if (apply_all_cuts('m')) h_MR_m->Fill(data.evt.MR, w);
