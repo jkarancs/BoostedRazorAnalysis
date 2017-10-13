@@ -992,7 +992,7 @@ std::vector<size_t > iPhotonNoSieie;
 std::vector<size_t > itPhotonSelect;
 std::vector<size_t > itPhotonNoSieie;
 std::vector<bool> passPhotonSelect;
-std::vector<bool> passPhotonNoSieie;
+std::vector<bool> passPhotonPrompt;
 std::vector<double> ChargedHadronIsoEACorr;
 unsigned int nPhotonSelect, nPhotonNoSieie;
 double MT, MT_vetolep;
@@ -1020,6 +1020,9 @@ int npreWTag;
 int nTopTag;
 int nmTopTag;
 int npreTopTag;
+int nFakePhoton;
+int nDirectPromptPhoton;
+int nFragmentationPromptPhoton;
 
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
@@ -1349,12 +1352,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   }
   // Count photons
   std::vector<TLorentzVector> selected_photons;
+  std::vector<TLorentzVector> faked_photons;
   iPhotonSelect    .clear();
   iPhotonNoSieie   .clear();
   itPhotonSelect   .assign(data.pho.size, (size_t)-1);
   itPhotonNoSieie  .assign(data.pho.size, (size_t)-1);
   passPhotonSelect .assign(data.pho.size, 0);
-  passPhotonNoSieie.assign(data.pho.size, 0);
   ChargedHadronIsoEACorr.clear();
   nPhotonSelect = nPhotonNoSieie = 0;
   while(data.pho.Loop()) {
@@ -1388,7 +1391,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       id_noSieie = 
   	data.pho.HoverE[i]                          < 0.0396 &&
   	//data.pho.SigmaIEtaIEta[i]                   < 0.01022 &&
-  	ChargedHadronIsoEACorr[i]                   < 0.441 &&
+  	//ChargedHadronIsoEACorr[i]                   < 0.441 &&
   	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 2.725+0.0148*pt+0.000017*pt*pt &&
   	data.pho.PhotonIsoEAcorrectedsp15[i]        < 2.571+0.0047*pt;
     } else {
@@ -1396,7 +1399,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       id_noSieie = 
   	data.pho.HoverE[i]                          < 0.0219 &&
   	//data.pho.SigmaIEtaIEta[i]                   < 0.03001 &&
-  	ChargedHadronIsoEACorr[i]                   < 0.442 &&
+  	//ChargedHadronIsoEACorr[i]                   < 0.442 &&
   	data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 1.715+0.0163*pt+0.000014*pt*pt &&
   	data.pho.PhotonIsoEAcorrectedsp15[i]        < 3.863+0.0034*pt;
     }
@@ -1405,13 +1408,16 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	 ele_veto &&
 	 pt        >= PHOTON_SELECT_PT_CUT &&
 	 abseta    <  PHOTON_SELECT_ETA_CUT ) {
-      iPhotonNoSieie.push_back(i);
-      itPhotonNoSieie[i] = nPhotonNoSieie++;
+      if ( data.pho.SigmaIEtaIEta[i] >= (std::abs(data.pho.SCEta[i])<1.479 ? 0.01022 : 0.03001) ) {
+				faked_photons.push_back(pho_v4);
+      	iPhotonNoSieie.push_back(i);
+      	itPhotonNoSieie[i] = nPhotonNoSieie++;
+      }
       // Photons passing full ID
-      if ( data.pho.SigmaIEtaIEta[i] < (std::abs(data.pho.SCEta[i])<1.479 ? 0.01022 : 0.03001) ) {
-	selected_photons.push_back(pho_v4);
-	iPhotonSelect.push_back(i);
-	itPhotonSelect[i] = nPhotonSelect++;
+      if (passPhotonSelect[i] = (data.pho.SigmaIEtaIEta[i] < (std::abs(data.pho.SCEta[i])<1.479 ? 0.01022 : 0.03001)) ) {
+				selected_photons.push_back(pho_v4);
+				iPhotonSelect.push_back(i);
+				itPhotonSelect[i] = nPhotonSelect++;
       }
     }
   }
@@ -1432,6 +1438,15 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     TVector3 pho_met;
     pho_met.SetPtEtaPhi(selected_photons[0].Pt(), 0, selected_photons[0].Phi());
     met_pho += pho_met;
+  }
+
+  // Add the photon to MET
+  TVector3 met_fakepho;
+  met_fakepho.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
+  if (nPhotonNoSieie==1) {
+    TVector3 pho_met;
+    pho_met.SetPtEtaPhi(faked_photons[0].Pt(), 0, faked_photons[0].Phi());
+    met_fakepho += pho_met;
   }
 
   // Rest of the vairables need to be recalculated each time the jet energy is changed
@@ -1778,16 +1793,21 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   passGenTop      .assign(data.gen.size, 0);
   genHadWPassWTag .assign(data.gen.size, 0);
   genTopPassTopTag.assign(data.gen.size, 0);
+  passPhotonPrompt.assign(data.gen.size, 0);
   nGenHadW = nGenTop = 0;
   nGenMassW = nGenMassTop = 0;
   npreWTag = nWTag = nmWTag = npreTopTag = nTopTag = nmTopTag = 0;
+  nFakePhoton = nDirectPromptPhoton = nFragmentationPromptPhoton = 0;
   float dR;
   float dR1;
   //bool passWTag = 0;
   //bool passpreWTag = 0;
+  TLorentzVector photag;
+  TLorentzVector genpho;
   TLorentzVector wtag_v4;
   TLorentzVector genw_v4;
   TLorentzVector genb_v4; 
+  std::vector<TLorentzVector> selected_genphoton;
   std::vector<TLorentzVector> selected_genw_v4;
   std::vector<TLorentzVector> selected_genb_v4;
   //bool passTopTag = 0;
@@ -1798,6 +1818,19 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   hasGenTop          .assign(data.jetsAK8.size, 0);
   while(data.gen.Loop()) {
     size_t i = data.gen.it;
+
+    while(data.pho.Loop()){
+      size_t j = data.pho.it;
+      if( passPhotonSelect[j]){
+      if( fabs(data.gen.ID[i]) == 22 && (fabs(data.gen.Mom0ID[i])==1||fabs(data.gen.Mom0ID[i])==2||fabs(data.gen.Mom0ID[i])==3||fabs(data.gen.Mom0ID[i])==4||fabs(data.gen.Mom0ID[i])==5||fabs(data.gen.Mom0ID[i])==6||fabs(data.gen.Mom0ID[i])==21)){
+        photag.SetPtEtaPhiE(data.pho.Pt[j], data.pho.Eta[j], data.pho.Phi[j], data.pho.E[j]);
+        genpho.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
+        if(genpho.DeltaR(photag) < 0.1 && data.gen.Pt[i]/data.pho.Pt[j] > 0.5 && data.gen.Pt[i]/data.pho.Pt[j] < 2 && data.gen.Status[i] == 1) selected_genphoton.push_back(photag);
+      }
+      else nFakePhoton++;
+      }
+    }
+
     // Select only final version of the particles (their daughters have different IDs)
     // Apply cut |eta| < 2.4
     if (data.gen.Dau0ID[i]!=data.gen.ID[i]&&data.gen.Dau1ID[i]!=data.gen.ID[i]) {
@@ -1908,7 +1941,18 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       }
     }
   }
-
+  for(size_t j=0;j<selected_genphoton.size();++j){
+    while(data.gen.Loop()){
+      size_t i = data.gen.it;
+      photag.SetPtEtaPhiE(data.pho.Pt[j], data.pho.Eta[j], data.pho.Phi[j], data.pho.E[j]);
+      genpho.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
+      dR = genpho.DeltaR(photag);
+      if(dR > 0.4 && (fabs(data.gen.ID[i])==1||fabs(data.gen.ID[i])==2||fabs(data.gen.ID[i])==3||fabs(data.gen.ID[i])==4||fabs(data.gen.ID[i])==5||fabs(data.gen.ID[i])==6||fabs(data.gen.ID[i])==21)) nDirectPromptPhoton++;
+      else nFragmentationPromptPhoton++;
+    }
+  }
+       
+ 
   //if (syst_index==0&&applySmearing) {
   //  data.evt.MR  = data.evt.MR_Smear;
   //  data.evt.MTR = data.evt.MTR_Smear;
@@ -1968,6 +2012,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     if (nPhotonSelect==1) {
       MET_pho = met_pho.Pt();
       MTR_pho = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_pho);
+      R_pho   = MTR_pho/data.evt.MR;
+      R2_pho  = R_pho*R_pho;
+    }
+    if (nPhotonNoSieie==1) {
+      MET_pho = met_fakepho.Pt();
+      MTR_pho = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_fakepho);
       R_pho   = MTR_pho/data.evt.MR;
       R2_pho  = R_pho*R_pho;
     }
