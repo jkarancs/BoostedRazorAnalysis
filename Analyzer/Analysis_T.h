@@ -260,7 +260,7 @@ i+=2;
   double sf_top = calc_top_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
 i+=2;
  
-// fakes; mass top tagging and Anti-top tagiing scale factors
+// fakes; mass top tagging and Anti-top taging scale factors
  
   double sf_fake_mTop = calc_fake_top_mass_tagging_sf(data);
   double sf_fake_aTop = calc_fake_top_anti_tagging_sf(data);
