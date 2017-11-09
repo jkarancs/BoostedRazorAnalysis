@@ -1215,6 +1215,7 @@ public:
     if (debug) {
     //if (name_=="HitEfficiency_vs_InstLumi") {
     //if (name_=="HitEfficiency_vs_LayersDisks"&&npf_==0) {
+    //if (name_=="Counts_vs_NVtx"&&npf_==1) {
       std::cout<<name_<<" ";
       for (size_t i=0, n=pf_names_.size(); i<n; ++i) std::cout<<pf_names_[i]<<" ";
       std::cout<<" - pass_cuts: "<<pass_cuts_();
@@ -1234,6 +1235,7 @@ public:
       if (nweight_==2) std::cout<<weight1_()<<" * "<<weight2_();
       if (nweight_==3) std::cout<<weight1_()<<" * "<<weight2_()<<" * "<<weight3_();
       std::cout<<"\n";
+    //}
     }
     //std::cout<<pfs_[0].sel()<<std::endl;
     //std::cout<<fill_1d_()<<std::endl;
@@ -1803,6 +1805,8 @@ private:
     float labelfontsize = 20;
     float titlefontsize = 32;
     float leg_y2 = 0.9; // not used values, read from orig
+    bool ok = 0;
+    if (debug) std::cout<<"Start debugging: "<<c->GetName()<<std::endl;
     if (debug) std::cout<<"ok"<<std::endl;
     if (c->GetListOfPrimitives()->GetEntries()>2) {
       // Histos
@@ -1978,34 +1982,37 @@ private:
 	l->SetLineStyle(2);
 	l->Draw();
 	if (debug) std::cout<<"ok3"<<std::endl;
+	ok = 1;
       }
     }
-    if (debug) std::cout<<"ok4"<<std::endl;
-    TPad* pad = (TPad*)c->GetListOfPrimitives()->At(0);
-    // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), cms, era, data, legend
-    int extra = 3;
-    if (approval_/10>0) extra++;
-    if (approval_%10>0) extra++;
-    if (debug) std::cout<<"ok4"<<std::endl;
-    if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+extra) { 
-      // Resize CMS label and era text
-      extra = 1;
-      if (debug) std::cout<<"ok5"<<std::endl;
-      if (approval_/10>0) {
-	TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
-	cms_lat->SetTextSize(cms_lat->GetTextSize()*(y1+y2)/y1);
+    if (ok) {
+      if (debug) std::cout<<"ok4"<<std::endl;
+      TPad* pad = (TPad*)c->GetListOfPrimitives()->At(0);
+      // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), cms, era, data, legend
+      int extra = 3;
+      if (approval_/10>0) extra++;
+      if (approval_%10>0) extra++;
+      if (debug) std::cout<<"ok4"<<std::endl;
+      if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+extra) { 
+        // Resize CMS label and era text
+        extra = 1;
+        if (debug) std::cout<<"ok5"<<std::endl;
+        if (approval_/10>0) {
+          TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
+          cms_lat->SetTextSize(cms_lat->GetTextSize()*(y1+y2)/y1);
+        }
+        if (debug) std::cout<<"ok5"<<std::endl;
+        if (approval_%10>0) {
+          TLatex* era_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
+          era_lat->SetTextSize(era_lat->GetTextSize()*(y1+y2)/y1);
+        }
+        if (debug) std::cout<<"ok5"<<std::endl;
+        // Resize Legend (Back to default)
+        TLegend* leg = (TLegend*)pad->GetListOfPrimitives()->At(n_nostack_+(extra+=2));
+        leg->SetTextSize(0.04);
+        leg->SetY1(leg_y2 - leg->GetNRows()*1.2*0.04);
+        leg->SetY2(1-(1-leg_y2)*1.25);
       }
-      if (debug) std::cout<<"ok5"<<std::endl;
-      if (approval_%10>0) {
-	TLatex* era_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
-	era_lat->SetTextSize(era_lat->GetTextSize()*(y1+y2)/y1);
-      }
-      if (debug) std::cout<<"ok5"<<std::endl;
-      // Resize Legend (Back to default)
-      TLegend* leg = (TLegend*)pad->GetListOfPrimitives()->At(n_nostack_+(extra+=2));
-      leg->SetTextSize(0.04);
-      leg->SetY1(leg_y2 - leg->GetNRows()*1.2*0.04);
-      leg->SetY2(1-(1-leg_y2)*1.25);
     }
   }
   

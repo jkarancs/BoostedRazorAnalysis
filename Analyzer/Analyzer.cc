@@ -19,12 +19,8 @@ int main(int argc, char** argv) {
   // List names in filenames from which the code can decide if it is data or signal
   // For the rest it's assumed it's background MC
   // if .txt file is given as input then from the directory name we can already tell
-  std::vector<std::string> vname_data = { "JetHT", "MET", "SingleEle", "SingleMu", 
-					  "2015B", "2015C", "2015D", 
-					  "2016B", "2016C", "2016D", "2016E", 
-					  "2016F", "2016G", "2016H", "2016I", 
-					  "2016J", "2016K", "2016L", "2016M" };
-  std::vector<std::string> vname_signal = { "T1tttt", "T1ttbb", "T5ttcc", "T5tttt", "T2tt" }; // SMS
+  std::vector<std::string> vname_data = { "Run2015", "Run2016", "Run2017", "Run2018" };
+  std::vector<std::string> vname_signal = { "SMS" }; // SMS
 
   // ------------------------------
   // -- Parse command line stuff --
@@ -318,10 +314,10 @@ int main(int argc, char** argv) {
   if (debug) std::cout<<"Analyzer::main: init_pileup_reweighting ok"<<std::endl;
 
   // Scale QCD to match data in a QCD dominated region
-  cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
+  //cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
 
   // Jet Pt Reweighting
-  cout << "doHTReweighting (settings): " << ( settings.doHTReweighting ? "true" : "false" ) << endl;
+  //cout << "doHTReweighting (settings): " << ( settings.doHTReweighting ? "true" : "false" ) << endl;
 
   // Scale factors
   cout << "applySmearing (settings): " << ( settings.applySmearing ? "true" : "false" ) << endl;
@@ -386,7 +382,11 @@ int main(int argc, char** argv) {
   cout << endl;
   cout << "Start looping on events ..." << endl;
   double nskim = 0;
-  for(int entry=0; entry < nevents; ++entry) {
+  int ifirst = 0;
+  int ilast = nevents;
+  if (cmdline.ifirst != -1) ifirst = cmdline.ifirst;
+  if (cmdline.ilast != -1) ilast = cmdline.ilast;
+  for(int entry=ifirst; entry < ilast; ++entry) {
 
     // Read event into memory
     stream.read(entry);
@@ -493,7 +493,7 @@ int main(int argc, char** argv) {
 	// Save the total weights
 	ana.get_toppt_weight(data, syst.nSigmaTopPt[syst.index], syst.index, settings.runOnSkim);
 	ana.get_isr_weight(data, syst.nSigmaISR[syst.index], syst.index, settings.runOnSkim);
-	ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index], syst.index, settings.runOnSkim);
+	ana.get_pileup_weight(data, syst.nSigmaPU[syst.index], syst.index, settings.runOnSkim);
 
 	ana.fill_common_histos(data, settings.varySystematics, settings.runOnSkim, syst.index, w);
 	if (debug>1) std::cout<<"Analyzer::main: fill_common_histos ok"<<std::endl;
@@ -542,12 +542,10 @@ int main(int argc, char** argv) {
 	  if (syst.index==0) ofile->count("w_isr", w);
 	  
 
-	  // Pileup reweighting (Currently only do for Background)
+	  // Pileup reweighting
 	  if (syst.index == 0) h_nvtx->Fill(data.evt.NGoodVtx, w);
-	  if ( settings.doPileupReweighting && !cmdline.isSignal ) {
-	    w *= (ana.all_weights[3] = ana.get_pileup_weight(data.pu.NtrueInt, syst.nSigmaPU[syst.index], syst.index, settings.runOnSkim));
-	  } else {
-	    w *= (ana.all_weights[3] = 1);
+	  if ( settings.doPileupReweighting ) {
+	    w *= (ana.all_weights[3] = ana.get_pileup_weight(data, syst.nSigmaPU[syst.index], syst.index, settings.runOnSkim));
 	  }
 	  if (syst.index==0) {
 	    h_nvtx_rw->Fill(data.evt.NGoodVtx, w);
@@ -636,12 +634,10 @@ int main(int argc, char** argv) {
 	  // First cuts that are likely to be implemented in all analyses
 	  // eg. MET filters, baseline event selection etc.
 	  bool pass_all_baseline_cuts = true;
-	  if (syst.index == 0) {
-	    if (syst.index==0) ofile->count("NoCuts", w);
-	    for (const auto& cut : ana.baseline_cuts) {
-	      if ( !(pass_all_baseline_cuts = cut.func()) ) break; 
-	      if (syst.index==0) ofile->count(cut.name, w);
-	    }
+	  if (syst.index==0) ofile->count("NoCuts", w);
+	  for (const auto& cut : ana.baseline_cuts) {
+	    if ( !(pass_all_baseline_cuts = cut.func()) ) break; 
+	    if (syst.index==0) ofile->count(cut.name, w);
 	  }
 	  if (debug>1) std::cout<<"Analyzer::main: counting baseline events ok"<<std::endl;
 

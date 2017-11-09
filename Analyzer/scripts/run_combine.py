@@ -134,10 +134,11 @@ def run_combine(combine_cmds, nproc):
 print "Making a list of commands to run"
 combine_cmds = []
 for card in glob.glob(opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_*_"+boxes[0]+".txt"):
-    mg   = card.replace("_"+boxes[0]+".txt","").split("_")[-2:][0]
-    mchi = card.replace("_"+boxes[0]+".txt","").split("_")[-2:][1]
-    if len(boxes) > 1: card = card.replace(boxes[0],"combined")
-    combine_cmds.append(["python", "scripts/Combine_job.py", "-M", "AsymptoticLimits", "-d", card]+boxes)
+    if re.match("^"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_[0-9]+_[0-9]+_"+boxes[0]+".txt", card):
+        mg   = card.replace("_"+boxes[0]+".txt","").split("_")[-2:][0]
+        mchi = card.replace("_"+boxes[0]+".txt","").split("_")[-2:][1]
+        if len(boxes) > 1: card = card.replace(boxes[0],"_".join(boxes))
+        combine_cmds.append(["python", "scripts/Combine_job.py", "-M", "AsymptoticLimits", "-d", card]+boxes)
 
 # Merge n commands into a single job
 if opt.batch and opt.ncardperjob>1:

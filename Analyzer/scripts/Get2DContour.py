@@ -81,6 +81,7 @@ sms_models = {
         'T2qq':SMS(100, 1500, 0, 800,
             isGluino=False),
         'T5ttcc':SMS(600, 2300, 0, 1450),#, diagonalOffset=225),
+        'T5qqqqVV':SMS(600, 2300, 0, 1650),
 }
 # ------------------ End import by hand -----------------
 
@@ -351,6 +352,7 @@ if __name__ == '__main__':
     directory = options.outDir
     
     refXsecFile = options.refXsecFile
+    if "T2tt" in options.model: refXsecFile = "./data/stop13TeV.txt"
     doHybridNew = options.doHybridNew
                 
     set_palette("rainbow",255)
@@ -383,7 +385,7 @@ if __name__ == '__main__':
     #    mchi = float(result.replace(".log","").split("_")[-2:][1])
     #    gchipairs.append((mg,mchi))
     #    haddOutputs.append("%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box))
-    for result in glob.glob(directory+"/"+model+"_xsecUL_*_"+box+".root"):
+    for result in glob.glob(directory+"/"+model+"_xsecUL_mg_*_mchi_*.?_"+box+".root"):
         haddOutputs.append(result)
         mg   = float(result.replace("_"+box+".root","").split("_")[-3])
         mchi = float(result.replace("_"+box+".root","").split("_")[-1])

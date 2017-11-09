@@ -180,6 +180,8 @@ namespace utils {
     std::string signalName;                // determined automatically from input file names
     int  quickTest;                        // Do a quick test on 1/100th of events
     bool noPlots;                          // Do not make analysis histos (for skimming)
+    int ifirst;
+    int ilast;
   };
   
   // Read ntuple fileNames from file list
@@ -224,6 +226,10 @@ namespace utils {
     // Don't fill any histos (useful for skimmin jobs)
     cl.noPlots = false;
 
+    // Change event loop range (default=-1, all events)
+    cl.ifirst = -1;
+    cl.ilast = -1;
+
     for (int iarg=1; iarg<argc; ++iarg) {
       std::string arg = argv[iarg];
       // look for optional arguments (argument has "=" in it)
@@ -241,6 +247,8 @@ namespace utils {
 	  std::vector<std::string> list = getFilenames(fullFileList);
 	  cl.allFileNames.insert(cl.allFileNames.end(), list.begin(), list.end());
 	}
+	if (option=="ifirst") value>>cl.ifirst;
+	if (option=="ilast") value>>cl.ilast;
       } else {
 	if (cl.outputFileName=="") {
 	  // 1st non-optional (i.e xxx=yyy) command line argument is output ifle

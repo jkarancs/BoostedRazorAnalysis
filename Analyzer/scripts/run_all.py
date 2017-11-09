@@ -145,6 +145,18 @@ elif not opt.replot and len(args) < 1:
 else:
     input_filelists = args
 
+# Read some options from included settings_*.h file
+with open("Analyzer.cc") as ana:
+    for line in ana:
+        if '#include "settings_' in line:
+            settings_file = line.split()[1].replace('"','')
+vary_syst = False
+with open(settings_file) as settings:
+    for line in settings:
+        if "define SYST" in line and not "0" in line:
+            vary_syst = True
+
+
 # ----------------- Analyzer Arguments -------------------
 # Analyzer (see below in functions):
 # Each element supplies 3 arguments for each Analyzer job:
@@ -197,14 +209,13 @@ for filelist in input_filelists:
                     for line in ratios:
                         column = line.split()
                         #if samplename == column[2]:
-                        if column[1] in samplename:
+                        if column[1] in samplename and not optim_found:
                             JOB_NEVT = int(float(column[0])*JOB_NEVT)
                             optim_found = True
-                if "FastSim" in samplename: JOB_NEVT /= 4
             # Other jobs use the results from a previous run
             else:
                 # Previous txt file method (job_ratios.txt)
-                with open("job_ratios.txt") as ratios:
+                with open("systjob_ratios.txt" if vary_syst else "job_ratios.txt") as ratios:
                     for line in ratios:
                         column = line.split()
                         if samplename == column[1]:
@@ -293,6 +304,9 @@ for filelist in input_filelists:
     else:
         # In case of a single job/dataset
         ana_arguments.append([output_file, [EXEC_PATH+"/"+filelist], options, log_file])
+
+#print "Number of jobs: "+str(len(ana_arguments))
+#sys.exit()
 
 # for recovery (also uncomment backup, compile)
 #ana_arguments = ana_arguments[2833:]
@@ -383,10 +397,10 @@ def compile(Ana = 1, Plotter = 1):
     if opt.run: os.chdir(EXEC_PATH)
     special_call(["make", "clean"])
     if Ana:
-        special_call(["make", "Analyzer"])
+        special_call(["make", "-j8", "Analyzer"])
         special_call(["chmod", "777", "Analyzer"])
     if Plotter:
-        special_call(["make", "Plotter"])
+        special_call(["make", "-j8", "Plotter"])
         special_call(["chmod", "777", "Plotter"])
     if opt.run: os.chdir(saved_path)
     print "Compilation successful."
@@ -507,6 +521,8 @@ def analysis(ana_arguments, nproc):
                             os.remove('jobstatus_'+jobname+'.txt')
                             last_known_status[jobindex] = time.time()
                 # Check list of files ready to be merged (with hadd)
+                if not os.path.exists(opt.OUTDIR+"/hadd"):
+                    special_call(["mkdir", "-p", opt.OUTDIR+"/hadd"], 0)
                 prev_sample = ""
                 mergeables = []
                 all_mergeables = []
@@ -586,7 +602,7 @@ else:
         compile(1, opt.plot)
     plotter_input_files = analysis(ana_arguments, opt.NPROC)
     if opt.plot:
-        if opt.nohadd: plotter_input_files = glob.glob(opt.OUTDIR+"/hadd/*.root")
+        if not opt.nohadd: plotter_input_files = glob.glob(opt.OUTDIR+"/hadd/*.root")
         plotter(plotter_input_files, PLOTTER_OUT)
         #if not 'lxplus' in socket.gethostname():
         #    show_result(PLOTTER_OUT)

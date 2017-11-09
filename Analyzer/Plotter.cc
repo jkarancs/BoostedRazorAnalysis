@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   Analysis ana(cmdline.isData, cmdline.isSignal, cmdline.dirname);
 
   ana.define_histo_options(w, data, syst.nSyst, syst.index, settings.runOnSkim);
-  ana.init_common_histos();
+  ana.init_common_histos(settings.varySystematics);
   ana.init_analysis_histos(syst.nSyst, syst.index);
 
   for (auto in_file : cmdline.fileNames) ana.load_analysis_histos(in_file);

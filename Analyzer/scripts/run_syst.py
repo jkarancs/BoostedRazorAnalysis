@@ -1,4 +1,5 @@
 import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, getpass, ROOT
+from array import array
 from optparse import OptionParser
 
 # ---------------------- Cmd Line  -----------------------
@@ -21,6 +22,10 @@ if "_nj35" in opt.box: BIN = "_nj35"
 if "_nj6"  in opt.box: BIN = "_nj6"
 
 # ---------------------- Settings ------------------------
+
+lumi = 35867 # /pb
+ntuple = "ntuple/Latest"
+combine_bins = False
 
 # List of input files
 data = [
@@ -49,6 +54,8 @@ elif opt.model == "T5tttt":
 elif opt.model == "T5ttcc":
     signal.append("FastSim_SMS-T5ttcc")
     signal.append("FastSim_SMS-T5ttcc_mGluino1750to2300")
+elif opt.model == "T5qqqqVV":
+    signal.append("FastSim_SMS-T5qqqqVV")
 else:
     "Error: unknown signal model: "+opt.model
     sys.exit()
@@ -141,6 +148,10 @@ systematics = [
     "",
 #    "_lumiUp",
 #    "_lumiDown",
+    "_topptUp",
+    "_topptDown",
+    "_isrUp", 
+    "_isrDown", 
     "_pileupUp",
     "_pileupDown",
     "_alphasUp",
@@ -241,13 +252,57 @@ def logged_call(cmd, logfile, append=False):
             continue
         break
 
-def load(f, name, pf=""):
+def load(f, name, pf="", combine = False):
     h = f.Get(name)
-    h_new = ROOT.TH1D(h.GetName()+pf,h.GetTitle(),h.GetNbinsX(),h.GetXaxis().GetXmin(),h.GetXaxis().GetXmax())
-    for i in range (0, h.GetNbinsX()+2):
-        h_new.SetBinContent(i,h.GetBinContent(i));
-        h_new.SetBinError(i,h.GetBinError(i));
+    if combine:
+        h_new = combinebins(h, pf)
+    else:
+        h_new = ROOT.TH1D(h.GetName()+pf,h.GetTitle(),h.GetNbinsX(),h.GetXaxis().GetXmin(),h.GetXaxis().GetXmax())
+        for i in range (0, h.GetNbinsX()+2):
+            h_new.SetBinContent(i,h.GetBinContent(i));
+            h_new.SetBinError(i,h.GetBinError(i));
+        h_new.SetEntries(h.GetEntries())
+        h_new.SetDirectory(0)
+    return h_new
+
+def combinebins(h, pf=""):
+    binmap = {
+        1:   1,
+        2:   2,
+        3:   3,
+        4:   4,
+        5:   5,
+        6:   6,
+        7:   7,
+        8:   8,
+        9:   9,
+        10: 10,
+        11: 11,
+        12: 12,
+        13: 13,
+        14: 14, # Merge 2 MR [1200, 1600], R2 [0.24, 0.5, 1.0]
+        15: 14,
+        16: 15,
+        17: 16,
+        18: 17, # Merge 3 MR [1600, 2000], R2 [0.16, 0.24, 0.5, 1.0]
+        19: 17,
+        20: 17,
+        21: 18,
+        22: 19, # Merge 4 MR [2000, 4000], R2 [0.12, 0.16, 0.24, 0.5, 1.0]
+        23: 19,
+        24: 19,
+        25: 19 }
+    h_new = ROOT.TH1D(h.GetName()+pf,h.GetTitle(), 19,0,19)
+    for i in range (1, h.GetNbinsX()+1):
+        h_new.SetBinContent(binmap[i], h_new.GetBinContent(binmap[i]) + h.GetBinContent(i))
+        h_new.SetBinError  (binmap[i], (h_new.GetBinError(binmap[i])**2 + h.GetBinError(i)**2)**0.5)
     h_new.SetEntries(h.GetEntries())
+    h_new.SetDirectory(0)
+    return h_new
+
+def loadclone(f, name, pf=""):
+    h = f.Get(name)
+    h_new = h.Clone(name+pf)
     h_new.SetDirectory(0)
     return h_new
 
@@ -265,17 +320,17 @@ def bg_est(name, data, sub, mult, div):
         if est.GetBinContent(binx)<0:
             est.SetBinContent(binx,0)
             est.SetBinError(binx,0)
-        if mult2.GetBinContent(binx)<0:
-            mult2.SetBinContent(binx,0)
-            mult2.SetBinError(binx,0)
-        if div2.GetBinContent(binx)<0:
-            div2.SetBinContent(binx,0)
-            div2.SetBinError(binx,0)
+        #if mult2.GetBinContent(binx)<0:
+        #    mult2.SetBinContent(binx,0)
+        #    mult2.SetBinError(binx,0)
+        #if div2.GetBinContent(binx)<0:
+        #    div2.SetBinContent(binx,0)
+        #    div2.SetBinError(binx,0)
     # bin-by-bin k factor
-    est.Multiply(mult2)
-    est.Divide(div2)
+    #est.Multiply(mult2)
+    #est.Divide(div2)
     # common k factor
-    #est.Scale(mult.Integral()/div.Integral())
+    est.Scale(mult.Integral()/div.Integral())
     #if "Top_MJ_est" in name:
     #for binx in range(1, est.GetNbinsX()+1):
     #    if est.GetBinContent(binx)<0:
@@ -317,59 +372,85 @@ def run_combine(combine_cmds, nproc):
 
 if not opt.nohadd:
     print "Merging histograms from directory: "+opt.dir
-    
-    data_files = []
-    for name in data: data_files.append(opt.dir+"/hadd/"+name+".root")
-    
-    signal_files = []
-    for name in signal: signal_files.append(opt.dir+"/hadd/"+name+".root")
-    
-    multijet_files = []
-    for name in multijet: multijet_files.append(opt.dir+"/hadd/"+name+".root")
-    top_files = []
-    for name in top: top_files.append(opt.dir+"/hadd/"+name+".root")
-    wjets_files = []
-    for name in wjets: wjets_files.append(opt.dir+"/hadd/"+name+".root")
-    ztoinv_files = []
-    for name in ztoinv: ztoinv_files.append(opt.dir+"/hadd/"+name+".root")
-    other_files = []
-    for name in other: other_files.append(opt.dir+"/hadd/"+name+".root")
 
+    # data
     if not os.path.exists("syst_"+opt.dir+"/hadd/data.root"):
+        data_files = []
+        for name in data: data_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/data.root"]+data_files,               "syst_"+opt.dir+"/hadd/log/data.log")
+
+    # signal
     if not os.path.exists("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"):
+        signal_files = []
+        for name in signal: signal_files.append(opt.dir+"/hadd/"+name+".root")
         if len(signal_files)>1:
             logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"]+signal_files, "syst_"+opt.dir+"/hadd/log/signal_"+opt.model+".log")
         else:
-            print (["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"])
+            #print (["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"])
             logged_call(["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"], "syst_"+opt.dir+"/hadd/log/signal_"+opt.model+".log")
+        # Get unskimmed number of events in low/high npv region (for signal acceptance)
+        input_files = []
+        for sig in signal: input_files += glob.glob(ntuple+"/"+sig+"/*.root")
+        for i in range(len(input_files)):
+            f = ROOT.TFile.Open(input_files[i])
+            if "T2tt" in opt.model:
+                h = f.Get("npvLowHigh_T2tt")
+            else:
+                h = f.Get("npvLowHigh_T1tttt")
+            if i==0:
+                npvLowHighHist_allevt = h.Clone(h.GetName()+"_allevt")
+                npvLowHighHist_allevt.SetDirectory(0)
+            else:
+                npvLowHighHist_allevt.Add(h)
+            f.Close()
+        f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root","UPDATE")
+        npvLowHighHist_allevt.Write()
+        f.Close()
+
+    # background
     if not os.path.exists("syst_"+opt.dir+"/hadd/multijet.root"):
+        multijet_files = []
+        for name in multijet: multijet_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/multijet.root"]+multijet_files,       "syst_"+opt.dir+"/hadd/log/multijet.log")
     if not os.path.exists("syst_"+opt.dir+"/hadd/top.root"):
+        top_files = []
+        for name in top: top_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/top.root"]+top_files,                 "syst_"+opt.dir+"/hadd/log/top.log")
     if not os.path.exists("syst_"+opt.dir+"/hadd/wjets.root"):
+        wjets_files = []
+        for name in wjets: wjets_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/wjets.root"]+wjets_files,             "syst_"+opt.dir+"/hadd/log/wjets.log")
     if not os.path.exists("syst_"+opt.dir+"/hadd/ztoinv.root"):
+        ztoinv_files = []
+        for name in ztoinv: ztoinv_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/ztoinv.root"]+ztoinv_files,           "syst_"+opt.dir+"/hadd/log/ztoinv.log")
     if not os.path.exists("syst_"+opt.dir+"/hadd/other.root"):
+        other_files = []
+        for name in other: other_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/other.root"]+other_files,             "syst_"+opt.dir+"/hadd/log/other.log")
 
 # ----------------- Harvest histograms -------------------
 
 # Load:
+# BG estimate
 # Q_data, Q_TT, Q_MJ, Q_WJ, Q_ZI, Q_OT
 # W_data, W_TT, W_MJ, W_WJ, W_ZI, W_OT
 # T_data, T_TT, T_MJ, T_WJ, T_ZI, T_OT
 # S_data, S_TT, S_MJ, S_WJ, S_ZI, S_OT
+# For kappa uncertainty:
+# q_data, q_TT, q_MJ, q_WJ, q_ZI, q_OT
 
 print "Loading histograms"
 
 # Data
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
-Q_data = load(f,"MRR2_Q_data"+BIN,"_data")
-W_data = load(f,"MRR2_W_data"+BIN,"_data")
-T_data = load(f,"MRR2_T_data"+BIN,"_data")
-S_data = load(f,"MRR2_S_data"+BIN,"_data")
+Q_data = load(f,"MRR2_Q_data"+BIN,"_data", combine_bins)
+W_data = load(f,"MRR2_W_data"+BIN,"_data", combine_bins)
+T_data = load(f,"MRR2_T_data"+BIN,"_data", combine_bins)
+S_data = load(f,"MRR2_S_data"+BIN,"_data", combine_bins)
+q_data = load(f,"MRR2_q_data"+BIN,"_data", combine_bins)
+npvHist = load(f,"nvtx","_data")
+npvHist.Scale(1/npvHist.Integral())
 
 # Signal
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root")
@@ -382,11 +463,18 @@ for ikey in range(0, f.GetListOfKeys().GetEntries()):
             counter+=1
             S_syst = []
             for syst in systematics:
-                S_syst.append(load(f, name+BIN+syst, "_sig"))
+                S_syst.append(load(f, name+BIN+syst, "_sig", combine_bins))
             S_signal.append(S_syst)
     if opt.TEST>0:
         if counter==opt.TEST:
             break
+# Histos for pileup acceptance systematic
+if "T2tt" in opt.model:
+    npvLowHighHist        = loadclone(f,"npvLowHigh_T2tt","_sig")
+    npvLowHighHist_allevt = loadclone(f,"npvLowHigh_T2tt_allevt","_sig")
+else:
+    npvLowHighHist        = loadclone(f,"npvLowHigh_T1tttt","_sig")
+    npvLowHighHist_allevt = loadclone(f,"npvLowHigh_T1tttt_allevt","_sig")
 
 # Background
 # top
@@ -395,56 +483,285 @@ Q_TT = []
 W_TT = []
 T_TT = []
 S_TT = []
+q_TT = []
 for syst in systematics:
-    Q_TT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_TT"))
-    W_TT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_TT"))
-    T_TT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_TT"))
-    S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT"))
+    Q_TT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_TT", combine_bins))
+    W_TT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_TT", combine_bins))
+    T_TT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_TT", combine_bins))
+    S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT", combine_bins))
+    q_TT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_TT", combine_bins))
 # multijet
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/multijet.root")
 Q_MJ = []
 W_MJ = []
 T_MJ = []
 S_MJ = []
+q_MJ = []
 for syst in systematics:
-    Q_MJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_MJ"))
-    W_MJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_MJ"))
-    T_MJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_MJ"))
-    S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ"))
+    Q_MJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_MJ", combine_bins))
+    W_MJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_MJ", combine_bins))
+    T_MJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_MJ", combine_bins))
+    S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ", combine_bins))
+    q_MJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_MJ", combine_bins))
 # wjets
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/wjets.root")
 Q_WJ = []
 W_WJ = []
 T_WJ = []
 S_WJ = []
+q_WJ = []
 for syst in systematics:
-    Q_WJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_WJ"))
-    W_WJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_WJ"))
-    T_WJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_WJ"))
-    S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ"))
+    Q_WJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_WJ", combine_bins))
+    W_WJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_WJ", combine_bins))
+    T_WJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_WJ", combine_bins))
+    S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ", combine_bins))
+    q_WJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_WJ", combine_bins))
 # ztoinv
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
 Q_ZI = []
 W_ZI = []
 T_ZI = []
 S_ZI = []
+q_ZI = []
 for syst in systematics:
-    Q_ZI.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_ZI"))
-    W_ZI.append(load(f,"MRR2_W_bkg"+BIN+syst,"_ZI"))
-    T_ZI.append(load(f,"MRR2_T_bkg"+BIN+syst,"_ZI"))
-    S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI"))
+    Q_ZI.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_ZI", combine_bins))
+    W_ZI.append(load(f,"MRR2_W_bkg"+BIN+syst,"_ZI", combine_bins))
+    T_ZI.append(load(f,"MRR2_T_bkg"+BIN+syst,"_ZI", combine_bins))
+    S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI", combine_bins))
+    q_ZI.append(load(f,"MRR2_q_bkg"+BIN+syst,"_ZI", combine_bins))
 # other
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/other.root")
 Q_OT = []
 W_OT = []
 T_OT = []
 S_OT = []
+q_OT = []
 for syst in systematics:
-    Q_OT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_OT"))
-    W_OT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_OT"))
-    T_OT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_OT"))
-    S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT"))
+    Q_OT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_OT", combine_bins))
+    W_OT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_OT", combine_bins))
+    T_OT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_OT", combine_bins))
+    S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", combine_bins))
+    q_OT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_OT", combine_bins))
 
+# ------------- Signal MET systematics ------------------
+
+# Implementing method:
+# https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSRecommendationsMoriond17#Special_treatment_of_MET_uncerta
+# --> https://github.com/RazorCMS/RazorAnalyzer/blob/master/python/SMSTemplates.py#L140-L170
+
+print "Correcting yields using gen-MET vs PF MET comparison"
+i_metUp = -1
+for i in range(len(S_signal[0])):
+    if "metUp" in S_signal[0][i].GetName(): i_metUp = i
+
+for i in range(len(S_signal)):
+    # pfmet:  S_signal[i][0]       nominal
+    # genmet: S_signal[i][i_metUp] "metUp"
+    for ibin in range(1, S_signal[i][0].GetNbinsX()+1):
+        pfmetYield = S_signal[i][0].GetBinContent(ibin)
+        genmetYield = S_signal[i][i_metUp].GetBinContent(ibin)        
+        central = (pfmetYield+genmetYield)/2.0
+        unc = (pfmetYield-genmetYield)/2.0
+        S_signal[i][i_metUp]  .SetBinContent(ibin, central + unc)
+        S_signal[i][i_metUp+1].SetBinContent(ibin, central - unc)        
+        if pfmetYield <= 0:
+            continue
+        #print "Multiplying bin content by",central/pfmetYield
+        for hist in S_signal[i]:
+            if '_metUp' in hist.GetName() or '_metDown' in hist.GetName(): 
+                continue
+            hist.SetBinContent(ibin, hist.GetBinContent(ibin) * central/pfmetYield)
+
+# ------------- Signal pile-up systematic ---------------
+
+# Implementing method:
+# https://twiki.cern.ch/twiki/bin/viewauth/CMS/SUSRecommendationsMoriond17#Pileup_lumi
+# --> https://twiki.cern.ch/twiki/pub/CMS/SUSRecommendationsMoriond17/pileup_acceptance_systematic.pdf
+# Similar implementation to: https://github.com/RazorCMS/RazorAnalyzer/blob/master/python/SMSTemplates.py#L60-L138
+
+print "Performing NPV extrapolation procedure for signal MC"
+i_pileupUp = -1
+for i in range(len(S_signal[0])):
+    if "pileupUp" in S_signal[0][i].GetName(): i_pileupUp = i
+
+#get theory cross sections
+xsecs = {}
+for line in open('./data/stop13TeV.txt' if ('T2' in opt.model) else 'data/gluino13TeV.txt','r'):
+    line = line.replace('\n','')
+    xsecs[float(line.split(',')[0])]=float(line.split(',')[1]) #pb
+
+w_pileup_nom = ROOT.TH2D("w_pileup_nominal","",npvLowHighHist_allevt.GetNbinsX(),npvLowHighHist_allevt.GetXaxis().GetXmin(),npvLowHighHist_allevt.GetXaxis().GetXmax(),
+                         npvLowHighHist_allevt.GetNbinsY(),npvLowHighHist_allevt.GetYaxis().GetXmin(),npvLowHighHist_allevt.GetYaxis().GetXmax())
+w_pileup_err = ROOT.TH2D("w_pileup_error","",npvLowHighHist_allevt.GetNbinsX(),npvLowHighHist_allevt.GetXaxis().GetXmin(),npvLowHighHist_allevt.GetXaxis().GetXmax(),
+                         npvLowHighHist_allevt.GetNbinsY(),npvLowHighHist_allevt.GetYaxis().GetXmin(),npvLowHighHist_allevt.GetYaxis().GetXmax())
+
+for i in range(len(S_signal)):
+    histLowNPV  = S_signal[i][i_pileupUp+1]
+    histHighNPV = S_signal[i][i_pileupUp]
+    
+    # Get gluino/stop and lsp bins for npvHighLow (signal)
+    scan_point = S_signal[i][0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
+    mg_bin  = npvLowHighHist.GetXaxis().FindBin(float(scan_point.split("_")[0]))
+    mch_bin = npvLowHighHist.GetXaxis().FindBin(float(scan_point.split("_")[1]))
+    
+    # Bin centers of low/high vertex distributions in data - TODO: Ask Dustin
+    npvHist.GetXaxis().SetRangeUser(npvLowHighHist.GetZaxis().GetBinLowEdge(1),
+                                    npvLowHighHist.GetZaxis().GetBinLowEdge(1)+npvLowHighHist.GetZaxis().GetBinWidth(1)-1)
+    xmean_low = npvHist.GetMean()
+    npvHist.GetXaxis().SetRangeUser(npvLowHighHist.GetZaxis().GetBinLowEdge(2),
+                                    npvLowHighHist.GetZaxis().GetBinLowEdge(2)+npvLowHighHist.GetZaxis().GetBinWidth(2))
+    xmean_high = npvHist.GetMean()
+    x = array('d', [xmean_low, xmean_high]) # bin centers of npvLowHighHist
+    ex = array('d', [0,0])
+    pL = 0
+    pH = 0
+    epL = 0
+    epH = 0
+    for ibin in range(1, histLowNPV.GetNbinsX()+1):
+        # Calculate relative acceptances
+        pL += histLowNPV.GetBinContent(ibin)
+        pH += histHighNPV.GetBinContent(ibin)
+        epL = (epL*epL + histLowNPV.GetBinError(ibin)*histLowNPV.GetBinError(ibin)) ** 0.5
+        epH = (epH*epH + histHighNPV.GetBinError(ibin)*histHighNPV.GetBinError(ibin)) ** 0.5
+    
+    p = pL+pH
+    NL = npvLowHighHist_allevt.GetBinContent(mg_bin,mch_bin,1)
+    NH = npvLowHighHist_allevt.GetBinContent(mg_bin,mch_bin,2)
+    N = NL+NH
+    evt_weight = (lumi * xsecs[float(scan_point.split("_")[0])] / N)
+    if not epL: epL = 1.83 * evt_weight
+    if not epH: epH = 1.83 * evt_weight
+    #print "p (L,H): "+str(pL)+", "+str(pH)+"   N (L,H): "+str(NL)+", "+str(NH)
+    relAccLow  = pL/(p if p>0 else 1)  * (N/NL)
+    relAccHigh = pH/(p if p>0 else 1)  * (N/NH)
+    errRelAccLow  = epL/(p if p>0 else 1)  * (N/NL)
+    errRelAccHigh = epH/(p if p>0 else 1)  * (N/NH)
+    #print "relAcc (low,high): "+str(relAccLow)+", "+str(relAccHigh)
+    
+    # Perform linear fit to 2-bin NPV distribution
+    y = array('d', [relAccLow, relAccHigh])
+    ey = array('d', [errRelAccLow, errRelAccHigh])
+    graph = ROOT.TGraphErrors(2, x, y, ex, ey)
+    fitResult = graph.Fit("pol1", "SMFQ")
+    p0 = fitResult.Parameter(0)
+    p1 = fitResult.Parameter(1)
+    fitCov = fitResult.GetCovarianceMatrix()
+    
+    # Convolve linear fit with NPV distribution in data
+    averageAcceptance = 0
+    averageAcceptanceErr = 0
+    for npvBin in range(1, npvHist.GetNbinsX()+1):
+        npv = npvHist.GetXaxis().GetBinCenter(npvBin)
+        npvWeight = npvHist.GetBinContent(npvBin)
+        fitPred = p0 + npv * p1
+        fitError = ( npv*npv * fitCov(1,1) + 
+                     fitCov(0,0) + 2*npv * fitCov(0,1) )**(0.5)
+        averageAcceptance += npvWeight * fitPred
+        averageAcceptanceErr += npvWeight * fitError
+    averageAcceptance = max(0.01, averageAcceptance)
+    w_pileup_nom.SetBinContent(mg_bin, mch_bin, averageAcceptance)
+    w_pileup_err.SetBinContent(mg_bin, mch_bin, averageAcceptanceErr)
+    
+    # Put the up/down errors from this procedure 
+    # into the npvextrap histograms
+    for ibin in range(1, histLowNPV.GetNbinsX()+1):
+        nominal = S_signal[i][0].GetBinContent(ibin)
+        S_signal[i][i_pileupUp]  .SetBinContent(ibin, (averageAcceptance+averageAcceptanceErr)*nominal)
+        S_signal[i][i_pileupUp+1].SetBinContent(ibin, max(0.01,averageAcceptance-averageAcceptanceErr)*nominal)
+    
+    # Scale all the rest of the signal histograms based on these weights
+    #print "pL,pH: "+str(pL)+", "+str(pH)+" acceptance factors ",
+    #print "(nominal, up, down): "+str(averageAcceptance)+",",
+    #print " "+str(averageAcceptance+averageAcceptanceErr)+",",
+    #print " "+str(max(0,averageAcceptance-averageAcceptanceErr))
+    weightedOverNominal = averageAcceptance
+    #print "In bin %d, weighted yield is %.3f of nominal"%(ibin,weightedOverNominal)
+    for hist in S_signal[i]:
+        if '_pileupUp' in hist.GetName() or '_pileupDown' in hist.GetName(): 
+            continue
+        for ibin in range(1, histLowNPV.GetNbinsX()+1):
+            hist.SetBinContent(ibin, hist.GetBinContent(ibin) * weightedOverNominal)
+
+f_pu = ROOT.TFile.Open("signal_pileup_syst_"+opt.model+"_"+opt.box+".root","RECREATE")
+w_pileup_nom.Write()
+w_pileup_err.Write()
+f_pu.Close()
+
+# --------------- kappa uncertainty ---------------------
+
+##  # Determined from the Closure of Q --> Q'
+##  
+##  # Merging MC yields in Q and Q'
+##  Q_MC = Q_TT[0].Clone("Q_MC")
+##  Q_MC.Add(Q_MJ[0])
+##  Q_MC.Add(Q_WJ[0])
+##  Q_MC.Add(Q_ZI[0])
+##  Q_MC.Add(Q_OT[0])
+##  q_MC = q_TT[0].Clone("q_MC")
+##  q_MC.Add(q_MJ[0])
+##  q_MC.Add(q_WJ[0])
+##  q_MC.Add(q_ZI[0])
+##  q_MC.Add(q_OT[0])
+##  
+##  # Calculating bin-by-bin Q' estimate
+##  q_est = Q_data.Clone("q_est")
+##  q_est.Multiply(q_MC)
+##  q_est.Divide(Q_MC)
+##  
+##  # Divide data counts by this estimate
+##  kappa_unc = q_data.Clone("kappa_unc")
+##  kappa_unc.Divide(q_est)
+##  
+##  # Convolute gaussians with area of event counts in data
+##  functions = []
+##  fmax = 0
+##  all_func = ""
+##  for xbin in range(1, kappa_unc.GetNbinsX()+1):
+##      #print "Drawing gaus with parameters: norm="+str(q_data.GetBinContent(xbin))+", mean="+str(kappa_unc.GetBinContent(xbin))+", sigma="+str(kappa_unc.GetBinError(xbin))
+##      gaus = ROOT.TF1("gaus"+str(xbin),"[0]*exp(-0.5*(x-[1])*(x-[1])/([2]*[2]))", -10,10)
+##      #gaus.SetParameters(q_data.GetBinContent(xbin)**0.5,kappa_unc.GetBinContent(xbin),kappa_unc.GetBinError(xbin))
+##      gaus.SetParameters(q_data.GetBinContent(xbin),kappa_unc.GetBinContent(xbin),kappa_unc.GetBinError(xbin))
+##      all_func += "gaus("+str((xbin-1)*3)+")+"
+##      gaus.SetLineColor(605+xbin)
+##      functions.append(gaus)
+##      if gaus.GetMaximum() > fmax: fmax = gaus.GetMaximum()
+##  
+##  kappa_uncertainty = 0.6
+##  plotmax = 500
+##  plot = ROOT.TCanvas("kappa_unc_"+opt.box)
+##  hist = ROOT.TH1D("h",";Data/Prediction;A.U.",20,-10,10)
+##  hist.GetXaxis().SetRangeUser(0,2)
+##  hist.GetYaxis().SetRangeUser(0,fmax*1.1)
+##  hist.SetStats(0)
+##  hist.Draw()
+##  conv = ROOT.TF1("conv", all_func[:-1], -10,10)
+##  conv.SetLineColor(1)
+##  for i in range(0, len(functions)):
+##      functions[i].Draw("SAME")
+##      conv.SetParameter(i*3,  functions[i].GetParameter(0))
+##      conv.SetParameter(i*3+1,functions[i].GetParameter(1))
+##      conv.SetParameter(i*3+2,functions[i].GetParameter(2))
+##  conv.Draw("SAME")
+##  plotmax = 1.2 * conv.GetMaximum()
+##  hist.GetYaxis().SetRangeUser(0,plotmax)
+##  l1 = ROOT.TLine(1-kappa_uncertainty,0, 1-kappa_uncertainty,plotmax)
+##  l1.Draw()
+##  l2 = ROOT.TLine(1+kappa_uncertainty,0, 1+kappa_uncertainty,plotmax)
+##  l2.Draw()
+##  lat = ROOT.TLatex(0.6, 0.9*plotmax, "Integral in range = %.3f" % (conv.Integral(1-kappa_uncertainty, 1+kappa_uncertainty)/conv.Integral(-10, 10)))
+##  lat.Draw()
+##  
+##  plot.SaveAs(plot.GetName()+".png")
+##  
+##  fout = ROOT.TFile("kappa_unc_"+opt.box+".root","RECREATE")
+##  Q_MC.Write()
+##  q_MC.Write()
+##  q_est.Write()
+##  Q_data.Write("Q_data")
+##  q_data.Write("q_data")
+##  kappa_unc.Write()
+##  plot.Write()
+##  fout.Close()
 
 # --------------- Background Estimation ------------------
 
@@ -499,7 +816,7 @@ for signal_syst in S_signal:
     root_filename = "syst_"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_"+scan_point+"_"+opt.box+".root"
     if not opt.nocards:
         fout = ROOT.TFile.Open(root_filename,"recreate")
-        print "  Creating root file: "+root_filename
+        #print "  Creating root file: "+root_filename
         # Add signal systematics
         for i in range(0, len(systematics)):
             signal_syst[i].Write("Signal"+systematics[i])
@@ -512,7 +829,7 @@ for signal_syst in S_signal:
     card_filename = root_filename.replace(".root",".txt")
     cards.append(card_filename)
     if not opt.nocards:
-        print "  Creating data card: "+card_filename
+        #print "  Creating data card: "+card_filename
         card=open(card_filename, 'w+')
         card.write(
 '''imax 1 number of channels
@@ -545,7 +862,9 @@ rate		'''
 '''
 ------------------------------------------------------------
 lumi		lnN	1.025	1.025	1.025	1.025	1.025	1.025
-pileup		shape	-	1.0	1.0	1.0	1.0	1.0
+pileup		shape	1.0	1.0	1.0	1.0	1.0	1.0
+toppt		shape	-	1.0	1.0	1.0	1.0	1.0
+isr		shape	1.0	-	-	-	-	-
 jes		shape	1.0	1.0	1.0	1.0	1.0	1.0
 jer 		shape	1.0	1.0	1.0	1.0	1.0	1.0
 met		shape	1.0	1.0	1.0	1.0	1.0	1.0

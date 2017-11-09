@@ -34,7 +34,9 @@ LATEST_NTUPLE_EOS="Skim_Oct11"
 #LATEST_NTUPLE_GRID18="May10"
 #LATEST_NTUPLE_GRID18="May10_part7"
 #LATEST_NTUPLE_GRID18="Skim_May19_1JetAK8_0p04R2"
-LATEST_NTUPLE_GRID18="Sep26_part1"
+#LATEST_NTUPLE_GRID18="Sep26_part1"
+#LATEST_NTUPLE_GRID18="Sep26_part2"
+LATEST_NTUPLE_GRID18="Skim_Oct11"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 if 'grid18.kfki.hu' in socket.gethostname(): ANA_BASE='/data/jkarancs/CMSSW/Analyzer'
@@ -95,13 +97,14 @@ elif 'grid18.kfki.hu' in socket.gethostname():
     if not os.path.exists(ANA_BASE+'/ntuple/Latest'):
         print "Making directory for latest ntuple symlinks: "+ANA_BASE+'/ntuple/Latest'
         os.makedirs(ANA_BASE+'/ntuple/Latest')
-    print 'Creating symlinks to the latest ntuples in ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/ ... ',
+    
+    #print 'Creating symlinks to the latest ntuples in ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/ ... ',
     #for grid18_subdir in os.listdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18):
     #    if os.path.isdir(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/'+grid18_subdir):
     #        source = os.path.realpath(ANA_BASE+'/ntuple/grid18/'+LATEST_NTUPLE_GRID18+'/'+grid18_subdir)
     #        target = ANA_BASE+'/ntuple/Latest/'+source.split("/")[-1]
     #        os.symlink(source, target)
-
+    #    print 'Done.'
     if os.path.exists(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
         print 'Creating symlinks to the latest ntuples in /data drive: ntuple/grid18_data/'+LATEST_NTUPLE_GRID18+'/ ... ',
         for data_subdir in os.listdir(ANA_BASE+'/ntuple/grid18_data/'+LATEST_NTUPLE_GRID18):
