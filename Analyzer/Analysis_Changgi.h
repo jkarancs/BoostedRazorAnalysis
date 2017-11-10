@@ -127,8 +127,20 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['K'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
   analysis_cuts['K'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
   analysis_cuts['K'].push_back({ .name="1a0bTop",    .func = []    { return nHadTop0BAntiTag>=1;              }});
-  //analysis_cuts['K'].push_back({ .name="InvmDPhi0p3",.func = []    { return minDeltaPhi<0.3;                  }});
   analysis_cuts['K'].push_back({ .name="InvmDPhi0p3",.func = []    { return dPhiRazor>=2.8;                  }});
+
+  // k: Photon enriched sample
+  analysis_cuts['k'].push_back({ .name="Skim_1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  analysis_cuts['k'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  //analysis_cuts['k'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
+  //analysis_cuts['k'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }});
+  analysis_cuts['k'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1         || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['k'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['k'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+  analysis_cuts['k'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
+  analysis_cuts['k'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }});
+  analysis_cuts['k'].push_back({ .name="1a0bTop",    .func = []    { return nHadTop0BAntiTag>=1;              }});
+  analysis_cuts['k'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
 
   // Gen Level Information
   bool isFFsim = TString(sample).Contains("TTJets_madgraphMLM");
@@ -236,7 +248,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
   analysis_cuts['z'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
   analysis_cuts['z'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;              }});
   //analysis_cuts['z'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;              }});
-  //analysis_cuts['z'].push_back({ .name="1FakePho",       .func = []    { return nPhotonNoSieie==1;         }});
+  //analysis_cuts['z'].push_back({ .name="1FakePho",       .func = []    { return nPhotonFake==1;         }});
   //analysis_cuts['z'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
   //analysis_cuts['G'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
   //analysis_cuts['z'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
@@ -325,7 +337,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
 				   else if (nMuSelect==2) return (d.mu.Charge[iMuSelect[0]] + d.mu.Charge[iMuSelect[1]])==0;
 				   return false;
 				 }});
-  analysis_cuts['F'].push_back({ .name="1mTop",        .func = []    { return nHadTop0BMassTag>=1;                     }});
+  analysis_cuts['F'].push_back({ .name="1mTop",        .func = []    { return nHadTopMassTag>=1;                     }});
   analysis_cuts['F'].push_back({ .name="mDPhill",    .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['F'].push_back({ .name="Mll",        .func = []    { return std::abs(M_ll-91.2)<10;           }});
 
@@ -424,6 +436,8 @@ Analysis::apply_scale_factors(DataStruct& data, const unsigned int& s, const std
   scale_factors['K'].push_back(sf_ele_veto);
   scale_factors['K'].push_back(sf_muon_veto);
   scale_factors['K'].push_back(sf_btag_loose);
+  scale_factors['k'].push_back(sf_ele_veto);
+  scale_factors['k'].push_back(sf_muon_veto);
 
   // Top analysis
   scale_factors['A'].push_back(sf_ele_veto);
@@ -1705,10 +1719,53 @@ TH1D* h_ChargedIso_R2_020_CR_1mW_EE;
 TH1D* h_ChargedIso_R2_037_CR_1mW_EE;
 TH1D* h_ChargedIso_R2_075_CR_1mW_EE;
 
+TH1D* h_ChargedIso_MR_900_SR_1mTop_EB;
+TH1D* h_ChargedIso_MR_1100_SR_1mTop_EB;
+TH1D* h_ChargedIso_MR_1400_SR_1mTop_EB;
+TH1D* h_ChargedIso_MR_1800_SR_1mTop_EB;
+TH1D* h_ChargedIso_MR_3000_SR_1mTop_EB;
+TH1D* h_ChargedIso_R2_010_SR_1mTop_EB;
+TH1D* h_ChargedIso_R2_014_SR_1mTop_EB;
+TH1D* h_ChargedIso_R2_020_SR_1mTop_EB;
+TH1D* h_ChargedIso_R2_037_SR_1mTop_EB;
+TH1D* h_ChargedIso_R2_075_SR_1mTop_EB;
+TH1D* h_ChargedIso_MR_900_CR_1mTop_EB;
+TH1D* h_ChargedIso_MR_1100_CR_1mTop_EB;
+TH1D* h_ChargedIso_MR_1400_CR_1mTop_EB;
+TH1D* h_ChargedIso_MR_1800_CR_1mTop_EB;
+TH1D* h_ChargedIso_MR_3000_CR_1mTop_EB;
+TH1D* h_ChargedIso_R2_010_CR_1mTop_EB;
+TH1D* h_ChargedIso_R2_014_CR_1mTop_EB;
+TH1D* h_ChargedIso_R2_020_CR_1mTop_EB;
+TH1D* h_ChargedIso_R2_037_CR_1mTop_EB;
+TH1D* h_ChargedIso_R2_075_CR_1mTop_EB;
+TH1D* h_ChargedIso_MR_900_SR_1mTop_EE;
+TH1D* h_ChargedIso_MR_1100_SR_1mTop_EE;
+TH1D* h_ChargedIso_MR_1400_SR_1mTop_EE;
+TH1D* h_ChargedIso_MR_1800_SR_1mTop_EE;
+TH1D* h_ChargedIso_MR_3000_SR_1mTop_EE;
+TH1D* h_ChargedIso_R2_010_SR_1mTop_EE;
+TH1D* h_ChargedIso_R2_014_SR_1mTop_EE;
+TH1D* h_ChargedIso_R2_020_SR_1mTop_EE;
+TH1D* h_ChargedIso_R2_037_SR_1mTop_EE;
+TH1D* h_ChargedIso_R2_075_SR_1mTop_EE;
+TH1D* h_ChargedIso_MR_900_CR_1mTop_EE;
+TH1D* h_ChargedIso_MR_1100_CR_1mTop_EE;
+TH1D* h_ChargedIso_MR_1400_CR_1mTop_EE;
+TH1D* h_ChargedIso_MR_1800_CR_1mTop_EE;
+TH1D* h_ChargedIso_MR_3000_CR_1mTop_EE;
+TH1D* h_ChargedIso_R2_010_CR_1mTop_EE;
+TH1D* h_ChargedIso_R2_014_CR_1mTop_EE;
+TH1D* h_ChargedIso_R2_020_CR_1mTop_EE;
+TH1D* h_ChargedIso_R2_037_CR_1mTop_EE;
+TH1D* h_ChargedIso_R2_075_CR_1mTop_EE;
+
 TH1D* h_AK8Jet1Pt_W_fakerate;
 TH1D* h_AK8Jet1Pt_no_W_fakerate;
 TH1D* h_AK8Jet1Pt_mW_fakerate;
 TH1D* h_AK8Jet1Pt_no_mW_fakerate;
+TH1D* h_AK8Jet1Pt_m0bW_fakerate;
+TH1D* h_AK8Jet1Pt_no_m0bW_fakerate;
 TH1D* h_AK8Jet1Pt_aW_fakerate;
 TH1D* h_AK8Jet1Pt_no_aW_fakerate;
 
@@ -1716,6 +1773,8 @@ TH1D* h_AK8Jet1Pt_Top_fakerate;
 TH1D* h_AK8Jet1Pt_no_Top_fakerate;
 TH1D* h_AK8Jet1Pt_mTop_fakerate;
 TH1D* h_AK8Jet1Pt_no_mTop_fakerate;
+TH1D* h_AK8Jet1Pt_m0bTop_fakerate;
+TH1D* h_AK8Jet1Pt_no_m0bTop_fakerate;
 TH1D* h_AK8Jet1Pt_aTop_fakerate;
 TH1D* h_AK8Jet1Pt_no_aTop_fakerate;
 
@@ -1723,6 +1782,8 @@ TH2D* h_AK8Jet1Pt_Eta_W_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_no_W_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_mW_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_no_mW_fakerate;
+TH2D* h_AK8Jet1Pt_Eta_m0bW_fakerate;
+TH2D* h_AK8Jet1Pt_Eta_no_m0bW_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_aW_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_no_aW_fakerate;
 
@@ -1730,6 +1791,8 @@ TH2D* h_AK8Jet1Pt_Eta_Top_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_no_Top_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_mTop_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_no_mTop_fakerate;
+TH2D* h_AK8Jet1Pt_Eta_m0bTop_fakerate;
+TH2D* h_AK8Jet1Pt_Eta_no_m0bTop_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_aTop_fakerate;
 TH2D* h_AK8Jet1Pt_Eta_no_aTop_fakerate;
 
@@ -3409,6 +3472,47 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_ChargedIso_R2_037_CR_1mW_EE = new TH1D("ChargedIso_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
   h_ChargedIso_R2_075_CR_1mW_EE = new TH1D("ChargedIso_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
 
+  h_ChargedIso_MR_900_SR_1mTop_EB = new TH1D("ChargedIso_MR_900_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1100_SR_1mTop_EB = new TH1D("ChargedIso_MR_1100_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1400_SR_1mTop_EB = new TH1D("ChargedIso_MR_1400_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1800_SR_1mTop_EB = new TH1D("ChargedIso_MR_1800_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_3000_SR_1mTop_EB = new TH1D("ChargedIso_MR_3000_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_010_SR_1mTop_EB = new TH1D("ChargedIso_R2_010_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_014_SR_1mTop_EB = new TH1D("ChargedIso_R2_014_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_020_SR_1mTop_EB = new TH1D("ChargedIso_R2_020_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_037_SR_1mTop_EB = new TH1D("ChargedIso_R2_037_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_075_SR_1mTop_EB = new TH1D("ChargedIso_R2_075_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_900_CR_1mTop_EB = new TH1D("ChargedIso_MR_900_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1100_CR_1mTop_EB = new TH1D("ChargedIso_MR_1100_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1400_CR_1mTop_EB = new TH1D("ChargedIso_MR_1400_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1800_CR_1mTop_EB = new TH1D("ChargedIso_MR_1800_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_3000_CR_1mTop_EB = new TH1D("ChargedIso_MR_3000_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_010_CR_1mTop_EB = new TH1D("ChargedIso_R2_010_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_014_CR_1mTop_EB = new TH1D("ChargedIso_R2_014_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_020_CR_1mTop_EB = new TH1D("ChargedIso_R2_020_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_037_CR_1mTop_EB = new TH1D("ChargedIso_R2_037_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_075_CR_1mTop_EB = new TH1D("ChargedIso_R2_075_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_900_SR_1mTop_EE = new TH1D("ChargedIso_MR_900_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1100_SR_1mTop_EE = new TH1D("ChargedIso_MR_1100_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1400_SR_1mTop_EE = new TH1D("ChargedIso_MR_1400_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1800_SR_1mTop_EE = new TH1D("ChargedIso_MR_1800_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_3000_SR_1mTop_EE = new TH1D("ChargedIso_MR_3000_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_010_SR_1mTop_EE = new TH1D("ChargedIso_R2_010_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_014_SR_1mTop_EE = new TH1D("ChargedIso_R2_014_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_020_SR_1mTop_EE = new TH1D("ChargedIso_R2_020_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_037_SR_1mTop_EE = new TH1D("ChargedIso_R2_037_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_075_SR_1mTop_EE = new TH1D("ChargedIso_R2_075_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_900_CR_1mTop_EE = new TH1D("ChargedIso_MR_900_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1100_CR_1mTop_EE = new TH1D("ChargedIso_MR_1100_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1400_CR_1mTop_EE = new TH1D("ChargedIso_MR_1400_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_1800_CR_1mTop_EE = new TH1D("ChargedIso_MR_1800_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_MR_3000_CR_1mTop_EE = new TH1D("ChargedIso_MR_3000_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_010_CR_1mTop_EE = new TH1D("ChargedIso_R2_010_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_014_CR_1mTop_EE = new TH1D("ChargedIso_R2_014_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_020_CR_1mTop_EE = new TH1D("ChargedIso_R2_020_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_037_CR_1mTop_EE = new TH1D("ChargedIso_R2_037_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+  h_ChargedIso_R2_075_CR_1mTop_EE = new TH1D("ChargedIso_R2_075_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
+
   for (unsigned int i=0; i<=syst_nSyst; ++i) {
     std::stringstream histoname, title;
     title<<"Systematic variation #="<<i;
@@ -4387,6 +4491,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_AK8Jet1Pt_no_W_fakerate = new TH1D("AK8Jet1Pt_no_W_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_mW_fakerate = new TH1D("AK8Jet1Pt_mW_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_no_mW_fakerate = new TH1D("AK8Jet1Pt_no_mW_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
+  h_AK8Jet1Pt_m0bW_fakerate = new TH1D("AK8Jet1Pt_m0bW_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
+  h_AK8Jet1Pt_no_m0bW_fakerate = new TH1D("AK8Jet1Pt_no_m0bW_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_aW_fakerate = new TH1D("AK8Jet1Pt_aW_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_no_aW_fakerate = new TH1D("AK8Jet1Pt_no_aW_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
 
@@ -4394,6 +4500,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_AK8Jet1Pt_no_Top_fakerate = new TH1D("AK8Jet1Pt_no_Top_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_mTop_fakerate = new TH1D("AK8Jet1Pt_mTop_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_no_mTop_fakerate = new TH1D("AK8Jet1Pt_no_mTop_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
+  h_AK8Jet1Pt_m0bTop_fakerate = new TH1D("AK8Jet1Pt_m0bTop_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
+  h_AK8Jet1Pt_no_m0bTop_fakerate = new TH1D("AK8Jet1Pt_no_m0bTop_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_aTop_fakerate = new TH1D("AK8Jet1Pt_aTop_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
   h_AK8Jet1Pt_no_aTop_fakerate = new TH1D("AK8Jet1Pt_no_aTop_fakerate",";p_{T, AK8 jet} [GeV]",nbn_AK8J1pt,bn_AK8J1pt);
 
@@ -4401,6 +4509,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_AK8Jet1Pt_Eta_no_W_fakerate = new TH2D("AK8Jet1Pt_Eta_no_W_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_mW_fakerate = new TH2D("AK8Jet1Pt_Eta_mW_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_no_mW_fakerate = new TH2D("AK8Jet1Pt_Eta_no_mW_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
+  h_AK8Jet1Pt_Eta_m0bW_fakerate = new TH2D("AK8Jet1Pt_Eta_m0bW_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
+  h_AK8Jet1Pt_Eta_no_m0bW_fakerate = new TH2D("AK8Jet1Pt_Eta_no_m0bW_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_aW_fakerate = new TH2D("AK8Jet1Pt_Eta_aW_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_no_aW_fakerate = new TH2D("AK8Jet1Pt_Eta_no_aW_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
 
@@ -4408,6 +4518,8 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_AK8Jet1Pt_Eta_no_Top_fakerate = new TH2D("AK8Jet1Pt_Eta_no_Top_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_mTop_fakerate = new TH2D("AK8Jet1Pt_Eta_mTop_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_no_mTop_fakerate = new TH2D("AK8Jet1Pt_Eta_no_mTop_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
+  h_AK8Jet1Pt_Eta_m0bTop_fakerate = new TH2D("AK8Jet1Pt_Eta_m0bTop_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
+  h_AK8Jet1Pt_Eta_no_m0bTop_fakerate = new TH2D("AK8Jet1Pt_Eta_no_m0bTop_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_aTop_fakerate = new TH2D("AK8Jet1Pt_Eta_aTop_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
   h_AK8Jet1Pt_Eta_no_aTop_fakerate = new TH2D("AK8Jet1Pt_Eta_no_aTop_fakerate",";p_{T, AK8 jet} [GeV];#eta_{AK8 jet}",nbn_AK8J1pt,bn_AK8J1pt,nbn_eta,bn_eta);
 
@@ -4526,16 +4638,16 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     if (apply_all_cuts_except('Y', "1W")){
     for (size_t i=0; i<data.jetsAK8.size; ++i) {
     h_AK8Jet1Pt_no_W_fakerate->Fill(data.jetsAK8.Pt[i], w); 
-    h_AK8Jet1Pt_no_mW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    h_AK8Jet1Pt_no_m0bW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     h_AK8Jet1Pt_no_aW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     h_AK8Jet1Pt_Eta_no_W_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
-    h_AK8Jet1Pt_Eta_no_mW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    h_AK8Jet1Pt_Eta_no_m0bW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     h_AK8Jet1Pt_Eta_no_aW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     if(passTightWTag[i]) h_AK8Jet1Pt_W_fakerate->Fill(data.jetsAK8.Pt[i], w);
-    if(passWMassTag[i])  h_AK8Jet1Pt_mW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    if(passWMassTag[i])  h_AK8Jet1Pt_m0bW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     if(passTightWAntiTag[i])h_AK8Jet1Pt_aW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     if(passTightWTag[i]) h_AK8Jet1Pt_Eta_W_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w);
-    if(passWMassTag[i])  h_AK8Jet1Pt_Eta_mW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    if(passWMassTag[i])  h_AK8Jet1Pt_Eta_m0bW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     if(passTightWAntiTag[i])h_AK8Jet1Pt_Eta_aW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
 }}
 
@@ -4543,17 +4655,30 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     if (apply_all_cuts_except('K', "1a0bTop")){
     for (size_t i=0; i<data.jetsAK8.size; ++i) {
     h_AK8Jet1Pt_no_Top_fakerate->Fill(data.jetsAK8.Pt[i], w); 
-    h_AK8Jet1Pt_no_mTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    h_AK8Jet1Pt_no_m0bTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     h_AK8Jet1Pt_no_aTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     h_AK8Jet1Pt_Eta_no_Top_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
-    h_AK8Jet1Pt_Eta_no_mTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    h_AK8Jet1Pt_Eta_no_m0bTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     h_AK8Jet1Pt_Eta_no_aTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     if(passHadTopTag[i]) h_AK8Jet1Pt_Top_fakerate->Fill(data.jetsAK8.Pt[i], w); 
-    if(passHadTop0BMassTag[i])h_AK8Jet1Pt_mTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    if(passHadTop0BMassTag[i])h_AK8Jet1Pt_m0bTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     if(passHadTop0BAntiTag[i])h_AK8Jet1Pt_aTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     if(passHadTopTag[i]) h_AK8Jet1Pt_Eta_Top_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
-    if(passHadTop0BMassTag[i])h_AK8Jet1Pt_Eta_mTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    if(passHadTop0BMassTag[i])h_AK8Jet1Pt_Eta_m0bTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     if(passHadTop0BAntiTag[i])h_AK8Jet1Pt_Eta_aTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    }}
+
+    w = sf_weight['k'];
+    if (apply_all_cuts_except('k', "1a0bTop")){
+    for (size_t i=0; i<data.jetsAK8.size; ++i) {
+    h_AK8Jet1Pt_no_mW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    h_AK8Jet1Pt_Eta_no_mW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    if(passWMassTag[i])  h_AK8Jet1Pt_mW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    if(passWMassTag[i])  h_AK8Jet1Pt_Eta_mW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    h_AK8Jet1Pt_no_mTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    h_AK8Jet1Pt_Eta_no_mTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
+    if(passHadTopMassTag[i])h_AK8Jet1Pt_mTop_fakerate->Fill(data.jetsAK8.Pt[i], w); 
+    if(passHadTopMassTag[i])h_AK8Jet1Pt_Eta_mTop_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
     }}
 
 /*
@@ -5614,7 +5739,19 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
           else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
          }
         }
-       else if(nWMassTag == 1) {
+       else if(nHadTopMassTag >= 1) {
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+				}
+       else if(nWMassTag >= 1) {
        h_MR_zinv_1mW_EB->Fill(data.evt.MR,w);
        h_R2_zinv_1mW_EB->Fill(R2_pho,w);
        h_R2_MR_zinv_1mW_EB->Fill(data.evt.MR,R2_pho,w);
@@ -5755,7 +5892,19 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
           else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
          }
        }
-       else if(nWMassTag == 1) {
+       else if(nHadTopMassTag >= 1) {
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]],w);
+       }
+       else if(nWMassTag >= 1) {
        h_MR_zinv_1mW_EE->Fill(data.evt.MR,w);
        h_R2_zinv_1mW_EE->Fill(R2_pho,w);
        h_R2_MR_zinv_1mW_EE->Fill(data.evt.MR,R2_pho,w);
@@ -5843,267 +5992,291 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
        }
       }
 
-    if (apply_all_cuts('z') && nPhotonNoSieie==1) {
-      if(std::abs(data.pho.Eta[iPhotonNoSieie[0]])<=1.479) {
+    if (apply_all_cuts('z') && nPhotonFake==1) {
+      if(std::abs(data.pho.Eta[iPhotonFake[0]])<=1.479) {
        if(nWMassTag == 0) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
         }
+       else if(nHadTopMassTag >= 1) {
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+        }
        else if(nWMassTag == 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
         }
         if(R2_pho >= 0.08 && R2_pho < 0.12){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
        }
-      else if(std::abs(data.pho.Eta[iPhotonNoSieie[0]])>1.479) {
+      else if(std::abs(data.pho.Eta[iPhotonFake[0]])>1.479) {
        if(nWMassTag == 0) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
         }
-       else if(nWMassTag == 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+       else if(nHadTopMassTag >= 1) {
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+        }
+       else if(nWMassTag >= 1) {
+         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
          else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
          }
         }
         if(R2_pho >= 0.08 && R2_pho < 0.12){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonNoSieie[0]],w);
+         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
+         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
         }
        }
       }
