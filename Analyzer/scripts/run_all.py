@@ -75,14 +75,14 @@ if opt.batch and opt.NEVT == -1 and not opt.optim and not opt.useprev:
     print "       If too many jobs fail, try lowering job runtime eg: --optim --jobtime=1200"
     print "       Or use --useprev option to run on previously created temporary filelists"
     sys.exit()
-if opt.optim and not opt.skim and opt.PREVDIR == "":
-    sorted_dirs = sorted(glob.glob("results/*/"), key=os.path.getmtime)
-    if len(sorted_dirs):
-        opt.PREVDIR = sorted_dirs[-1][:-1]
-        print "Using --optim option, but no --prevdir argument was given, using previous working directory: "+opt.PREVDIR
-    else:
-        print "ERROR: Using --optim option, but no --prevdir argument was given, and cannot find previous working directory in results/*"
-        sys.exit()
+#if opt.optim and not opt.skim and opt.PREVDIR == "":
+#    sorted_dirs = sorted(glob.glob("results/*/"), key=os.path.getmtime)
+#    if len(sorted_dirs):
+#        opt.PREVDIR = sorted_dirs[-1][:-1]
+#        print "Using --optim option, but no --prevdir argument was given, using previous working directory: "+opt.PREVDIR
+#    else:
+#        print "ERROR: Using --optim option, but no --prevdir argument was given, and cannot find previous working directory in results/*"
+#        sys.exit()
 if opt.plot:
     #PLOTTER_IN automatic
     if opt.test:
