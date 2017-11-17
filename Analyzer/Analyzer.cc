@@ -277,9 +277,7 @@ int main(int argc, char** argv) {
 					  settings.runOnSkim, settings.varySystematics, out_dir); // histo names given in settings.h
 
     // Find the index of the current signal
-    if (cmdline.fileNames.size()>0) for (size_t i=0, n=vname_signal.size(); i<n; ++i) 
-      if (cmdline.fileNames[0].find(vname_signal[i])!=std::string::npos&&signal_index==-1) 
-	signal_index = (i>=4); // 0: T1tttt, T1ttbb, T5ttcc, T5tttt; 1: T2tt
+    signal_index = TString(cmdline.dirname).Contains("T2tt");
   }
   if (debug) std::cout<<"Analyzer::main: calc lumi weight norm ok"<<std::endl;
 

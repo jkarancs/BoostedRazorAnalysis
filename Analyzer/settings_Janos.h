@@ -5,8 +5,8 @@
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     3
 #define SKIM    0
-#define SYST    0
-#define TOP     0
+#define SYST    1
+#define TOP     1
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"

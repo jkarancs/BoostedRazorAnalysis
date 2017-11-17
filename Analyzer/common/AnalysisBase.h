@@ -2260,10 +2260,10 @@ TH2D* h_MR_R2_G_EB_nj35;
 TH2D* h_MR_R2_G_EB_nj6;
 TH2D* h_MR_R2_G_EE_nj35;
 TH2D* h_MR_R2_G_EE_nj6;
-TH1D* h_CHIsoTemplate_Fake_p_EB; // Fake photon template (data)
-TH1D* h_CHIsoTemplate_Fake_p_EE;
-TH1D* h_CHIsoTemplate_Prompt_p_EB; // Prompt photon template (mc)
-TH1D* h_CHIsoTemplate_Prompt_p_EE; 
+TH3D* h_CHIsoTemplate_Fake_p_EB; // Fake photon template (data)
+TH3D* h_CHIsoTemplate_Fake_p_EE;
+TH3D* h_CHIsoTemplate_Prompt_p_EB; // Prompt photon template (GJets)
+TH3D* h_CHIsoTemplate_Prompt_p_EE; 
 TH3D* h_MR_R2_CHIso_GNoIso_EB; // For purity in data
 TH3D* h_MR_R2_CHIso_GNoIso_EE;
 TH3D* h_MR_R2_CHIso_GNoIso_EB_nj35;
@@ -2463,10 +2463,10 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_G_EB_nj6             = new TH2D("MR_R2_G_EB_nj6",             "G region, EB, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_EE_nj35            = new TH2D("MR_R2_G_EE_nj35 ",           "G region, EE, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_EE_nj6             = new TH2D("MR_R2_G_EE_nj6",             "G region, EE, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  h_CHIsoTemplate_Fake_p_EB    = new TH1D("CHIsoTemplate_Fake_p_EB",    "p region, EB;Photon Charged Isolation (GeV)", 20,chisobins);
-  h_CHIsoTemplate_Fake_p_EE    = new TH1D("CHIsoTemplate_Fake_p_EE",    "p region, EE;Photon Charged Isolation (GeV)", 20,chisobins);
-  h_CHIsoTemplate_Prompt_p_EB  = new TH1D("CHIsoTemplate_Prompt_p_EB",  "p region, EB;Photon Charged Isolation (GeV)", 20,chisobins);
-  h_CHIsoTemplate_Prompt_p_EE  = new TH1D("CHIsoTemplate_Prompt_p_EE",  "p region, EE;Photon Charged Isolation (GeV)", 20,chisobins);
+  h_CHIsoTemplate_Fake_p_EB    = new TH3D("CHIsoTemplate_Fake_p_EB",    "p region, EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
+  h_CHIsoTemplate_Fake_p_EE    = new TH3D("CHIsoTemplate_Fake_p_EE",    "p region, EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
+  h_CHIsoTemplate_Prompt_p_EB  = new TH3D("CHIsoTemplate_Prompt_p_EB",  "p region, EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
+  h_CHIsoTemplate_Prompt_p_EE  = new TH3D("CHIsoTemplate_Prompt_p_EE",  "p region, EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EB      = new TH3D("MR_R2_CHIso_GNoIso_EB",      "G region (w/o CH iso.), EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EE      = new TH3D("MR_R2_CHIso_GNoIso_EE",      "G region (w/o CH iso.), EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EB_nj35 = new TH3D("MR_R2_CHIso_GNoIso_EB_nj35", "G region (w/o CH iso.), EB nj35;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
@@ -2478,9 +2478,9 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_S                    = new TH2D("MR_R2_S",                    "S region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_S_nj35               = new TH2D("MR_R2_S_nj35",               "S region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_S_nj6                = new TH2D("MR_R2_S_nj6",                "S region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  h_MR_R2_G_DirectPrompt       = new TH2D("MR_R2_G_DirectPrompt",       "G region (direct,prompt $gamma);M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_G_DirectPrompt_nj35  = new TH2D("MR_R2_G_DirectPrompt_nj35",  "G region (direct,prompt $gamma), nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  h_MR_R2_G_DirectPrompt_nj6   = new TH2D("MR_R2_G_DirectPrompt_nj6",   "G region (direct,prompt $gamma), nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_G_DirectPrompt       = new TH2D("MR_R2_G_DirectPrompt",       "G region (direct,prompt #gamma);M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
+  h_MR_R2_G_DirectPrompt_nj35  = new TH2D("MR_R2_G_DirectPrompt_nj35",  "G region (direct,prompt #gamma), nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_G_DirectPrompt_nj6   = new TH2D("MR_R2_G_DirectPrompt_nj6",   "G region (direct,prompt #gamma), nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_Z                    = new TH2D("MR_R2_Z",                    "Z region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_Z_nj35               = new TH2D("MR_R2_Z_nj35",               "Z region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_Z_nj6                = new TH2D("MR_R2_Z_nj6",                "Z region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
@@ -2554,7 +2554,7 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
           h_trigger2d_nolep_total ->Fill(AK4_HtNoLep, d.jetsAK8.Pt[iJetAK8[0]]);
         }
       }
-
+      
       // Fill Histos for the Z(nunu) estimate
       if (isData) {
 	// All photon counts in G (data)
@@ -2574,18 +2574,20 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	if (apply_all_cuts('p')) {
 	  if (nPhotonFake==1) {
 	    bool EB = std::abs(d.pho.SCEta[iPhotonFake[0]])<1.479;
-	    if (EB) h_CHIsoTemplate_Fake_p_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]]);
-	    else    h_CHIsoTemplate_Fake_p_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]]);
+	    if (EB) h_CHIsoTemplate_Fake_p_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonFake[0]], sf_weight['p']);
+	    else    h_CHIsoTemplate_Fake_p_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonFake[0]], sf_weight['p']);
 	  }
 	}
       } else if (isBackground) {
 	// Prompt photon templates
 	if (apply_all_cuts('p')) {
-	  if (nPhotonSelect==1) {
-	    if (d.pho.isPromptDirect[iPhotonSelect[0]]==1||d.pho.isPromptFrag[iPhotonSelect[0]]==1) {
-	      bool EB = std::abs(d.pho.SCEta[iPhotonSelect[0]])<1.479;
-	      if (EB) h_CHIsoTemplate_Prompt_p_EB->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]]);
-	      else    h_CHIsoTemplate_Prompt_p_EE->Fill(ChargedHadronIsoEACorr[iPhotonSelect[0]]);
+	  if (nPhotonPreSelect==1) {
+	    if (d.pho.SigmaIEtaIEta[iPhotonPreSelect[0]] < (std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479 ? 0.01022 : 0.03001)) {
+	      if (d.pho.isPromptDirect[iPhotonPreSelect[0]]==1||d.pho.isPromptFrag[iPhotonPreSelect[0]]==1) {
+		bool EB = std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479;
+		if (EB) h_CHIsoTemplate_Prompt_p_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['p']);
+		else    h_CHIsoTemplate_Prompt_p_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['p']);
+	      }
 	    }
 	  }
 	}
@@ -2614,32 +2616,32 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	if (apply_all_cuts('G')) {
 	  if (d.pho.isPromptDirect[iPhotonSelect[0]]==1||d.pho.isPromptFrag[iPhotonSelect[0]]==1) {
 	    bool EB = std::abs(d.pho.SCEta[iPhotonSelect[0]])<1.479;
-	    if (EB) h_MR_R2_IsDirect_G_EB->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]]);
-	    else    h_MR_R2_IsDirect_G_EE->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]]);
+	    if (EB) h_MR_R2_IsDirect_G_EB->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]], sf_weight['G']);
+	    else    h_MR_R2_IsDirect_G_EE->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]], sf_weight['G']);
 	  }
 	  // Prompt direct photons in G control region
 	  if (d.pho.isPromptDirect[iPhotonSelect[0]]==1) {
-	    h_MR_R2_G_DirectPrompt->Fill(MR_pho, R2_pho);
-	    if (nJetNoPho<6) h_MR_R2_G_DirectPrompt_nj35->Fill(MR_pho, R2_pho);
-	    else             h_MR_R2_G_DirectPrompt_nj6 ->Fill(MR_pho, R2_pho);
+	    h_MR_R2_G_DirectPrompt->Fill(MR_pho, R2_pho, sf_weight['G']);
+	    if (nJetNoPho<6) h_MR_R2_G_DirectPrompt_nj35->Fill(MR_pho, R2_pho, sf_weight['G']);
+	    else             h_MR_R2_G_DirectPrompt_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
 	  }
 	}
       }
       // Counts for transfer factors/ratios
       if (apply_all_cuts('S')) {
-	h_MR_R2_S->Fill(d.evt.MR, d.evt.R2);
-	if (nJet<6) h_MR_R2_S_nj35->Fill(d.evt.MR, d.evt.R2);
-	else        h_MR_R2_S_nj6 ->Fill(d.evt.MR, d.evt.R2);
+	h_MR_R2_S->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
+	if (nJet<6) h_MR_R2_S_nj35->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
+	else        h_MR_R2_S_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
       }
       if (apply_all_cuts('Z')) {
-	h_MR_R2_Z->Fill(d.evt.MR, d.evt.R2);
-	if (nJet<6) h_MR_R2_Z_nj35->Fill(d.evt.MR, d.evt.R2);
-	else        h_MR_R2_Z_nj6 ->Fill(d.evt.MR, d.evt.R2);
+	h_MR_R2_Z->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
+	if (nJet<6) h_MR_R2_Z_nj35->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
+	else        h_MR_R2_Z_nj6 ->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
       }
       if (apply_all_cuts('G')) {
-	h_MR_R2_G->Fill(d.evt.MR, d.evt.R2);
-	if (nJet<6) h_MR_R2_G_nj35->Fill(d.evt.MR, d.evt.R2);
-	else        h_MR_R2_G_nj6 ->Fill(d.evt.MR, d.evt.R2);
+	h_MR_R2_G->Fill(MR_pho, R2_pho, sf_weight['G']);
+	if (nJetNoPho<6) h_MR_R2_G_nj35->Fill(MR_pho, R2_pho, sf_weight['G']);
+	else             h_MR_R2_G_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
       }
 
     } // end syst_index == 0
@@ -2900,9 +2902,9 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
       m_vh_MRR2_sig     [bin.first] = std::vector<TH1D*>();
       m_vh_MRR2_sig_nj35[bin.first] = std::vector<TH1D*>();
       m_vh_MRR2_sig_nj6 [bin.first] = std::vector<TH1D*>();
-      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second).c_str(),         ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj35").c_str(), ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj6").c_str(),  ";MR/R^{2} bins (unrolled);M_{#tilde{g}} (GeV);M_{#tilde{#chi}^{0}} (GeV);Counts", 25,0,25));
+      m_vh_MRR2_sig     [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second).c_str(),         ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
+      m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
       for (size_t j=0; j<syst.size(); ++j) {
 	std::stringstream ss1, ss2, ss3;
 	ss1<<"MRR2_S_signal"<<bin.second<<"_"<<syst[j];
