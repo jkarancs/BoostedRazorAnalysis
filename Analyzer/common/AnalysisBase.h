@@ -92,6 +92,8 @@ public:
 
   double get_pileup_weight(DataStruct&, const double&, const unsigned int&, const bool&);
 
+  void rescale_AK8_jet_pt(DataStruct&);
+
   void rescale_smear_jet_met(DataStruct&, const bool&, const unsigned int&, const double&, const double&, const double&);
 
   double get_ht_weight(DataStruct&, const double&);
@@ -210,7 +212,7 @@ private:
 //                 Define baseline cuts
 void
 AnalysisBase::define_preselections(const DataStruct& data)
-{ 
+{
   baseline_cuts.clear();
 
   // Apply the same cuts as it is in the ntuple - Only for check
@@ -566,6 +568,23 @@ Choose:
 //_______________________________________________________
 //              Rescale jet 4-momenta
 
+
+void
+AnalysisBase::rescale_AK8_jet_pt(DataStruct& data)
+{
+  while(data.jetsAK8.Loop()) {
+    size_t i = data.jetsAK8.it;
+    // Get the fit from: scripts/calc_pt_scaling.C
+    double scale = 0.867158, offset = 33.2264;
+    // Rescale the whole 4-momentum, because the Z-mass peak (in AK8 jet) also looks shifted
+    double scale_v4 = scale + offset/data.jetsAK8.SmearedPt[i];
+    data.jetsAK8.E[i]                 *= scale_v4;
+    data.jetsAK8.Pt[i]                *= scale_v4;
+    data.jetsAK8.SmearedPt[i]         *= scale_v4;
+    data.jetsAK8.corrSDMassPuppi[i]   *= scale_v4;
+    data.jetsAK8.uncorrSDMassPuppi[i] *= scale_v4;
+  }
+}
 
 // Variables to save the original values before applying any systematics on them
 std::vector<float> AK4_E, AK4_Pt;
@@ -1013,6 +1032,7 @@ std::vector<bool> passPhotonFake;
 std::vector<double> ChargedHadronIsoEACorr;
 unsigned int nPhotonPreSelect, nPhotonSelect, nPhotonFake;
 double MT, MT_vetolep;
+double MET_1l, MTR_1l, R_1l, R2_1l, minDeltaPhi_1l, M_1l;
 double MET_ll, MTR_ll, R_ll, R2_ll, minDeltaPhi_ll, M_ll;
 double MET_pho, MR_pho, MTR_pho, R_pho, R2_pho, minDeltaPhi_pho; 
 double dPhi_ll_met, dPhi_ll_jet;
@@ -1451,7 +1471,14 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
   }
 
-  // Add the lepton pair to MET
+  // Add the lepton (pair) to MET
+  TVector3 met_1l;
+  met_1l.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
+  if (nLepSelect==1) {
+    TVector3 lep_met;
+    lep_met.SetPtEtaPhi(selected_leptons[0].Pt(), 0, selected_leptons[0].Phi());
+    met_1l += lep_met;
+  }
   TVector3 met_ll;
   met_ll.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
   if (M_ll!=-9999) {
@@ -1507,7 +1534,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   nMediumBTag = nMediumBTagNoPho = 0;
   nTightBTag  = 0;
   AK4_Ht = AK4_HtOnline = AK4_HtNoLep = 0;
-  minDeltaPhi = minDeltaPhi_ll = minDeltaPhi_pho = dPhi_ll_jet = 9999;
+  minDeltaPhi = minDeltaPhi_1l = minDeltaPhi_ll = minDeltaPhi_pho = dPhi_ll_jet = 9999;
   //std::vector<bool> add_lepton_to_ht(veto_leptons.size(),1);
   //std::vector<bool> remove_muon_from_ht(selected_muons.size(),0);
   while(data.jetsAK4.Loop()) {
@@ -1540,6 +1567,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if (nJet<=4) {
 	double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4.Phi[i]));
 	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
+	// with added lepton
+	double dphi_met1l = std::abs(TVector2::Phi_mpi_pi(met_1l.Phi() - data.jetsAK4.Phi[i]));
+	if (dphi_met1l<minDeltaPhi_1l) minDeltaPhi_1l = dphi_met1l;
 	// with added lepton pair
 	double dphi_metll = std::abs(TVector2::Phi_mpi_pi(met_ll.Phi() - data.jetsAK4.Phi[i]));
 	if (dphi_metll<minDeltaPhi_ll) minDeltaPhi_ll = dphi_metll;
@@ -2050,10 +2080,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   }
   // Recalculate Razor with MET + 2lep, and MET + pho
   MR_pho = -9999;
-  MET_ll = MET_pho = -9999;
-  MTR_ll = MTR_pho = -9999;
-  R_ll   = R_pho   = -9999;
-  R2_ll  = R2_pho  = -9999;
+  MET_1l = MET_ll = MET_pho = -9999;
+  MTR_1l = MTR_ll = MTR_pho = -9999;
+  R_1l   = R_ll   = R_pho   = -9999;
+  R2_1l  = R2_ll  = R2_pho  = -9999;
   dPhiRazorNoPho = 9999;
   if (hemis_AK4.size()!=2) {
     std::vector<TLorentzVector> selected_jets_AK4;
@@ -2064,6 +2094,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
     if (selected_jets_AK4.size()>=2) hemis_AK4 = Razor::CombineJets(selected_jets_AK4);
   } else {
+    if (nLepSelect==1) {
+      MET_1l = met_1l.Pt();
+      MTR_1l = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_1l);
+      R_1l   = MTR_1l/data.evt.MR;
+      R2_1l  = R_1l*R_1l;
+    }
     if (M_ll!=-9999) {
       MET_ll = met_ll.Pt();
       MTR_ll = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_ll);
@@ -2260,8 +2296,10 @@ TH2D* h_MR_R2_G_EB_nj35;
 TH2D* h_MR_R2_G_EB_nj6;
 TH2D* h_MR_R2_G_EE_nj35;
 TH2D* h_MR_R2_G_EE_nj6;
-TH3D* h_CHIsoTemplate_Fake_p_EB; // Fake photon template (data)
+TH3D* h_CHIsoTemplate_Fake_p_EB; // Fake photon templates (data)
 TH3D* h_CHIsoTemplate_Fake_p_EE;
+TH3D* h_CHIsoTemplate_Fake_p_EB_MC; // Fake photon templates (mc)
+TH3D* h_CHIsoTemplate_Fake_p_EE_MC;
 TH3D* h_CHIsoTemplate_Prompt_p_EB; // Prompt photon template (GJets)
 TH3D* h_CHIsoTemplate_Prompt_p_EE; 
 TH3D* h_MR_R2_CHIso_GNoIso_EB; // For purity in data
@@ -2284,6 +2322,14 @@ TH2D* h_MR_R2_Z_nj6;
 TH2D* h_MR_R2_G;
 TH2D* h_MR_R2_G_nj35;
 TH2D* h_MR_R2_G_nj6;
+// 1 Lepton estimate
+TH2D* h_MR_R2_L;
+TH2D* h_MR_R2_L_nj35;
+TH2D* h_MR_R2_L_nj6;
+// Q' closure
+TH2D* h_MR_R2_q;
+TH2D* h_MR_R2_q_nj35;
+TH2D* h_MR_R2_q_nj6;
 
 //_______________________________________________________
 //              Define Histograms here
@@ -2465,6 +2511,8 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_G_EE_nj6             = new TH2D("MR_R2_G_EE_nj6",             "G region, EE, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_CHIsoTemplate_Fake_p_EB    = new TH3D("CHIsoTemplate_Fake_p_EB",    "p region, EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_CHIsoTemplate_Fake_p_EE    = new TH3D("CHIsoTemplate_Fake_p_EE",    "p region, EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
+  h_CHIsoTemplate_Fake_p_EB_MC = new TH3D("CHIsoTemplate_Fake_p_EB_MC", "p region, EB (MC);M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
+  h_CHIsoTemplate_Fake_p_EE_MC = new TH3D("CHIsoTemplate_Fake_p_EE_MC", "p region, EE (MC);M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_CHIsoTemplate_Prompt_p_EB  = new TH3D("CHIsoTemplate_Prompt_p_EB",  "p region, EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_CHIsoTemplate_Prompt_p_EE  = new TH3D("CHIsoTemplate_Prompt_p_EE",  "p region, EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EB      = new TH3D("MR_R2_CHIso_GNoIso_EB",      "G region (w/o CH iso.), EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
@@ -2487,7 +2535,12 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_G                    = new TH2D("MR_R2_G",                    "G region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_G_nj35               = new TH2D("MR_R2_G_nj35",               "G region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_nj6                = new TH2D("MR_R2_G_nj6",                "G region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  
+  h_MR_R2_L                    = new TH2D("MR_R2_L",                    "L region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
+  h_MR_R2_L_nj35               = new TH2D("MR_R2_L_nj35",               "L region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_L_nj6                = new TH2D("MR_R2_L_nj6",                "L region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_q                    = new TH2D("MR_R2_q",                    "q region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
+  h_MR_R2_q_nj35               = new TH2D("MR_R2_q_nj35",               "q region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_q_nj6                = new TH2D("MR_R2_q_nj6",                "q region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
 }
 
 //_______________________________________________________
@@ -2583,10 +2636,13 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	if (apply_all_cuts('p')) {
 	  if (nPhotonPreSelect==1) {
 	    if (d.pho.SigmaIEtaIEta[iPhotonPreSelect[0]] < (std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479 ? 0.01022 : 0.03001)) {
+	      bool EB = std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479;
 	      if (d.pho.isPromptDirect[iPhotonPreSelect[0]]==1||d.pho.isPromptFrag[iPhotonPreSelect[0]]==1) {
-		bool EB = std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479;
 		if (EB) h_CHIsoTemplate_Prompt_p_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['p']);
 		else    h_CHIsoTemplate_Prompt_p_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['p']);
+	      } else {
+		if (EB) h_CHIsoTemplate_Fake_p_EB_MC->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['p']);
+		else    h_CHIsoTemplate_Fake_p_EE_MC->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['p']);
 	      }
 	    }
 	  }
@@ -2633,6 +2689,7 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	if (nJet<6) h_MR_R2_S_nj35->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
 	else        h_MR_R2_S_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
       }
+      // photon/1-lepton/2-lepton estimates
       if (apply_all_cuts('Z')) {
 	h_MR_R2_Z->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
 	if (nJet<6) h_MR_R2_Z_nj35->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
@@ -2643,6 +2700,18 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	if (nJetNoPho<6) h_MR_R2_G_nj35->Fill(MR_pho, R2_pho, sf_weight['G']);
 	else             h_MR_R2_G_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
       }
+      if (apply_all_cuts('L')) {
+	h_MR_R2_L->Fill(d.evt.MR, R2_1l, sf_weight['L']);
+	if (nJet<6) h_MR_R2_L_nj35->Fill(d.evt.MR, R2_1l, sf_weight['L']);
+	else        h_MR_R2_L_nj6 ->Fill(d.evt.MR, R2_1l, sf_weight['L']);
+      }
+      // closure test in Q'
+      if (apply_all_cuts('q')) {
+	h_MR_R2_q->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
+	if (nJet<6) h_MR_R2_q_nj35->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
+	else        h_MR_R2_q_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
+      }
+
 
     } // end syst_index == 0
 
@@ -2662,7 +2731,7 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
           }
         } else MRR2_bin=9999;
       }
-      const std::vector<char> regions = {'S', 's', 'T','W','Q', 'q', 'Z', 'G'};
+      const std::vector<char> regions = {'S', 's', 'T','W','Q', 'q', 'Z', 'G', 'L'};
       if (isData) {
         if (TString(sample).Contains("JetHT")) {
           for (size_t i=0; i<regions.size(); ++i) {

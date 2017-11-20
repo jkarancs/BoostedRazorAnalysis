@@ -5,8 +5,8 @@
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     3
 #define SKIM    0
-#define SYST    1
-#define TOP     0
+#define SYST    0
+#define TOP     1
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -53,6 +53,7 @@ struct settings {
     doTopPtReweighting       ( true  ),
     doISRReweighting         ( true  ),
     doPileupReweighting      ( true  ),
+    doAK8JetPtRescaling      ( true  ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 2 W, 2 b, 2 top
@@ -76,6 +77,7 @@ struct settings {
   const bool doTopPtReweighting;
   const bool doISRReweighting;
   const bool doPileupReweighting;
+  const bool doAK8JetPtRescaling;
   const bool applySmearing;
   const bool applyScaleFactors;
   const int  nSigmaScaleFactors;

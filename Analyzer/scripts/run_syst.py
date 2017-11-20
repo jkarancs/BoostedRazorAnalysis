@@ -656,55 +656,80 @@ Z_data = loadclone(f, "MR_R2_Z", "_data")
 G_data = loadclone(f, "MR_R2_G", "_data")
 
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
-S_ZI_MC      = loadclone(f, "MR_R2_S",      "_ZI")
-S_ZI_MC_nj35 = loadclone(f, "MR_R2_S_nj35", "_ZI")
-S_ZI_MC_nj6  = loadclone(f, "MR_R2_S_nj6",  "_ZI")
+S_ZI_MC      = loadclone(f, "MR_R2_S"+BIN,  "_ZI")
+## OLD S_ZI_MC_nj35 = loadclone(f, "MR_R2_S_nj35", "_ZI")
+## OLD S_ZI_MC_nj6  = loadclone(f, "MR_R2_S_nj6",  "_ZI")
 
-# TODO: Temporary fix for bad weights (for no njet bin)
-##  f = ROOT.TFile.Open("syst_"+opt.dir.replace("_syst","")+"/hadd/ztoinv.root")
-##  S_ZI_MC      = loadclone(f, "MR_R2_S",      "_ZI")
-##  S_ZI_MC_nj35 = loadclone(f, "MR_R2_S_nj35", "_ZI")
-##  S_ZI_MC_nj6  = loadclone(f, "MR_R2_S_nj6",  "_ZI")
-##  f = ROOT.TFile.Open("syst_"+opt.dir.replace("_syst","")+"/hadd/bkg.root")
-##  Z_MC      = loadclone(f, "MR_R2_Z",      "_MC")
-##  Z_MC_nj35 = loadclone(f, "MR_R2_Z_nj35", "_MC")
-##  Z_MC_nj6  = loadclone(f, "MR_R2_Z_nj6",  "_MC")
-##  G_MC      = loadclone(f, "MR_R2_G",      "_MC")
-##  G_MC_nj35 = loadclone(f, "MR_R2_G_nj35", "_MC")
-##  G_MC_nj6  = loadclone(f, "MR_R2_G_nj6",  "_MC")
-##  S_ZI_MC.Add(S_ZI_MC_nj35, S_ZI_MC_nj6)
-##  Z_MC   .Add(Z_MC_nj35,    Z_MC_nj6)
-##  G_MC   .Add(G_MC_nj35,    G_MC_nj6)
-print "S_ZI:"
-print S_ZI_MC     .Integral()
-print S_ZI_MC_nj35.Integral()
-print S_ZI_MC_nj6 .Integral()
-
-print "Z:"
-print Z_data      .Integral()
-print Z_MC        .Integral()
-print Z_MC_nj35   .Integral()
-print Z_MC_nj6    .Integral()
-
-print "G:"
-print G_data      .Integral()
-print G_MC        .Integral()
-print G_MC_nj35   .Integral()
-print G_MC_nj6    .Integral()
+##  print "S_ZI:"
+##  print S_ZI_MC     .Integral()
+##  ## OLD print S_ZI_MC_nj35.Integral()
+##  ## OLD print S_ZI_MC_nj6 .Integral()
+##  
+##  print "Z:"
+##  print Z_data      .Integral()
+##  print Z_MC        .Integral()
+##  print Z_MC_nj35   .Integral()
+##  print Z_MC_nj6    .Integral()
+##  
+##  print "G:"
+##  print G_data      .Integral()
+##  print G_MC        .Integral()
+##  print G_MC_nj35   .Integral()
+##  print G_MC_nj6    .Integral()
 
 
 # ---------------- Z(nunu) estimate ---------------------
 
 # Z(nunu) estimate from L (1 lepton invisible) region
-# Using Ufuk/Fatma's plots for now
-region = "M" if "WAna" in opt.box else "L"
-f_lepton_est = ROOT.TFile.Open("WtoLNuEstimate_S_from_"+region+".root")
-h_30bins = f_lepton_est.Get("comparison_ZtoInv_estimate_S_from_"+region).GetListOfPrimitives().At(0).GetListOfPrimitives().At(1)
-# Remove R2 [0.04,0.08] bins
 ztonunu_lepton_est = ROOT.TH1D("ztonunu_lepton_est", ";Bin;Z(#nu#nu) 1-lepton estimate",25,0.5,25.5)
-for binx in range(1, 26):
-    ztonunu_lepton_est.SetBinContent(binx, h_30bins.GetBinContent(binx+((binx+4)/5)))
-    ztonunu_lepton_est.SetBinError  (binx, h_30bins.GetBinError  (binx+((binx+4)/5)))
+ztonunu_lepton_est.SetDirectory(0)
+
+## OLD # Using Ufuk/Fatma's plots for now
+## OLD region = "M" if "WAna" in opt.box else "L"
+## OLD f_lepton_est = ROOT.TFile.Open("WtoLNuEstimate_S_from_"+region+".root")
+## OLD h_30bins = f_lepton_est.Get("comparison_ZtoInv_estimate_S_from_"+region).GetListOfPrimitives().At(0).GetListOfPrimitives().At(1)
+## OLD # Remove R2 [0.04,0.08] bins
+## OLD for binx in range(1, 26):
+## OLD     ztonunu_lepton_est.SetBinContent(binx, h_30bins.GetBinContent(binx+((binx+4)/5)))
+## OLD     ztonunu_lepton_est.SetBinError  (binx, h_30bins.GetBinError  (binx+((binx+4)/5)))
+
+# Calculate estimate from L
+L_dir = "syst_results/run_2017_11_18"+("_TopAna" if "TopAna" in opt.box else "")
+
+f = ROOT.TFile.Open(L_dir+"/hadd/data.root")
+L_data = loadclone(f,"MR_R2_L"+BIN,"_data")
+f = ROOT.TFile.Open(L_dir+"/hadd/ttbar.root")
+L_TT   = loadclone(f,"MR_R2_L"+BIN,"_TT")
+f = ROOT.TFile.Open(L_dir+"/hadd/top.root")
+L_TT.Add(loadclone(f,"MR_R2_L"+BIN,"_T"))
+f = ROOT.TFile.Open(L_dir+"/hadd/multijet.root")
+L_MJ   = loadclone(f,"MR_R2_L"+BIN,"_MJ")
+f = ROOT.TFile.Open(L_dir+"/hadd/wjets.root")
+L_WJ   = loadclone(f,"MR_R2_L"+BIN,"_WJ")
+f = ROOT.TFile.Open(L_dir+"/hadd/ztoinv.root")
+L_ZI   = loadclone(f,"MR_R2_L"+BIN,"_ZI")
+f = ROOT.TFile.Open(L_dir+"/hadd/other.root")
+L_OT   = loadclone(f,"MR_R2_L"+BIN,"_OT")
+# Overwrite also plots for double ratio
+# TODO: Can remove this if rerunning systematics
+Z_MC   = loadclone(f, "MR_R2_Z", "_MC2")
+G_MC   = loadclone(f, "MR_R2_G", "_MC2")
+# Do the estimation
+ZInv_Lepton_est = L_data.Clone("ZInv_Lepton_est")
+for hist in [L_TT, L_MJ, L_ZI, L_OT]:
+    ZInv_Lepton_est.Add(hist, -1)
+for binx in range(1, ZInv_Lepton_est.GetNbinsX()+1):
+    for biny in range(1, ZInv_Lepton_est.GetNbinsX()+1):
+        if ZInv_Lepton_est.GetBinContent(binx, biny)<0:
+            ZInv_Lepton_est.SetBinContent(binx,biny,0)
+            ZInv_Lepton_est.SetBinError(binx,biny,0)
+ZInv_Lepton_est.Scale(S_ZI_MC.Integral()/L_WJ.Integral())
+# unroll
+for binx in range(1, ZInv_Lepton_est.GetNbinsX()+1):
+    for biny in range(1, ZInv_Lepton_est.GetNbinsX()+1):
+        unrolled_bin = (binx-1)*5+biny
+        ztonunu_lepton_est.SetBinContent(unrolled_bin, ZInv_Lepton_est.GetBinContent(binx, biny))
+        ztonunu_lepton_est.SetBinError  (unrolled_bin, ZInv_Lepton_est.GetBinError  (binx, biny))
 
 # Z(nunu) estimate from G (photon enriched) region
 f_zinv_est = ROOT.TFile.Open("zinv_est_"+opt.box+".root","recreate")
@@ -920,13 +945,6 @@ h_CR_to_SR_R2_factorized.Write()
 # Double ratio = k_Z / k_G
 k_Z = Z_data.Integral()/Z_MC.Integral()
 k_G = G_data.Integral()/G_MC.Integral()
-# TODO: temporary fix of integrals
-##  if "WAna" in opt.box:
-##      k_Z = 279.0 / 263.3
-##      k_G = 729.0 / 881.4
-##  else:
-##      k_Z =  59.0 / 152.6
-##      k_G = 596.0 / 871.6
 double_ratio = k_Z / k_G
 print ("k_Z = %4.3f (%4.3f / %4.3f), k_G = %4.3f (%4.3f / %4.3f), double ratio = %4.3f" %
        (k_Z, Z_data.Integral(), Z_MC.Integral(), k_G, G_data.Integral(), G_MC.Integral(), double_ratio))
@@ -999,32 +1017,32 @@ for binx in range(1, G_data_EB.GetNbinsX()+1):
         ztonunu_photon_est_dirfracDown.SetBinError  (unrolled_bin, zinv_est_err_dirfracDown)
 
 # Finally scale by the relative number of events in the njet boxes (found in MC)
-njet_ratio = 1.0
-if "nj35" in opt.box:
-    njet_ratio = S_ZI_MC_nj35.Integral()/S_ZI_MC.Integral()
-elif "nj6" in opt.box:
-    njet_ratio = S_ZI_MC_nj6 .Integral()/S_ZI_MC.Integral()
-if njet_ratio != 1.0:
-    ztonunu_lepton_est            .Scale(njet_ratio)
-    ztonunu_photon_est            .Scale(njet_ratio)
-    ztonunu_photon_est_purityUp   .Scale(njet_ratio)
-    ztonunu_photon_est_purityDown .Scale(njet_ratio)
-    ztonunu_photon_est_dirfracUp  .Scale(njet_ratio)
-    ztonunu_photon_est_dirfracDown.Scale(njet_ratio)
+## OLD njet_ratio = 1.0
+## OLD if "nj35" in opt.box:
+## OLD     njet_ratio = S_ZI_MC_nj35.Integral()/S_ZI_MC.Integral()
+## OLD elif "nj6" in opt.box:
+## OLD     njet_ratio = S_ZI_MC_nj6 .Integral()/S_ZI_MC.Integral()
+## OLD if njet_ratio != 1.0:
+## OLD     ztonunu_lepton_est            .Scale(njet_ratio)
+## OLD     ztonunu_photon_est            .Scale(njet_ratio)
+## OLD     ztonunu_photon_est_purityUp   .Scale(njet_ratio)
+## OLD     ztonunu_photon_est_purityDown .Scale(njet_ratio)
+## OLD     ztonunu_photon_est_dirfracUp  .Scale(njet_ratio)
+## OLD     ztonunu_photon_est_dirfracDown.Scale(njet_ratio)
 # Unroll also the ZToNuNu MC plot
 ztonunu_mc    = ROOT.TH1D("ztonunu_mc",    ";Bin;Z(#nu#nu) estimate",25,0.5,25.5)
 for binx in range(1, G_data_EB.GetNbinsX()+1):
     for biny in range(1, G_data_EB.GetNbinsY()+1):
         unrolled_bin = (binx-1)*5+biny
-        if "nj35" in opt.box:
-            ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC_nj35.GetBinContent(binx,biny))
-            ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC_nj35.GetBinError  (binx,biny))
-        elif "nj6" in opt.box:
-            ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC_nj6.GetBinContent(binx,biny))
-            ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC_nj6.GetBinError  (binx,biny))
-        else:
-            ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC.GetBinContent(binx,biny))
-            ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC.GetBinError  (binx,biny))
+        ## OLD if "nj35" in opt.box:
+        ## OLD     ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC_nj35.GetBinContent(binx,biny))
+        ## OLD     ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC_nj35.GetBinError  (binx,biny))
+        ## OLD elif "nj6" in opt.box:
+        ## OLD     ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC_nj6.GetBinContent(binx,biny))
+        ## OLD     ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC_nj6.GetBinError  (binx,biny))
+        ## OLD else:
+        ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC.GetBinContent(binx,biny))
+        ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC.GetBinError  (binx,biny))
 
 # Add them to vector (used later)
 ZInv_est = []
@@ -1048,7 +1066,8 @@ pad = can.cd(1)
 pad.SetPad(0,0.3,1,1)
 pad.SetBottomMargin(0.02)
 ztonunu_mc.GetXaxis().SetLabelSize(0)
-ztonunu_mc.GetYaxis().SetRangeUser(0,20 if "Wana" in opt.box else 4)
+ymax = {"WAna_nj35": 20, "WAna_nj6" : 8, "TopAna" : 4}
+ztonunu_mc.GetYaxis().SetRangeUser(0, ymax[opt.box])
 ztonunu_mc.GetYaxis().SetTitleSize(0.07)
 ztonunu_mc.GetYaxis().SetTitleOffset(1.1)
 ztonunu_mc.SetMarkerStyle(0)

@@ -314,8 +314,8 @@ int main(int argc, char** argv) {
   // Scale QCD to match data in a QCD dominated region
   //cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
 
-  // Jet Pt Reweighting
-  //cout << "doHTReweighting (settings): " << ( settings.doHTReweighting ? "true" : "false" ) << endl;
+  // AK8 Jet Pt Reweighting
+  cout << "doAK8JetPtRescaling (settings): " << ( settings.doAK8JetPtRescaling ? "true" : "false" ) << endl;
 
   // Scale factors
   cout << "applySmearing (settings): " << ( settings.applySmearing ? "true" : "false" ) << endl;
@@ -592,11 +592,16 @@ int main(int argc, char** argv) {
 	  //    if (settings.scaleQCD)
 	  //      w *= settings.useJSON ? 0.776458 : 0.785087; // Golden/Silver JSON
 	  //  
-	  //    // HT reweighting
-	  //    if (settings.doHTReweighting)
-	  //      w *= ana.get_ht_weight(data, syst.nSigmaHT[syst.index]);
 	  //  }
 	  //  if (debug>1) std::cout<<"Analyzer::main: apply special weights ok"<<std::endl;
+
+	  // AK8 jet pt reweighting for madgraph Z/gamma samples
+	  if (settings.doAK8JetPtRescaling && syst.index==0) {
+	    TString samplename(cmdline.dirname);
+	    if (samplename.Contains("ZJetsToNuNu")||samplename.Contains("DYJetsToLL")||samplename.Contains("GJets_HT")) { 
+	      ana.rescale_AK8_jet_pt(data);
+	    }
+	  }
 
 	  // Scale and Smear Jets and MET
 	  ana.rescale_smear_jet_met(data, settings.applySmearing, syst.index, syst.nSigmaJES[syst.index],
@@ -609,7 +614,7 @@ int main(int argc, char** argv) {
 	  ana.calculate_variables(data, syst.index);
 	  if (debug>1) std::cout<<"Analyzer::main: calculate_variables ok"<<std::endl;
 
-	  // Apply Trigger Efficiency Scale Factor
+	  // Apply Trigger Efficiency
 	  w *= (ana.all_weights[7] = ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]));
 	  if (syst.index==0) ofile->count("w_trigger", w);
 	  if (debug==-1) std::cout<<" trigger = "<<ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]);
