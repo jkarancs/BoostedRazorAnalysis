@@ -1033,6 +1033,7 @@ std::vector<double> ChargedHadronIsoEACorr;
 unsigned int nPhotonPreSelect, nPhotonSelect, nPhotonFake;
 double MT, MT_vetolep;
 double MET_1l, MTR_1l, R_1l, R2_1l, minDeltaPhi_1l, M_1l;
+double MET_1vl, MTR_1vl, R_1vl, R2_1vl, minDeltaPhi_1vl, M_1vl;
 double MET_ll, MTR_ll, R_ll, R2_ll, minDeltaPhi_ll, M_ll;
 double MET_pho, MR_pho, MTR_pho, R_pho, R2_pho, minDeltaPhi_pho; 
 double dPhi_ll_met, dPhi_ll_jet;
@@ -1479,6 +1480,13 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     lep_met.SetPtEtaPhi(selected_leptons[0].Pt(), 0, selected_leptons[0].Phi());
     met_1l += lep_met;
   }
+  TVector3 met_1vl;
+  met_1vl.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
+  if (nLepVeto==1) {
+    TVector3 lep_met;
+    lep_met.SetPtEtaPhi(veto_leptons[0].Pt(), 0, veto_leptons[0].Phi());
+    met_1vl += lep_met;
+  }
   TVector3 met_ll;
   met_ll.SetPtEtaPhi(data.met.Pt[0], 0, data.met.Phi[0]);
   if (M_ll!=-9999) {
@@ -1534,7 +1542,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   nMediumBTag = nMediumBTagNoPho = 0;
   nTightBTag  = 0;
   AK4_Ht = AK4_HtOnline = AK4_HtNoLep = 0;
-  minDeltaPhi = minDeltaPhi_1l = minDeltaPhi_ll = minDeltaPhi_pho = dPhi_ll_jet = 9999;
+  minDeltaPhi = minDeltaPhi_1l = minDeltaPhi_1vl = minDeltaPhi_ll = minDeltaPhi_pho = dPhi_ll_jet = 9999;
   //std::vector<bool> add_lepton_to_ht(veto_leptons.size(),1);
   //std::vector<bool> remove_muon_from_ht(selected_muons.size(),0);
   while(data.jetsAK4.Loop()) {
@@ -1567,9 +1575,11 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if (nJet<=4) {
 	double dphi = std::abs(TVector2::Phi_mpi_pi(data.met.Phi[0] - data.jetsAK4.Phi[i]));
 	if (dphi<minDeltaPhi) minDeltaPhi = dphi;
-	// with added lepton
+	// with added (veto) lepton
 	double dphi_met1l = std::abs(TVector2::Phi_mpi_pi(met_1l.Phi() - data.jetsAK4.Phi[i]));
 	if (dphi_met1l<minDeltaPhi_1l) minDeltaPhi_1l = dphi_met1l;
+	double dphi_met1vl = std::abs(TVector2::Phi_mpi_pi(met_1vl.Phi() - data.jetsAK4.Phi[i]));
+	if (dphi_met1vl<minDeltaPhi_1vl) minDeltaPhi_1vl = dphi_met1vl;
 	// with added lepton pair
 	double dphi_metll = std::abs(TVector2::Phi_mpi_pi(met_ll.Phi() - data.jetsAK4.Phi[i]));
 	if (dphi_metll<minDeltaPhi_ll) minDeltaPhi_ll = dphi_metll;
@@ -2080,10 +2090,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   }
   // Recalculate Razor with MET + 2lep, and MET + pho
   MR_pho = -9999;
-  MET_1l = MET_ll = MET_pho = -9999;
-  MTR_1l = MTR_ll = MTR_pho = -9999;
-  R_1l   = R_ll   = R_pho   = -9999;
-  R2_1l  = R2_ll  = R2_pho  = -9999;
+  MET_1l = MET_1vl = MET_ll = MET_pho = -9999;
+  MTR_1l = MTR_1vl = MTR_ll = MTR_pho = -9999;
+  R_1l   = R_1vl   = R_ll   = R_pho   = -9999;
+  R2_1l  = R2_1vl  = R2_ll  = R2_pho  = -9999;
   dPhiRazorNoPho = 9999;
   if (hemis_AK4.size()!=2) {
     std::vector<TLorentzVector> selected_jets_AK4;
@@ -2099,6 +2109,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       MTR_1l = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_1l);
       R_1l   = MTR_1l/data.evt.MR;
       R2_1l  = R_1l*R_1l;
+    }
+    if (nLepVeto==1) {
+      MET_1vl = met_1vl.Pt();
+      MTR_1vl = Razor::CalcMTR(hemis_AK4[0], hemis_AK4[1], met_1vl);
+      R_1vl   = MTR_1vl/data.evt.MR;
+      R2_1vl  = R_1vl*R_1vl;
     }
     if (M_ll!=-9999) {
       MET_ll = met_ll.Pt();
@@ -2326,6 +2342,9 @@ TH2D* h_MR_R2_G_nj6;
 TH2D* h_MR_R2_L;
 TH2D* h_MR_R2_L_nj35;
 TH2D* h_MR_R2_L_nj6;
+TH2D* h_MR_R2_l;
+TH2D* h_MR_R2_l_nj35;
+TH2D* h_MR_R2_l_nj6;
 // Q' closure
 TH2D* h_MR_R2_q;
 TH2D* h_MR_R2_q_nj35;
@@ -2538,6 +2557,9 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_L                    = new TH2D("MR_R2_L",                    "L region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_L_nj35               = new TH2D("MR_R2_L_nj35",               "L region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_L_nj6                = new TH2D("MR_R2_L_nj6",                "L region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_l                    = new TH2D("MR_R2_l",                    "l region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
+  h_MR_R2_l_nj35               = new TH2D("MR_R2_l_nj35",               "l region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
+  h_MR_R2_l_nj6                = new TH2D("MR_R2_l_nj6",                "l region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q                    = new TH2D("MR_R2_q",                    "q region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_q_nj35               = new TH2D("MR_R2_q_nj35",               "q region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q_nj6                = new TH2D("MR_R2_q_nj6",                "q region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
@@ -2704,6 +2726,11 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	h_MR_R2_L->Fill(d.evt.MR, R2_1l, sf_weight['L']);
 	if (nJet<6) h_MR_R2_L_nj35->Fill(d.evt.MR, R2_1l, sf_weight['L']);
 	else        h_MR_R2_L_nj6 ->Fill(d.evt.MR, R2_1l, sf_weight['L']);
+      }
+      if (apply_all_cuts('l')) {
+	h_MR_R2_l->Fill(d.evt.MR, R2_1vl, sf_weight['l']);
+	if (nJet<6) h_MR_R2_l_nj35->Fill(d.evt.MR, R2_1vl, sf_weight['l']);
+	else        h_MR_R2_l_nj6 ->Fill(d.evt.MR, R2_1vl, sf_weight['l']);
       }
       // closure test in Q'
       if (apply_all_cuts('q')) {
