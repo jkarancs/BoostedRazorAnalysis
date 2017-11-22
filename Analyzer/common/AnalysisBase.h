@@ -2427,7 +2427,7 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_trigger2d_nolep_pass        = new TH2D("trigger2d_nolep_pass",  "Pass trigger;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
   h_trigger2d_nolep_total       = new TH2D("trigger2d_nolep_total",        "Total;H_{T} (GeV);Leading AK8 jet p_{T} (GeV)", 11,HTB, 8,PtB);
 
-  std::vector<std::string> regions = {"S", "s", "T", "W", "Q", "q", "Z", "G"}; 
+  std::vector<std::string> regions = {"S", "s", "T", "W", "Q", "q", "Z", "G", "L"}; 
 
   if (varySystematics) {
     for (size_t i=0; i<regions.size(); ++i) {
