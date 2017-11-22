@@ -5,8 +5,8 @@
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     3
 #define SKIM    0
-#define SYST    0
-#define TOP     1
+#define SYST    1
+#define TOP     0
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -58,8 +58,8 @@ struct settings {
     applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 2 W, 2 b, 2 top
     varySystematics          ( SYST  ),
-    systematicsFileName      ( "systematics/2017_10_03_1SigmaUpDown_NoPdf.txt" ),
-//  systematicsFileName      ( "systematics/test.txt" ),
+//  systematicsFileName      ( "systematics/2017_10_03_1SigmaUpDown_NoPdf.txt" ),
+    systematicsFileName      ( "systematics/2017_11_22_AllUpDown_NoPdf.txt" ),
     useJSON                  ( false ), // by default: no need to apply, but can be useful if some lumisections need to be excluded additionally
 #if VER != 0
     jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/ReReco/Final/"

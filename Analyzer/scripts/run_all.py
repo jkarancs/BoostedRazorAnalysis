@@ -151,10 +151,10 @@ with open("Analyzer.cc") as ana:
         if '#include "settings_' in line:
             settings_file = line.split()[1].replace('"','')
 vary_syst = False
-with open(settings_file) as settings:
-    for line in settings:
-        if "define SYST" in line and not "0" in line:
-            vary_syst = True
+#with open(settings_file) as settings:
+#    for line in settings:
+#        if "define SYST" in line and not "0" in line:
+#            vary_syst = True
 
 
 # ----------------- Analyzer Arguments -------------------

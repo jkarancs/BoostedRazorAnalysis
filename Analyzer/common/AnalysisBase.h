@@ -1062,18 +1062,26 @@ int nFakePhoton;
 int nDirectPromptPhoton;
 int nFragmentationPromptPhoton;
 
+ std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons, tight_leptons;
+std::vector<float> r_iso_tight_leptons;
+TLorentzVector lep_pair;
+//std::vector<TLorentzVector> veto_muons_noiso, veto_muons, selected_muons;
+//std::vector<bool> veto_lep_in_jet;
+//std::vector<bool> veto_mu_in_jet, selected_mu_in_jet;
+
 void
 AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
 {
-  std::vector<TLorentzVector> veto_leptons_noiso, veto_leptons, selected_leptons, tight_leptons;
-  std::vector<float> r_iso_tight_leptons;
-  TLorentzVector lep_pair;
-  //std::vector<TLorentzVector> veto_muons_noiso, veto_muons, selected_muons;
-  //std::vector<bool> veto_lep_in_jet;
-  //std::vector<bool> veto_mu_in_jet, selected_mu_in_jet;
 
-  // It only makes sense to calculate certain variables only once if they don't depend on jet energy
+  // It only makes sense to calculate certain variables only once 
+  // if they don't depend on jet energy (eg. leptons)
   if (syst_index == 0) {
+    veto_leptons_noiso .clear();
+    veto_leptons       .clear();
+    selected_leptons   .clear();
+    tight_leptons      .clear();
+    r_iso_tight_leptons.clear();
+    lep_pair.SetPxPyPzE(0,0,0,0);
 
     // Loop on AK8 jets
     tau21         .assign(data.jetsAK8.size, 9999);
@@ -1331,7 +1339,6 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     // M_ll, dPhi_ll_met
     M_ll = -9999;
     dPhi_ll_met = 9999;
-    lep_pair.SetPxPyPzE(0,0,0,0);
     if (nLepSelect==2) {
       TLorentzVector lep1, lep2;
       if (nEleSelect==2) {
@@ -2342,9 +2349,6 @@ TH2D* h_MR_R2_G_nj6;
 TH2D* h_MR_R2_L;
 TH2D* h_MR_R2_L_nj35;
 TH2D* h_MR_R2_L_nj6;
-TH2D* h_MR_R2_l;
-TH2D* h_MR_R2_l_nj35;
-TH2D* h_MR_R2_l_nj6;
 // Q' closure
 TH2D* h_MR_R2_q;
 TH2D* h_MR_R2_q_nj35;
@@ -2557,9 +2561,6 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_L                    = new TH2D("MR_R2_L",                    "L region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_L_nj35               = new TH2D("MR_R2_L_nj35",               "L region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_L_nj6                = new TH2D("MR_R2_L_nj6",                "L region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  h_MR_R2_l                    = new TH2D("MR_R2_l",                    "l region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_l_nj35               = new TH2D("MR_R2_l_nj35",               "l region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  h_MR_R2_l_nj6                = new TH2D("MR_R2_l_nj6",                "l region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q                    = new TH2D("MR_R2_q",                    "q region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_q_nj35               = new TH2D("MR_R2_q_nj35",               "q region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q_nj6                = new TH2D("MR_R2_q_nj6",                "q region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
@@ -2726,11 +2727,6 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	h_MR_R2_L->Fill(d.evt.MR, R2_1l, sf_weight['L']);
 	if (nJet<6) h_MR_R2_L_nj35->Fill(d.evt.MR, R2_1l, sf_weight['L']);
 	else        h_MR_R2_L_nj6 ->Fill(d.evt.MR, R2_1l, sf_weight['L']);
-      }
-      if (apply_all_cuts('l')) {
-	h_MR_R2_l->Fill(d.evt.MR, R2_1vl, sf_weight['l']);
-	if (nJet<6) h_MR_R2_l_nj35->Fill(d.evt.MR, R2_1vl, sf_weight['l']);
-	else        h_MR_R2_l_nj6 ->Fill(d.evt.MR, R2_1vl, sf_weight['l']);
       }
       // closure test in Q'
       if (apply_all_cuts('q')) {

@@ -27,7 +27,7 @@ if "_nj6"  in opt.box: BIN = "_nj6"
 
 lumi = 35867 # /pb
 ntuple = "ntuple/Latest"
-combine_bins = False
+combine_bins = True
 
 tdrstyle.setTDRStyle()
 
@@ -48,6 +48,8 @@ if opt.model == "T1tttt":
     signal.append("FastSim_SMS-T1tttt")
 elif opt.model == "T1ttbb":
     signal.append("FastSim_SMS-T1ttbb")
+elif opt.model == "T1ttbb_dM5to25":
+    signal.append("FastSim_SMS-T1ttbb_deltaM5to25")
 elif opt.model == "T2tt":
     signal.append("FastSim_SMS-T2tt_mStop-150to250")
     signal.append("FastSim_SMS-T2tt_mStop-250to350")
@@ -286,33 +288,64 @@ def load(f, name, pf="", combine = False):
     return h_new
 
 def combinebins(h, name=""):
-    binmap = {
-        1:   1,
-        2:   2,
-        3:   3,
-        4:   4,
-        5:   5,
-        6:   6,
-        7:   7,
-        8:   8,
-        9:   9,
-        10: 10,
-        11: 11,
-        12: 12,
-        13: 13,
-        14: 14, 
-        15: 15,
-        16: 16,
-        17: 17,
-        18: 18,
-        19: 19, # Merge 2 MR [1600, 2000], R2 [0.24, 0.5, 1.0]
-        20: 19,
-        21: 20,
-        22: 21,
-        23: 22, # Merge 3 MR [2000, 4000], R2 [0.16, 0.24, 0.5, 1.0]
-        24: 22,
-        25: 22 }
-    h_new = ROOT.TH1D(name,h.GetTitle(), 22,0.5,22.5)
+    if "WAna_nj6" in opt.box:
+        # Wn6
+        h_new = ROOT.TH1D(name,h.GetTitle(), 21,0,21)
+        binmap = {
+            1:   1,
+            2:   2,
+            3:   3,
+            4:   4,
+            5:   5,
+            6:   6,
+            7:   7,
+            8:   8,
+            9:   9,
+            10: 10,
+            11: 11,
+            12: 12,
+            13: 13,
+            14: 14, # Merge 2 MR [1200, 1600], R2 [0.24, 0.5, 1.0]
+            15: 14,
+            16: 15,
+            17: 16,
+            18: 17,
+            19: 18, # Merge 2 MR [1600, 2000], R2 [0.24, 0.5, 1.0]
+            20: 18,
+            21: 19,
+            22: 20,
+            23: 21, # Merge 3 MR [2000, 4000], R2 [0.16, 0.24, 0.5, 1.0]
+            24: 21,
+            25: 21 }
+    else:
+        #Wn35, Top
+        h_new = ROOT.TH1D(name,h.GetTitle(), 22,0,22)
+        binmap = {
+            1:   1,
+            2:   2,
+            3:   3,
+            4:   4,
+            5:   5,
+            6:   6,
+            7:   7,
+            8:   8,
+            9:   9,
+            10: 10,
+            11: 11,
+            12: 12,
+            13: 13,
+            14: 14,
+            15: 15,
+            16: 16,
+            17: 17,
+            18: 18,
+            19: 19, # Merge 2 MR [1600, 2000], R2 [0.24, 0.5, 1.0]
+            20: 19,
+            21: 20,
+            22: 21,
+            23: 22, # Merge 3 MR [2000, 4000], R2 [0.16, 0.24, 0.5, 1.0]
+            24: 22,
+            25: 22 }
     for i in range (1, h.GetNbinsX()+1):
         h_new.SetBinContent(binmap[i], h_new.GetBinContent(binmap[i]) + h.GetBinContent(i))
         h_new.SetBinError  (binmap[i], (h_new.GetBinError(binmap[i])**2 + h.GetBinError(i)**2)**0.5)
@@ -729,7 +762,7 @@ S_ZI_MC      = loadclone(f, "MR_R2_S"+BIN,  "_ZI")
 ##  print G_MC_nj6    .Integral()
 
 # Z(nunu) estimate from L (1 lepton invisible) region
-ztonunu_lepton_est = ROOT.TH1D("ztonunu_lepton_est", ";Bin;Z(#nu#nu) 1-lepton estimate",25,0.5,25.5)
+ztonunu_lepton_est = ROOT.TH1D("ztonunu_lepton_est", ";Bin;Z(#nu#nu) 1-lepton estimate",25,0,25)
 ztonunu_lepton_est.SetDirectory(0)
 
 ## OLD # Using Ufuk/Fatma's plots
@@ -1020,13 +1053,13 @@ print ("k_Z = %4.3f (%4.3f / %4.3f), k_G = %4.3f (%4.3f / %4.3f), double ratio =
        (k_Z, Z_data_DY_est.Integral(), Z_DJ.Integral(), k_G, G_data_G_est.Integral(), G_GJ.Integral(), double_ratio))
 
 # Estimate background
-ztonunu_photon_est               = ROOT.TH1D("ztonunu_photon_est",               ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
-ztonunu_photon_est_purityUp      = ROOT.TH1D("ztonunu_photon_est_purityUp",      ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
-ztonunu_photon_est_purityDown    = ROOT.TH1D("ztonunu_photon_est_purityDown",    ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
-ztonunu_photon_est_dirfracUp     = ROOT.TH1D("ztonunu_photon_est_dirfracUp",     ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
-ztonunu_photon_est_dirfracDown   = ROOT.TH1D("ztonunu_photon_est_dirfracDown",   ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
-ztonunu_photon_est_leptonestUp   = ROOT.TH1D("ztonunu_photon_est_leptonestUp",   ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
-ztonunu_photon_est_leptonestDown = ROOT.TH1D("ztonunu_photon_est_leptonestDown", ";Bin;Z(#nu#nu) photon estimate",25,0.5,25.5)
+ztonunu_photon_est               = ROOT.TH1D("ztonunu_photon_est",               ";Bin;Z(#nu#nu) photon estimate",25,0,25)
+ztonunu_photon_est_purityUp      = ROOT.TH1D("ztonunu_photon_est_purityUp",      ";Bin;Z(#nu#nu) photon estimate",25,0,25)
+ztonunu_photon_est_purityDown    = ROOT.TH1D("ztonunu_photon_est_purityDown",    ";Bin;Z(#nu#nu) photon estimate",25,0,25)
+ztonunu_photon_est_dirfracUp     = ROOT.TH1D("ztonunu_photon_est_dirfracUp",     ";Bin;Z(#nu#nu) photon estimate",25,0,25)
+ztonunu_photon_est_dirfracDown   = ROOT.TH1D("ztonunu_photon_est_dirfracDown",   ";Bin;Z(#nu#nu) photon estimate",25,0,25)
+ztonunu_photon_est_leptonestUp   = ROOT.TH1D("ztonunu_photon_est_leptonestUp",   ";Bin;Z(#nu#nu) photon estimate",25,0,25)
+ztonunu_photon_est_leptonestDown = ROOT.TH1D("ztonunu_photon_est_leptonestDown", ";Bin;Z(#nu#nu) photon estimate",25,0,25)
 # Use average purities (pur_EB, pur_EE)
 for binx in range(1, G_data_EB.GetNbinsX()+1):
     ##  # Use purity in bins of MR
@@ -1079,22 +1112,22 @@ for binx in range(1, G_data_EB.GetNbinsX()+1):
         zinv_est_err_dirfracDown = npromptdirect_err_dirfracDown * transfer_factor * double_ratio
         # fill predicted counts
         unrolled_bin = (binx-1)*5+biny
-        ztonunu_photon_est            .SetBinContent(unrolled_bin, zinv_est)
+        ztonunu_photon_est            .SetBinContent(unrolled_bin, max(0, zinv_est))
         ztonunu_photon_est            .SetBinError  (unrolled_bin, zinv_est_err)
-        ztonunu_photon_est_purityUp   .SetBinContent(unrolled_bin, zinv_est_purityUp)
+        ztonunu_photon_est_purityUp   .SetBinContent(unrolled_bin, max(0, zinv_est_purityUp))
         ztonunu_photon_est_purityUp   .SetBinError  (unrolled_bin, zinv_est_err_purityUp)
-        ztonunu_photon_est_purityDown .SetBinContent(unrolled_bin, zinv_est_purityDown)
+        ztonunu_photon_est_purityDown .SetBinContent(unrolled_bin, max(0, zinv_est_purityDown))
         ztonunu_photon_est_purityDown .SetBinError  (unrolled_bin, zinv_est_err_purityDown)
-        ztonunu_photon_est_dirfracUp  .SetBinContent(unrolled_bin, zinv_est_dirfracUp)
+        ztonunu_photon_est_dirfracUp  .SetBinContent(unrolled_bin, max(0, zinv_est_dirfracUp))
         ztonunu_photon_est_dirfracUp  .SetBinError  (unrolled_bin, zinv_est_err_dirfracUp)
-        ztonunu_photon_est_dirfracDown.SetBinContent(unrolled_bin, zinv_est_dirfracDown)
+        ztonunu_photon_est_dirfracDown.SetBinContent(unrolled_bin, max(0, zinv_est_dirfracDown))
         ztonunu_photon_est_dirfracDown.SetBinError  (unrolled_bin, zinv_est_err_dirfracDown)
         # Use Z(nunu) 1-lepton invisible estimate as a systematic
         lep_est = ztonunu_lepton_est.GetBinContent(unrolled_bin)
         lep_est_syst = (max(zinv_est, lep_est) - min(zinv_est, lep_est)) / 2.0
-        ztonunu_photon_est_leptonestUp   .SetBinContent(unrolled_bin, zinv_est + lep_est_syst)
+        ztonunu_photon_est_leptonestUp   .SetBinContent(unrolled_bin, max(0, zinv_est + lep_est_syst))
         ztonunu_photon_est_leptonestUp   .SetBinError  (unrolled_bin, zinv_est_err)
-        ztonunu_photon_est_leptonestDown .SetBinContent(unrolled_bin, zinv_est - lep_est_syst)
+        ztonunu_photon_est_leptonestDown .SetBinContent(unrolled_bin, max(0, zinv_est - lep_est_syst))
         ztonunu_photon_est_leptonestDown .SetBinError  (unrolled_bin, zinv_est_err)
 
 
@@ -1133,7 +1166,7 @@ else:
 ## OLD     ztonunu_photon_est_dirfracUp  .Scale(njet_ratio)
 ## OLD     ztonunu_photon_est_dirfracDown.Scale(njet_ratio)
 # Unroll also the ZToNuNu MC plot
-ztonunu_mc    = ROOT.TH1D("ztonunu_mc",    ";Bin;Z(#nu#nu) estimate",25,0.5,25.5)
+ztonunu_mc    = ROOT.TH1D("ztonunu_mc",    ";Bin;Z(#nu#nu) estimate",25,0,25)
 for binx in range(1, G_data_EB.GetNbinsX()+1):
     for biny in range(1, G_data_EB.GetNbinsY()+1):
         unrolled_bin = (binx-1)*5+biny
@@ -1187,7 +1220,7 @@ pad.SetPad(0,0,1,0.3)
 pad.SetTopMargin(0.04)
 pad.SetBottomMargin(0.3)
 # Add ratio plots
-ztonunu_photon_ratio = ROOT.TH1D("ztonunu_photon_ratio", ";Bin;Estmate/MC",        25,0.5,25.5)
+ztonunu_photon_ratio = ROOT.TH1D("ztonunu_photon_ratio", ";Bin;Estmate/MC",        25,0,25)
 ztonunu_photon_ratio.Divide(ztonunu_photon_est, ztonunu_mc)
 ztonunu_photon_ratio.GetXaxis().SetLabelSize(0.125)
 ztonunu_photon_ratio.GetYaxis().SetLabelSize(0.125)
@@ -1199,7 +1232,7 @@ ztonunu_photon_ratio.GetYaxis().SetTitleOffset(0.5)
 ztonunu_photon_ratio.GetYaxis().SetRangeUser(0,2)
 ztonunu_photon_ratio.SetMarkerStyle(20)
 ztonunu_photon_ratio.Draw("PE1")
-ztonunu_lepton_ratio = ROOT.TH1D("ztonunu_lepton_ratio", ";Bin;Estmate/MC",        25,0.5,25.5)
+ztonunu_lepton_ratio = ROOT.TH1D("ztonunu_lepton_ratio", ";Bin;Estmate/MC",        25,0,25)
 ztonunu_lepton_ratio.Divide(ztonunu_lepton_est, ztonunu_mc)
 ztonunu_lepton_ratio.SetMarkerStyle(21)
 ztonunu_lepton_ratio.SetMarkerColor(418)
@@ -1211,7 +1244,7 @@ ztonunu_photon_est.Write()
 ztonunu_lepton_est.Write()
 ztonunu_mc.Write()
 f_zinv_est.Close()
-#sys.exit()
+sys.exit()
 
 # ------------- Signal MET systematics ------------------
 
@@ -1469,6 +1502,10 @@ for i in range(0, len(systematics)):
     MultiJet_est.append(S_MJ_est)
     WJets_est   .append(S_WJ_est)
     ####    ZInv_est    .append(S_ZI_est)
+    # Sometimes MC sum has negative counts (due to NLO MCs)
+    for binx in range(1,S_OT_est.GetNbinsX()+1):
+        if S_OT_est.GetBinContent(binx)<0:
+            S_OT_est.SetBinContent(binx,0)
     Other_est   .append(S_OT_est)
 
 # Now save a different root file for each signal point
