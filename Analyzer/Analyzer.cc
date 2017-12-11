@@ -126,6 +126,7 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaJES         = std::vector<double>(1,0);
     std::vector<double> nSigmaJER         = std::vector<double>(1,0);
     std::vector<double> nSigmaRestMET     = std::vector<double>(1,0);
+    std::vector<double> nSigmaRescaleAK8  = std::vector<double>(1,0);
     std::vector<std::vector<double> > nSigmaSFs = 
       std::vector<std::vector<double> >(settings.nSigmaScaleFactors, std::vector<double>(1,0));
     std::vector<unsigned int> numScale    = std::vector<unsigned int>(1,0);
@@ -159,6 +160,7 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaJES.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJER.push_back(dbl);
       nth_line>>dbl; syst.nSigmaRestMET.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaRescaleAK8.push_back(dbl);
       for (int i=0; i<settings.nSigmaScaleFactors; ++i) {
 	nth_line>>dbl; syst.nSigmaSFs[i].push_back(dbl);
       }
@@ -596,16 +598,18 @@ int main(int argc, char** argv) {
 	  //  if (debug>1) std::cout<<"Analyzer::main: apply special weights ok"<<std::endl;
 
 	  // AK8 jet pt reweighting for madgraph Z/gamma samples
-	  if (settings.doAK8JetPtRescaling && syst.index==0) {
+	  bool rescaleAK8 = 0;
+	  if (settings.doAK8JetPtRescaling) {
 	    TString samplename(cmdline.dirname);
 	    if (samplename.Contains("ZJetsToNuNu")||samplename.Contains("DYJetsToLL")||samplename.Contains("GJets_HT")) { 
-	      ana.rescale_AK8_jet_pt(data);
+	      rescaleAK8 = 1;
 	    }
 	  }
 
 	  // Scale and Smear Jets and MET
 	  ana.rescale_smear_jet_met(data, settings.applySmearing, syst.index, syst.nSigmaJES[syst.index],
-				    syst.nSigmaJER[syst.index], syst.nSigmaRestMET[syst.index]);
+				    syst.nSigmaJER[syst.index], syst.nSigmaRestMET[syst.index],
+				    rescaleAK8, syst.nSigmaRescaleAK8[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: rescale_smear_jet_met ok"<<std::endl;
 
 	  // Calculate variables that do not exist in the ntuple

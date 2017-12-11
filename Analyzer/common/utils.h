@@ -347,23 +347,23 @@ namespace utils {
     }
   }
   // Get efficiency (and assymmetric errors) from TGraph
-  void geteff_AE(TGraphAsymmErrors* g, double x, double& eff, double& err_down, double& err_up) {
+  void geteff_AE(TGraphAsymmErrors* g, double x, double& eff, double& err_up, double& err_down) {
     double X;
     // If the bin is out of range, use the closest bin
     for (int i=0, n=g->GetN(); i<n; ++i) {
       g->GetPoint(i,X,eff);
-      err_down = g->GetErrorYlow(i);
       err_up = g->GetErrorYhigh(i);
+      err_down = g->GetErrorYlow(i);
       if (x<X+g->GetErrorXhigh(i)) break;
     }
   }
-  void geteff_AE(const TGraphAsymmErrors& g, double x, double& eff, double& err_down, double& err_up) {
+  void geteff_AE(const TGraphAsymmErrors& g, double x, double& eff, double& err_up, double& err_down) {
     double X;
     // If the bin is out of range, use the closest bin
     for (int i=0, n=g.GetN(); i<n; ++i) {
       g.GetPoint(i,X,eff);
-      err_down = g.GetErrorYlow(i);
       err_up = g.GetErrorYhigh(i);
+      err_down = g.GetErrorYlow(i);
       if (x<X+g.GetErrorXhigh(i)) break;
     }
   }

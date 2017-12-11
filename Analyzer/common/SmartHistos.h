@@ -1678,7 +1678,8 @@ private:
 	  }
 	  //tgae->Draw((i==skip) ? "AP" : "SAMEP");
 	  if (i==skip) asym_labels_(hvec[i], tgae, 0);
-	  graphs.push_back(tgae);
+	  TGraphAsymmErrors* tgae_allbins = asym_(hvec[i], mother_2d_[hvec[i]]->ProjectionX(), true);
+	  graphs.push_back(tgae_allbins);
 	  if (ratio_&&graphs.size()==2) {
 	    TGraphAsymmErrors* ratio = get_tgae_ratio_(graphs[0], graphs[1]);
 	    ratio->SetMarkerColor(417);
@@ -2028,12 +2029,13 @@ private:
   std::vector<double> bincoordx_;
   std::vector<std::string> binlabels_;
   
-  TGraphAsymmErrors* asym_(TH1D* eff, TH1D* den) {
+  TGraphAsymmErrors* asym_(TH1D* eff, TH1D* den, bool allbins = false) {
     bincoordx_.clear();
     binlabels_.clear();
     //TGraphAsymmErrors* tgae = new TGraphAsymmErrors(eff);
     int n = 0;
-    for (Int_t i=0; i<den->GetNbinsX(); ++i) if (den->GetBinContent(i+1)>0) n++;
+    if (allbins) n = den->GetNbinsX();
+    else for (Int_t i=0; i<den->GetNbinsX(); ++i) if (den->GetBinContent(i+1)>0) n++;
     TGraphAsymmErrors* tgae = new TGraphAsymmErrors(n+2); // added 2 dummy points (see below)
     int m = 1;
     const int Method = 1;
@@ -2045,10 +2047,10 @@ private:
         double x = eff->GetBinCenter(i+1);
         double y = eff->GetBinContent(i+1);
         double denum = den->GetBinContent(i+1);
-        double y_center = (y+(z*z/(2*denum))) / (1.0 + (z*z/denum));
-        double y_halfwidth = z*sqrt( y*(1.0-y)/denum + (z*z/(4*denum*denum)) ) / (1.0 + (z*z/denum));
+        double y_center = denum>0 ? (y+(z*z/(2*denum))) / (1.0 + (z*z/denum)) : 0;
+        double y_halfwidth = denum>0 ? z*sqrt( y*(1.0-y)/denum + (z*z/(4*denum*denum)) ) / (1.0 + (z*z/denum)) : 0;
         double x_halfwidth = eff->GetXaxis()->GetBinWidth(i+1)/2;
-        if (denum>0) {
+        if (allbins||denum>0) {
           tgae->SetPoint(m,x,y);
           tgae->SetPointEXlow (m,x_halfwidth);
           tgae->SetPointEXhigh(m,x_halfwidth);

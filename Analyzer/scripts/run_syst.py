@@ -191,7 +191,9 @@ systematics = [
     "_jerUp",
     "_jerDown",
     "_metUp", 
-    "_metDown", 
+    "_metDown",
+#    "_ak8scaleUp",
+#    "_ak8scaleDown",
     "_elerecoUp",
     "_elerecoDown",
     "_eleidUp",
@@ -214,10 +216,24 @@ systematics = [
     "_wtagDown",
     "_wtagfastsimUp",
     "_wtagfastsimDown",
+#    "_wmistagUp",
+#    "_wmistagDown",
+#    "_wmasstagUp",
+#    "_wmasstagDown",
+#    "_wantitagUp",
+#    "_wantitagDown",
     "_toptagUp",
     "_toptagDown",
     "_toptagfastsimUp",
     "_toptagfastsimDown",
+#    "_topmistagUp",
+#    "_topmistagDown",
+#    "_top0bmasstagUp",
+#    "_top0bmasstagDown",
+#    "_topmasstagUp",
+#    "_topmasstagDown",
+#    "_topantitagUp",
+#    "_topantitagDown",
 ]
 
 # --------------------- Functions ------------------------
@@ -366,10 +382,16 @@ def loadclone(f, name, pf=""):
 
 def bg_est(name, data, sub, mult, div):
     est   = data.Clone(name)
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, est=%5.2f" % (binx, est.GetBinContent(binx)))
     mult2 = mult.Clone(name+"_mult")
     div2  = div .Clone(name+"_div")
     for hist in sub:
         est.Add(hist, -1)
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, est=%5.2f" % (binx, est.GetBinContent(binx)))
     # Zero bins with negative counts
     # Coming from NLO generator scale variations (flipped sign)
     # See thread: https://hypernews.cern.ch/HyperNews/CMS/get/generators/3510.html
@@ -386,7 +408,23 @@ def bg_est(name, data, sub, mult, div):
             div2.SetBinError(binx,0)
     # bin-by-bin k factor
     est.Multiply(mult2)
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, est=%5.2f" % (binx, est.GetBinContent(binx)))
     est.Divide(div2)
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, est=%5.2f" % (binx, est.GetBinContent(binx)))
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, mult=%5.2f +- %5.2f" % (binx, mult2.GetBinContent(binx), mult2.GetBinError(binx)))
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, div=%5.2f" % (binx, div2.GetBinContent(binx)))
+    ##print  if name == "Top":
+    ##print      for binx in range(1, est.GetNbinsX()+1):
+    ##print          print ("Top: bin=%-2d, trans=%5.2f" % (binx, mult2.GetBinContent(binx)/max(0.001,div2.GetBinContent(binx))))
+    ##print      print ("Top: avg trans=%5.2f" % (mult2.Integral()/max(0.001,div2.Integral())))
     # common k factor
     ##common  est.Scale(mult.Integral()/div.Integral())
     #if "Top_MJ_est" in name:
@@ -689,11 +727,12 @@ for syst in systematics:
     S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", combine_bins))
     q_OT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_OT", combine_bins))
 
+
 # ---------------- Z(nunu) estimate ---------------------
 
 # Loading plots
 # TODO: Can remove this if rerunning systematics
-ZInv_dir = "syst_results/run_2017_11_19"+("_TopAna" if "TopAna" in opt.box else "")
+ZInv_dir = "syst_results/run_2017_11_22"+("_TopAna" if "TopAna" in opt.box else "")
 
 # Needed for 1-lepton estimate
 f = ROOT.TFile.Open(ZInv_dir+"/hadd/data.root")

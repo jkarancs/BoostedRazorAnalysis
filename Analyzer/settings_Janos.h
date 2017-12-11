@@ -56,10 +56,10 @@ struct settings {
     doAK8JetPtRescaling      ( true  ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
-    nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 2 W, 2 b, 2 top
+    nSigmaScaleFactors       ( 20    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 5 W, 2b, 6 top
     varySystematics          ( SYST  ),
-//  systematicsFileName      ( "systematics/2017_10_03_1SigmaUpDown_NoPdf.txt" ),
-    systematicsFileName      ( "systematics/2017_11_22_AllUpDown_NoPdf.txt" ),
+    systematicsFileName      ( "systematics/2017_11_28_1SigmaUpDown_NoPdf.txt" ),
+//  systematicsFileName      ( "systematics/2017_11_22_AllUpDown_NoPdf.txt" ),
     useJSON                  ( false ), // by default: no need to apply, but can be useful if some lumisections need to be excluded additionally
 #if VER != 0
     jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/ReReco/Final/"
