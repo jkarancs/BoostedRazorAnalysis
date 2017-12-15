@@ -2,11 +2,10 @@
 // VER 1 - Moriond17 datasets
 // VER 2 - Moriond17 + 03Feb2017 ReMiniAOD datasets
 // VER 3 - VER2 with updates (added photons, corridor event veto, ISR, gen MET)
+// VER 4 - VER3 with updates (added taus, updated isolations)
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
 #define VER     3
 #define SKIM    0
-#define SYST    0
-#define TOP     1
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -14,6 +13,8 @@
 #include "common/DataStruct_May10.h"
 #elif VER == 3
 #include "common/DataStruct_Sep26.h"
+#elif VER == 4
+#include "common/DataStruct_Nov30.h"
 #endif
 #include "common/treestream.h"
 #include "Analysis_T.h" // Specify here the implementations for your Analysis
@@ -42,6 +43,14 @@ struct settings {
 #else
 #include "common/selectVariables_fast_Sep26.h"
 #endif
+
+#elif VER == 4
+#if SKIM == 1
+#include "common/selectVariables_skim_Nov30.h"
+#else
+#include "common/selectVariables_fast_Nov30.h"
+#endif
+
 #endif
 
   //-----------------------------------------------------------------------------
@@ -56,10 +65,10 @@ struct settings {
     doAK8JetPtRescaling      ( true  ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
-    nSigmaScaleFactors       ( 13    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 2 W, 2 b, 2 top
-    varySystematics          ( SYST  ),
-    systematicsFileName      ( "systematics/2017_10_03_1SigmaUpDown_NoPdf.txt" ),
-//  systematicsFileName      ( "systematics/test.txt" ),
+    nSigmaScaleFactors       ( 20    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 5 W, 2b, 6 top
+    varySystematics          ( true  ),
+//  systematicsFileName      ( "systematics/2017_11_28_1SigmaUpDown_NoPdf.txt" ),
+    systematicsFileName      ( "systematics/2017_12_15_AllUpDown_NoPdf.txt" ),
     useJSON                  ( false ), // by default: no need to apply, but can be useful if some lumisections need to be excluded additionally
 #if VER != 0
     jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/ReReco/Final/"
