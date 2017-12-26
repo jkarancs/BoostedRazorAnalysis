@@ -1069,10 +1069,14 @@ std::vector<float> genTopMatchedAK8JetPt;
 std::vector<float> genTopMatchedAK8JetEta;
 std::vector<size_t > iGenHadW,   itGenHadW;
 std::vector<size_t > iGenTop,    itGenTop;
+std::vector<size_t > iGenZ,		   itGenZ;
+std::vector<size_t > iGenWtagZ,   itGenWtagZ;
 std::vector<size_t > iGenMassW,   itGenMassW;
 std::vector<size_t > iGenMassTop, itGenMassTop;
 unsigned int nGenHadW;
 unsigned int nGenTop;
+unsigned int nGenZ;
+unsigned int nGenWtagZ;
 unsigned int nGenMassW;
 unsigned int nGenMassTop;
 int nWTag;
@@ -1948,10 +1952,14 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   // Loop on generator particles
   iGenHadW   .clear();
   iGenTop    .clear();
+  iGenZ    .clear();
+  iGenWtagZ  .clear();
   iGenMassW  .clear();
   iGenMassTop.clear();
   itGenHadW              .assign(data.gen.size, (size_t)-1);
   itGenTop               .assign(data.gen.size, (size_t)-1);
+  itGenZ                 .assign(data.gen.size, (size_t)-1);
+  itGenWtagZ             .assign(data.gen.size, (size_t)-1);
   itGenMassW             .assign(data.gen.size, (size_t)-1);
   itGenMassTop           .assign(data.gen.size, (size_t)-1);
   passGenHadW            .assign(data.gen.size, 0);
@@ -1967,6 +1975,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   passPhotonPrompt.assign(data.gen.size, 0);
   nGenHadW = nGenTop = 0;
   nGenMassW = nGenMassTop = 0;
+  nGenZ = nGenWtagZ = 0;
   npreWTag = nWTag = nmWTag = npreTopTag = nTopTag = nmTopTag = 0;
   nFakePhoton = nDirectPromptPhoton = nFragmentationPromptPhoton = 0;
   float dR;
@@ -1975,6 +1984,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   //bool passpreWTag = 0;
   TLorentzVector photag;
   TLorentzVector genpho;
+  TLorentzVector ztag_v4;
+  TLorentzVector genz_v4;
   TLorentzVector wtag_v4;
   TLorentzVector genw_v4;
   TLorentzVector genb_v4; 
@@ -2010,6 +2021,24 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
         if(abs(data.gen.ID[i])==5&&data.gen.Pt[i]>0) {
           genb_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
           selected_genb_v4.push_back(genb_v4);
+        }
+  
+	// gen Zs
+        if ( abs(data.gen.ID[i])==23 && data.gen.Pt[i] > 0) {
+            genz_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
+          while(data.jetsAK8.Loop()) {
+            size_t j = data.jetsAK8.it;
+            ztag_v4.SetPtEtaPhiE(data.jetsAK8.Pt[j], data.jetsAK8.Eta[j], data.jetsAK8.Phi[j], data.jetsAK8.E[j]);
+            dR = genz_v4.DeltaR(ztag_v4);
+            if (dR<0.8) {
+          iGenZ.push_back(j);
+          itGenZ[j] = nGenZ++;
+					if (passTightWTag[j]) {
+          iGenWtagZ.push_back(j);
+          itGenWtagZ[j] = nGenWtagZ++;
+							}
+            }
+          }
         }
         
 	// gen Ws
