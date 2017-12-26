@@ -1,3 +1,36 @@
+   1.23  DYJetsToLL_M-50_HT-1200to2500
+   3.34  DYJetsToLL_M-50_HT-200to400
+   1.23  DYJetsToLL_M-50_HT-2500toInf
+   1.29  DYJetsToLL_M-50_HT-400to600
+   1.20  DYJetsToLL_M-50_HT-600to800
+   1.21  DYJetsToLL_M-50_HT-800to1200
+ 405.03  DYJetsToLL_M-5to50_HT-100to200
+  11.04  DYJetsToLL_M-5to50_HT-200to400
+   1.92  DYJetsToLL_M-5to50_HT-400to600
+   1.79  DYJetsToLL_M-5to50_HT-600toInf
+  22.54  DYJetsToQQ_HT180
+    1.2  FastSim_SMS-T1ttbb
+    1.2  FastSim_SMS-T1ttbb_deltaM5to25
+    1.4  FastSim_SMS-T1tttt
+   2.00  FastSim_SMS-T2tt_dM-10to80_genHT-160_genMET-80
+   6.80  FastSim_SMS-T2tt_mStop-150to250
+   3.83  FastSim_SMS-T2tt_mStop-250to350
+   2.98  FastSim_SMS-T2tt_mStop-350to400
+   2.16  FastSim_SMS-T2tt_mStop-400to1200
+    1.3  FastSim_SMS-T5qqqqVV
+    1.1  FastSim_SMS-T5qqqqVV_dM10_mLSP-300
+    1.1  FastSim_SMS-T5qqqqVV_dM15_mLSP-300
+    1.2  FastSim_SMS-T5qqqqVV_dM20
+    1.2  FastSim_SMS-T5qqqqVV_dM20_mGlu-600to2000
+    1.1  FastSim_SMS-T5qqqqVV_dM5_mLSP-300
+   1.61  FastSim_SMS-T5ttcc
+   1.06  FastSim_SMS-T5ttcc_mGluino1750to2300
+    1.3  FastSim_SMS-T5tttt
+ 131.73  GJets_HT-100To200
+   6.59  GJets_HT-200To400
+   2.15  GJets_HT-400To600
+10000.00  GJets_HT-40To100
+   2.28  GJets_HT-600ToInf
    10.2  JetHT_Run2016B_03Feb2017_v2
     6.5  JetHT_Run2016C_03Feb2017
     7.6  JetHT_Run2016D_03Feb2017
@@ -14,6 +47,27 @@
    31.3  MET_Run2016G_03Feb2017
     7.2  MET_Run2016H_03Feb2017_v2
     5.6  MET_Run2016H_03Feb2017_v3
+  10.52  QCD_HT1000to1500
+  10.61  QCD_HT1000to1500_ext1
+10000.00  QCD_HT100to200
+  13.62  QCD_HT1500to2000
+  13.65  QCD_HT1500to2000_ext1
+  14.89  QCD_HT2000toInf
+  15.13  QCD_HT2000toInf_ext1
+ 448.96  QCD_HT200to300
+ 400.42  QCD_HT200to300_ext1
+   8.33  QCD_HT300to500
+   8.33  QCD_HT300to500_ext1
+   4.77  QCD_HT500to700
+   4.74  QCD_HT500to700_ext1
+10000.00  QCD_HT50to100
+   6.98  QCD_HT700to1000
+   7.05  QCD_HT700to1000_ext1
+  15.87  ST_s-channel_4f_InclusiveDecays
+  26.62  ST_t-channel_antitop_4f_inclusiveDecays
+  24.02  ST_t-channel_top_4f_inclusiveDecays
+   8.69  ST_tW_antitop_5f_inclusiveDecays
+   8.50  ST_tW_top_5f_inclusiveDecays
    31.3  SingleElectron_Run2016B_03Feb2017_v2
    19.7  SingleElectron_Run2016C_03Feb2017
    20.0  SingleElectron_Run2016D_03Feb2017
@@ -30,109 +84,53 @@
    15.7  SingleMuon_Run2016G_03Feb2017
    17.2  SingleMuon_Run2016H_03Feb2017_v2
    17.7  SingleMuon_Run2016H_03Feb2017_v3
-    8.6  SinglePhoton_Run2016B_03Feb2017_v2
-    8.6  SinglePhoton_Run2016C_03Feb2017
-   11.5  SinglePhoton_Run2016D_03Feb2017
-    6.0  SinglePhoton_Run2016E_03Feb2017
-    6.3  SinglePhoton_Run2016F_03Feb2017
-    6.7  SinglePhoton_Run2016G_03Feb2017
-   11.5  SinglePhoton_Run2016H_03Feb2017_v2
-    5.6  SinglePhoton_Run2016H_03Feb2017_v3
-    1.2  DYJetsToLL_M-50_HT-1200to2500
-    3.3  DYJetsToLL_M-50_HT-200to400
-    1.2  DYJetsToLL_M-50_HT-2500toInf
-    1.3  DYJetsToLL_M-50_HT-400to600
-    1.2  DYJetsToLL_M-50_HT-600to800
-    1.2  DYJetsToLL_M-50_HT-800to1200
-  437.9  DYJetsToLL_M-5to50_HT-100to200
-   11.0  DYJetsToLL_M-5to50_HT-200to400
-    1.9  DYJetsToLL_M-5to50_HT-400to600
-    1.7  DYJetsToLL_M-5to50_HT-600toInf
-   21.7  DYJetsToQQ_HT180
-    1.2  FastSim_SMS-T1ttbb
-    1.2  FastSim_SMS-T1ttbb_deltaM5to25
-    1.4  FastSim_SMS-T1tttt
-    1.9  FastSim_SMS-T2tt_dM-10to80_genHT-160_genMET-80
-    7.0  FastSim_SMS-T2tt_mStop-150to250
-    3.8  FastSim_SMS-T2tt_mStop-250to350
-    2.9  FastSim_SMS-T2tt_mStop-350to400
-    2.1  FastSim_SMS-T2tt_mStop-400to1200
-    1.6  FastSim_SMS-T5ttcc
-    1.1  FastSim_SMS-T5ttcc_mGluino1750to2300
-    1.3  FastSim_SMS-T5tttt
-  149.0  GJets_HT-100To200
-    7.3  GJets_HT-200To400
-    2.2  GJets_HT-400To600
-10000.0  GJets_HT-40To100
-    2.2  GJets_HT-600ToInf
-    7.3  QCD_HT1000to1500
-    7.5  QCD_HT1000to1500_ext1
-10000.0  QCD_HT100to200
-    8.2  QCD_HT1500to2000
-    8.4  QCD_HT1500to2000_ext1
-    8.4  QCD_HT2000toInf
-    8.6  QCD_HT2000toInf_ext1
-  378.3  QCD_HT200to300
-  346.4  QCD_HT200to300_ext1
-    8.0  QCD_HT300to500
-    8.0  QCD_HT300to500_ext1
-    4.2  QCD_HT500to700
-    4.3  QCD_HT500to700_ext1
-10000.0  QCD_HT50to100
-    5.7  QCD_HT700to1000
-    5.6  QCD_HT700to1000_ext1
-   14.0  ST_s-channel_4f_InclusiveDecays
-   24.6  ST_t-channel_antitop_4f_inclusiveDecays
-   21.6  ST_t-channel_top_4f_inclusiveDecays
-    8.2  ST_tW_antitop_5f_inclusiveDecays
-    8.0  ST_tW_top_5f_inclusiveDecays
-    2.6  TTGJets
-    6.0  TTJets_madgraphMLM-pythia8
-    6.0  TTJets_madgraphMLM_FastSim
-    1.5  TTTT
-    2.2  TTWJetsToLNu
-    2.6  TTWJetsToQQ
-    2.2  TTZToLLNuNu
-    2.5  TTZToQQ
-    6.4  TT_powheg-pythia8
-    6.4  TT_powheg-pythia8_backup
- 1133.3  WJetsToLNu_Wpt-0To50
-    6.2  WJetsToLNu_Wpt-100to200
-    1.3  WJetsToLNu_Wpt-200toInf
-   67.1  WJetsToLNu_Wpt-50To100
-   20.9  WJetsToQQ_HT180
-   21.8  WWTo2L2Nu
-   41.3  WWTo4Q
-   17.9  WWToLNuQQ
-    4.9  WWW
-    3.5  WWZ
-    9.2  WZTo1L1Nu2Q
-   12.6  WZTo1L3Nu
-   11.6  WZTo2L2Q
-   10.3  WZTo2Q2Nu
-   20.3  WZTo3LNu
-    4.0  WZZ
-  252.9  ZJetsToNuNu_HT-100To200
-    1.8  ZJetsToNuNu_HT-1200To2500
-    5.3  ZJetsToNuNu_HT-200To400
-    2.4  ZJetsToNuNu_HT-2500ToInf
-    1.5  ZJetsToNuNu_HT-400To600
-    1.4  ZJetsToNuNu_HT-600To800
-    1.5  ZJetsToNuNu_HT-800To1200
-    4.1  ZJetsToQQ_HT600toInf
-   21.3  ZZTo2L2Nu
-   15.9  ZZTo2L2Q
-   17.6  ZZTo2Q2Nu
-  105.0  ZZTo4L
-   28.8  ZZTo4Q
-    6.1  ZZZ
-   37.1  ZGTo2NuG
-   64.5  WGToLNuG
-   15.8  WGJets_MonoPhoton_PtG-40to130
-    1.4  WGJets_MonoPhoton_PtG-130
-    1.1  FastSim_SMS-T5qqqqVV_dM5_mLSP-300
-    1.1  FastSim_SMS-T5qqqqVV_dM10_mLSP-300
-    1.1  FastSim_SMS-T5qqqqVV_dM15_mLSP-300
-    1.2  FastSim_SMS-T5qqqqVV_dM20
-    1.2  FastSim_SMS-T5qqqqVV_dM20_mGlu-600to2000
-    1.3  FastSim_SMS-T5qqqqVV
+   9.37  SinglePhoton_Run2016B_03Feb2017_v2
+  10.00  SinglePhoton_Run2016C_03Feb2017
+   6.51  SinglePhoton_Run2016D_03Feb2017
+   5.20  SinglePhoton_Run2016E_03Feb2017
+   5.40  SinglePhoton_Run2016F_03Feb2017
+   5.90  SinglePhoton_Run2016G_03Feb2017
+   5.46  SinglePhoton_Run2016H_03Feb2017_v2
+   5.35  SinglePhoton_Run2016H_03Feb2017_v3
+   2.87  TTGJets
+   6.42  TTJets_madgraphMLM-pythia8
+   1.49  TTTT
+   2.07  TTWJetsToLNu
+   2.89  TTWJetsToQQ
+   2.13  TTZToLLNuNu
+   2.74  TTZToQQ
+   6.82  TT_powheg-pythia8
+   6.88  TT_powheg-pythia8_backup
+   1.37  WGJets_MonoPhoton_PtG-130
+  15.92  WGJets_MonoPhoton_PtG-40to130
+  67.74  WGToLNuG
+1367.63  WJetsToLNu_Wpt-0To50
+   6.25  WJetsToLNu_Wpt-100to200
+   1.25  WJetsToLNu_Wpt-200toInf
+  76.77  WJetsToLNu_Wpt-50To100
+  22.39  WJetsToQQ_HT180
+  21.21  WWTo2L2Nu
+  45.01  WWTo4Q
+  18.15  WWToLNuQQ
+   4.97  WWW
+   3.51  WWZ
+   8.87  WZTo1L1Nu2Q
+  12.41  WZTo1L3Nu
+  11.51  WZTo2L2Q
+  10.49  WZTo2Q2Nu
+  17.81  WZTo3LNu
+   4.17  WZZ
+ 242.88  ZJetsToNuNu_HT-100To200
+   1.89  ZJetsToNuNu_HT-1200To2500
+   5.35  ZJetsToNuNu_HT-200To400
+   2.59  ZJetsToNuNu_HT-2500ToInf
+   1.53  ZJetsToNuNu_HT-400To600
+   1.45  ZJetsToNuNu_HT-600To800
+   1.59  ZJetsToNuNu_HT-800To1200
+   5.38  ZJetsToQQ_HT600toInf
+  21.40  ZZTo2L2Nu
+  15.68  ZZTo2L2Q
+  17.87  ZZTo2Q2Nu
+  87.63  ZZTo4L
+  33.78  ZZTo4Q
+   6.32  ZZZ

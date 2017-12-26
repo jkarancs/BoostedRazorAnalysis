@@ -105,7 +105,7 @@ if opt.test:
     EXEC_PATH = os.getcwd()
 elif opt.replot:
     EXEC_PATH = opt.OUTDIR+"/backup_replot"
-elif not opt.test:
+else:
     EXEC_PATH = opt.OUTDIR+"/backup"
 
 # Print some options for logging
@@ -129,7 +129,14 @@ if opt.NQUICK>1:
     print "Running with option: --quick "+str(opt.NQUICK)+" (1/"+str(opt.NQUICK)+" statistics)"
 
 # Some automatic filelists
-if (opt.full):
+if opt.recover:
+    saved_path = os.getcwd()
+    os.chdir(EXEC_PATH)
+    input_filelists  = glob.glob("filelists/data/*.txt")
+    input_filelists += glob.glob("filelists/backgrounds/*.txt")
+    input_filelists += glob.glob("filelists/signals/*.txt")    
+    os.chdir(saved_path)
+elif opt.full:
     input_filelists  = glob.glob("filelists/data/*.txt")
     input_filelists += glob.glob("filelists/backgrounds/*.txt")
     input_filelists += glob.glob("filelists/signals/*.txt")
@@ -151,10 +158,10 @@ with open("Analyzer.cc") as ana:
         if '#include "settings_' in line:
             settings_file = line.split()[1].replace('"','')
 vary_syst = False
-#with open(settings_file) as settings:
-#    for line in settings:
-#        if "define SYST" in line and not "0" in line:
-#            vary_syst = True
+with open(settings_file) as settings:
+    for line in settings:
+        if "define SYST" in line and not "0" in line:
+            vary_syst = True
 
 
 # ----------------- Analyzer Arguments -------------------
@@ -189,7 +196,7 @@ for filelist in input_filelists:
     # Temporary filelists
     if opt.useprev:
         # Use previously created lists
-        if not opt.skim: options.append("fullFileList="+EXEC_PATH+"/"+filelist) # Need full ntuple to correctly normalize weights
+        if not opt.skim: options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize weights
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
         for jobnum in range(1, len(prev_lists)+1):
             tmp_filelist = prev_lists[jobnum-1]

@@ -1,4 +1,4 @@
-import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, getpass, ROOT
+import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, getpass, ROOT, io
 from array import array
 from optparse import OptionParser
 import tdrstyle
@@ -19,8 +19,11 @@ parser.add_option('--nproc',       dest="NPROC",       type="int",          defa
 (opt,args) = parser.parse_args()
 
 BIN = ""
-if "_nj35" in opt.box: BIN = "_nj35"
-if "_nj6"  in opt.box: BIN = "_nj6"
+if   "_nj35" in opt.box: BIN = "_nj35"
+elif "_nj45" in opt.box: BIN = "_nj45"
+elif "_nj46" in opt.box: BIN = "_nj46"
+elif "_nj6"  in opt.box: BIN = "_nj6"
+elif "_nj7"  in opt.box: BIN = "_nj7"
 
 # ---------------------- Settings ------------------------
 
@@ -192,8 +195,8 @@ systematics = [
     "_jerDown",
     "_metUp", 
     "_metDown",
-#    "_ak8scaleUp",
-#    "_ak8scaleDown",
+    "_ak8scaleUp",
+    "_ak8scaleDown",
     "_elerecoUp",
     "_elerecoDown",
     "_eleidUp",
@@ -216,24 +219,24 @@ systematics = [
     "_wtagDown",
     "_wtagfastsimUp",
     "_wtagfastsimDown",
-#    "_wmistagUp",
-#    "_wmistagDown",
-#    "_wmasstagUp",
-#    "_wmasstagDown",
-#    "_wantitagUp",
-#    "_wantitagDown",
+    "_wmistagUp",
+    "_wmistagDown",
+    "_wmasstagUp",
+    "_wmasstagDown",
+    "_wantitagUp",
+    "_wantitagDown",
     "_toptagUp",
     "_toptagDown",
     "_toptagfastsimUp",
     "_toptagfastsimDown",
-#    "_topmistagUp",
-#    "_topmistagDown",
-#    "_top0bmasstagUp",
-#    "_top0bmasstagDown",
-#    "_topmasstagUp",
-#    "_topmasstagDown",
-#    "_topantitagUp",
-#    "_topantitagDown",
+    "_topmistagUp",
+    "_topmistagDown",
+    "_top0bmasstagUp",
+    "_top0bmasstagDown",
+    "_topmasstagUp",
+    "_topmasstagDown",
+    "_topantitagUp",
+    "_topantitagDown",
 ]
 
 # --------------------- Functions ------------------------
@@ -374,6 +377,8 @@ def combinebins(h, name=""):
     # sys.exit()
     return h_new
 
+#def rollback(h, hexample, name=""):   
+    
 def loadclone(f, name, pf=""):
     h = f.Get(name)
     h_new = h.Clone(name+pf)
@@ -464,33 +469,54 @@ def run_combine(combine_cmds, nproc):
     print
     return output_files
 
-def fit_fraction(fitter, can, data, bin):
+# Silence stdout/stderr
+class suppress_stdout_stderr(object):
+    def __init__(self):
+        self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
+        self.save_fds = [os.dup(1), os.dup(2)]
+    def __enter__(self):
+        os.dup2(self.null_fds[0],1)
+        os.dup2(self.null_fds[1],2)
+    def __exit__(self, *_):
+        os.dup2(self.save_fds[0],1)
+        os.dup2(self.save_fds[1],2)
+        for fd in self.null_fds + self.save_fds:
+            os.close(fd)
+
+def fit_fraction(chiso, temp1, temp2, bin):
+    temp1.Write()
+    temp2.Write()
+    EBEE = ("EB" if "EB" in chiso.GetName() else "EE")
+    data    = chiso.Clone("data_" +EBEE+"_"+bin)
+    can = ROOT.TCanvas("CHiso_"+EBEE+"_fit_"+bin)
     data.Draw("hist")
     prompt_val = ROOT.Double(0)
     prompt_err = ROOT.Double(0)
     fake_val = ROOT.Double(0)
     fake_err = ROOT.Double(0)
     if data.Integral()>0.:
-        status = fitter.Fit()
+        mctemp1 = temp1.Clone("temp1_"+EBEE+"_"+bin)
+        mctemp2 = temp2.Clone("temp2_"+EBEE+"_"+bin)
+        templates = ROOT.TObjArray(2)
+        templates.Add(mctemp1)
+        templates.Add(mctemp2)
+        fitter = ROOT.TFractionFitter(data,templates)
+        fitter.Constrain(0, 0,1)
+        fitter.Constrain(1, 0,1)
+        with suppress_stdout_stderr(): status = fitter.Fit()
         result = fitter.GetPlot();
         fitter.GetResult(0, prompt_val, prompt_err)
         fitter.GetResult(1, fake_val, fake_err)
-        print "prompt: "+str(prompt_val)+" fake_value: "+str(fake_val)
+        #print "prompt: "+str(prompt_val)+" fake_value: "+str(fake_val)
         result.SetLineColor(2)
         result.Draw("same")
         leg = ROOT.TLegend(0.28,0.70,0.9,0.9)
         leg.SetTextSize(0.03)
-        if "EB" in can.GetName():
-            leg.SetHeader("Purity : "+str("%4.3f" % prompt_val)+" in "+bin+", EB")
-        else:
-            leg.SetHeader("Purity : "+str("%4.3f" % prompt_val)+" in "+bin+", EE")
+        leg.SetHeader("Purity : "+str("%4.3f" % prompt_val)+" in "+bin+", "+EBEE)
         leg.AddEntry(data, "Data", "LPE")
         leg.AddEntry(result, "Total Fit", "L")
         leg.Draw("SAME")
-        if "EB" in can.GetName():
-            save_plot(can, "", "Plots/z_inv_est/Fit_"+bin+"_EB_"+opt.box)
-        else:
-            save_plot(can, "", "Plots/z_inv_est/Fit_"+bin+"_EE_"+opt.box)            
+        save_plot(can, "", "Plots/z_inv_est/Fit_"+bin+"_"+EBEE+"_"+opt.box)
     return prompt_val, prompt_err
 
 def get_zslice(input, name, binx1, binx2, biny1, biny2):
@@ -508,7 +534,8 @@ def save_plot(can, name, plotname):
         can.Write(name)
     else:
         can.Write()
-    can.SaveAs(plotname+".png")
+    with suppress_stdout_stderr():
+        can.SaveAs(plotname+".png")
 
 # ----------------- Merge histograms --------------------
 
@@ -531,20 +558,27 @@ if not opt.nohadd:
             #print (["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"])
             logged_call(["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+opt.model+".root"], "syst_"+opt.dir+"/hadd/log/signal_"+opt.model+".log")
         # Get unskimmed number of events in low/high npv region (for signal acceptance)
-        input_files = []
-        for sig in signal: input_files += glob.glob(ntuple+"/"+sig+"/*.root")
-        for i in range(len(input_files)):
-            f = ROOT.TFile.Open(input_files[i])
-            if "T2tt" in opt.model:
-                h = f.Get("npvLowHigh_T2tt")
-            else:
-                h = f.Get("npvLowHigh_T1tttt")
-            if i==0:
-                npvLowHighHist_allevt = h.Clone(h.GetName()+"_allevt")
-                npvLowHighHist_allevt.SetDirectory(0)
-            else:
-                npvLowHighHist_allevt.Add(h)
-            f.Close()
+        ##  input_files = []
+        ##  for sig in signal: input_files += glob.glob(ntuple+"/"+sig+"/*.root")
+        ##  for i in range(len(input_files)):
+        ##      f = ROOT.TFile.Open(input_files[i])
+        ##      if "T2tt" in opt.model:
+        ##          h = f.Get("npvLowHigh_T2tt")
+        ##      else:
+        ##          h = f.Get("npvLowHigh_T1tttt")
+        ##      if i==0:
+        ##          npvLowHighHist_allevt = h.Clone(h.GetName()+"_allevt")
+        ##          npvLowHighHist_allevt.SetDirectory(0)
+        ##      else:
+        ##          npvLowHighHist_allevt.Add(h)
+        ##      f.Close()
+        # TODO: Remove this when new ntuple is ready
+        f = ROOT.TFile.Open("syst_results/run_2017_11_13_syst/hadd/signal_"+opt.model+".root")
+        if "T2tt" in opt.model: npvLowHighHist_allevt = f.Get("npvLowHigh_T2tt_allevt")
+        else:                   npvLowHighHist_allevt = f.Get("npvLowHigh_T1tttt_allevt")
+        npvLowHighHist_allevt = npvLowHighHist_allevt.Clone()
+        npvLowHighHist_allevt.SetDirectory(0)
+        f.Close()
         f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root","UPDATE")
         npvLowHighHist_allevt.Write()
         f.Close()
@@ -633,7 +667,7 @@ counter = 0
 for ikey in range(0, f.GetListOfKeys().GetEntries()):
     name = f.GetListOfKeys().At(ikey).GetName()
     if name.startswith("MRR2_S_signal") and not "Up" in name and not "Down" in name:
-        if not "_nj35" in name and not "_nj6" in name:
+        if not "_nj" in name:
             counter+=1
             S_syst = []
             for syst in systematics:
@@ -727,12 +761,10 @@ for syst in systematics:
     S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", combine_bins))
     q_OT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_OT", combine_bins))
 
-
 # ---------------- Z(nunu) estimate ---------------------
 
 # Loading plots
-# TODO: Can remove this if rerunning systematics
-ZInv_dir = "syst_results/run_2017_11_22"+("_TopAna" if "TopAna" in opt.box else "")
+ZInv_dir = "syst_"+opt.dir
 
 # Needed for 1-lepton estimate
 f = ROOT.TFile.Open(ZInv_dir+"/hadd/data.root")
@@ -750,18 +782,21 @@ IsDirect_G_EE = loadclone(f, "MR_R2_IsDirect_G_EE", "_MC")
 GDirectPrompt_MC = loadclone(f, "MR_R2_G_DirectPrompt", "_MC")
 Z_MC      = loadclone(f, "MR_R2_Z",    "_MC")
 G_MC      = loadclone(f, "MR_R2_G",    "_MC")
+#G_MC = []
+#for syst in systematics:
+#    G_MC_SYST.append(rollback(load(f, "MRR2_G_bkg"+syst,"_TMP", 0), GDirectPrompt_MC, "MRR2_G"+syst))
 
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
 f = ROOT.TFile.Open(ZInv_dir+"/hadd/gjets.root")
-CHIsoTemplate_Prompt_EB = loadclone(f, "CHIsoTemplate_Prompt_p_EB", "_MC")
-CHIsoTemplate_Prompt_EE = loadclone(f, "CHIsoTemplate_Prompt_p_EE", "_MC")
+CHIsoTemplate_Prompt_EB = loadclone(f, "CHIsoTemplate_Prompt_g_EB", "_MC")
+CHIsoTemplate_Prompt_EE = loadclone(f, "CHIsoTemplate_Prompt_g_EE", "_MC")
 
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
 f = ROOT.TFile.Open(ZInv_dir+"/hadd/data.root")
 G_data_EB = loadclone(f, "MR_R2_G_EB", "_data") # + BIN
 G_data_EE = loadclone(f, "MR_R2_G_EB", "_data")
-CHIsoTemplate_Fake_EB = loadclone(f, "CHIsoTemplate_Fake_p_EB", "_data")
-CHIsoTemplate_Fake_EE = loadclone(f, "CHIsoTemplate_Fake_p_EE", "_data")
+CHIsoTemplate_Fake_EB = loadclone(f, "CHIsoTemplate_Fake_g_EB", "_data")
+CHIsoTemplate_Fake_EE = loadclone(f, "CHIsoTemplate_Fake_g_EE", "_data")
 CHIso_GNoIso_EB = loadclone(f, "MR_R2_CHIso_GNoIso_EB", "_data") # + BIN
 CHIso_GNoIso_EE = loadclone(f, "MR_R2_CHIso_GNoIso_EE", "_data")
 Z_data = loadclone(f, "MR_R2_Z", "_data")
@@ -780,39 +815,14 @@ Z_NONDJ = loadclone(f,"MR_R2_Z", "_NONDJ")
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
 f = ROOT.TFile.Open(ZInv_dir+"/hadd/ztoinv.root")
 S_ZI_MC      = loadclone(f, "MR_R2_S"+BIN,  "_ZI")
-## OLD S_ZI_MC_nj35 = loadclone(f, "MR_R2_S_nj35", "_ZI")
-## OLD S_ZI_MC_nj6  = loadclone(f, "MR_R2_S_nj6",  "_ZI")
-
-##  print "S_ZI:"
-##  print S_ZI_MC     .Integral()
-##  ## OLD print S_ZI_MC_nj35.Integral()
-##  ## OLD print S_ZI_MC_nj6 .Integral()
-##  
-##  print "Z:"
-##  print Z_data      .Integral()
-##  print Z_MC        .Integral()
-##  print Z_MC_nj35   .Integral()
-##  print Z_MC_nj6    .Integral()
-##  
-##  print "G:"
-##  print G_data      .Integral()
-##  print G_MC        .Integral()
-##  print G_MC_nj35   .Integral()
-##  print G_MC_nj6    .Integral()
 
 # Z(nunu) estimate from L (1 lepton invisible) region
 ztonunu_lepton_est = ROOT.TH1D("ztonunu_lepton_est", ";Bin;Z(#nu#nu) 1-lepton estimate",25,0,25)
 ztonunu_lepton_est.SetDirectory(0)
 
-## OLD # Using Ufuk/Fatma's plots
-## OLD region = "M" if "WAna" in opt.box else "L"
-## OLD f_lepton_est = ROOT.TFile.Open("WtoLNuEstimate_S_from_"+region+".root")
-## OLD h_30bins = f_lepton_est.Get("comparison_ZtoInv_estimate_S_from_"+region).GetListOfPrimitives().At(0).GetListOfPrimitives().At(1)
-## OLD # Remove R2 [0.04,0.08] bins
-## OLD for binx in range(1, 26):
-## OLD     ztonunu_lepton_est.SetBinContent(binx, h_30bins.GetBinContent(binx+((binx+4)/5)))
-## OLD     ztonunu_lepton_est.SetBinError  (binx, h_30bins.GetBinError  (binx+((binx+4)/5)))
+# --------------------- Lepton Estimate ---------------------------
 
+print "Calculate 1-lepton based Z(nunu) estimate"
 ZInv_lepton_est = L_data.Clone("ZInv_lepton_est")
 ZInv_lepton_est.Add(L_NONWJ, -1)
 multiply = S_ZI_MC.Clone()
@@ -830,14 +840,6 @@ for binx in range(1, ZInv_lepton_est.GetNbinsX()+1):
             divide.SetBinError(binx,biny,0)
 ZInv_lepton_est.Multiply(multiply)
 ZInv_lepton_est.Divide(divide)
-## common transfer-factor
-##common  for binx in range(1, ZInv_lepton_est.GetNbinsX()+1):
-##common      for biny in range(1, ZInv_lepton_est.GetNbinsX()+1):
-##common          if ZInv_lepton_est.GetBinContent(binx, biny)<0:
-##common              ZInv_lepton_est.SetBinContent(binx,biny,0)
-##common              ZInv_lepton_est.SetBinError  (binx,biny,0)
-##common  ZInv_lepton_est.Scale(S_ZI_MC.Integral()/L_WJ.Integral())
-
 # unroll
 for binx in range(1, ZInv_lepton_est.GetNbinsX()+1):
     for biny in range(1, ZInv_lepton_est.GetNbinsX()+1):
@@ -845,10 +847,16 @@ for binx in range(1, ZInv_lepton_est.GetNbinsX()+1):
         ztonunu_lepton_est.SetBinContent(unrolled_bin, ZInv_lepton_est.GetBinContent(binx, biny))
         ztonunu_lepton_est.SetBinError  (unrolled_bin, ZInv_lepton_est.GetBinError  (binx, biny))
 
-# Z(nunu) estimate from G (photon enriched) region
+# --------------------- Photon Estimate ---------------------------
+
+print "Calculate photon based Z(nunu) estimate"
 f_zinv_est = ROOT.TFile.Open("zinv_est_"+opt.box+".root","recreate")
 
-# Measure purity
+# --------------------------------
+#             Purity
+
+print "- Fitting purity"
+
 # In bins of MR
 first = True
 purity_MR_EB = ROOT.TH1D("purity_MR_EB",";MR bin;Photon purity",5,0.5,5.5)
@@ -872,32 +880,8 @@ for binx in range(1, CHIso_GNoIso_EB.GetNbinsX()+1):
     temp1_EE = get_zslice(CHIsoTemplate_Prompt_EE, "PrompTempalte_EE_"+binname, min(3,binx1),binx2,biny1,biny2)
     temp2_EB = get_zslice(CHIsoTemplate_Fake_EB,   "FakeTempalte_EB_"+binname,  min(3,binx1),binx2,biny1,biny2)
     temp2_EE = get_zslice(CHIsoTemplate_Fake_EE,   "FakeTempalte_EE_"+binname,  min(3,binx1),binx2,biny1,biny2)
-    temp1_EB.Write()
-    temp1_EE.Write()
-    temp2_EB.Write()
-    temp2_EE.Write()
-    templates_EB = ROOT.TObjArray(2)
-    templates_EB.Add(temp1_EB)
-    templates_EB.Add(temp2_EB)
-    templates_EE = ROOT.TObjArray(2)
-    templates_EE.Add(temp1_EE)
-    templates_EE.Add(temp2_EE)
-    if first:
-        fitter_EB = ROOT.TFractionFitter(chiso_EB,templates_EB)
-        fitter_EB.Constrain(0, 0,1)
-        fitter_EB.Constrain(1, 0,1)
-        fitter_EE = ROOT.TFractionFitter(chiso_EE,templates_EE)
-        fitter_EE.Constrain(0, 0,1)
-        fitter_EE.Constrain(1, 0,1)
-    else:
-        fitter_EB.SetData(chiso_EB)
-        fitter_EE.SetData(chiso_EE)
-        fitter_EB.SetMC(2, templates_EB)
-        fitter_EE.SetMC(2, templates_EE)
-    can_EB = ROOT.TCanvas("CHiso_EB_fit_"+binname)
-    pur_EB, pur_EB_err = fit_fraction(fitter_EB, can_EB, chiso_EB, binname)
-    can_EE = ROOT.TCanvas("CHiso_EE_fit_"+binname)
-    pur_EE, pur_EE_err = fit_fraction(fitter_EE, can_EE, chiso_EE, binname)
+    pur_EB, pur_EB_err = fit_fraction(chiso_EB, temp1_EB, temp2_EB, binname)
+    pur_EE, pur_EE_err = fit_fraction(chiso_EE, temp1_EE, temp2_EE, binname)
     purity_MR_EB.SetBinContent(binx, pur_EB)
     purity_MR_EB.SetBinError  (binx, pur_EB_err)
     purity_MR_EE.SetBinContent(binx, pur_EE)
@@ -938,32 +922,8 @@ for biny in range(1, CHIso_GNoIso_EB.GetNbinsY()+1):
     temp1_EE = get_zslice(CHIsoTemplate_Prompt_EE, "PrompTemplate_EE_"+binname, binx1,binx2,min(3,biny1),biny2)
     temp2_EB = get_zslice(CHIsoTemplate_Fake_EB,   "FakeTemplate_EB_"+binname,  binx1,binx2,min(3,biny1),biny2)
     temp2_EE = get_zslice(CHIsoTemplate_Fake_EE,   "FakeTemplate_EE_"+binname,  binx1,binx2,min(3,biny1),biny2)
-    temp1_EB.Write()
-    temp1_EE.Write()
-    temp2_EB.Write()
-    temp2_EE.Write()
-    templates_EB = ROOT.TObjArray(2)
-    templates_EB.Add(temp1_EB)
-    templates_EB.Add(temp2_EB)
-    templates_EE = ROOT.TObjArray(2)
-    templates_EE.Add(temp1_EE)
-    templates_EE.Add(temp2_EE)
-    if first:
-        fitter_EB = ROOT.TFractionFitter(chiso_EB,templates_EB)
-        fitter_EB.Constrain(0, 0,1)
-        fitter_EB.Constrain(1, 0,1)
-        fitter_EE = ROOT.TFractionFitter(chiso_EE,templates_EE)
-        fitter_EE.Constrain(0, 0,1)
-        fitter_EE.Constrain(1, 0,1)
-    else:
-        fitter_EB.SetData(chiso_EB)
-        fitter_EE.SetData(chiso_EE)
-        fitter_EB.SetMC(2, templates_EB)
-        fitter_EE.SetMC(2, templates_EE)
-    can_EB = ROOT.TCanvas("CHiso_EB_fit_"+binname)
-    pur_EB, pur_EB_err = fit_fraction(fitter_EB, can_EB, chiso_EB, binname)
-    can_EE = ROOT.TCanvas("CHiso_EE_fit_"+binname)
-    pur_EE, pur_EE_err = fit_fraction(fitter_EE, can_EE, chiso_EE, binname)
+    pur_EB, pur_EB_err = fit_fraction(chiso_EB, temp1_EB, temp2_EB, binname)
+    pur_EE, pur_EE_err = fit_fraction(chiso_EE, temp1_EE, temp2_EE, binname)
     purity_R2_EB.SetBinContent(biny, pur_EB)
     purity_R2_EB.SetBinError  (biny, pur_EB_err)
     purity_R2_EE.SetBinContent(biny, pur_EE)
@@ -1000,26 +960,8 @@ temp1_EB = get_zslice(CHIsoTemplate_Prompt_EB, "PrompTemplate_EB_avg", binx1,bin
 temp1_EE = get_zslice(CHIsoTemplate_Prompt_EE, "PrompTemplate_EE_avg", binx1,binx2,biny1,biny2)
 temp2_EB = get_zslice(CHIsoTemplate_Fake_EB,   "FakeTemplate_EB_avg",  binx1,binx2,biny1,biny2)
 temp2_EE = get_zslice(CHIsoTemplate_Fake_EE,   "FakeTemplate_EE_avg",  binx1,binx2,biny1,biny2)
-temp1_EB.Write()
-temp1_EE.Write()
-temp2_EB.Write()
-temp2_EE.Write()
-templates_EB = ROOT.TObjArray(2)
-templates_EB.Add(temp1_EB)
-templates_EB.Add(temp2_EB)
-templates_EE = ROOT.TObjArray(2)
-templates_EE.Add(temp1_EE)
-templates_EE.Add(temp2_EE)
-fitter_EB = ROOT.TFractionFitter(chiso_EB,templates_EB)
-fitter_EB.Constrain(0, 0,1)
-fitter_EB.Constrain(1, 0,1)
-fitter_EE = ROOT.TFractionFitter(chiso_EE,templates_EE)
-fitter_EE.Constrain(0, 0,1)
-fitter_EE.Constrain(1, 0,1)
-can_EB = ROOT.TCanvas("CHiso_EB_fit_avg")
-pur_EB, pur_EB_err = fit_fraction(fitter_EB, can_EB, chiso_EB, "avg")
-can_EE = ROOT.TCanvas("CHiso_EE_fit_avg")
-pur_EE, pur_EE_err = fit_fraction(fitter_EE, can_EE, chiso_EE, "avg")
+pur_EB, pur_EB_err = fit_fraction(chiso_EB, temp1_EB, temp2_EB, binname)
+pur_EE, pur_EE_err = fit_fraction(chiso_EE, temp1_EE, temp2_EE, binname)
 purity_EB.SetBinContent(1, pur_EB)
 purity_EB.SetBinError  (1, pur_EB_err)
 purity_EE.SetBinContent(1, pur_EE)
@@ -1048,11 +990,18 @@ for binx in range(1, G_data_EB.GetNbinsX()+1):
 avg_purity_data = nevt_G_prompt / nevt_G
 print "Average Purity = "+str(avg_purity_data)
 
-# Direct photon fraction
+# --------------------------------
+#      Direct photon fraction
+print "- Calculate direct photon fraction"
+
 # Use an average direct photon fraction for EB/EE (It is ~0.9)
 direct_frac_EB = IsDirect_G_EB.Project3D("z").GetMean()
 direct_frac_EE = IsDirect_G_EE.Project3D("z").GetMean()
 
+# --------------------------------
+#         Transfer factors
+
+print "- Calculate transfer factors"
 # Calculate the transfer factor in bins of MR
 h_CR_to_SR_MR = S_ZI_MC.ProjectionX()
 h_CR_to_SR_MR.Divide(GDirectPrompt_MC.ProjectionX())
@@ -1067,9 +1016,19 @@ h_CR_to_SR_R2_factorized = h_CR_to_SR_R2.Clone("transfer_factor_R2_factorized")
 h_CR_to_SR_R2_factorized.Scale(1/avg_factor)
 h_CR_to_SR_R2_factorized.Write()
 
-# Double ratio = k_Z / k_G
+# Systematics
+##  for iSyst in range(0, len(systematics)):
+##  S_ZI[iSyst]
+##  MRR2_G
+##  MRR2_S_ZI
+##  MRR2_G
+
+# --------------------------------
+#     Double ratio = k_Z / k_G
+
+print "- Calculate double ratio"
 ##  k_Z = Z_data.Integral()/Z_MC.Integral()
-##  k_G = G_data.Integral()/G_MC.Integral()
+##  k_G = G_data.Integral()/G_MC[0].Integral()
 # For DY in Z region, use MC
 Z_data_DY_est = Z_data.Clone("Z_data_DY_est")
 Z_data_DY_est.Add(Z_NONDJ, -1)
@@ -1088,7 +1047,7 @@ print "G_nonGJ: "+str(G_NONGJ.Integral())
 print "G_pure:  "+str(G_data.Integral()*avg_purity_data)
 print "G_GJ:    "+str(G_GJ.Integral())
 print ("k_Z = %4.3f (%4.3f / %4.3f), k_G = %4.3f (%4.3f / %4.3f), double ratio = %4.3f" %
-##     (k_Z, Z_data.Integral(), Z_MC.Integral(), k_G, G_data.Integral(), G_MC.Integral(), double_ratio))
+##     (k_Z, Z_data.Integral(), Z_MC.Integral(), k_G, G_data.Integral(), G_MC[0].Integral(), double_ratio))
        (k_Z, Z_data_DY_est.Integral(), Z_DJ.Integral(), k_G, G_data_G_est.Integral(), G_GJ.Integral(), double_ratio))
 
 # Estimate background
@@ -1192,30 +1151,11 @@ else:
     ZInv_est.append(combinebins(ztonunu_photon_est_dirfracDown,"ZInv_leptonestDown"))
 
 # Finally scale by the relative number of events in the njet boxes (found in MC)
-## OLD njet_ratio = 1.0
-## OLD if "nj35" in opt.box:
-## OLD     njet_ratio = S_ZI_MC_nj35.Integral()/S_ZI_MC.Integral()
-## OLD elif "nj6" in opt.box:
-## OLD     njet_ratio = S_ZI_MC_nj6 .Integral()/S_ZI_MC.Integral()
-## OLD if njet_ratio != 1.0:
-## OLD     ztonunu_lepton_est            .Scale(njet_ratio)
-## OLD     ztonunu_photon_est            .Scale(njet_ratio)
-## OLD     ztonunu_photon_est_purityUp   .Scale(njet_ratio)
-## OLD     ztonunu_photon_est_purityDown .Scale(njet_ratio)
-## OLD     ztonunu_photon_est_dirfracUp  .Scale(njet_ratio)
-## OLD     ztonunu_photon_est_dirfracDown.Scale(njet_ratio)
 # Unroll also the ZToNuNu MC plot
 ztonunu_mc    = ROOT.TH1D("ztonunu_mc",    ";Bin;Z(#nu#nu) estimate",25,0,25)
 for binx in range(1, G_data_EB.GetNbinsX()+1):
     for biny in range(1, G_data_EB.GetNbinsY()+1):
         unrolled_bin = (binx-1)*5+biny
-        ## OLD if "nj35" in opt.box:
-        ## OLD     ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC_nj35.GetBinContent(binx,biny))
-        ## OLD     ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC_nj35.GetBinError  (binx,biny))
-        ## OLD elif "nj6" in opt.box:
-        ## OLD     ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC_nj6.GetBinContent(binx,biny))
-        ## OLD     ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC_nj6.GetBinError  (binx,biny))
-        ## OLD else:
         ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_MC.GetBinContent(binx,biny))
         ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_MC.GetBinError  (binx,biny))
 
@@ -1226,7 +1166,7 @@ pad = can.cd(1)
 pad.SetPad(0,0.3,1,1)
 pad.SetBottomMargin(0.02)
 ztonunu_mc.GetXaxis().SetLabelSize(0)
-ymax = {"WAna_nj35": 20, "WAna_nj6" : 8, "TopAna" : 4}
+ymax = {"WAna_nj35": 20, "WAna_nj45": 20, "WAna_nj46": 20, "WAna_nj6": 8, "WAna_nj7": 8, "TopAna" : 4}
 ztonunu_mc.GetYaxis().SetRangeUser(0, ymax[opt.box])
 ztonunu_mc.GetYaxis().SetTitleSize(0.07)
 ztonunu_mc.GetYaxis().SetTitleOffset(1.1)
@@ -1240,7 +1180,14 @@ ztonunu_lepton_est.SetMarkerStyle(21)
 ztonunu_lepton_est.SetMarkerColor(418)
 ztonunu_lepton_est.SetLineColor(418)
 ztonunu_lepton_est.Draw("SAME LE1")
-title = { "WAna_nj35": "W analysis, 3#seqN_{jet}#seq5", "WAna_nj35": "W analysis, N_{jet}#seq6", "TopAna": "top analysis",}
+title = {
+    "WAna_nj35": "W analysis, 3#seqN_{jet}#seq5",
+    "WAna_nj45": "W analysis, 4#seqN_{jet}#seq5",
+    "WAna_nj46": "W analysis, 4#seqN_{jet}#seq6",
+    "WAna_nj6": "W analysis, N_{jet}#seq6",
+    "WAna_nj7": "W analysis, N_{jet}#seq7",
+    "TopAna": "top analysis"
+    }
 leg = ROOT.TLegend(0.5,0.75,0.9,0.9, "")
 leg.SetTextSize(0.04)
 #leg.AddEntry(ztonunu_mc,         "ZToNuNu MC",       "LE")
@@ -1283,7 +1230,7 @@ ztonunu_photon_est.Write()
 ztonunu_lepton_est.Write()
 ztonunu_mc.Write()
 f_zinv_est.Close()
-sys.exit()
+#sys.exit()
 
 # ------------- Signal MET systematics ------------------
 
@@ -1645,6 +1592,7 @@ met		shape	1.0	1.0	1.0	1.0	-	1.0
 trigger		shape	1.0	1.0	1.0	1.0	-	1.0
 facrenscale	shape	1.0	1.0	1.0	1.0	-	1.0
 alphas		shape	1.0	1.0	1.0	1.0	-	1.0
+ak8scale	shape	-	1.0	1.0	1.0	-	1.0
 elereco		shape	1.0	1.0	1.0	1.0	-	1.0
 eleid		shape	1.0	1.0	1.0	1.0	-	1.0
 eleiso		shape	1.0	1.0	1.0	1.0	-	1.0
@@ -1656,15 +1604,22 @@ btag		shape	1.0	1.0	1.0	1.0	-	1.0
 btagfastsim	shape	1.0	-	-	-	-	-
 wtag		shape	1.0	1.0	1.0	1.0	-	1.0
 wtagfastsim	shape	1.0	-	-	-	-	-
-toptag		shape	1.0	1.0	1.0	1.0	-	1.0
+wmistag		shape	1.0	1.0	1.0	1.0	-	1.0
+wmasstag	shape	-	-	-	1.0	-	-
+wantitag	shape	-	-	1.0	-	-	-
+toptag		shape	1.0	1.0	-	-	-	1.0
 toptagfastsim	shape	1.0	-	-	-	-	-
+topmistag	shape	1.0	1.0	1.0	1.0	-	1.0
+top0bmasstag	shape	1.0	-	-	1.0	-	-
+topmasstag	shape	1.0	1.0	1.0	1.0	-	-
+topantitag	shape	1.0	-	1.0	-	-	-
 purity		shape	-	-	-	-	1.0	-
 dirfrac		shape	-	-	-	-	1.0	-
 leptonest	shape	-	-	-	-	1.0	-
 '''
+            )
 #facscale	shape	1.0	1.0	1.0	1.0	-	1.0
 #renscale	shape	1.0	1.0	1.0	1.0	-	1.0
-            )
         card.close()
 
 time.sleep(10)

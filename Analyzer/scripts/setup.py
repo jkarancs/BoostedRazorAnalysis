@@ -23,7 +23,8 @@ import os, re, sys, glob, socket, subprocess
 #LATEST_NTUPLE_EOS="Skim_Mar09_1JetAK8_0p04R2"
 #LATEST_NTUPLE_EOS="Skim_May19_1JetAK8_0p04R2"
 #LATEST_NTUPLE_EOS="Skim_Sep26"
-LATEST_NTUPLE_EOS="Skim_Oct11"
+#LATEST_NTUPLE_EOS="Skim_Oct11"
+LATEST_NTUPLE_EOS="Skim_Dec12"
 #LATEST_NTUPLE_GRID18="Aug17"
 #LATEST_NTUPLE_GRID18="Skim_Aug30_1AK8JetPt300"
 #LATEST_NTUPLE_GRID18="Oct24"
@@ -36,7 +37,9 @@ LATEST_NTUPLE_EOS="Skim_Oct11"
 #LATEST_NTUPLE_GRID18="Skim_May19_1JetAK8_0p04R2"
 #LATEST_NTUPLE_GRID18="Sep26_part1"
 #LATEST_NTUPLE_GRID18="Sep26_part2"
-LATEST_NTUPLE_GRID18="Skim_Oct11"
+#LATEST_NTUPLE_GRID18="Skim_Oct11"
+LATEST_NTUPLE_GRID18="Nov30_part1"
+#LATEST_NTUPLE_GRID18="Skim_Dec12"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 if 'grid18.kfki.hu' in socket.gethostname(): ANA_BASE='/data/jkarancs/CMSSW/Analyzer'
@@ -139,8 +142,8 @@ for directory in os.listdir(DIR):
             # Data
             if re.compile('.*20[1-2][0-9][A-J].*').match(directory):
                 txtname = directory
+                if txtname.endswith('_recovery'): txtname = txtname[:-9]
                 if txtname.endswith('_2'): txtname = txtname[:-2]
-                elif txtname.endswith('_recovery'): txtname = txtname[:-9]
                 flist = open(ANA_BASE+'/filelists/data/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
                     filename = os.path.realpath(DIR+'/'+directory+'/'+files)
@@ -153,6 +156,7 @@ for directory in os.listdir(DIR):
             # Signals
             elif re.compile('.*T[1-9][t,b,c,q][t,b,c,q].*').match(directory):
                 txtname = directory
+                if txtname.endswith('_recovery'): txtname = txtname[:-9]
                 if txtname.endswith('_2'): txtname = txtname[:-2]
                 flist = open(ANA_BASE+'/filelists/signals/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):
@@ -167,6 +171,7 @@ for directory in os.listdir(DIR):
             else:
                 txtname = directory
                 # Please synchronize the lines below with get_xsec_totweight_from_txt_file in AnalysisBase.h
+                if txtname.endswith('_recovery'): txtname = txtname[:-9]
                 if txtname.endswith('_2'):      txtname = txtname[:-2]
                 if txtname.endswith('_ext1'):   txtname = txtname[:-5]
                 if txtname.endswith('_ext2'):   txtname = txtname[:-5]

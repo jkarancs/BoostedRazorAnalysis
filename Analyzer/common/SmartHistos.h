@@ -428,13 +428,13 @@ private:
   // ****************** Most Probable Value ******************
   void calc_mpv_1d_(TH1D* h1d, TH2D* h2d, bool savemother=1) {
     if (h2d->GetEntries()) {
-      Int_t nbiny = h2d->GetNbinsY();
-      double ylow = h2d->GetYaxis()->GetXmin();
-      double yup = h2d->GetYaxis()->GetXmax();
+      int nbiny = h2d->GetNbinsY();
+      double ylow  = h2d->GetYaxis()->GetXmin();
+      double yhigh = h2d->GetYaxis()->GetXmax();
       for (int i=1; i<=h2d->GetNbinsX(); i++) {
 	// Get Y-slice in bin of X
 	double entries = 0;
-	TH1D *slice_x = new TH1D("slice_x","slice_x",nbiny,ylow,yup);
+	TH1D *slice_x = new TH1D("slice_x","slice_x",nbiny,ylow,yhigh);
 	for (int j=1; j<=nbiny; j++) {
 	  double cont = h2d->GetBinContent(i,j);
 	  entries += cont;
@@ -1671,6 +1671,10 @@ private:
 	  if (tgae->GetN()) {
 	    if (draw_axis) {
 	      tgae->Draw("AP");
+	      // X-axis ranges are messed up by default, so need to draw first
+	      //  tgae->GetXaxis()->SetRangeUser(hvec[i]->GetXaxis()->GetBinLowEdge(hvec[i]->GetXaxis()->GetFirst()),
+	      //    			     hvec[i]->GetXaxis()->GetBinUpEdge(hvec[i]->GetXaxis()->GetLast()));
+	      //  tgae->Draw("AP");	      
 	      draw_axis=0;
 	    } else tgae->Draw("SAMEP");
 	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
@@ -2028,22 +2032,39 @@ private:
   
   std::vector<double> bincoordx_;
   std::vector<std::string> binlabels_;
+  std::map<const char*, TH1F*> tgae_hist_;
   
   TGraphAsymmErrors* asym_(TH1D* eff, TH1D* den, bool allbins = false) {
     bincoordx_.clear();
     binlabels_.clear();
     //TGraphAsymmErrors* tgae = new TGraphAsymmErrors(eff);
+    // Get ranges
+    double xlow  = eff->GetXaxis()->GetBinLowEdge(eff->GetXaxis()->GetFirst());
+    double xhigh = eff->GetXaxis()->GetBinUpEdge(eff->GetXaxis()->GetLast());
+    double ylow  = eff->GetMinimum();
+    double yhigh = eff->GetMaximum();
+    // Check if we need to add dummy points in order to correctly set axis ranges
+    bool add_low = 0, add_high = 0;
+    if (!allbins) {
+      int first = -1, last = -1;
+      for (int i=1; i<=den->GetNbinsX(); ++i) if (den->GetBinContent(i)) {
+	if (den->GetXaxis()->GetBinLowEdge(i)>=xlow&&den->GetXaxis()->GetBinUpEdge(i)<xlow) first = i;
+	if (den->GetXaxis()->GetBinLowEdge(i)>xhigh&&den->GetXaxis()->GetBinUpEdge(i)<=xhigh) last = i;	
+      }
+      if (first!=-1) add_low  = 0;
+      if (last !=-1) add_high = 0;
+    }
     int n = 0;
     if (allbins) n = den->GetNbinsX();
-    else for (Int_t i=0; i<den->GetNbinsX(); ++i) if (den->GetBinContent(i+1)>0) n++;
-    TGraphAsymmErrors* tgae = new TGraphAsymmErrors(n+2); // added 2 dummy points (see below)
-    int m = 1;
+    else for (int i=0; i<den->GetNbinsX(); ++i) if (den->GetBinContent(i+1)>0) n++;
+    TGraphAsymmErrors* tgae = new TGraphAsymmErrors(n+add_low+add_high); // add 2 dummy points (see below)
+    int m = add_low;
     const int Method = 1;
     // Method 1
     // Calculate the asymmetric Wilson Score Interval
     if (Method==1) {
       double z = 1; // 1 Sigma confidence
-      for (Int_t i=0; i<den->GetNbinsX(); ++i) {
+      for (int i=0; i<den->GetNbinsX(); ++i) {
         double x = eff->GetBinCenter(i+1);
         double y = eff->GetBinContent(i+1);
         double denum = den->GetBinContent(i+1);
@@ -2066,26 +2087,25 @@ private:
       pass->Multiply(den);
       tgae->BayesDivide(pass, den);
     }
-    // Set same ranges/settings etc
-    double xlow = eff->GetXaxis()->GetBinLowEdge(eff->GetXaxis()->GetFirst());
-    double xup  = eff->GetXaxis()->GetBinUpEdge(eff->GetXaxis()->GetLast());
-    double ylow = eff->GetMinimum();
-    double yup  = eff->GetMaximum();
     // Add a 2 dummy points (not visible) to make sure to be able to set X axis range
-    tgae->SetPoint(0,xlow,ylow-(yup-ylow)*10);
-    tgae->SetPointEXlow (0,0);
-    tgae->SetPointEXhigh(0,0);
-    tgae->SetPointEYlow (0,0);
-    tgae->SetPointEYhigh(0,0);
-    tgae->SetPoint(n+1,xup,ylow-(yup-ylow)*10);
-    tgae->SetPointEXlow (n+1,0);
-    tgae->SetPointEXhigh(n+1,0);
-    tgae->SetPointEYlow (n+1,0);
-    tgae->SetPointEYhigh(n+1,0);
-    tgae->GetXaxis()->SetRangeUser(xlow,xup);
-    tgae->GetYaxis()->SetRangeUser(ylow,yup);
+    if (add_low) {
+      tgae->SetPoint(0,xlow,ylow-(yhigh-ylow)*10);
+      tgae->SetPointEXlow (0,0);
+      tgae->SetPointEXhigh(0,0);
+      tgae->SetPointEYlow (0,0);
+      tgae->SetPointEYhigh(0,0);
+    }
+    if (add_high) {
+      tgae->SetPoint(n+1,xhigh,ylow-(yhigh-ylow)*10);
+      tgae->SetPointEXlow (n+1,0);
+      tgae->SetPointEXhigh(n+1,0);
+      tgae->SetPointEYlow (n+1,0);
+      tgae->SetPointEYhigh(n+1,0);
+    }
+    tgae->GetXaxis()->SetRangeUser(xlow,xhigh);
+    tgae->GetYaxis()->SetRangeUser(ylow,yhigh);
     tgae->SetMinimum(ylow);
-    tgae->SetMaximum(yup);
+    tgae->SetMaximum(yhigh);
     tgae->SetTitle(eff->GetTitle());
     tgae->GetXaxis()->SetTitle(eff->GetXaxis()->GetTitle());
     tgae->GetYaxis()->SetTitle(eff->GetYaxis()->GetTitle());
@@ -2105,8 +2125,44 @@ private:
     tgae->SetMarkerStyle(eff->GetMarkerStyle());
     tgae->SetMarkerColor(eff->GetMarkerColor());
     tgae->SetMarkerSize(eff->GetMarkerSize());
+    double minbinwidth = 99999999, min = eff->GetXaxis()->GetXmin(), max = eff->GetXaxis()->GetXmax();
+    for (int bin=1; bin<=eff->GetNbinsX(); ++bin) if (eff->GetBinWidth(bin)<minbinwidth) minbinwidth = eff->GetBinWidth(bin);
+    int nbin = (max-min)/minbinwidth;
+    // TGraph X-axis ranges are messed up a lot of times by badly chosen automatic bins
+    // Make a histogram used to draw the plots and correctly set the ranges
+    TH1F* hist;
+    if (tgae_hist_.count(eff->GetName())==0) {
+      hist = new TH1F((std::string(eff->GetName())+"_forrange").c_str(),"",nbin,min,max);
+      tgae_hist_[eff->GetName()] = hist;
+    } else {
+      hist = tgae_hist_[eff->GetName()];
+    }
+    hist->GetXaxis()->SetRangeUser(xlow,xhigh);
+    hist->GetYaxis()->SetRangeUser(ylow,yhigh);
+    hist->SetMinimum(ylow);
+    hist->SetMaximum(yhigh);
+    hist->SetTitle(eff->GetTitle());
+    hist->GetXaxis()->SetTitle(eff->GetXaxis()->GetTitle());
+    hist->GetYaxis()->SetTitle(eff->GetYaxis()->GetTitle());
+    hist->GetXaxis()->SetTitleSize(eff->GetXaxis()->GetTitleSize());
+    hist->GetYaxis()->SetTitleSize(eff->GetYaxis()->GetTitleSize());
+    hist->GetXaxis()->SetTitleOffset(eff->GetXaxis()->GetTitleOffset());
+    hist->GetYaxis()->SetTitleOffset(eff->GetYaxis()->GetTitleOffset());
+    hist->GetXaxis()->SetTitleFont(eff->GetXaxis()->GetTitleFont());
+    hist->GetYaxis()->SetTitleFont(eff->GetYaxis()->GetTitleFont());
+    hist->GetXaxis()->SetNdivisions(eff->GetNdivisions("X"));
+    hist->GetYaxis()->SetNdivisions(eff->GetNdivisions("Y"));
+    hist->GetYaxis()->SetDecimals(1);
+    hist->GetXaxis()->SetTimeDisplay(eff->GetXaxis()->GetTimeDisplay());
+    hist->GetXaxis()->SetTimeFormat(eff->GetXaxis()->GetTimeFormat());
+    hist->SetLineColor(eff->GetLineColor());
+    hist->SetLineWidth(eff->GetLineWidth());
+    hist->SetMarkerStyle(eff->GetMarkerStyle());
+    hist->SetMarkerColor(eff->GetMarkerColor());
+    hist->SetMarkerSize(eff->GetMarkerSize());
+    tgae->SetHistogram(hist);
     // If Bin Labels exist remove current X axis labels and draw similar bin labels but with TLatex
-    for (Int_t bin=1; bin<=eff->GetNbinsX(); ++bin) {
+    for (int bin=1; bin<=eff->GetNbinsX(); ++bin) {
       if (std::string(eff->GetXaxis()->GetBinLabel(bin)).size()) {
 	bincoordx_.push_back(eff->GetXaxis()->GetBinCenter(bin));
 	binlabels_.push_back(eff->GetXaxis()->GetBinLabel(bin));
@@ -2135,7 +2191,7 @@ private:
   
   TGraphAsymmErrors* get_tgae_ratio_(TGraphAsymmErrors* data, TGraphAsymmErrors* mc) {
     TGraphAsymmErrors* ratio = (TGraphAsymmErrors*)data->Clone();
-    for (Int_t i=0; i<ratio->GetN(); i++) {
+    for (int i=0; i<ratio->GetN(); i++) {
       Double_t x_data, y_data;
       data->GetPoint(i, x_data, y_data);
       Double_t xh_data = data->GetErrorXhigh(i);

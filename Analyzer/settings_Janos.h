@@ -2,8 +2,9 @@
 // VER 1 - Moriond17 datasets
 // VER 2 - Moriond17 + 03Feb2017 ReMiniAOD datasets
 // VER 3 - VER2 with updates (added photons, corridor event veto, ISR, gen MET)
+// VER 4 - VER3 with updates (added taus, updated isolations)
 // SKIM - 1: save skimmed ntuple, 0: run on already skimmed ntuple
-#define VER     3
+#define VER     4
 #define SKIM    0
 #define SYST    1
 #define TOP     0
@@ -14,6 +15,8 @@
 #include "common/DataStruct_May10.h"
 #elif VER == 3
 #include "common/DataStruct_Sep26.h"
+#elif VER == 4
+#include "common/DataStruct_Nov30.h"
 #endif
 #include "common/treestream.h"
 #include "Analysis_Janos.h" // Specify here the implementations for your Analysis
@@ -42,6 +45,14 @@ struct settings {
 #else
 #include "common/selectVariables_fast_Sep26.h"
 #endif
+
+#elif VER == 4
+#if SKIM == 1
+#include "common/selectVariables_skim_Nov30.h"
+#else
+#include "common/selectVariables_fast_Nov30.h"
+#endif
+
 #endif
 
   //-----------------------------------------------------------------------------
@@ -56,10 +67,10 @@ struct settings {
     doAK8JetPtRescaling      ( true  ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
-    nSigmaScaleFactors       ( 20    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 5 W, 2b, 6 top
+    nSigmaScaleFactors       ( 22    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 6 W, 2b, 7 top
     varySystematics          ( SYST  ),
-    systematicsFileName      ( "systematics/2017_11_28_1SigmaUpDown_NoPdf.txt" ),
-//  systematicsFileName      ( "systematics/2017_11_22_AllUpDown_NoPdf.txt" ),
+    systematicsFileName      ( "systematics/2017_12_26_1SigmaUpDown_NoPdf.txt" ),
+//  systematicsFileName      ( "systematics/2017_12_26_AllUpDown_NoPdf.txt" ),
     useJSON                  ( false ), // by default: no need to apply, but can be useful if some lumisections need to be excluded additionally
 #if VER != 0
     jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/ReReco/Final/"
@@ -68,7 +79,7 @@ struct settings {
     intLumi                  ( 35867 /* brilcalc - Dec02 Golden JSON */ ), // Tot int lumi in (pb^-1),
     lumiUncertainty          ( 0.025  ),
 #endif
-    useXSecFileForBkg        ( false  ), // true: use file below, false: use value in the ntuple (evt_XSec)
+    useXSecFileForBkg        ( true   ), // true: use file below, false: use value in the ntuple (evt_XSec)
     xSecFileName             ( "common/BackGroundXSec.txt" ) {};
   ~settings(){};
 

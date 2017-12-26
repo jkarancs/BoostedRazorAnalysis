@@ -283,6 +283,36 @@ int main(int argc, char** argv) {
   }
   if (debug) std::cout<<"Analyzer::main: calc lumi weight norm ok"<<std::endl;
 
+  std::vector<double> scale_weight_norm;
+  if ( settings.varySystematics ) {
+    std::string line;
+    std::ifstream scaleNormFile("common/scalenorm.txt");
+    while ( std::getline(scaleNormFile, line) ) {
+      std::stringstream nth_line;
+      nth_line<<line;
+      double norm1, norm2, norm3, norm4, norm5, norm6;
+      std::string samplename;
+      nth_line>>norm1;
+      nth_line>>norm2;
+      nth_line>>norm3;
+      nth_line>>norm4;
+      nth_line>>norm5;
+      nth_line>>norm6;
+      nth_line>>samplename;
+      if (cmdline.dirname==samplename) {
+	std::cout<<"Scale normalizations found: "<<norm1<<" "<<norm2<<" "<<norm3<<" "<<norm4<<" "<<norm5<<" "<<norm6<<" "<<samplename<<std::endl;
+	scale_weight_norm.push_back(norm1);
+	scale_weight_norm.push_back(norm2);
+	scale_weight_norm.push_back(norm3);
+	scale_weight_norm.push_back(norm4);
+	scale_weight_norm.push_back(norm5);
+	scale_weight_norm.push_back(norm6);
+	break;
+      }
+    }
+  }
+  if (debug) std::cout<<"Analyzer::main: read factor/renorm scale weight normalization ok"<<std::endl;
+
   // ---------------------------------------
   // --- ScaleFectors/Reweighting        ---
   // ---------------------------------------
@@ -573,9 +603,9 @@ int main(int argc, char** argv) {
 	  // A set of six weights, unphysical combinations excluded
 	  // If numScale=0 is specified, not doing any weighting
 	  if ( syst.numScale[syst.index] >= 1 && syst.numScale[syst.index] <= 3 )
-	    w *= (ana.all_weights[5] = ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]));
+	    w *= (ana.all_weights[5] = ana.get_scale_weight(data.syst_scale.Weights, scale_weight_norm, syst.nSigmaScale[syst.index], syst.numScale[syst.index]));
 	  if (syst.index==0) ofile->count("w_scale", w);
-	  if (debug==-1) std::cout<<" scale = "<<ana.get_scale_weight(data.syst_scale.Weights, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
+	  if (debug==-1) std::cout<<" scale = "<<ana.get_scale_weight(data.syst_scale.Weights, scale_weight_norm, syst.nSigmaScale[syst.index], syst.numScale[syst.index]);
 	  // PDF weights
 	  // A set of 100 weights for the nominal PDF
 	  // If numPdf=0 is specified, not doing any weighting
