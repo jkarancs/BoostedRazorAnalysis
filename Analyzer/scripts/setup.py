@@ -38,8 +38,8 @@ LATEST_NTUPLE_EOS="Skim_Dec12"
 #LATEST_NTUPLE_GRID18="Sep26_part1"
 #LATEST_NTUPLE_GRID18="Sep26_part2"
 #LATEST_NTUPLE_GRID18="Skim_Oct11"
-LATEST_NTUPLE_GRID18="Nov30_part1"
-#LATEST_NTUPLE_GRID18="Skim_Dec12"
+#LATEST_NTUPLE_GRID18="Nov30_part1"
+LATEST_NTUPLE_GRID18="Skim_Dec12"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
 if 'grid18.kfki.hu' in socket.gethostname(): ANA_BASE='/data/jkarancs/CMSSW/Analyzer'

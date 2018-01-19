@@ -420,6 +420,7 @@ int main(int argc, char** argv) {
 
     // Read event into memory
     stream.read(entry);
+    //std::cout<<entry<<std::endl;
     if (debug>1) std::cout<<"Analyzer::main: reading entry ok"<<std::endl;
 
     if ( entry%100000==0 ) cout << entry << " events analyzed." << endl;

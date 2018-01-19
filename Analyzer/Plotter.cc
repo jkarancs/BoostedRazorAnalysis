@@ -38,7 +38,10 @@ int main(int argc, char** argv) {
   ana.init_common_histos(settings.varySystematics);
   ana.init_analysis_histos(syst.nSyst, syst.index);
 
-  for (auto in_file : cmdline.fileNames) ana.load_analysis_histos(in_file);
+  for (auto in_file : cmdline.fileNames) {
+    std::cout<<"Loading histos from file: "<<in_file<<std::endl;
+    ana.load_analysis_histos(in_file);
+  }
 
   TFile *f = new TFile(cmdline.outputFileName.c_str(),"RECREATE");
   ana.save_analysis_histos(1);

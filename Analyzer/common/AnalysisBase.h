@@ -413,14 +413,14 @@ Choose:
 
   For Veto (Regions except Z) Choose:
   - Spring15 Cut based Veto ID without relIso (EA) cut
-  - for pt>=20 Mini-Isolation (EA)/pt < 0.2 (RazorInclusive cut [5])
   - for pt<20  absolute iso03 (EA) < 5 
+  - Mini-Isolation (EA)/pt < 0.1 (Medium WP [4])
   - pt >= 5
   - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
   - |d0| < 0.2, |dz| < 0.5 (Loose IP2D [6])
   OR when using MVA:
   - Spring16 MVA Loose ID
-  - Mini-Isolation (EA)/pt < 0.1 (Medium WP [4])
+  - for pt>=20 Mini-Isolation (EA)/pt < 0.2 (RazorInclusive cut [5])
   - pt >= 5
   - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
   - 3D IP sig < 4
@@ -455,10 +455,25 @@ Choose:
 */
 
 #define USE_MVA_ID             1
+#define USE_POG_ID             0
 
+#if USE_POG_ID > 0
 #define ELE_VETO_PT_CUT        5
 #define ELE_VETO_ETA_CUT       2.5
-#define ELE_VETO_MINIISO_CUT   0.2 // Was 0.1 previously
+#define ELE_VETO_MINIISO_CUT   0.1
+#define ELE_VETO_ABSISO_CUT    5   // For skim only
+#if USE_MVA_ID == 1
+#define ELE_VETO_IP_D0_CUT     0.05
+#define ELE_VETO_IP_DZ_CUT     0.1
+#define ELE_VETO_IP_3D_CUT     4   // For skim only
+#else
+#define ELE_VETO_IP_D0_CUT     0.2
+#define ELE_VETO_IP_DZ_CUT     0.5
+#endif
+#else
+#define ELE_VETO_PT_CUT        5
+#define ELE_VETO_ETA_CUT       2.5
+#define ELE_VETO_MINIISO_CUT   0.2
 #define ELE_VETO_ABSISO_CUT    5
 #if USE_MVA_ID == 1
 #define ELE_VETO_IP_D0_CUT     0.05
@@ -467,6 +482,7 @@ Choose:
 #else
 #define ELE_VETO_IP_D0_CUT     0.2
 #define ELE_VETO_IP_DZ_CUT     0.5
+#endif
 #endif
 
 #define ELE_LOOSE_PT_CUT       10
@@ -530,13 +546,23 @@ Choose:
 
 */
 
+#if USE_POG_ID > 0
 #define MU_VETO_PT_CUT         5
 #define MU_VETO_ETA_CUT        2.4
-#define MU_VETO_MINIISO_CUT    0.2 // Was 0.4 previously
+#define MU_VETO_MINIISO_CUT    0.4
+#define MU_VETO_ABSISO_CUT     10  // For skim only
+#define MU_VETO_IP_D0_CUT      0.2
+#define MU_VETO_IP_DZ_CUT      0.5
+#define MU_VETO_IP_3D_CUT      4   // For skim only
+#else
+#define MU_VETO_PT_CUT         5
+#define MU_VETO_ETA_CUT        2.4
+#define MU_VETO_MINIISO_CUT    0.2
 #define MU_VETO_ABSISO_CUT     10
 #define MU_VETO_IP_D0_CUT      0.2
 #define MU_VETO_IP_DZ_CUT      0.5
 #define MU_VETO_IP_3D_CUT      4
+#endif
 
 #define MU_LOOSE_PT_CUT        10
 #define MU_LOOSE_ETA_CUT       2.4
@@ -556,6 +582,25 @@ Choose:
 #define MU_TIGHT_IP_D0_CUT     0.05
 #define MU_TIGHT_IP_DZ_CUT     0.1
 #define MU_TIGHT_IP_SIG_CUT    4
+
+/*
+  Latest Tau IDs:
+  https://twiki.cern.ch/twiki/bin/view/CMS/TauIDRecommendation13TeV?rev=35
+
+  For Veto Choose:
+  - POG Loose ID:
+    + byLooseCombinedIsolationDeltaBetaCorr3Hits"
+  - pt >= 18 (Same as MINIAOD)
+
+  OR use:
+  - Isolated charged trk = 0
+    + pt>=5 (ele/mu), 10 (hadrons)
+    + isolation (dR=0.3) / pt < 0.2 (ele/mu), 0.1 (hadrons)
+    + |dz| < 0.1
+
+*/
+
+#define USE_ISO_TRK_VETO 0
 
 
 /*
@@ -802,7 +847,11 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
       // Get the scale/offset from: scripts/calc_pt_scaling.C
       // Rescale the whole 4-momentum, because the Z-mass peak (in AK8 jet) also looks shifted
       //double scale = 0.867 + 0.039*nSigmaRescaleAK8, offset = 33.2 + 36.4 *nSigmaRescaleAK8;
-      double scale = 0.84 + 0.037*nSigmaRescaleAK8, offset = 50.5 + 35 *nSigmaRescaleAK8;
+#if USE_ISO_TRK_VETO > 0
+      double scale = 0.858 + 0.047*nSigmaRescaleAK8, offset = 30.8 + 38.6 *nSigmaRescaleAK8;
+#else
+      double scale = 0.840 + 0.037*nSigmaRescaleAK8, offset = 50.5 + 35.0 *nSigmaRescaleAK8;
+#endif
       // Use original pt without any scale/smear to determine the right scaling
       double orig_pt = AK8_Pt[i];
       if (applySmearing) orig_pt *= AK8_JERSmearFactor[i];
@@ -1169,7 +1218,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float pt = data.ele.Pt[i];
       float abseta = std::abs(data.ele.Eta[i]);
       float miniIso = data.ele.MiniIso[i];
+#if USE_POG_ID == 0
       float absIso  = data.ele.Iso03[i]*pt;
+#endif
       float absd0 = std::abs(data.ele.Dxy[i]);
       float absdz = std::abs(data.ele.Dz[i]);
       float ipsig = std::abs(data.ele.DB[i])/data.ele.DBerr[i];
@@ -1197,16 +1248,30 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       //bool id_veto = (data.ele.vidVeto[i] == 1.0);
       //bool id_select = (data.ele.vidTight[i] == 1.0);
       // Veto
+#if USE_POG_ID > 0
       if (passEleVeto[i] = 
 	  ( id_veto_noiso &&
 	    pt      >= ELE_VETO_PT_CUT &&
 	    abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
-//          absd0   <  ELE_VETO_IP_D0_CUT &&
-//          absdz   <  ELE_VETO_IP_DZ_CUT) ) {
+	    absd0   <  ELE_VETO_IP_D0_CUT &&
+	    absdz   <  ELE_VETO_IP_DZ_CUT) ) {
+	veto_leptons_noiso.push_back(ele_v4);
+	nEleVetoNoIso++;
+	if (passEleVeto[i] = (miniIso <  ELE_VETO_MINIISO_CUT) ) {
+	  iEleVeto.push_back(i);
+	  itEleVeto[i] = nEleVeto++;
+	  veto_leptons.push_back(ele_v4);
+	  //veto_lep_in_jet.push_back(data.ele.IsPartOfNearAK4Jet[i]);
+	}
+      }
+#else
+      if (passEleVeto[i] = 
+	  ( id_veto_noiso &&
+	    pt      >= ELE_VETO_PT_CUT &&
+	    abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
 	    ipsig   <  ELE_VETO_IP_3D_CUT) ) {
 	veto_leptons_noiso.push_back(ele_v4);
 	nEleVetoNoIso++;
-	//if (miniIso <  ELE_VETO_MINIISO_CUT) {
 	if (passEleVeto[i] = 
 	    (pt>20 ? miniIso <  ELE_VETO_MINIISO_CUT : absIso < ELE_VETO_ABSISO_CUT) ) {
 	  iEleVeto.push_back(i);
@@ -1215,6 +1280,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  //veto_lep_in_jet.push_back(data.ele.IsPartOfNearAK4Jet[i]);
 	}
       }
+#endif
       // Loose
       if (passEleLoose[i] = 
 	  ( id_loose_noiso &&
@@ -1274,8 +1340,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       float pt = data.mu.Pt[i];
       float abseta = std::abs(data.mu.Eta[i]);
       float miniIso = data.mu.MiniIso[i];
-      float absIso  = data.mu.Iso04[i]*pt;
       float relIso = data.mu.Iso04[i];
+#if USE_POG_ID == 0
+      float absIso  = data.mu.Iso04[i]*pt;
+#endif
       float absd0 = std::abs(data.mu.Dxy[i]);
       float absdz = std::abs(data.mu.Dz[i]);
       float ipsig = std::abs(data.mu.DB[i])/data.mu.DBerr[i];
@@ -1284,17 +1352,34 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       bool id_select_noiso = (data.mu.IsMediumMuon[i] == 1.0);
       bool id_tight_noiso  = (data.mu.IsTightMuon[i] == 1.0);
       // Veto
+#if USE_POG_ID > 0
       if (passMuVeto[i] =
 	  (id_veto_noiso &&
 	   pt      >= MU_VETO_PT_CUT &&
 	   abseta  <  MU_VETO_ETA_CUT &&
-//         absd0   <  MU_VETO_IP_D0_CUT &&
-//         absdz   <  MU_VETO_IP_DZ_CUT) ) {
+	   absd0   <  MU_VETO_IP_D0_CUT &&
+	   absdz   <  MU_VETO_IP_DZ_CUT) ) {
+	veto_leptons_noiso.push_back(mu_v4);
+	//veto_muons_noiso.push_back(mu_v4);
+	nMuVetoNoIso++;
+	if (passMuVeto[i] = (miniIso <  MU_VETO_MINIISO_CUT) ) {
+	  iMuVeto.push_back(i);
+	  itMuVeto[i] = nMuVeto++;
+	  veto_leptons.push_back(mu_v4);
+	  //veto_muons.push_back(mu_v4);
+	  //veto_lep_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
+	  //veto_mu_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
+	}
+      }
+#else
+      if (passMuVeto[i] =
+	  (id_veto_noiso &&
+	   pt      >= MU_VETO_PT_CUT &&
+	   abseta  <  MU_VETO_ETA_CUT &&
 	   ipsig   <  MU_VETO_IP_3D_CUT) ) {
 	veto_leptons_noiso.push_back(mu_v4);
 	//veto_muons_noiso.push_back(mu_v4);
 	nMuVetoNoIso++;
-	//if (miniIso <  MU_VETO_MINIISO_CUT) {
 	if (passMuVeto[i] =
 	    ( pt>20 ? miniIso <  MU_VETO_MINIISO_CUT : absIso < MU_VETO_ABSISO_CUT ) ) {
 	  iMuVeto.push_back(i);
@@ -1305,6 +1390,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  //veto_mu_in_jet.push_back(data.mu.IsPartOfNearAK4Jet[i]);
 	}
       }
+#endif
       // Loose
       if (passMuLoose[i] =
 	  ( id_loose_noiso &&
@@ -1474,7 +1560,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     float pt = data.pho.Pt[i];
     float abseta = std::abs(data.pho.Eta[i]);
     bool ele_veto = (data.pho.ElectronVeto[i]==1);
-    //bool id_select = data.pho.PassMediumID[i];
+    bool id_select = data.pho.PassMediumID[i];
 #if VER < 4
     // For cut based ID, need all cut variables at hand
     // But the EA corrected value was not saved for the Charged isolation (in VER 3)
@@ -1531,15 +1617,58 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       	iPhotonFake.push_back(i);
       	itPhotonFake[i] = nPhotonFake++;
       }
-      // Photons passing full ID
-      if ( passPhotonSelect[i] = 
-	   ( data.pho.SigmaIEtaIEta[i] < (std::abs(data.pho.SCEta[i])<1.479 ? 0.01022 : 0.03001) &&
-	     ChargedHadronIsoEACorr[i] < (std::abs(data.pho.SCEta[i])<1.479 ? 0.441 : 0.442) ) ) {			  
-	selected_photons.push_back(pho_v4);
-	iPhotonSelect.push_back(i);
-	itPhotonSelect[i] = nPhotonSelect++;
-      }
     }
+    // Photons passing full ID
+    if ( passPhotonSelect[i] = 
+	 ( id_select &&
+	   ele_veto &&
+	   pt        >= PHOTON_SELECT_PT_CUT &&
+	   abseta    <  PHOTON_SELECT_ETA_CUT ) ) {
+      selected_photons.push_back(pho_v4);
+      iPhotonSelect.push_back(i);
+      itPhotonSelect[i] = nPhotonSelect++;
+    }
+    // Sanity check for cut based implementation
+    //  bool id_select_manual= false;
+    //  if ( std::abs(data.pho.SCEta[i])<1.479 ) {
+    //    // Barrel cuts (EB)
+    //    id_select_manual = 
+    //      data.pho.HoverE[i]                          < 0.0396 &&
+    //      data.pho.SigmaIEtaIEta[i]                   < 0.01022 &&
+    //      data.pho.ChargedHadronIsoEAcorrectedsp15[i] < 0.441 &&
+    //      //data.pho.ChargedHadronIso[i]                < 0.441 &&
+    //      data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 2.725+0.0148*pt+0.000017*pt*pt &&
+    //      data.pho.PhotonIsoEAcorrectedsp15[i]        < 2.571+0.0047*pt;
+    //  } else {
+    //    // Encap cuts (EE)
+    //    id_select_manual = 
+    //      data.pho.HoverE[i]                          < 0.0219 &&
+    //      data.pho.SigmaIEtaIEta[i]                   < 0.03001 &&
+    //      data.pho.ChargedHadronIsoEAcorrectedsp15[i] < 0.442 &&
+    //      //data.pho.ChargedHadronIso[i]                < 0.442 &&
+    //      data.pho.NeutralHadronIsoEAcorrectedsp15[i] < 1.715+0.0163*pt+0.000014*pt*pt&&
+    //      data.pho.PhotonIsoEAcorrectedsp15[i]        < 3.863+0.0034*pt;
+    //  }
+    //  if (id_select_manual != id_select) {
+    //    std::cout<<"POG ID - Pass VID="<<id_select<<std::endl;
+    //    if (std::abs(data.pho.SCEta[i]) < 1.479) {
+    //      std::cout<<(std::abs(data.pho.SCEta[i])<1.479                                             )<<" SCEta="<<std::abs(data.pho.SCEta[i])<<std::endl;
+    //      std::cout<<(data.pho.HoverE[i] < 0.0396                                                   )<<" HoverE="<<data.pho.HoverE[i]<<std::endl;
+    //      std::cout<<(data.pho.SigmaIEtaIEta[i] < 0.01022                                           )<<" SigmaIEtaIEta="<<data.pho.SigmaIEtaIEta[i]<<std::endl;   
+    //      std::cout<<(data.pho.ChargedHadronIso[i] < 0.441                                          )<<" ChargedHadronIso="<<data.pho.ChargedHadronIso[i]<<std::endl;
+    //      std::cout<<(data.pho.ChargedHadronIsoEAcorrectedsp15[i] < 0.441                           )<<" ChargedHadronIsoEACorr="<<data.pho.ChargedHadronIsoEAcorrectedsp15[i]<<std::endl;
+    //      std::cout<<(data.pho.NeutralHadronIsoEAcorrectedsp15[i] < (2.725+0.0148*pt+0.000017*pt*pt))<<" NeutralHadronIsoEAcorrectedsp15="<<data.pho.NeutralHadronIsoEAcorrectedsp15[i]<<" cut="<<(2.725+0.0148*pt+0.000017*pt*pt)<<std::endl;
+    //      std::cout<<(data.pho.PhotonIsoEAcorrectedsp15[i] < 2.571+0.0047*pt                        )<<" PhotonIsoEAcorrectedsp15="<<data.pho.PhotonIsoEAcorrectedsp15[i]<<" cut="<<(2.571+0.0047*pt)<<std::endl<<std::endl;
+    //    } else {
+    //      std::cout<<(std::abs(data.pho.SCEta[i])>=1.479                                            )<<" SCEta="<<std::abs(data.pho.SCEta[i])<<std::endl;
+    //      std::cout<<(data.pho.HoverE[i] < 0.0219                                                   )<<" HoverE="<<data.pho.HoverE[i]<<std::endl;
+    //      std::cout<<(data.pho.SigmaIEtaIEta[i] < 0.03001                                           )<<" SigmaIEtaIEta="<<data.pho.SigmaIEtaIEta[i]<<std::endl;   
+    //      std::cout<<(data.pho.ChargedHadronIso[i] < 0.442                                          )<<" ChargedHadronIso="<<data.pho.ChargedHadronIso[i]<<std::endl;
+    //      std::cout<<(data.pho.ChargedHadronIsoEAcorrectedsp15[i] < 0.442                           )<<" ChargedHadronIsoEACorr="<<data.pho.ChargedHadronIsoEAcorrectedsp15[i]<<std::endl;
+    //      std::cout<<(data.pho.NeutralHadronIsoEAcorrectedsp15[i] < (1.715+0.0163*pt+0.000014*pt*pt))<<" NeutralHadronIsoEAcorrectedsp15="<<data.pho.NeutralHadronIsoEAcorrectedsp15[i]<<" cut="<<(2.725+0.0148*pt+0.000017*pt*pt)<<std::endl;
+    //      std::cout<<(data.pho.PhotonIsoEAcorrectedsp15[i] < 3.863+0.0034*pt                        )<<" PhotonIsoEAcorrectedsp15="<<data.pho.PhotonIsoEAcorrectedsp15[i]<<" cut="<<(2.571+0.0047*pt)<<std::endl<<std::endl;
+    //    }
+    //  }
   }
 
   // Add the lepton (pair) to MET
@@ -2407,25 +2536,20 @@ TH2D* h_trigger2d_nolep_pass;
 TH2D* h_trigger2d_nolep_total;
 
 std::vector<TH1D*> vh_MRR2_data;
-std::vector<TH1D*> vh_MRR2_data_nj35;
 std::vector<TH1D*> vh_MRR2_data_nj45;
 std::vector<TH1D*> vh_MRR2_data_nj6;
 std::vector<std::vector<TH1D*> > vvh_MRR2_bkg;
-std::vector<std::vector<TH1D*> > vvh_MRR2_bkg_nj35;
 std::vector<std::vector<TH1D*> > vvh_MRR2_bkg_nj45;
 std::vector<std::vector<TH1D*> > vvh_MRR2_bkg_nj6;
 std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig;
-std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig_nj35;
 std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig_nj45;
 std::map<uint32_t, std::vector<TH1D*> > m_vh_MRR2_sig_nj6;
 
 // Histos for the Z(nunu) estimate
 TH2D* h_MR_R2_G_EB; // For counts in data
 TH2D* h_MR_R2_G_EE;
-TH2D* h_MR_R2_G_EB_nj35;
 TH2D* h_MR_R2_G_EB_nj45;
 TH2D* h_MR_R2_G_EB_nj6;
-TH2D* h_MR_R2_G_EE_nj35;
 TH2D* h_MR_R2_G_EE_nj45;
 TH2D* h_MR_R2_G_EE_nj6;
 TH3D* h_CHIsoTemplate_Fake_g_EB; // Fake photon templates (data)
@@ -2436,46 +2560,36 @@ TH3D* h_CHIsoTemplate_Prompt_g_EB; // Prompt photon template (GJets)
 TH3D* h_CHIsoTemplate_Prompt_g_EE; 
 TH3D* h_MR_R2_CHIso_GNoIso_EB; // For purity in data
 TH3D* h_MR_R2_CHIso_GNoIso_EE;
-TH3D* h_MR_R2_CHIso_GNoIso_EB_nj35;
 TH3D* h_MR_R2_CHIso_GNoIso_EB_nj45;
 TH3D* h_MR_R2_CHIso_GNoIso_EB_nj6;
-TH3D* h_MR_R2_CHIso_GNoIso_EE_nj35;
 TH3D* h_MR_R2_CHIso_GNoIso_EE_nj45;
 TH3D* h_MR_R2_CHIso_GNoIso_EE_nj6;
 TH3D* h_MR_R2_CHIso_gNoIso_EB; // For purity in data (G-1)
 TH3D* h_MR_R2_CHIso_gNoIso_EE;
-TH3D* h_MR_R2_CHIso_gNoIso_EB_nj35;
 TH3D* h_MR_R2_CHIso_gNoIso_EB_nj45;
 TH3D* h_MR_R2_CHIso_gNoIso_EB_nj6;
-TH3D* h_MR_R2_CHIso_gNoIso_EE_nj35;
 TH3D* h_MR_R2_CHIso_gNoIso_EE_nj45;
 TH3D* h_MR_R2_CHIso_gNoIso_EE_nj6;
 TH3D* h_MR_R2_IsDirect_G_EB; // MC truth for direct fraction
 TH3D* h_MR_R2_IsDirect_G_EE;
 TH2D* h_MR_R2_S; // Counts for Transfer factor: S(mc)/G(mc)
-TH2D* h_MR_R2_S_nj35;
 TH2D* h_MR_R2_S_nj45;
 TH2D* h_MR_R2_S_nj6;
 TH2D* h_MR_R2_G_DirectPrompt;
-TH2D* h_MR_R2_G_DirectPrompt_nj35;
 TH2D* h_MR_R2_G_DirectPrompt_nj45;
 TH2D* h_MR_R2_G_DirectPrompt_nj6;
 TH2D* h_MR_R2_Z; // Double ratio: [G(data)/G(mc)] / [Z(ll,data)/Z(ll,mc)]
-TH2D* h_MR_R2_Z_nj35;
 TH2D* h_MR_R2_Z_nj45;
 TH2D* h_MR_R2_Z_nj6;
 TH2D* h_MR_R2_G;
-TH2D* h_MR_R2_G_nj35;
 TH2D* h_MR_R2_G_nj45;
 TH2D* h_MR_R2_G_nj6;
 // 1 Lepton estimate
 TH2D* h_MR_R2_L;
-TH2D* h_MR_R2_L_nj35;
 TH2D* h_MR_R2_L_nj45;
 TH2D* h_MR_R2_L_nj6;
 // Q' closure
 TH2D* h_MR_R2_q;
-TH2D* h_MR_R2_q_nj35;
 TH2D* h_MR_R2_q_nj45;
 TH2D* h_MR_R2_q_nj6;
 
@@ -2559,17 +2673,14 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
       if (isData) {
 	// Data
 	vh_MRR2_data     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-	vh_MRR2_data_nj35.push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	vh_MRR2_data_nj45.push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj45").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	vh_MRR2_data_nj6 .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_data_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
       } else if (!isSignal) {
 	// Background
 	vvh_MRR2_bkg     .push_back(std::vector<TH1D*>());
-	vvh_MRR2_bkg_nj35.push_back(std::vector<TH1D*>());
 	vvh_MRR2_bkg_nj45.push_back(std::vector<TH1D*>());
 	vvh_MRR2_bkg_nj6 .push_back(std::vector<TH1D*>());
 	vvh_MRR2_bkg[i]     .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg").c_str(),      ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-	vvh_MRR2_bkg_nj35[i].push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	vvh_MRR2_bkg_nj45[i].push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj45").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	vvh_MRR2_bkg_nj6[i] .push_back(new TH1D((std::string("MRR2_")+regions[i]+"_bkg_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	for (size_t j=0; j<syst.size(); ++j) {
@@ -2577,10 +2688,6 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
 	  ss<<"MRR2_"<<regions[i]<<"_bkg_"<<syst[j];
 	  vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	  vvh_MRR2_bkg[i].push_back(new TH1D((ss.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-	  std::stringstream ss35;
-	  ss35<<"MRR2_"<<regions[i]<<"_bkg_nj35_"<<syst[j];
-	  vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss35.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-	  vvh_MRR2_bkg_nj35[i].push_back(new TH1D((ss35.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	  std::stringstream ss45;
 	  ss45<<"MRR2_"<<regions[i]<<"_bkg_nj45_"<<syst[j];
 	  vvh_MRR2_bkg_nj45[i].push_back(new TH1D((ss45.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
@@ -2675,10 +2782,8 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   // Histos for the Z(nunu) estimate
   h_MR_R2_G_EB                 = new TH2D("MR_R2_G_EB",                 "G region, EB;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
   h_MR_R2_G_EE                 = new TH2D("MR_R2_G_EE",                 "G region, EE;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_G_EB_nj35            = new TH2D("MR_R2_G_EB_nj35",            "G region, EB, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_EB_nj45            = new TH2D("MR_R2_G_EB_nj45",            "G region, EB, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_EB_nj6             = new TH2D("MR_R2_G_EB_nj6",             "G region, EB, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
-  h_MR_R2_G_EE_nj35            = new TH2D("MR_R2_G_EE_nj35 ",           "G region, EE, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_EE_nj45            = new TH2D("MR_R2_G_EE_nj45 ",           "G region, EE, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_EE_nj6             = new TH2D("MR_R2_G_EE_nj6",             "G region, EE, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_CHIsoTemplate_Fake_g_EB    = new TH3D("CHIsoTemplate_Fake_g_EB",    "G-1 region, EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
@@ -2689,44 +2794,34 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_CHIsoTemplate_Prompt_g_EE  = new TH3D("CHIsoTemplate_Prompt_g_EE",  "G-1 region, EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EB      = new TH3D("MR_R2_CHIso_GNoIso_EB",      "G region (w/o CH iso.), EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EE      = new TH3D("MR_R2_CHIso_GNoIso_EE",      "G region (w/o CH iso.), EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
-  h_MR_R2_CHIso_GNoIso_EB_nj35 = new TH3D("MR_R2_CHIso_GNoIso_EB_nj35", "G region (w/o CH iso.), EB nj35;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EB_nj45 = new TH3D("MR_R2_CHIso_GNoIso_EB_nj45", "G region (w/o CH iso.), EB nj45;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EB_nj6  = new TH3D("MR_R2_CHIso_GNoIso_EB_nj6",  "G region (w/o CH iso.), EB nj6-;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
-  h_MR_R2_CHIso_GNoIso_EE_nj35 = new TH3D("MR_R2_CHIso_GNoIso_EE_nj35 ","G region (w/o CH iso.), EE nj35;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EE_nj45 = new TH3D("MR_R2_CHIso_GNoIso_EE_nj45 ","G region (w/o CH iso.), EE nj45;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_GNoIso_EE_nj6  = new TH3D("MR_R2_CHIso_GNoIso_EE_nj6",  "G region (w/o CH iso.), EE nj6-;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EB      = new TH3D("MR_R2_CHIso_gNoIso_EB",      "G-1 region (w/o CH iso.), EB;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EE      = new TH3D("MR_R2_CHIso_gNoIso_EE",      "G-1 region (w/o CH iso.), EE;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)",      5,mrbins, 5,r2bins, 20,chisobins);
-  h_MR_R2_CHIso_gNoIso_EB_nj35 = new TH3D("MR_R2_CHIso_gNoIso_EB_nj35", "G-1 region (w/o CH iso.), EB nj35;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EB_nj45 = new TH3D("MR_R2_CHIso_gNoIso_EB_nj45", "G-1 region (w/o CH iso.), EB nj45;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EB_nj6  = new TH3D("MR_R2_CHIso_gNoIso_EB_nj6",  "G-1 region (w/o CH iso.), EB nj6-;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
-  h_MR_R2_CHIso_gNoIso_EE_nj35 = new TH3D("MR_R2_CHIso_gNoIso_EE_nj35 ","G-1 region (w/o CH iso.), EE nj35;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EE_nj45 = new TH3D("MR_R2_CHIso_gNoIso_EE_nj45 ","G-1 region (w/o CH iso.), EE nj45;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EE_nj6  = new TH3D("MR_R2_CHIso_gNoIso_EE_nj6",  "G-1 region (w/o CH iso.), EE nj6-;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_IsDirect_G_EB        = new TH3D("MR_R2_IsDirect_G_EB",        "G region, EB;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins, 2,isdirectbins);
   h_MR_R2_IsDirect_G_EE        = new TH3D("MR_R2_IsDirect_G_EE",        "G region, EE;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins, 2,isdirectbins);
   h_MR_R2_S                    = new TH2D("MR_R2_S",                    "S region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_S_nj35               = new TH2D("MR_R2_S_nj35",               "S region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_S_nj45               = new TH2D("MR_R2_S_nj45",               "S region, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_S_nj6                = new TH2D("MR_R2_S_nj6",                "S region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_DirectPrompt       = new TH2D("MR_R2_G_DirectPrompt",       "G region (direct,prompt #gamma);M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_G_DirectPrompt_nj35  = new TH2D("MR_R2_G_DirectPrompt_nj35",  "G region (direct,prompt #gamma), nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_DirectPrompt_nj45  = new TH2D("MR_R2_G_DirectPrompt_nj45",  "G region (direct,prompt #gamma), nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_DirectPrompt_nj6   = new TH2D("MR_R2_G_DirectPrompt_nj6",   "G region (direct,prompt #gamma), nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_Z                    = new TH2D("MR_R2_Z",                    "Z region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_Z_nj35               = new TH2D("MR_R2_Z_nj35",               "Z region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_Z_nj45               = new TH2D("MR_R2_Z_nj45",               "Z region, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_Z_nj6                = new TH2D("MR_R2_Z_nj6",                "Z region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G                    = new TH2D("MR_R2_G",                    "G region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_G_nj35               = new TH2D("MR_R2_G_nj35",               "G region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_nj45               = new TH2D("MR_R2_G_nj45",               "G region, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_G_nj6                = new TH2D("MR_R2_G_nj6",                "G region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_L                    = new TH2D("MR_R2_L",                    "L region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_L_nj35               = new TH2D("MR_R2_L_nj35",               "L region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_L_nj45               = new TH2D("MR_R2_L_nj45",               "L region, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_L_nj6                = new TH2D("MR_R2_L_nj6",                "L region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q                    = new TH2D("MR_R2_q",                    "q region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
-  h_MR_R2_q_nj35               = new TH2D("MR_R2_q_nj35",               "q region, nj35;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q_nj45               = new TH2D("MR_R2_q_nj45",               "q region, nj45;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
   h_MR_R2_q_nj6                = new TH2D("MR_R2_q_nj6",                "q region, nj6-;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins);
 }
@@ -2807,17 +2902,13 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	  bool EB = std::abs(d.pho.SCEta[iPhotonSelect[0]])<1.479;
 	  if (EB) h_MR_R2_G_EB->Fill(MR_pho, R2_pho);
 	  else    h_MR_R2_G_EE->Fill(MR_pho, R2_pho);
-	  if (nJetNoPho<6) {
-	    if (EB) h_MR_R2_G_EB_nj35->Fill(MR_pho, R2_pho);
-	    else    h_MR_R2_G_EE_nj35->Fill(MR_pho, R2_pho);
-	  } else {
-	    if (EB) h_MR_R2_G_EB_nj6->Fill(MR_pho, R2_pho);
-	    else    h_MR_R2_G_EE_nj6->Fill(MR_pho, R2_pho);
-	  }
 	  if (nJetNoPho>=4) {
 	    if (nJetNoPho<6) {
 	      if (EB) h_MR_R2_G_EB_nj45->Fill(MR_pho, R2_pho);
 	      else    h_MR_R2_G_EE_nj45->Fill(MR_pho, R2_pho);
+	    } else {
+	      if (EB) h_MR_R2_G_EB_nj6->Fill(MR_pho, R2_pho);
+	      else    h_MR_R2_G_EE_nj6->Fill(MR_pho, R2_pho);
 	    }
 	  }
 	}
@@ -2825,8 +2916,10 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	if (apply_all_cuts_except('g',"1Pho")) {
 	  if (nPhotonFake==1) {
 	    bool EB = std::abs(d.pho.SCEta[iPhotonFake[0]])<1.479;
-	    if (EB) h_CHIsoTemplate_Fake_g_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonFake[0]], sf_weight['g']);
-	    else    h_CHIsoTemplate_Fake_g_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonFake[0]], sf_weight['g']);
+	    //if (EB) h_CHIsoTemplate_Fake_g_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonFake[0]], sf_weight['g']);
+	    //else    h_CHIsoTemplate_Fake_g_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonFake[0]], sf_weight['g']);
+	    if (EB) h_CHIsoTemplate_Fake_g_EB->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonFake[0]], sf_weight['g']);
+	    else    h_CHIsoTemplate_Fake_g_EE->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonFake[0]], sf_weight['g']);
 	  }
 	}
       } else if (isBackground) {
@@ -2836,11 +2929,15 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	    if (d.pho.SigmaIEtaIEta[iPhotonPreSelect[0]] < (std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479 ? 0.01022 : 0.03001)) {
 	      bool EB = std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479;
 	      if (d.pho.isPromptDirect[iPhotonPreSelect[0]]==1||d.pho.isPromptFrag[iPhotonPreSelect[0]]==1) {
-		if (EB) h_CHIsoTemplate_Prompt_g_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
-		else    h_CHIsoTemplate_Prompt_g_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
+		//if (EB) h_CHIsoTemplate_Prompt_g_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
+		//else    h_CHIsoTemplate_Prompt_g_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
+		if (EB) h_CHIsoTemplate_Prompt_g_EB->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]], sf_weight['g']);
+		else    h_CHIsoTemplate_Prompt_g_EE->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]], sf_weight['g']);
 	      } else {
-		if (EB) h_CHIsoTemplate_Fake_g_EB_MC->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
-		else    h_CHIsoTemplate_Fake_g_EE_MC->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
+		//if (EB) h_CHIsoTemplate_Fake_g_EB_MC->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
+		//else    h_CHIsoTemplate_Fake_g_EE_MC->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]], sf_weight['g']);
+		if (EB) h_CHIsoTemplate_Fake_g_EB_MC->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]], sf_weight['g']);
+		else    h_CHIsoTemplate_Fake_g_EE_MC->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]], sf_weight['g']);
 	      }
 	    }
 	  }
@@ -2853,19 +2950,21 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	    if (d.pho.SigmaIEtaIEta[iPhotonPreSelect[0]] < (std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479 ? 0.01022 : 0.03001)) {
 	      // Select 1 photon with CHIso N-1 cuts
 	      bool EB = std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479;
-	      if (EB) h_MR_R2_CHIso_GNoIso_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      else    h_MR_R2_CHIso_GNoIso_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      if (nJetNoPho<6) {
-		if (EB) h_MR_R2_CHIso_GNoIso_EB_nj35->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-		else    h_MR_R2_CHIso_GNoIso_EE_nj35->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      } else {
-		if (EB) h_MR_R2_CHIso_GNoIso_EB_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-		else    h_MR_R2_CHIso_GNoIso_EE_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      }
+	      //if (EB) h_MR_R2_CHIso_GNoIso_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+	      //else    h_MR_R2_CHIso_GNoIso_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+	      if (EB) h_MR_R2_CHIso_GNoIso_EB->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+	      else    h_MR_R2_CHIso_GNoIso_EE->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
 	      if (nJetNoPho>=4) {
 		if (nJetNoPho<6) {
-		  if (EB) h_MR_R2_CHIso_GNoIso_EB_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-		  else    h_MR_R2_CHIso_GNoIso_EE_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  //if (EB) h_MR_R2_CHIso_GNoIso_EB_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  //else    h_MR_R2_CHIso_GNoIso_EE_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  if (EB) h_MR_R2_CHIso_GNoIso_EB_nj45->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+		  else    h_MR_R2_CHIso_GNoIso_EE_nj45->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+		} else {
+		  //if (EB) h_MR_R2_CHIso_GNoIso_EB_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  //else    h_MR_R2_CHIso_GNoIso_EE_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  if (EB) h_MR_R2_CHIso_GNoIso_EB_nj6->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+		  else    h_MR_R2_CHIso_GNoIso_EE_nj6->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
 		}
 	      }
 	    }
@@ -2877,19 +2976,21 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	    if (d.pho.SigmaIEtaIEta[iPhotonPreSelect[0]] < (std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479 ? 0.01022 : 0.03001)) {
 	      // Select 1 photon with CHIso N-1 cuts
 	      bool EB = std::abs(d.pho.SCEta[iPhotonPreSelect[0]])<1.479;
-	      if (EB) h_MR_R2_CHIso_gNoIso_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      else    h_MR_R2_CHIso_gNoIso_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      if (nJetNoPho<6) {
-		if (EB) h_MR_R2_CHIso_gNoIso_EB_nj35->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-		else    h_MR_R2_CHIso_gNoIso_EE_nj35->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      } else {
-		if (EB) h_MR_R2_CHIso_gNoIso_EB_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-		else    h_MR_R2_CHIso_gNoIso_EE_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-	      }
+	      //if (EB) h_MR_R2_CHIso_gNoIso_EB->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+	      //else    h_MR_R2_CHIso_gNoIso_EE->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+	      if (EB) h_MR_R2_CHIso_gNoIso_EB->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+	      else    h_MR_R2_CHIso_gNoIso_EE->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
 	      if (nJetNoPho>=4) {
 		if (nJetNoPho<6) {
-		  if (EB) h_MR_R2_CHIso_gNoIso_EB_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
-		  else    h_MR_R2_CHIso_gNoIso_EE_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  //if (EB) h_MR_R2_CHIso_gNoIso_EB_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  //else    h_MR_R2_CHIso_gNoIso_EE_nj45->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  if (EB) h_MR_R2_CHIso_gNoIso_EB_nj45->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+		  else    h_MR_R2_CHIso_gNoIso_EE_nj45->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+		} else {
+		  //if (EB) h_MR_R2_CHIso_gNoIso_EB_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  //else    h_MR_R2_CHIso_gNoIso_EE_nj6->Fill(MR_pho, R2_pho, ChargedHadronIsoEACorr[iPhotonPreSelect[0]]);
+		  if (EB) h_MR_R2_CHIso_gNoIso_EB_nj6->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
+		  else    h_MR_R2_CHIso_gNoIso_EE_nj6->Fill(MR_pho, R2_pho, d.pho.ChargedHadronIso[iPhotonPreSelect[0]]);
 		}
 	      }
 	    }
@@ -2898,6 +2999,7 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
       } else if (isBackground) {
 	// Direct photon ratio from MC
 	if (apply_all_cuts('G')) {
+	  //std::cout<<"Pass G: "<<MR_pho<<" "<<R2_pho<<" "<<d.evt.RunNumber<<" "<<d.evt.LumiBlock<<" "<<d.evt.EventNumber<<std::endl;
 	  if (d.pho.isPromptDirect[iPhotonSelect[0]]==1||d.pho.isPromptFrag[iPhotonSelect[0]]==1) {
 	    bool EB = std::abs(d.pho.SCEta[iPhotonSelect[0]])<1.479;
 	    if (EB) h_MR_R2_IsDirect_G_EB->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]], sf_weight['G']);
@@ -2906,10 +3008,9 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	  // Prompt direct photons in G control region
 	  if (d.pho.isPromptDirect[iPhotonSelect[0]]==1) {
 	    h_MR_R2_G_DirectPrompt->Fill(MR_pho, R2_pho, sf_weight['G']);
-	    if (nJetNoPho<6) h_MR_R2_G_DirectPrompt_nj35->Fill(MR_pho, R2_pho, sf_weight['G']);
-	    else             h_MR_R2_G_DirectPrompt_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
 	    if (nJetNoPho>=4) {
 	      if (nJetNoPho<6) h_MR_R2_G_DirectPrompt_nj45->Fill(MR_pho, R2_pho, sf_weight['G']);
+	      else             h_MR_R2_G_DirectPrompt_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
 	    }
 	  }
 	}
@@ -2917,44 +3018,39 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
       // Counts for transfer factors/ratios
       if (apply_all_cuts('S')) {
 	h_MR_R2_S->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
-	if (nJet<6) h_MR_R2_S_nj35->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
-	else        h_MR_R2_S_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
 	if (nJet>=4) {
 	  if (nJet<6) h_MR_R2_S_nj45->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
+	  else        h_MR_R2_S_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['S']);
 	}
       }
       // photon/1-lepton/2-lepton estimates
       if (apply_all_cuts('Z')) {
 	h_MR_R2_Z->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
-	if (nJet<6) h_MR_R2_Z_nj35->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
-	else        h_MR_R2_Z_nj6 ->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
 	if (nJet>=4) {
 	  if (nJet<6) h_MR_R2_Z_nj45->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
+	  else        h_MR_R2_Z_nj6 ->Fill(d.evt.MR, R2_ll, sf_weight['Z']);
 	}
       }
       if (apply_all_cuts('L')) {
 	h_MR_R2_L->Fill(d.evt.MR, R2_1l, sf_weight['L']);
-	if (nJet<6) h_MR_R2_L_nj35->Fill(d.evt.MR, R2_1l, sf_weight['L']);
-	else        h_MR_R2_L_nj6 ->Fill(d.evt.MR, R2_1l, sf_weight['L']);
 	if (nJet>=4) {
 	  if (nJet<6) h_MR_R2_L_nj45->Fill(d.evt.MR, R2_1l, sf_weight['L']);
+	  else        h_MR_R2_L_nj6 ->Fill(d.evt.MR, R2_1l, sf_weight['L']);
 	}
       }
       if (apply_all_cuts('G')) {
 	h_MR_R2_G->Fill(MR_pho, R2_pho, sf_weight['G']);
-	if (nJetNoPho<6) h_MR_R2_G_nj35->Fill(MR_pho, R2_pho, sf_weight['G']);
-	else             h_MR_R2_G_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
 	if (nJetNoPho>=4) {
 	  if (nJetNoPho<6) h_MR_R2_G_nj45->Fill(MR_pho, R2_pho, sf_weight['G']);
+	  else             h_MR_R2_G_nj6 ->Fill(MR_pho, R2_pho, sf_weight['G']);
 	}
       }
       // closure test in Q'
       if (apply_all_cuts('q')) {
 	h_MR_R2_q->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
-	if (nJet<6) h_MR_R2_q_nj35->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
-	else        h_MR_R2_q_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
 	if (nJet>=4) {
 	  if (nJet<6) h_MR_R2_q_nj45->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
+	  else        h_MR_R2_q_nj6 ->Fill(d.evt.MR, d.evt.R2, sf_weight['q']);
 	}
       }
 
@@ -2970,10 +3066,9 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	    int MRR2_bin = calc_mrr2_bin(d, regions[i]);
             if (this->apply_all_cuts(regions[i])) {
               vh_MRR2_data[i]->Fill(MRR2_bin);
-              if (nJet<6) vh_MRR2_data_nj35[i]->Fill(MRR2_bin);
-              else        vh_MRR2_data_nj6[i] ->Fill(MRR2_bin);
 	      if (nJet>=4) {
 		if (nJet<6) vh_MRR2_data_nj45[i]->Fill(MRR2_bin);
+		else        vh_MRR2_data_nj6[i] ->Fill(MRR2_bin);
 	      }
             }
           }
@@ -2992,10 +3087,9 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
           uint32_t signal_bin = mMother * 10000 + mLSP;
 	  int MRR2_bin = calc_mrr2_bin(d, 'S');
           m_vh_MRR2_sig[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
-          if (nJet<6) m_vh_MRR2_sig_nj35[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
-          else        m_vh_MRR2_sig_nj6 [signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
 	  if (nJet>=4) {
 	    if (nJet<6) m_vh_MRR2_sig_nj45[signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
+	    else        m_vh_MRR2_sig_nj6 [signal_bin][syst_index]->Fill(MRR2_bin, sf_weight['S']);
 	  }
 	  // npv for Signal
 	  if (TString(sample).Contains("T2tt")) {
@@ -3010,20 +3104,18 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
           if (apply_all_cuts(regions[i])) {
 	    int MRR2_bin = calc_mrr2_bin(d, regions[i]);
             vvh_MRR2_bkg[i][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
-            if (nJet<6) vvh_MRR2_bkg_nj35[i][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
-            else        vvh_MRR2_bkg_nj6 [i][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
 	    if (nJet>=4) {
 	      if (nJet<6) vvh_MRR2_bkg_nj45[i][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
+	      else        vvh_MRR2_bkg_nj6 [i][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
 	    }
 	    if (regions[i]=='G') {
 	      // Save also the direct prompt photons for G region
 	      // Needed for transfer factors
 	      if (d.pho.isPromptDirect[iPhotonSelect[0]]==1) {
 		vvh_MRR2_bkg[i+1][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
-		if (nJet<6) vvh_MRR2_bkg_nj35[i+1][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
-		else        vvh_MRR2_bkg_nj6 [i+1][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
 		if (nJet>=4) {
 		  if (nJet<6) vvh_MRR2_bkg_nj45[i+1][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
+		  else        vvh_MRR2_bkg_nj6 [i+1][syst_index]->Fill(MRR2_bin, sf_weight[regions[i]]);
 		}
 	      }
 	    }
@@ -3225,23 +3317,18 @@ AnalysisBase::calc_weightnorm_histo_from_ntuple(const std::vector<std::string>& 
     // Declare systematics histos for Signals
     for (const auto& bin : signal_bins) {
       m_vh_MRR2_sig     [bin.first] = std::vector<TH1D*>();
-      m_vh_MRR2_sig_nj35[bin.first] = std::vector<TH1D*>();
       m_vh_MRR2_sig_nj45[bin.first] = std::vector<TH1D*>();
       m_vh_MRR2_sig_nj6 [bin.first] = std::vector<TH1D*>();
       m_vh_MRR2_sig     [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second).c_str(),         ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-      m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj35").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
       m_vh_MRR2_sig_nj45[bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj45").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
       m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((std::string("MRR2_S_signal")+bin.second+"_nj6").c_str(),  ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
       for (size_t j=0; j<syst.size(); ++j) {
-	std::stringstream ss, ss35, ss45, ss6;
+	std::stringstream ss, ss45, ss6;
 	ss  <<"MRR2_S_signal"<<bin.second<<"_"<<syst[j];
-	ss35<<"MRR2_S_signal"<<bin.second<<"_nj35_"<<syst[j];
 	ss45<<"MRR2_S_signal"<<bin.second<<"_nj45_"<<syst[j];
 	ss6 <<"MRR2_S_signal"<<bin.second<<"_nj6_"<<syst[j];
 	m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss.str()+"Up").c_str(),     ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	m_vh_MRR2_sig     [bin.first].push_back(new TH1D((ss.str()+"Down").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-	m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss35.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
-	m_vh_MRR2_sig_nj35[bin.first].push_back(new TH1D((ss35.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	m_vh_MRR2_sig_nj45[bin.first].push_back(new TH1D((ss45.str()+"Up").c_str(),   ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	m_vh_MRR2_sig_nj45[bin.first].push_back(new TH1D((ss45.str()+"Down").c_str(), ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
 	m_vh_MRR2_sig_nj6 [bin.first].push_back(new TH1D((ss6.str()+"Up").c_str(),    ";MR/R^{2} bins (unrolled);Counts", 25,0,25));
@@ -3791,14 +3878,25 @@ void AnalysisBase::init_syst_input() {
   // eff_trigger = new TGraphAsymmErrors(pass, total);
 
   // 2D Trigger Efficiency (New) - Use combination of SingleElectron + MET datasets
+#if USE_ISO_TRK_VETO > 0
+  TH2D* veto_pass_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/MET.root",            "trigger2d_pass",   "trig1");
+  TH2D* veto_total_2d = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/MET.root",            "trigger2d_total",  "trig2");
+  TH2D* ele_pass_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/SingleElectron.root", "trigger2d_pass",   "trig3");
+  TH2D* ele_total_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/SingleElectron.root", "trigger2d_total",  "trig4");
+  TH2D* mu_pass_2d    = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/SingleMuon.root",     "trigger2d_pass",   "trig5");
+  TH2D* mu_total_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/SingleMuon.root",     "trigger2d_total",  "trig6");
+  TH2D* pho_pass_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/SingleElectron.root", "trigger2d_pass",   "trig7");
+  TH2D* pho_total_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/SingleElectron.root", "trigger2d_total",  "trig8");
+#else
   TH2D* veto_pass_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/MET.root",            "trigger2d_pass",   "trig1");
   TH2D* veto_total_2d = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/MET.root",            "trigger2d_total",  "trig2");
   TH2D* ele_pass_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_pass",   "trig3");
   TH2D* ele_total_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_total",  "trig4");
   TH2D* mu_pass_2d    = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleMuon.root",     "trigger2d_pass",   "trig5");
   TH2D* mu_total_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleMuon.root",     "trigger2d_total",  "trig6");
-  TH2D* pho_pass_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_pass",   "trig3");
-  TH2D* pho_total_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_total",  "trig4");
+  TH2D* pho_pass_2d   = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_pass",   "trig7");
+  TH2D* pho_total_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON/SingleElectron.root", "trigger2d_total",  "trig8");
+#endif
   eff_trigger_veto      = (TH2D*)veto_total_2d->Clone("eff_trigger_veto");      eff_trigger_veto     ->Reset();
   eff_trigger_veto_up   = (TH2D*)veto_total_2d->Clone("eff_trigger_veto_up");   eff_trigger_veto_up  ->Reset();
   eff_trigger_veto_down = (TH2D*)veto_total_2d->Clone("eff_trigger_veto_down"); eff_trigger_veto_down->Reset();
@@ -3887,6 +3985,30 @@ void AnalysisBase::init_syst_input() {
   //    eff_fast_bTop         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap.root", "bTopFF",  "fast_bTop");
   //    eff_fast_eTop         = utils::getplot_TH1D("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap.root", "eTopFF",  "fast_eTop");
   // From Janos
+#if USE_ISO_TRK_VETO > 0
+  eff_full_fake_bW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "bW",      "full_fake_W_barrel");
+  eff_full_fake_eW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "eW",      "full_fake_W_endcap");
+  eff_full_fake_bm0bW   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "bm0bW",   "full_fake_m0bW_barrel");
+  eff_full_fake_em0bW   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "em0bW",   "full_fake_m0bW_endcap");
+  eff_full_fake_baW     = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "baW",     "full_fake_aW_barrel");
+  eff_full_fake_eaW     = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "eaW",     "full_fake_aW_endcap");
+  eff_full_fake_bTop    = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "bTop",    "full_fake_Top_barrel");
+  eff_full_fake_eTop    = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "eTop",    "full_fake_Top_endcap");
+  eff_full_fake_bmTop   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "bmTop",   "full_fake_mTop_barrel");
+  eff_full_fake_emTop   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "emTop",   "full_fake_mTop_endcap");
+  eff_full_fake_bm0bTop = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "bm0bTop", "full_fake_0bmTop_barrel");
+  eff_full_fake_em0bTop = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "em0bTop", "full_fake_0bmTop_endcap");
+  eff_full_fake_baTop   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "baTop",   "full_fake_aTop_barrel");
+  eff_full_fake_eaTop   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos_IsoTrkVeto.root",                             "eaTop",   "full_fake_aTop_endcap");
+  eff_fast_bW           = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "bWFF",    "fast_bW");
+  eff_fast_eW           = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "eWFF",    "fast_eW");
+  eff_fast_bTop         = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "bTopFF",  "fast_bTop");
+  eff_fast_eTop         = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "eTopFF",  "fast_eTop");
+  eff_fast_fake_bW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "bMWFF",   "fast_fake_bW");
+  eff_fast_fake_eW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "eMWFF",   "fast_fake_eW");
+  eff_fast_fake_bTop    = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "bMTopFF", "fast_fake_bTop");
+  eff_fast_fake_eTop    = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos_IsoTrkVeto.root", "eMTopFF", "fast_fake_eTop");
+#else
   eff_full_fake_bW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos.root",                             "bW",      "full_fake_W_barrel");
   eff_full_fake_eW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos.root",                             "eW",      "full_fake_W_endcap");
   eff_full_fake_bm0bW   = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/WTopTagSF_Janos.root",                             "bm0bW",   "full_fake_m0bW_barrel");
@@ -3909,6 +4031,7 @@ void AnalysisBase::init_syst_input() {
   eff_fast_fake_eW      = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos.root", "eMWFF",   "fast_fake_eW");
   eff_fast_fake_bTop    = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos.root", "bMTopFF", "fast_fake_bTop");
   eff_fast_fake_eTop    = utils::getplot_TGraphAsymmErrors("scale_factors/w_top_tag/fastsim/FullFastSimTagSF_BarrelEndcap_Janos.root", "eMTopFF", "fast_fake_eTop");
+#endif
 }
 
 
@@ -4215,25 +4338,25 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
     double eta     = data.ele.Eta[i];
     float abseta   = std::abs(eta);
     float miniIso  = data.ele.MiniIso[i];
-//  float absIso   = data.ele.Iso03[i]*pt;
     float absd0    = std::abs(data.ele.Dxy[i]);
     float absdz    = std::abs(data.ele.Dz[i]);
-//  float ipsig    = std::abs(data.ele.DB[i])/data.ele.DBerr[i];
 #if USE_MVA_ID == 1
-//  // https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=210#Electrons
-//  //VLoose WP, pT > 10 GeV. A/B values are -0.48/-0.85, -0.67/-0.91, -0.49/-0.83 for |eta| [0, 0.8], [0.8, 1.479], [1.479, 2.5]
-//  //  In addition, for pT 5-10, the following values are used on the HZZ MVA: 0.46, -0.03, 0.06 for |eta| [0, 0.8], [0.8, 1.479], [1.479, 2.5] 
-//  int categ = data.ele.vidMvaHZZcateg[i];
-//  double mva = categ<3 ? data.ele.vidMvaHZZvalue[i] : data.ele.vidMvaGPvalue[i];
-//  std::vector<double> veto_cut = { 
-//    // pt<10
-//    0.46, -0.03, 0.06, 
-//    // pt>=10
-//    std::min(-0.48, std::max(-0.85 , -0.48 + (-0.85 - -0.48)/10.0*(pt-15))),
-//    std::min(-0.67, std::max(-0.91 , -0.67 + (-0.91 - -0.67)/10.0*(pt-15))),
-//    std::min(-0.49, std::max(-0.83 , -0.49 + (-0.83 - -0.49)/10.0*(pt-15)))
-//  };
-//  bool id_veto_noiso = (mva>veto_cut[categ]);
+#if USE_POG_ID > 0
+    // https://twiki.cern.ch/twiki/bin/view/CMS/SUSLeptonSF?rev=210#Electrons
+    //VLoose WP, pT > 10 GeV. A/B values are -0.48/-0.85, -0.67/-0.91, -0.49/-0.83 for |eta| [0, 0.8], [0.8, 1.479], [1.479, 2.5]
+    //  In addition, for pT 5-10, the following values are used on the HZZ MVA: 0.46, -0.03, 0.06 for |eta| [0, 0.8], [0.8, 1.479], [1.479, 2.5] 
+    int categ = data.ele.vidMvaHZZcateg[i];
+    double mva = categ<3 ? data.ele.vidMvaHZZvalue[i] : data.ele.vidMvaGPvalue[i];
+    std::vector<double> veto_cut = { 
+      // pt<10
+      0.46, -0.03, 0.06, 
+      // pt>=10
+      std::min(-0.48, std::max(-0.85 , -0.48 + (-0.85 - -0.48)/10.0*(pt-15))),
+      std::min(-0.67, std::max(-0.91 , -0.67 + (-0.91 - -0.67)/10.0*(pt-15))),
+      std::min(-0.49, std::max(-0.83 , -0.49 + (-0.83 - -0.49)/10.0*(pt-15)))
+    };
+    bool id_veto_noiso = (mva>veto_cut[categ]);
+#endif
 #else
     bool id_veto_noiso = (data.ele.vidVetonoiso[i] == 1.0);
 #endif
@@ -4250,23 +4373,21 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
 
     // Veto Electrons
 #if USE_MVA_ID == 1
+#if USE_POG_ID > 0
     // Using previous POG ID scale factors
-    /*
     // Apply ID + IP scale factor
     if ( id_veto_noiso &&
 	 pt      >= ELE_VETO_PT_CUT &&
 	 abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
-//       absd0   <  ELE_VETO_IP_D0_CUT &&
-//       absdz   <  ELE_VETO_IP_DZ_CUT ) {
-	 ipsig   <  ELE_VETO_IP_3D_CUT ) {
+	 absd0   <  ELE_VETO_IP_D0_CUT &&
+	 absdz   <  ELE_VETO_IP_DZ_CUT ) {
       utils::geteff2D(eff_full_ele_mvalooseid_tightip2d, pt, eta, sf, sf_err);
       weight_veto *= get_syst_weight(sf, sf_err, nSigmaEleIDSF);
       if (isFastSim) {
 	utils::geteff2D(eff_fast_ele_mvalooseid_tightip2d, pt, eta, sf, sf_err);
 	weight_veto *= sf;
       }
-      //if ( miniIso <  ELE_VETO_MINIISO_CUT ) {
-      if (pt>20 ? miniIso <  ELE_VETO_MINIISO_CUT : absIso < ELE_VETO_ABSISO_CUT) {
+      if ( miniIso <  ELE_VETO_MINIISO_CUT ) {
 	// Apply Iso scale factor
 	if (ELE_VETO_MINIISO_CUT == 0.1)
 	  utils::geteff2D(eff_full_ele_miniiso01, pt, eta, sf, sf_err);
@@ -4290,7 +4411,7 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
 	weight_veto   *= get_syst_weight(reco_sf, reco_sf_err, nSigmaEleRecoSF);
       }
     }
-    */
+#else
     // Using Razor Inclusive ID
     // Apply Ele Reco + RazorInclusive ID scale factors
     if ( passEleVeto[i] ) {
@@ -4299,6 +4420,7 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
       // Apply the Reco SF
       weight_veto *= get_syst_weight(reco_sf, reco_sf_err, nSigmaEleRecoSF);
     }
+#endif
 #else
     // Apply ID scale factor
     if ( id_veto_noiso &&
@@ -4310,8 +4432,7 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
 	utils::geteff2D(eff_fast_ele_vetoid, pt, eta, sf, sf_err);
 	weight_veto *= sf;
       }
-      //if ( miniIso <  ELE_VETO_MINIISO_CUT &&
-      if ( (pt>20 ? miniIso <  ELE_VETO_MINIISO_CUT : absIso < ELE_VETO_ABSISO_CUT) &&
+      if ( miniIso <  ELE_VETO_MINIISO_CUT &&
            absd0   <  ELE_VETO_IP_D0_CUT &&
            absdz   <  ELE_VETO_IP_DZ_CUT ) {
 	// Apply Iso scale factor
@@ -4429,11 +4550,11 @@ std::tuple<double, double, double> AnalysisBase::calc_muon_sf(DataStruct& data, 
     double eta     = data.mu.Eta[i];
     float abseta   = std::abs(eta);
     float miniIso  = data.mu.MiniIso[i];
-//  float absIso   = data.mu.Iso04[i]*pt;
+#if USE_POG_ID > 0
+    bool id_veto_noiso   = (data.mu.IsLooseMuon[i]  == 1.0);
+#endif
     float absd0    = std::abs(data.mu.Dxy[i]);
     float absdz    = std::abs(data.mu.Dz[i]);
-//  float ipsig = std::abs(data.mu.DB[i])/data.mu.DBerr[i];
-//  bool id_veto_noiso   = (data.mu.IsLooseMuon[i]  == 1.0);
     bool id_loose_noiso  = (data.mu.IsLooseMuon[i]  == 1.0);
     bool id_select_noiso = (data.mu.IsMediumMuon[i] == 1.0);
     // Tacking efficiency scale factor
@@ -4441,16 +4562,14 @@ std::tuple<double, double, double> AnalysisBase::calc_muon_sf(DataStruct& data, 
     utils::geteff_AE(eff_full_muon_trk_veto, eta, trk_sf_veto, trk_sf_veto_err_up, trk_sf_veto_err_down);
 
     // Veto Muons
+#if USE_POG_ID > 0
     // Using previous POG ID scale factors
-    /*
     if ( id_veto_noiso &&
 	 pt      >= MU_VETO_PT_CUT &&
 	 abseta  <  MU_VETO_ETA_CUT &&
-	 //miniIso <  MU_VETO_MINIISO_CUT
-	 (pt>20 ? miniIso <  MU_VETO_MINIISO_CUT : absIso < MU_VETO_ABSISO_CUT) &&
-//       absd0   <  MU_VETO_IP_D0_CUT &&
-//       absdz   <  MU_VETO_IP_DZ_CUT ) {
-	 ipsig   <  MU_VETO_IP_3D_CUT ) {
+	 miniIso <  MU_VETO_MINIISO_CUT &&
+	 absd0   <  MU_VETO_IP_D0_CUT &&
+	 absdz   <  MU_VETO_IP_DZ_CUT ) {
       // Apply ID scale factor
       utils::geteff2D(eff_full_muon_looseid, pt, eta, sf, sf_err);
       weight_veto *= sf;
@@ -4481,7 +4600,7 @@ std::tuple<double, double, double> AnalysisBase::calc_muon_sf(DataStruct& data, 
       // Apply Tracking scale factor here
       weight_veto *= get_syst_weight(trk_sf_veto, trk_sf_veto+trk_sf_veto_err_up, trk_sf_veto-trk_sf_veto_err_down, nSigmaMuonTrkSF);
     }
-    */
+#else
     // Using Razor Inclusive ID
     // Apply Ele Reco + RazorInclusive ID scale factors
     if ( passMuVeto[i] ) {
@@ -4494,6 +4613,7 @@ std::tuple<double, double, double> AnalysisBase::calc_muon_sf(DataStruct& data, 
 	weight_veto *= get_syst_weight(trk_sf, trk_sf+trk_sf_err_up, trk_sf-trk_sf_err_down, nSigmaMuonTrkSF);
       }
     }
+#endif
 
     // Loose Muons
     if ( id_loose_noiso &&

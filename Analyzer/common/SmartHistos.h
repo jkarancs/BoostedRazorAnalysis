@@ -201,6 +201,7 @@ public:
     twocol_ = opt.find("TwoCol")!=std::string::npos;
     addint_ = opt.find("AddInt")!=std::string::npos;
     syst_ = name.find("Counts_vs_")!=std::string::npos;
+    doublex_ = opt.find("DoubleX")!=std::string::npos;
     n_nostack_ = 0;
     if (stack_)    { std::stringstream ss; ss<<opt.substr(opt.find("Stack")   +5,1); ss>>n_nostack_; }
     if (twocol_)   { std::stringstream ss; ss<<opt.substr(opt.find("TwoCol")  +6,2); ss>>twocol_; }
@@ -269,6 +270,7 @@ private:
   size_t n_nostack_; // Do no stack first n plots
   bool plot_asymm_err_; // Decide automatically if histo should be plotted with asymmetric errors (Using TGraphAE)
   bool syst_;
+  bool doublex_; // Double the X-size of the plot area (1000x500)
   
   // axis ranges: xlow, xhigh, ylow, yhigh, zlow, zhigh
   // if low==high -> do not set
@@ -1363,6 +1365,14 @@ private:
         	       int mar_left = 90, int mar_right = 20, int mar_top = 20, int mar_bottom = 60,
 		       int title_align = 33, float title_x = 0.99, float title_y = 0.99) {
     if (std::string(h->GetTitle()).size()>0||approval_) mar_top += 25;
+    // Increase bottom margin to accomodate bin labels
+    bool set_bin_labels = 0;
+    if (!bin_labels_[0].empty()) {
+      size_t maxlength=0;
+      for (const auto& label : bin_labels_[0]) if (label.second.size()>maxlength) maxlength = label.second.size();
+      if (maxlength>6) mar_bottom = maxlength*10;
+      set_bin_labels = 1;
+    }
     float titlefontsize = 32;
     float labelfontsize = 20;
     float yoffset_x = mar_left - titlefontsize - 4;
@@ -1391,6 +1401,7 @@ private:
     h->SetLabelFont(42,"xyz");
     h->SetTitleSize(titlesize,"xyz");
     h->SetLabelSize(labelsize,"xyz");
+    if (set_bin_labels) h->GetXaxis()->SetLabelSize(1.5*labelsize);
     h->GetXaxis()->SetTitleOffset(xoffset);
     h->GetYaxis()->SetTitleOffset(yoffset);
     h->GetZaxis()->SetTitleOffset(zoffset);
@@ -1800,6 +1811,14 @@ private:
     float mid2       = 10;
     float y2         = 115;
     float mar_bottom = 60;
+    // Allow larger space for TLatex bin labels
+    bool set_bin_labels = false;
+    if (!bin_labels_[0].empty()) {
+      size_t maxlength=0;
+      for (const auto& label : bin_labels_[0]) if (label.second.size()>maxlength) maxlength = label.second.size();
+      if (maxlength>6) mar_bottom = maxlength*10;
+      set_bin_labels = true;
+    }
     float mar_left   = 90;
     float x          = 500;
     float mar_right  = 20;
@@ -1922,6 +1941,7 @@ private:
         Data ->SetTitleOffset(Data->GetYaxis()->GetTitleOffset()*heightratio1,"y");
         Data ->SetLabelSize(labelfontsize/padsize1,"xyz");
         ratio->SetLabelSize(labelfontsize/padsize2,"xyz");
+	if (set_bin_labels) ratio->SetLabelSize(labelfontsize*1.5/padsize2,"xyz");
         ratio->SetTitleSize(titlefontsize/padsize2,"xyz");
         ratio->GetYaxis()->SetRangeUser(0,2);
         ratio->GetYaxis()->SetNdivisions(305);
@@ -2172,11 +2192,11 @@ private:
   }
   
   void asym_labels_(TH1D *orig, TGraphAsymmErrors* tgae, int hor_vert_up_down = 1) {
+    if (binlabels_.size()>10) hor_vert_up_down = 1;
     int angle = hor_vert_up_down==0 ? 0 : hor_vert_up_down==1 ? 90 : hor_vert_up_down==2 ? 20 : -20 ;
-    if (binlabels_.size()>10) angle = 90;
     int align = hor_vert_up_down==0 ? 23 : hor_vert_up_down==1 ? 32 : hor_vert_up_down==2 ? 33 : 13;
     if (binlabels_.size()>0) tgae->GetXaxis()->SetLabelColor(0);
-    double labelsize = orig->GetXaxis()->GetLabelSize();
+    double labelsize = orig->GetXaxis()->GetLabelSize()/1.5;
     double min = orig->GetMinimum(), max = orig->GetMaximum();
     double offset = (max-min) * orig->GetXaxis()->GetLabelOffset() * 5;
     for (size_t i=0; i<binlabels_.size(); ++i) {
@@ -2340,8 +2360,10 @@ public:
 	++skip;
 	if (skip==dps1d[i].hvec.size()) break; 
       }
+      // Do not draw data also if the plot is blinded
+      if (approval_/10==5&&skip==0) ++skip;
       if (skip<dps1d[i].hvec.size()) {
-	TCanvas *c = custom_can_(dps1d[i].hvec[skip], dps1d[i].canname);
+	TCanvas *c = custom_can_(dps1d[i].hvec[skip], dps1d[i].canname, 1,1, (1+doublex_)*500,500);
 	bool y_range_set = 0;
 	if (ranges_.size()>=2) if (ranges_[0]!=ranges_[1]) 
 	  dps1d[i].hvec[skip]->GetXaxis()->SetRangeUser(ranges_[0],ranges_[1]);
@@ -2372,7 +2394,7 @@ public:
 	  dps2d[i].h->GetYaxis()->SetRangeUser(ranges_[2],ranges_[3]);
 	if (ranges_.size()>=6) if (ranges_[4]!=ranges_[5]) 
 	  dps2d[i].h->GetZaxis()->SetRangeUser(ranges_[4],ranges_[5]);
-	TCanvas *c = custom_can_(dps2d[i].h, dps2d[i].canname);
+	TCanvas *c = custom_can_(dps2d[i].h, dps2d[i].canname, 0,0, (1+doublex_)*500,500);
 	add_labels_(dps2d[i].h);
 	// Add more custom labels (similar to TLegend header)
 	if (ranges_.size()==8) {

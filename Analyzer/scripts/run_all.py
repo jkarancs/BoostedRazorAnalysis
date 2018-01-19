@@ -29,6 +29,7 @@ parser.add_option("--plot",        dest="plot",        action="store_true", defa
 parser.add_option("--replot",      dest="replot",      action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
 parser.add_option("--recover",     dest="recover",     action="store_true", default=False,   help="Recover stopped task (eg. due to some error)")
 parser.add_option("--nohadd",      dest="nohadd",      action="store_true", default=False,   help="Disable hadding output files")
+parser.add_option("--haddonly",    dest="haddonly",    action="store_true", default=False,   help="Do not submit any jobs, only merge output")
 (opt,args) = parser.parse_args()
 
 # ----------------------  Settings -----------------------
@@ -36,6 +37,7 @@ parser.add_option("--nohadd",      dest="nohadd",      action="store_true", defa
 
 # Output directories/files
 DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
+TMPDIR = "/tmp/"+getpass.getuser()+"/"
 if opt.OUTDIR == "" and not opt.skim and not opt.replot:
     opt.OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
 
@@ -197,11 +199,16 @@ for filelist in input_filelists:
     if opt.useprev:
         # Use previously created lists
         if not opt.skim: options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize weights
+        if opt.recover:
+            saved_path = os.getcwd()
+            os.chdir(EXEC_PATH)
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
+        if opt.recover:
+            os.chdir(saved_path)
         for jobnum in range(1, len(prev_lists)+1):
             tmp_filelist = prev_lists[jobnum-1]
-            args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
-            ana_arguments.append(args)
+            job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
+            ana_arguments.append(job_args)
     elif opt.NEVT != -1 or opt.optim:
         # SPLIT MODE (recommended for batch): Each jobs runs on max opt.NEVT
         JOB_NEVT = opt.NEVT
@@ -228,6 +235,9 @@ for filelist in input_filelists:
                         if samplename == column[1]:
                             JOB_NEVT *= float(column[0]) * 0.8
                             optim_found = True
+                # if no optimization found, use 0.2
+                if not optim_found:
+                    JOB_NEVT *= 0.2
                 ##  # Get information from log files in opt.PREVDIR
                 ##  min_nps  = float(1e6)
                 ##  tot_nevt = float(0)
@@ -273,8 +283,8 @@ for filelist in input_filelists:
                 if i==0 or (totalevt + nevt > JOB_NEVT):
                     jobnum += 1
                     tmp_filelist = filelist.replace("filelists","filelists_tmp").replace(".txt","_"+str(jobnum)+".txt")
-                    args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
-                    ana_arguments.append(args)
+                    job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
+                    ana_arguments.append(job_args)
                     totalevt = 0
                 totalevt += nevt
                 ntry = 0
@@ -306,8 +316,8 @@ for filelist in input_filelists:
                 with open(tmp_filelist, "w") as job_filelist:
                     for i in range((n-1)*opt.NFILE, min(n*opt.NFILE,len(files))):
                         print>>job_filelist, files[i]
-                args = [output_file.replace(".root","_"+str(n)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(n)+".log")]
-                ana_arguments.append(args)
+                job_args = [output_file.replace(".root","_"+str(n)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(n)+".log")]
+                ana_arguments.append(job_args)
     else:
         # In case of a single job/dataset
         ana_arguments.append([output_file, [EXEC_PATH+"/"+filelist], options, log_file])
@@ -467,16 +477,76 @@ def analyzer_job((jobindex)):
                 #print>>script, 'srm-set-permissions -type=CHANGE -group=RW '+EOS_VIKTOR+outpath
     return output_file
 
+def merge_output(ana_arguments, last_known_status):
+    # Check list of files ready to be merged (with hadd)
+    if not os.path.exists(opt.OUTDIR+"/hadd"): special_call(["mkdir", "-p", opt.OUTDIR+"/hadd"], 0)
+    prev_sample = ""
+    mergeables = []
+    all_mergeables = []
+    njob = len(ana_arguments)
+    for i in range(0, njob):
+        job_index = ana_arguments[i][0][:-5].split("_")[-1]
+        sample = ana_arguments[i][0][:-(6+len(job_index))]
+        if sample != prev_sample:
+            prev_sample = sample
+            ready_to_merge = True
+            if len(mergeables)>1: all_mergeables.append(mergeables)
+            mergeables = [sample.rsplit("/",1)[0]+"/hadd/"+sample.rsplit("/",1)[1]+".root"]
+        if ready_to_merge:
+            if last_known_status[i]==0:
+                mergeables.append(ana_arguments[i][0])
+            else:
+                ready_to_merge = False
+                mergeables = []
+    if ready_to_merge: all_mergeables.append(mergeables)
+    # Merge them if they are ready
+    for i in range(0, len(all_mergeables)):
+        if not os.path.exists(all_mergeables[i][0]):
+            if len(all_mergeables[i])>2:
+                print str(len(all_mergeables[i])-1)+" files for "+all_mergeables[i][0]+" are ready to be merged"
+                while not os.path.exists(all_mergeables[i][0]):
+                    logged_call(["hadd", "-f", "-v", "-n", "200"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"))
+                    if os.path.isfile(all_mergeables[i][0]):
+                        if os.path.getsize(all_mergeables[i][0]) < 1000: os.remove(all_mergeables[i][0])
+            else:
+                print "File for "+all_mergeables[i][0]+" is ready"
+                special_call(["cp","-p"]+[all_mergeables[i][1]]+[all_mergeables[i][0]], 0)
+
 
 # Run all Analyzer jobs in parallel
 def analysis(ana_arguments, nproc):
     global opt
     njob = len(ana_arguments)
-    if njob<nproc: nproc = njob
-    print "Running "+str(njob)+" instances of Analyzer jobs:"
-    print
+    if not opt.batch and njob<nproc: nproc = njob
+    output_files = []
     saved_path = os.getcwd()
-    if opt.batch:
+    if opt.haddonly:
+        last_known_status = [-1] * njob # -1: start, 0: finished, time(): last submit/status check
+        for jobindex in range(0, njob):
+            # Check if output file exists and size is larger than 1000 bytes
+            output_file = ana_arguments[jobindex][0]
+            file_size = 0
+            if os.path.isfile(output_file):
+                file_size = os.path.getsize(output_file)
+                if file_size > 1000:
+                    output_files.append(output_file)
+                    last_known_status[jobindex] = 0        
+        merge_output(ana_arguments, last_known_status)
+    elif not opt.batch:
+        print "Running "+str(njob)+" instances of Analyzer jobs:"
+        print
+        # Use the N CPUs in parallel on the current computer to analyze all jobs
+        workers = multiprocessing.Pool(processes=nproc)
+        output_files = workers.map(analyzer_job, range(njob), chunksize=1)
+        workers.close()
+        workers.join()
+        last_known_status = [0] * njob
+        print "All Analyzer jobs finished."
+        if not opt.nohadd:
+            merge_output(ana_arguments, last_known_status)
+    else:
+        print "Running "+str(njob)+" instances of Batch jobs:"
+        print
         # Running on the batch and babysitting all jobs until completion
         output_files = []
         njob = len(ana_arguments)
@@ -514,8 +584,8 @@ def analysis(ana_arguments, nproc):
                         # If the last submission/check is older than 10 minutes check job status with bjobs
                         elif time.time() - last_known_status[jobindex] > (600 if opt.NQUICK<2 else 600/opt.NQUICK):
                             jobname = DATE+'_'+str(jobindex)
-                            logged_call(shlex.split('bjobs -J '+jobname), 'jobstatus_'+jobname+'.txt')
-                            with open('jobstatus_'+jobname+'.txt') as jobstatus:
+                            logged_call(shlex.split('bjobs -J '+jobname), TMPDIR+'jobstatus_'+jobname+'.txt')
+                            with open(TMPDIR+'jobstatus_'+jobname+'.txt') as jobstatus:
                                 lines = jobstatus.readlines()
                                 if 'Job <'+jobname+'> is not found' in lines[0]:
                                     # Job is missing, so resubmit
@@ -525,41 +595,11 @@ def analysis(ana_arguments, nproc):
                                 #    status = lines[1].split()[2]
                                 #    if status == 'PEND' or status == 'RUN':
                                 #        print "Job "+jobname+" is pending/running"
-                            os.remove('jobstatus_'+jobname+'.txt')
+                            os.remove(TMPDIR+'jobstatus_'+jobname+'.txt')
                             last_known_status[jobindex] = time.time()
-                # Check list of files ready to be merged (with hadd)
-                if not os.path.exists(opt.OUTDIR+"/hadd"):
-                    special_call(["mkdir", "-p", opt.OUTDIR+"/hadd"], 0)
-                prev_sample = ""
-                mergeables = []
-                all_mergeables = []
-                for i in range(0, njob):
-                    job_index = ana_arguments[i][0][:-5].split("_")[-1]
-                    sample = ana_arguments[i][0][:-(6+len(job_index))]
-                    if sample != prev_sample:
-                        prev_sample = sample
-                        ready_to_merge = True
-                        if len(mergeables)>1: all_mergeables.append(mergeables)
-                        mergeables = [sample.rsplit("/",1)[0]+"/hadd/"+sample.rsplit("/",1)[1]+".root"]
-                    if ready_to_merge:
-                        if last_known_status[i]==0:
-                            mergeables.append(ana_arguments[i][0])
-                        else:
-                            ready_to_merge = False
-                            mergeables = []
-                if ready_to_merge: all_mergeables.append(mergeables)
-                # Merge them if they are ready
-                for i in range(0, len(all_mergeables)):
-                    if not os.path.exists(all_mergeables[i][0]):
-                        if len(all_mergeables[i])>2:
-                            print str(len(all_mergeables[i])-1)+" files for "+all_mergeables[i][0]+" are ready to be merged"
-                            while not os.path.exists(all_mergeables[i][0]):
-                                logged_call(["hadd", "-f", "-v"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"))
-                                if os.path.isfile(all_mergeables[i][0]):
-                                    if os.path.getsize(all_mergeables[i][0]) < 1000: os.remove(all_mergeables[i][0])
-                        else:
-                            print "File for "+all_mergeables[i][0]+" is ready"
-                            special_call(["cp","-p"]+[all_mergeables[i][1]]+[all_mergeables[i][0]], 0)
+                # Merge output files
+                if not opt.nohadd:
+                    merge_output(ana_arguments, last_known_status)
                 # Print status
                 print "Analyzer jobs on batch (Done/All): "+str(finished)+"/"+str(njob)+"   \r",
                 sys.stdout.flush()
@@ -567,14 +607,6 @@ def analysis(ana_arguments, nproc):
         else:
             for jobindex in range(0, njob):
                 output_files.append(analyzer_job(jobindex))
-    else:
-        # Use the N CPUs in parallel on the current computer to analyze all jobs
-        workers = multiprocessing.Pool(processes=nproc)
-        njob = len(ana_arguments)
-        output_files = workers.map(analyzer_job, range(njob), chunksize=1)
-        workers.close()
-        workers.join()
-        print "All Analyzer jobs finished."
     print
     return output_files
 
