@@ -29,11 +29,11 @@ DATE = "_".join(opt.dir.split("/")[-1].split("_")[1:4])
 
 # ---------------------- Settings ------------------------
 
-
 lumi = 35867 # /pb
 ntuple = "ntuple/Latest"
 combine_bins = True
 binned_k = False
+use_G = True
 
 mrbins = [ 800, 1000, 1200, 1600, 2000, 4000 ]
 r2bins = [ 0.08, 0.12, 0.16, 0.24, 0.4, 2.0 ]
@@ -356,9 +356,12 @@ def combinebins(h, name=""):
     add_bin_labels(h_new, 1, mrbins, r2bins)
     return h_new
 
-def loadclone(f, name, pf=""):
+def loadclone(f, name, pf="", add_postfix=True):
     h = f.Get(name)
-    h_new = h.Clone(name+pf)
+    if add_postfix:
+        h_new = h.Clone(name+pf)
+    else:
+        h_new = h.Clone(pf)        
     h_new.SetDirectory(0)
     return h_new
 
@@ -384,16 +387,31 @@ def calc_factorized_kappa(sr_2d, cr_2d, name, title):
             tf1_err = h_kappa_MR.GetBinError  (binx)
             tf2     = h_kappa_R2.GetBinContent(biny)
             tf2_err = h_kappa_R2.GetBinError  (biny)
+            #if name == "transfer_factor_G_fact":
+            #    print str(binx)+" "+str(biny)+" "+str(tf1)+" "+str(tf2)
             tf     = tf1*tf2
             tf_err = (tf1_err*tf1_err*tf2*tf2 + tf2_err*tf2_err*tf1*tf1) ** 0.5
             h_new.SetBinContent(unrolled_bin, tf)
             h_new.SetBinError  (unrolled_bin, tf_err)
     return h_new
 
-def bg_est(name, data, sub, sr, cr, combine_bins, write=False, binned_k = True):
-    if not ("Up" in name or "Down" in name) and write:
-        sr.Write()
-        cr.Write()
+def bg_est(name, data, sub, sr, cr, combine_bins, binned_k = True, scale=1.0):
+    # Create 1 and 2D versions of the MR-R2 plots
+    if sr.InheritsFrom("TH2"):
+        sr_1d = unroll(sr)
+        sr_2d = sr
+    else:
+        sr_1d = sr
+        sr_2d = rollback(sr)
+    if cr.InheritsFrom("TH2"):
+        cr_1d = unroll(cr)
+        cr_2d = cr
+    else:
+        cr_1d = cr
+        cr_2d = rollback(cr)
+    if not ("Up" in name or "Down" in name):
+        cr_1d.Write()
+        cr_1d.Write()
     # Subtract MC from data counts
     if combine_bins and binned_k:
         est = combinebins(data, name)
@@ -407,7 +425,7 @@ def bg_est(name, data, sub, sr, cr, combine_bins, write=False, binned_k = True):
             est.Add(combinebins(hist, hist.GetName()+"_combined"), -1)
         else:
             est.Add(hist, -1)
-    if not ("Up" in name or "Down" in name) and write: est.Write(name+"_nonzeroed")
+    if not ("Up" in name or "Down" in name): est.Write(name+"_nonzeroed")
     # Zero bins with negative counts
     # Coming from NLO generator scale variations (flipped sign)
     # See thread: https://hypernews.cern.ch/HyperNews/CMS/get/generators/3510.html
@@ -416,37 +434,37 @@ def bg_est(name, data, sub, sr, cr, combine_bins, write=False, binned_k = True):
         if est.GetBinContent(binx)<0:
             est.SetBinContent(binx,0)
             est.SetBinError(binx,0)
-    if not ("Up" in name or "Down" in name) and write: est.Write(name+"_zeroed")
+    if not ("Up" in name or "Down" in name): est.Write(name+"_zeroed")
     # Calculate the transfer factors
     # Binned version
     processname = name.split("_")[0]
-    srname = sr.GetName().split("_")[1].replace("s","S'").replace("q","Q'")
-    crname = cr.GetName().split("_")[1]
-    h_sr = sr.Clone()
-    h_cr = cr.Clone()
+    srname = sr_1d.GetName().split("_")[1].replace("s","S'").replace("q","Q'")
+    crname = cr_1d.GetName().split("_")[1]
+    h_sr = sr_1d.Clone()
+    h_cr = cr_1d.Clone()
     if combine_bins:
-        h_sr = combinebins(h_sr, sr.GetName()+"_combined")
-        h_cr = combinebins(h_cr, cr.GetName()+"_combined")
+        h_sr = combinebins(h_sr, sr_1d.GetName()+"_combined")
+        h_cr = combinebins(h_cr, cr_1d.GetName()+"_combined")
     nbin = h_sr.GetNbinsX()
     h_kappa_binned        = ROOT.TH1D("kappa_binned_"+srname+"_"+crname, ";;"+srname+"/"+crname+" transfer factor", nbin,0,nbin)
     add_bin_labels(h_kappa_binned, combine_bins)
     h_kappa_binned.Divide(h_sr, h_cr)
-    nbin_nocomb = sr.GetNbinsX()
+    nbin_nocomb = sr_1d.GetNbinsX()
     h_kappa_binned_nocomb = ROOT.TH1D("kappa_binned_nocomb_"+srname+"_"+crname, ";;"+srname+"/"+crname+" transfer factor", nbin_nocomb,0,nbin_nocomb)
     add_bin_labels(h_kappa_binned_nocomb, 0)
-    h_kappa_binned_nocomb.Divide(sr, cr)
+    h_kappa_binned_nocomb.Divide(sr_1d, cr_1d)
     # Zero also negative kappas (for binned version only)
     for binx in range(1, h_sr.GetNbinsX()+1):
         if h_kappa_binned.GetBinContent(binx)<0:
             h_kappa_binned.SetBinContent(binx,0)
             h_kappa_binned.SetBinError(binx,0)
-    for binx in range(1, sr.GetNbinsX()+1):
+    for binx in range(1, sr_1d.GetNbinsX()+1):
         if h_kappa_binned_nocomb.GetBinContent(binx)<0:
             h_kappa_binned_nocomb.SetBinContent(binx,0)
             h_kappa_binned_nocomb.SetBinError(binx,0)
     # Factorized form
-    h_kappa_fact = calc_factorized_kappa(rollback(sr), rollback(cr), "kappa_factorized_"+srname+"_"+crname, srname+"/"+crname)
-    if not ("Up" in name or "Down" in name) and write:
+    h_kappa_fact = calc_factorized_kappa(sr_2d, cr_2d, "kappa_factorized_"+srname+"_"+crname, srname+"/"+crname)
+    if not ("Up" in name or "Down" in name):
         h_kappa_binned.Write()
         h_kappa_binned_nocomb.Write()
         h_kappa_fact.Write()
@@ -460,9 +478,11 @@ def bg_est(name, data, sub, sr, cr, combine_bins, write=False, binned_k = True):
     # Merge only the bins after the estimate
     if (not binned_k) and combine_bins:
         est = combinebins(est, name)
+    # If specified, scale the estimate by a factor, eg. with the double ratio
+    if scale != 1.0: est.Scale(scale)
     # Draw kappa comparison plot
     if not ("Up" in name or "Down" in name):
-        if write: est.Write(name+"_est")
+        est.Write(name+"_est")
         can_tf = custom_can(h_kappa_binned, "kappa_"+processname+"_"+srname+"_"+crname+"_"+opt.box, 0,0)
         #can_tf.SetLogy(1)
         h_kappa_binned_nocomb.SetMarkerColor(633)
@@ -501,6 +521,125 @@ def bg_est(name, data, sub, sr, cr, combine_bins, write=False, binned_k = True):
     #        print " - sr: "+str(sr.GetBinContent(binx))
     #        print " - cr : "+str(cr .GetBinContent(binx))
     return est
+
+def zinv_est(name, sr, vh_g_data_promptdirect, g_cr, l_data, l_subtract, l_cr, combine_bins, binned_k, double_ratio):
+    ZInv_est = []
+    # G region based estimate
+    ZInv_est.append(bg_est(name,                vh_g_data_promptdirect[0], [], sr, g_cr, combine_bins, binned_k, double_ratio))
+    ZInv_est.append(bg_est(name+"_purityUp",    vh_g_data_promptdirect[1], [], sr, g_cr, combine_bins, binned_k, double_ratio))
+    ZInv_est.append(bg_est(name+"_purityDown",  vh_g_data_promptdirect[2], [], sr, g_cr, combine_bins, binned_k, double_ratio))
+    ZInv_est.append(bg_est(name+"_dirfracUp",   vh_g_data_promptdirect[3], [], sr, g_cr, combine_bins, binned_k, double_ratio))
+    ZInv_est.append(bg_est(name+"_dirfracDown", vh_g_data_promptdirect[4], [], sr, g_cr, combine_bins, binned_k, double_ratio))
+    ztonunu_photon_est = ZInv_est[0].Clone(name+"_photon_est")
+    # L region based estimate (as an additional systematic)
+    ztonunu_lepton_est = bg_est(name+"_lepest", l_data, l_subtract, sr, l_cr, combine_bins, binned_k)
+    ztonunu_lepton_est.GetXaxis().SetTitle("Z(#nu#nu) 1-lepton estimate")
+    ztonunu_leptonestUp   = ztonunu_lepton_est.Clone("h_"+name+"_leptonestUp")
+    ztonunu_leptonestDown = ztonunu_lepton_est.Clone("h_"+name+"_leptonestDown")
+    for unrolled_bin in range(1, ztonunu_lepton_est.GetNbinsX()+1):
+        zinv_est     = ztonunu_photon_est.GetBinContent(unrolled_bin)
+        zinv_est_err = ztonunu_photon_est.GetBinError(unrolled_bin)
+        lep_est      = ztonunu_lepton_est.GetBinContent(unrolled_bin)
+        lep_est_syst = (max(zinv_est, lep_est) - min(zinv_est, lep_est)) / 2.0
+        ztonunu_leptonestUp  .SetBinContent(unrolled_bin, max(0, zinv_est + lep_est_syst))
+        ztonunu_leptonestDown.SetBinContent(unrolled_bin, max(0, zinv_est - lep_est_syst))
+        ztonunu_leptonestUp  .SetBinError  (unrolled_bin, zinv_est_err)
+        ztonunu_leptonestDown.SetBinError  (unrolled_bin, zinv_est_err)
+    if combine_bins:
+        ZInv_est.append(combinebins(ztonunu_leptonestUp,   name+"_leptonestUp"))
+        ZInv_est.append(combinebins(ztonunu_leptonestDown, name+"_leptonestDown"))
+    else:
+        ZInv_est.append(ztonunu_leptonestUp  .Clone(name+"_leptonestUp"))
+        ZInv_est.append(ztonunu_leptonestDown.Clone(name+"_leptonestDown"))
+    for hist in ZInv_est: hist.SetDirectory(0)
+    # Make G/L based estimate comparison plot
+    can = ROOT.TCanvas(name)
+    can.Divide(1,2)
+    pad = can.cd(1)
+    pad.SetPad(0,0.3,1,1)
+    pad.SetBottomMargin(0.02)
+    if combine_bins:
+        ztonunu_mc = combinebins(sr, "ztonunu_mc_combined")
+    else:
+        ztonunu_mc = sr.Clone("ztonunu_mc")
+    ztonunu_mc.GetXaxis().SetLabelSize(0)
+    ztonunu_mc.GetXaxis().SetLabelColor(0)
+    ymax = {"WAna_nj35": 20, "WAna_nj45": 20, "WAna_nj46": 20, "WAna_nj6": 8, "WAna_nj7": 8, "TopAna" : 4}
+    if "q" in name:
+        if "Top" in opt.box:
+            ymax[opt.box] = 25 * ymax[opt.box]
+        else:
+            ymax[opt.box] = 2.5 * ymax[opt.box]
+    ztonunu_mc.GetYaxis().SetRangeUser(0, ymax[opt.box])
+    ztonunu_mc.GetYaxis().SetTitleSize(0.07)
+    ztonunu_mc.GetYaxis().SetTitleOffset(1.1)
+    ztonunu_mc.SetMarkerStyle(0)
+    ztonunu_mc.SetLineWidth(2)
+    ztonunu_mc.SetLineColor(633)
+    ztonunu_mc.Draw("HISTE")
+    ztonunu_photon_est.SetMarkerStyle(20)
+    ztonunu_photon_est.Draw("SAME PE1")
+    ztonunu_lepton_est.SetMarkerStyle(21)
+    ztonunu_lepton_est.SetMarkerColor(418)
+    ztonunu_lepton_est.SetLineColor(418)
+    ztonunu_lepton_est.Draw("SAME LE1")
+    title = {
+        "WAna_nj35": "W analysis, 3#seqN_{jet}#seq5",
+        "WAna_nj45": "W analysis, 4#seqN_{jet}#seq5",
+        "WAna_nj46": "W analysis, 4#seqN_{jet}#seq6",
+        "WAna_nj6": "W analysis, N_{jet}#seq6",
+        "WAna_nj7": "W analysis, N_{jet}#seq7",
+        "TopAna": "top analysis"
+        }
+    legtitle = "S region"
+    if "s_" in name:
+        legtitle = "S' region"
+    elif "q_" in name:
+        legtitle = "Q' region"
+    leg = ROOT.TLegend(0.5,0.75,0.9,0.9, legtitle)
+    leg.SetNColumns(2)
+    leg.SetTextSize(0.04)
+    #leg.AddEntry(ztonunu_mc,         "ZToNuNu MC",       "LE")
+    #leg.AddEntry(ztonunu_photon_est, "#gamma estimate",  "PE")
+    #leg.AddEntry(ztonunu_lepton_est, "W(l#nu) estimate", "PE")
+    leg.AddEntry(ztonunu_mc,         "Z(#nu#nu) MC",       "LE")
+    leg.AddEntry(0,                  ("#font[82]{%7.1f}" % ztonunu_mc.Integral()), "")
+    leg.AddEntry(ztonunu_photon_est, "#gamma estimate",  "PE")
+    leg.AddEntry(0,                  ("#font[82]{%7.1f}" % ztonunu_photon_est.Integral()), "")
+    leg.AddEntry(ztonunu_lepton_est, "W(l#nu) estimate", "PE")
+    leg.AddEntry(0,                  ("#font[82]{%7.1f}" % ztonunu_lepton_est.Integral()), "")
+    leg.Draw("SAME")
+    pad = can.cd(2)
+    pad.SetPad(0,0,1,0.3)
+    pad.SetTopMargin(0.04)
+    pad.SetBottomMargin(0.4)
+    pad.SetGridy(1)
+    # Add ratio plots
+    ztonunu_photon_ratio = ROOT.TH1D(name+"_ratio", ";;Estmate/MC", ztonunu_mc.GetNbinsX(),0,ztonunu_mc.GetNbinsX())
+    ztonunu_photon_ratio.Divide(ztonunu_photon_est, ztonunu_mc)
+    ztonunu_photon_ratio.GetXaxis().SetLabelSize(0.125)
+    ztonunu_photon_ratio.GetYaxis().SetLabelSize(0.125)
+    ztonunu_photon_ratio.GetYaxis().SetNdivisions(502)
+    ztonunu_photon_ratio.GetXaxis().SetTitleSize(0.15)
+    ztonunu_photon_ratio.GetXaxis().SetTitleOffset(1.0)
+    ztonunu_photon_ratio.GetYaxis().SetTitleSize(0.15)
+    ztonunu_photon_ratio.GetYaxis().SetTitleOffset(0.5)
+    ztonunu_photon_ratio.GetYaxis().SetRangeUser(0,2)
+    ztonunu_photon_ratio.SetMarkerStyle(20)
+    add_bin_labels(ztonunu_photon_ratio, combine_bins, mrbins, r2bins)
+    ztonunu_photon_ratio.GetXaxis().LabelsOption("v")
+    ztonunu_photon_ratio.Draw("PE1")
+    ztonunu_lepton_ratio = ROOT.TH1D("ztonunu_lepton_ratio", ";;Estmate/MC", ztonunu_mc.GetNbinsX(),0,ztonunu_mc.GetNbinsX())
+    ztonunu_lepton_ratio.Divide(ztonunu_lepton_est, ztonunu_mc)
+    ztonunu_lepton_ratio.SetMarkerStyle(21)
+    ztonunu_lepton_ratio.SetMarkerColor(418)
+    ztonunu_lepton_ratio.SetLineColor(418)
+    ztonunu_lepton_ratio.Draw("SAME PE1")
+    save_plot(can, "", plotdir+"/"+name+"_Estimate_"+opt.box)
+    ztonunu_photon_est.Write()
+    ztonunu_lepton_est.Write()
+    ztonunu_mc.Write()
+    return ZInv_est
 
 # Run a single Combine instance (on a single input list, i.e. one dataset)
 combine_cmds = []
@@ -635,7 +774,8 @@ def unroll(h):
     return h_new
 
 def rollback(h):
-    h_new = ROOT.TH2D(h.GetName()+"_2D", ";M_{R} (GeV);R^{2}", len(mrbins)-1,0,len(mrbins)-1, len(r2bins)-1,0,len(r2bins)-1)
+    #h_new = ROOT.TH2D(h.GetName()+"_2D", ";M_{R} (GeV);R^{2}", len(mrbins)-1,0,len(mrbins)-1, len(r2bins)-1,0,len(r2bins)-1)
+    h_new = ROOT.TH2D(h.GetName()+"_2D", ";M_{R} (GeV);R^{2}", len(mrbins)-1,array('d',mrbins), len(r2bins)-1,array('d',r2bins))
     h_new.SetDirectory(0)
     for i in range(h.GetNbinsX()):
         bin_mr = (i/(len(r2bins)-1))+1
@@ -907,24 +1047,22 @@ purity_in_Gm1 = False
 
 # Loading plots
 #ZInv_dir = "syst_"+opt.dir
-ZInv_dir1 = "syst_"+(opt.dir.replace("2018_01_08_syst","2018_01_11_CHIsoNoEACorr"))
-ZInv_dir2 = "syst_"+(opt.dir.replace("2018_01_08_syst","2018_01_03_syst"))
-
+ZInv_dir = "syst_"+(opt.dir.replace("2018_01_08_syst","2018_01_11_CHIsoNoEACorr")) # njet cut is messed in G region
 
 # Needed for 1-lepton estimate
-##  f = ROOT.TFile.Open(ZInv_dir1+"/hadd/data.root")
+##  f = ROOT.TFile.Open(ZInv_dir+"/hadd/data.root")
 ##  L_data_2D   = loadclone(f,"MR_R2_L"+BIN,"_data")
-##  f = ROOT.TFile.Open(ZInv_dir1+"/hadd/wjets.root")
+##  f = ROOT.TFile.Open(ZInv_dir+"/hadd/wjets.root")
 ##  L_WJ_2D     = loadclone(f,"MR_R2_L"+BIN,"_WJ")
-##  f = ROOT.TFile.Open(ZInv_dir1+"/hadd/nonwjets.root")
+##  f = ROOT.TFile.Open(ZInv_dir+"/hadd/nonwjets.root")
 ##  L_NONWJ  = loadclone(f,"MR_R2_L"+BIN,"_NONWJ")
 
 # Z(nunu) estimate - using SR/CR(G) transfer factors
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/bkg.root")
-f = ROOT.TFile.Open(ZInv_dir2+"/hadd/bkg.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/bkg.root")
 IsDirect_G_EB = loadclone(f, "MR_R2_IsDirect_G_EB", "_MC")
 IsDirect_G_EE = loadclone(f, "MR_R2_IsDirect_G_EE", "_MC")
-GDirectPrompt_2D = loadclone(f, "MR_R2_G_DirectPrompt", "_MC")
+GDirectPrompt_2D = loadclone(f, "MR_R2_G_DirectPrompt", "MR-R2_G_DirectPrompt_MC", 0)
 Z_MC      = loadclone(f, "MR_R2_Z",    "_MC")
 G_MC      = loadclone(f, "MR_R2_G",    "_MC")
 #G_MC = []
@@ -932,12 +1070,12 @@ G_MC      = loadclone(f, "MR_R2_G",    "_MC")
 #    G_MC_SYST.append(rollback(load(f, "MRR2_G_bkg"+syst,"_TMP", 0), GDirectPrompt_2D, "MRR2_G"+syst))
 
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/gjets.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/gjets.root")
 CHIsoTemplate_Prompt_EB = loadclone(f, "CHIsoTemplate_Prompt_g_EB", "_MC")
 CHIsoTemplate_Prompt_EE = loadclone(f, "CHIsoTemplate_Prompt_g_EE", "_MC")
 
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/data.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/data.root")
 G_data_EB = loadclone(f, "MR_R2_G_EB", "_data")
 G_data_EE = loadclone(f, "MR_R2_G_EB", "_data")
 CHIsoTemplate_Fake_EB = loadclone(f, "CHIsoTemplate_Fake_g_EB", "_data")
@@ -952,20 +1090,22 @@ Z_data = loadclone(f, "MR_R2_Z", "_data")
 G_data = loadclone(f, "MR_R2_G", "_data")
 
 # Subtracting backgrounds for double ratio
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/gjets.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/gjets.root")
 G_GJ    = loadclone(f,"MR_R2_G", "_GJ")
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/nongjets.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/nongjets.root")
 G_NONGJ = loadclone(f,"MR_R2_G", "_NONGJ")
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/dyjets.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/dyjets.root")
 Z_DJ    = loadclone(f,"MR_R2_Z", "_DJ")
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/nondyjets.root")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/nondyjets.root")
 Z_NONDJ = loadclone(f,"MR_R2_Z", "_NONDJ")
 
 #f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
-f = ROOT.TFile.Open(ZInv_dir1+"/hadd/ztoinv.root")
-S_ZI_2D      = loadclone(f, "MR_R2_S"+BIN,  "_ZI")
+f = ROOT.TFile.Open(ZInv_dir+"/hadd/ztoinv.root")
+S_ZI_2D      = loadclone(f, "MR_R2_S"+BIN,  "MR-R2_S_ZI", 0)
 
-# --------------------- Lepton Estimate ---------------------------
+# --------------------- Photon Estimate ---------------------------
+
+print "Calculate photon based Z(nunu) estimate"
 
 if purity_in_Gm1:
     f_zinv_est = ROOT.TFile.Open("zinv_est_"+opt.box+"_Gm1.root","recreate")
@@ -974,37 +1114,6 @@ else:
     f_zinv_est = ROOT.TFile.Open("zinv_est_"+opt.box+".root","recreate")
     plotdir = "Plots/z_inv_est/"+DATE
 
-print "Calculate 1-lepton based Z(nunu) estimate"
-##  ZInv_lepton_est = L_data_2D.Clone("ZInv_lepton_est")
-##  ZInv_lepton_est.Add(L_NONWJ, -1)
-##  multiply = S_ZI_2D.Clone()
-##  divide   = L_WJ_2D.Clone()
-##  for binx in range(1, ZInv_lepton_est.GetNbinsX()+1):
-##      for biny in range(1, ZInv_lepton_est.GetNbinsX()+1):
-##          if ZInv_lepton_est.GetBinContent(binx, biny)<0:
-##              ZInv_lepton_est.SetBinContent(binx,biny,0)
-##              ZInv_lepton_est.SetBinError  (binx,biny,0)
-##          if multiply.GetBinContent(binx,biny)<0:
-##              multiply.SetBinContent(binx,biny,0)
-##              multiply.SetBinError(binx,biny,0)
-##          if divide.GetBinContent(binx,biny)<0:
-##              divide.SetBinContent(binx,biny,0)
-##              divide.SetBinError(binx,biny,0)
-##  ZInv_lepton_est.Multiply(multiply)
-##  ZInv_lepton_est.Divide(divide)
-##  # unroll
-##  for binx in range(1, ZInv_lepton_est.GetNbinsX()+1):
-##      for biny in range(1, ZInv_lepton_est.GetNbinsX()+1):
-##          unrolled_bin = (binx-1)*5+biny
-##          ztonunu_lepton_est.SetBinContent(unrolled_bin, ZInv_lepton_est.GetBinContent(binx, biny))
-##          ztonunu_lepton_est.SetBinError  (unrolled_bin, ZInv_lepton_est.GetBinError  (binx, biny))
-
-ztonunu_lepton_est = bg_est("ZInv_S_L", L_data, [L_TT[0],  L_MJ[0],           L_ZI[0], L_OT[0]], S_WJ[i], L_WJ[i], combine_bins, 1, binned_k)
-ztonunu_lepton_est.GetXaxis().SetTitle("Z(#nu#nu) 1-lepton estimate")
-
-# --------------------- Photon Estimate ---------------------------
-
-print "Calculate photon based Z(nunu) estimate"
 
 # --------------------------------
 #             Purity
@@ -1152,43 +1261,6 @@ direct_frac_EB = IsDirect_G_EB.Project3D("z").GetMean()
 direct_frac_EE = IsDirect_G_EE.Project3D("z").GetMean()
 
 # --------------------------------
-#         Transfer factors
-
-print "- Calculate transfer factors"
-# Plot the transfer factors
-# Binned version
-h_transfer_factor_binned = ROOT.TH1D("transfer_factor_binned", ";Bin;S_{Z(#nu#nu)}/G transfer factor", nrazorbin,0,nrazorbin)
-can_tf = custom_can(h_transfer_factor_binned, "kappa_ZInv_S_G_"+opt.box)
-can_tf.SetLogy(1)
-S_ZI = unroll(S_ZI_2D)
-G_DP = unroll(GDirectPrompt_2D)
-S_ZI.Divide(G_DP)
-for binx in range(1, S_ZI.GetNbinsX()+1):
-    h_transfer_factor_binned.SetBinContent(binx, S_ZI.GetBinContent(binx))
-    h_transfer_factor_binned.SetBinError  (binx, S_ZI.GetBinError  (binx))
-h_transfer_factor_binned.SetMarkerColor(633)
-h_transfer_factor_binned.SetLineColor  (633)
-h_transfer_factor_binned.GetYaxis().SetRangeUser(1e-2,1e3)
-h_transfer_factor_binned.Draw("PE1")
-h_transfer_factor_binned.Write()
-# Factorized form
-h_transfer_factor = calc_factorized_kappa(S_ZI_2D, GDirectPrompt_2D, "transfer_factor_G_fact", "S_{Z(#nu#nu)}/G")
-h_transfer_factor.Draw("SAME PE1")
-h_transfer_factor.Write()
-
-leg = ROOT.TLegend(0.3,0.7,0.6,0.85,"")
-leg.AddEntry(h_transfer_factor,        "#color[1]{Factorized form}", "pl")
-leg.AddEntry(h_transfer_factor_binned, "#color[633]{Binned}",   "pl")
-leg.SetTextSize(0.04)
-leg.SetFillColor(0)
-leg.SetFillStyle(0)
-leg.SetBorderSize(0)
-leg.Draw("SAME")
-
-save_plot(can_tf, "", "Plots/kappa/"+DATE+"/"+can_tf.GetName())
-#sys.exit()
-
-# --------------------------------
 #     Double ratio = k_Z / k_G
 
 print "- Calculate double ratio"
@@ -1215,24 +1287,53 @@ print ("k_Z = %4.3f (%4.3f / %4.3f), k_G = %4.3f (%4.3f / %4.3f), double ratio =
 ##     (k_Z, Z_data.Integral(), Z_MC.Integral(), k_G, G_data.Integral(), G_MC[0].Integral(), double_ratio))
        (k_Z, Z_data_DY_est.Integral(), Z_DJ.Integral(), k_G, G_data_G_est.Integral(), G_GJ.Integral(), double_ratio))
 
-# Estimate background
-ztonunu_photon_est               = ROOT.TH1D("ztonunu_photon_est",               ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-ztonunu_photon_est_purityUp      = ROOT.TH1D("ztonunu_photon_est_purityUp",      ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-ztonunu_photon_est_purityDown    = ROOT.TH1D("ztonunu_photon_est_purityDown",    ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-ztonunu_photon_est_dirfracUp     = ROOT.TH1D("ztonunu_photon_est_dirfracUp",     ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-ztonunu_photon_est_dirfracDown   = ROOT.TH1D("ztonunu_photon_est_dirfracDown",   ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-ztonunu_photon_est_leptonestUp   = ROOT.TH1D("ztonunu_photon_est_leptonestUp",   ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-ztonunu_photon_est_leptonestDown = ROOT.TH1D("ztonunu_photon_est_leptonestDown", ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
-# Use average purities (pur_EB, pur_EE)
+# --------------------------------
+#         Transfer factors
+
+#DEL    print "- Calculate transfer factors"
+#DEL    # Plot the transfer factors
+#DEL    # Binned version
+#DEL    h_transfer_factor_binned = ROOT.TH1D("transfer_factor_binned", ";Bin;S_{Z(#nu#nu)}/G transfer factor", nrazorbin,0,nrazorbin)
+#DEL    can_tf = custom_can(h_transfer_factor_binned, "kappa_ZInv_S_G_"+opt.box)
+#DEL    can_tf.SetLogy(1)
+#DEL    S_ZI = unroll(S_ZI_2D)
+#DEL    G_DP = unroll(GDirectPrompt_2D)
+#DEL    S_ZI.Divide(G_DP)
+#DEL    for binx in range(1, S_ZI.GetNbinsX()+1):
+#DEL        h_transfer_factor_binned.SetBinContent(binx, S_ZI.GetBinContent(binx))
+#DEL        h_transfer_factor_binned.SetBinError  (binx, S_ZI.GetBinError  (binx))
+#DEL    h_transfer_factor_binned.SetMarkerColor(633)
+#DEL    h_transfer_factor_binned.SetLineColor  (633)
+#DEL    h_transfer_factor_binned.GetYaxis().SetRangeUser(1e-2,1e3)
+#DEL    h_transfer_factor_binned.Draw("PE1")
+#DEL    h_transfer_factor_binned.Write()
+#DEL    # Factorized form
+#DEL    h_transfer_factor = calc_factorized_kappa(S_ZI_2D, GDirectPrompt_2D, "transfer_factor_G_fact", "S_{Z(#nu#nu)}/G")
+#DEL    h_transfer_factor.Draw("SAME PE1")
+#DEL    h_transfer_factor.Write()
+#DEL    
+#DEL    leg = ROOT.TLegend(0.3,0.7,0.6,0.85,"")
+#DEL    leg.AddEntry(h_transfer_factor,        "#color[1]{Factorized form}", "pl")
+#DEL    leg.AddEntry(h_transfer_factor_binned, "#color[633]{Binned}",   "pl")
+#DEL    leg.SetTextSize(0.04)
+#DEL    leg.SetFillColor(0)
+#DEL    leg.SetFillStyle(0)
+#DEL    leg.SetBorderSize(0)
+#DEL    leg.Draw("SAME")
+#DEL    
+#DEL    save_plot(can_tf, "", "Plots/kappa/"+DATE+"/"+can_tf.GetName())
+#DEL    #sys.exit()
+
+# Estimate Prompt direct photons in the G control region
+print "- Estimate prompt direct photon counts in G region"
+h_npromptdirect               = ROOT.TH1D("npromptdirect",               ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
+h_npromptdirect_purityUp      = ROOT.TH1D("npromptdirect_purityUp",      ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
+h_npromptdirect_purityDown    = ROOT.TH1D("npromptdirect_purityDown",    ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
+h_npromptdirect_dirfracUp     = ROOT.TH1D("npromptdirect_dirfracUp",     ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
+h_npromptdirect_dirfracDown   = ROOT.TH1D("npromptdirect_dirfracDown",   ";Bin;Z(#nu#nu) photon estimate",nrazorbin,0,nrazorbin)
 for binx in range(1, G_data_EB.GetNbinsX()+1):
-    ##  # Use purity in bins of MR
-    ##  pur_EB = purity_MR_EB.GetBinContent(binx)
-    ##  pur_EE = purity_MR_EE.GetBinContent(binx)
-    # And also the transfer factors
     for biny in range(1, G_data_EB.GetNbinsY()+1):
-        # transfer factor is factorized in MR and R2
-        unrolled_bin = (binx-1)*G_data_EB.GetNbinsY()+biny
-        transfer_factor = h_transfer_factor.GetBinContent(unrolled_bin)
+        # Add prompt direct photons in EB and EE
         npromptdirect  = G_data_EB.GetBinContent(binx,biny) * pur_EB * direct_frac_EB
         npromptdirect += G_data_EE.GetBinContent(binx,biny) * pur_EE * direct_frac_EE        
         npromptdirect_purityUp     = G_data_EB.GetBinContent(binx,biny) * (pur_EB + 0.1) * direct_frac_EB
@@ -1261,147 +1362,36 @@ for binx in range(1, G_data_EB.GetNbinsX()+1):
         npromptdirect_err_dirfracUp    = npromptdirect_err_dirfracUp   ** 0.5
         npromptdirect_err_dirfracDown  = npromptdirect_err_dirfracDown ** 0.5
         # fill measured direct prompt photon counts
-        ztonunu_photon_est            .SetBinContent(unrolled_bin, npromptdirect)
-        ztonunu_photon_est_purityUp   .SetBinContent(unrolled_bin, npromptdirect_purityUp)
-        ztonunu_photon_est_purityDown .SetBinContent(unrolled_bin, npromptdirect_purityDown)
-        ztonunu_photon_est_dirfracUp  .SetBinContent(unrolled_bin, npromptdirect_dirfracUp)
-        ztonunu_photon_est_dirfracDown.SetBinContent(unrolled_bin, npromptdirect_dirfracDown)
-        ztonunu_photon_est            .SetBinError  (unrolled_bin, npromptdirect_err)
-        ztonunu_photon_est_purityUp   .SetBinError  (unrolled_bin, npromptdirect_err_purityUp)
-        ztonunu_photon_est_purityDown .SetBinError  (unrolled_bin, npromptdirect_err_purityDown)
-        ztonunu_photon_est_dirfracUp  .SetBinError  (unrolled_bin, npromptdirect_err_dirfracUp)
-        ztonunu_photon_est_dirfracDown.SetBinError  (unrolled_bin, npromptdirect_err_dirfracDown)
-        # Use Z(nunu) 1-lepton invisible estimate as a systematic
-        zinv_est     = npromptdirect     * transfer_factor * double_ratio
-        zinv_est_err = npromptdirect_err * transfer_factor * double_ratio
-        lep_est      = ztonunu_lepton_est.GetBinContent(unrolled_bin)
-        lep_est_syst = (max(zinv_est, lep_est) - min(zinv_est, lep_est)) / 2.0
-        ztonunu_photon_est_leptonestUp   .SetBinContent(unrolled_bin, max(0, zinv_est + lep_est_syst))
-        ztonunu_photon_est_leptonestUp   .SetBinError  (unrolled_bin, zinv_est_err)
-        ztonunu_photon_est_leptonestDown .SetBinContent(unrolled_bin, max(0, zinv_est - lep_est_syst))
-        ztonunu_photon_est_leptonestDown .SetBinError  (unrolled_bin, zinv_est_err)
+        unrolled_bin = (binx-1)*G_data_EB.GetNbinsY()+biny
+        h_npromptdirect              .SetBinContent(unrolled_bin, npromptdirect)
+        h_npromptdirect_purityUp     .SetBinContent(unrolled_bin, npromptdirect_purityUp)
+        h_npromptdirect_purityDown   .SetBinContent(unrolled_bin, npromptdirect_purityDown)
+        h_npromptdirect_dirfracUp    .SetBinContent(unrolled_bin, npromptdirect_dirfracUp)
+        h_npromptdirect_dirfracDown  .SetBinContent(unrolled_bin, npromptdirect_dirfracDown)
+        h_npromptdirect              .SetBinError  (unrolled_bin, npromptdirect_err)
+        h_npromptdirect_purityUp     .SetBinError  (unrolled_bin, npromptdirect_err_purityUp)
+        h_npromptdirect_purityDown   .SetBinError  (unrolled_bin, npromptdirect_err_purityDown)
+        h_npromptdirect_dirfracUp    .SetBinError  (unrolled_bin, npromptdirect_err_dirfracUp)
+        h_npromptdirect_dirfracDown  .SetBinError  (unrolled_bin, npromptdirect_err_dirfracDown)
 
-# Finally, multiply with the transfer factors (factorized) and double ratio
-ztonunu_photon_est            .Multiply(h_transfer_factor)
-ztonunu_photon_est_purityUp   .Multiply(h_transfer_factor)
-ztonunu_photon_est_purityDown .Multiply(h_transfer_factor)
-ztonunu_photon_est_dirfracUp  .Multiply(h_transfer_factor)
-ztonunu_photon_est_dirfracDown.Multiply(h_transfer_factor)
-ztonunu_photon_est            .Scale(double_ratio)
-ztonunu_photon_est_purityUp   .Scale(double_ratio)
-ztonunu_photon_est_purityDown .Scale(double_ratio)
-ztonunu_photon_est_dirfracUp  .Scale(double_ratio)
-ztonunu_photon_est_dirfracDown.Scale(double_ratio)
+vh_npromptdirect = []
+vh_npromptdirect.append(h_npromptdirect)
+vh_npromptdirect.append(h_npromptdirect_purityUp)
+vh_npromptdirect.append(h_npromptdirect_purityDown)
+vh_npromptdirect.append(h_npromptdirect_dirfracUp)
+vh_npromptdirect.append(h_npromptdirect_dirfracDown)
 
-# combine bins
-if combine_bins:
-    ztonunu_photon_est             = combinebins(ztonunu_photon_est,            "ZInv_combined")
-    ztonunu_photon_est_purityUp    = combinebins(ztonunu_photon_est_purityUp,   "ZInv_purityUp_combined")
-    ztonunu_photon_est_purityDown  = combinebins(ztonunu_photon_est_purityDown, "ZInv_purityDown_combined")
-    ztonunu_photon_est_dirfracUp   = combinebins(ztonunu_photon_est_dirfracUp,  "ZInv_dirfracUp_combined")
-    ztonunu_photon_est_dirfracDown = combinebins(ztonunu_photon_est_dirfracDown,"ZInv_dirfracDown_combined")
-    ztonunu_photon_est_dirfracUp   = combinebins(ztonunu_photon_est_dirfracUp,  "ZInv_leptonestUp_combined")
-    ztonunu_photon_est_dirfracDown = combinebins(ztonunu_photon_est_dirfracDown,"ZInv_leptonestDown_combined")
+# --------------------- Lepton Estimate ---------------------------
 
-# Add them to vector (used in cards later)
-ZInv_est = []
-ZInv_est.append(ztonunu_photon_est              .Clone("ZInv"))
-ZInv_est.append(ztonunu_photon_est_purityUp     .Clone("ZInv_purityUp"))
-ZInv_est.append(ztonunu_photon_est_purityDown   .Clone("ZInv_purityDown"))
-ZInv_est.append(ztonunu_photon_est_dirfracUp    .Clone("ZInv_dirfracUp"))
-ZInv_est.append(ztonunu_photon_est_dirfracDown  .Clone("ZInv_dirfracDown"))
-ZInv_est.append(ztonunu_photon_est_leptonestUp  .Clone("ZInv_leptonestUp"))
-ZInv_est.append(ztonunu_photon_est_leptonestDown.Clone("ZInv_leptonestDown"))
-for hist in ZInv_est: hist.SetDirectory(0)
+print "Perform Z(nunu) estimate"
 
+L_subtract = [L_TT[0],  L_MJ[0],           L_ZI[0], L_OT[0]]
+ZInv_est   = zinv_est("ZInv",   S_ZI[0], vh_npromptdirect, GDirectPrompt_2D, L_data, L_subtract, L_WJ[0], combine_bins, binned_k, double_ratio)
 
+# Do the same for closure tests
+s_ZInv_est = zinv_est("s_ZInv", s_ZI[0], vh_npromptdirect, GDirectPrompt_2D, L_data, L_subtract, L_WJ[0], combine_bins, binned_k, double_ratio)
+q_ZInv_est = zinv_est("q_ZInv", q_ZI[0], vh_npromptdirect, GDirectPrompt_2D, L_data, L_subtract, L_WJ[0], combine_bins, binned_k, double_ratio)
 
-# Finally scale by the relative number of events in the njet boxes (found in MC)
-# Unroll also the ZToNuNu MC plot
-##  ztonunu_mc    = ROOT.TH1D("ztonunu_mc",    ";Bin;Z(#nu#nu) estimate",nrazorbin,0,nrazorbin)
-##  for binx in range(1, G_data_EB.GetNbinsX()+1):
-##      for biny in range(1, G_data_EB.GetNbinsY()+1):
-##          unrolled_bin = (binx-1)*5+biny
-##          ztonunu_mc .SetBinContent(unrolled_bin, S_ZI_2D.GetBinContent(binx,biny))
-##          ztonunu_mc .SetBinError  (unrolled_bin, S_ZI_2D.GetBinError  (binx,biny))
-ztonunu_mc = unroll(S_ZI_2D)
-if combine_bins:
-    ztonunu_mc = combinebins(unroll(S_ZI_2D), "ztonunu_mc_combined")
-
-# Make plot
-can = ROOT.TCanvas("ztonunu_pred")
-can.Divide(1,2)
-pad = can.cd(1)
-pad.SetPad(0,0.3,1,1)
-pad.SetBottomMargin(0.02)
-ztonunu_mc.GetXaxis().SetLabelSize(0)
-ztonunu_mc.GetXaxis().SetLabelColor(0)
-ymax = {"WAna_nj35": 20, "WAna_nj45": 20, "WAna_nj46": 20, "WAna_nj6": 8, "WAna_nj7": 8, "TopAna" : 4}
-ztonunu_mc.GetYaxis().SetRangeUser(0, ymax[opt.box])
-ztonunu_mc.GetYaxis().SetTitleSize(0.07)
-ztonunu_mc.GetYaxis().SetTitleOffset(1.1)
-ztonunu_mc.SetMarkerStyle(0)
-ztonunu_mc.SetLineWidth(2)
-ztonunu_mc.SetLineColor(633)
-ztonunu_mc.Draw("HISTE")
-ztonunu_photon_est.SetMarkerStyle(20)
-ztonunu_photon_est.Draw("SAME PE1")
-ztonunu_lepton_est.SetMarkerStyle(21)
-ztonunu_lepton_est.SetMarkerColor(418)
-ztonunu_lepton_est.SetLineColor(418)
-ztonunu_lepton_est.Draw("SAME LE1")
-title = {
-    "WAna_nj35": "W analysis, 3#seqN_{jet}#seq5",
-    "WAna_nj45": "W analysis, 4#seqN_{jet}#seq5",
-    "WAna_nj46": "W analysis, 4#seqN_{jet}#seq6",
-    "WAna_nj6": "W analysis, N_{jet}#seq6",
-    "WAna_nj7": "W analysis, N_{jet}#seq7",
-    "TopAna": "top analysis"
-    }
-leg = ROOT.TLegend(0.5,0.75,0.9,0.9, "")
-leg.SetTextSize(0.04)
-#leg.AddEntry(ztonunu_mc,         "ZToNuNu MC",       "LE")
-#leg.AddEntry(ztonunu_photon_est, "#gamma estimate",  "PE")
-#leg.AddEntry(ztonunu_lepton_est, "W(l#nu) estimate", "PE")
-leg.SetNColumns(2)
-leg.AddEntry(ztonunu_mc,         "Z(#nu#nu) MC",       "LE")
-leg.AddEntry(0,                  ("#font[82]{%7.1f}" % ztonunu_mc.Integral()), "")
-leg.AddEntry(ztonunu_photon_est, "#gamma estimate",  "PE")
-leg.AddEntry(0,                  ("#font[82]{%7.1f}" % ztonunu_photon_est.Integral()), "")
-leg.AddEntry(ztonunu_lepton_est, "W(l#nu) estimate", "PE")
-leg.AddEntry(0,                  ("#font[82]{%7.1f}" % ztonunu_lepton_est.Integral()), "")
-leg.Draw("SAME")
-pad = can.cd(2)
-pad.SetPad(0,0,1,0.3)
-pad.SetTopMargin(0.04)
-pad.SetBottomMargin(0.4)
-pad.SetGridy(1)
-# Add ratio plots
-ztonunu_photon_ratio = ROOT.TH1D("ztonunu_photon_ratio", ";;Estmate/MC", ztonunu_mc.GetNbinsX(),0,ztonunu_mc.GetNbinsX())
-ztonunu_photon_ratio.Divide(ztonunu_photon_est, ztonunu_mc)
-ztonunu_photon_ratio.GetXaxis().SetLabelSize(0.125)
-ztonunu_photon_ratio.GetYaxis().SetLabelSize(0.125)
-ztonunu_photon_ratio.GetYaxis().SetNdivisions(502)
-ztonunu_photon_ratio.GetXaxis().SetTitleSize(0.15)
-ztonunu_photon_ratio.GetXaxis().SetTitleOffset(1.0)
-ztonunu_photon_ratio.GetYaxis().SetTitleSize(0.15)
-ztonunu_photon_ratio.GetYaxis().SetTitleOffset(0.5)
-ztonunu_photon_ratio.GetYaxis().SetRangeUser(0,2)
-ztonunu_photon_ratio.SetMarkerStyle(20)
-add_bin_labels(ztonunu_photon_ratio, combine_bins, mrbins, r2bins)
-ztonunu_photon_ratio.GetXaxis().LabelsOption("v")
-ztonunu_photon_ratio.Draw("PE1")
-ztonunu_lepton_ratio = ROOT.TH1D("ztonunu_lepton_ratio", ";;Estmate/MC", ztonunu_mc.GetNbinsX(),0,ztonunu_mc.GetNbinsX())
-ztonunu_lepton_ratio.Divide(ztonunu_lepton_est, ztonunu_mc)
-ztonunu_lepton_ratio.SetMarkerStyle(21)
-ztonunu_lepton_ratio.SetMarkerColor(418)
-ztonunu_lepton_ratio.SetLineColor(418)
-ztonunu_lepton_ratio.Draw("SAME PE1")
-save_plot(can, "", plotdir+"/ZInv_Estimate_"+opt.box)
-
-ztonunu_photon_est.Write()
-ztonunu_lepton_est.Write()
-ztonunu_mc.Write()
 f_zinv_est.Close()
 #sys.exit()
 
@@ -1629,10 +1619,13 @@ f_pu.Close()
 # ------------------- Clousre Tests ----------------------
 
 print "Doing closure tests"
+
 if binned_k:
-    fout = ROOT.TFile("closure_test_"+opt.box+"_binned_k.root","RECREATE")
+    fname_closure = "closure_test_"+opt.box+"_binned_k.root"
 else:
-    fout = ROOT.TFile("closure_test_"+opt.box+"_factorized_k.root","RECREATE")    
+    fname_closure = "closure_test_"+opt.box+"_factorized_k.root"
+
+fout = ROOT.TFile(fname_closure,"RECREATE")
 
 # S'
 # s_MJ_est = (Q_data - Q_notMJ) * s_MJ / Q_MJ
@@ -1644,15 +1637,16 @@ print "- in S'"
 s_Top_est      = []
 s_MultiJet_est = []
 s_WJets_est    = []
-s_ZInv_est     = []
+if not use_G: s_ZInv_est     = []
 s_Other_est    = []
-#T_MJ_est = bg_est("MultiJet_T_Q_est",         Q_data, [Q_TT[0],            Q_WJ[0], Q_ZI[0], Q_OT[0]], T_MJ[0], Q_MJ[0], combine_bins, 1, binned_k)
+#T_MJ_est = bg_est("MultiJet_T_Q_est",         Q_data, [Q_TT[0],            Q_WJ[0], Q_ZI[0], Q_OT[0]], T_MJ[0], Q_MJ[0], combine_bins, binned_k)
 for i in range(0, len(systematics)):
-    #s_TT_est = bg_est("Top_s_T"       +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], s_TT[i], T_TT[i], combine_bins, 1, binned_k)
-    s_TT_est = bg_est("Top_s_T"       +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], s_TT[i], T_TT[i], combine_bins, 1, binned_k)
-    s_MJ_est = bg_est("MultiJet_s_Q"  +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], s_MJ[i], Q_MJ[i], combine_bins, 1, binned_k)
-    s_WJ_est = bg_est("WJets_s_W"     +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], s_WJ[i], W_WJ[i], combine_bins, 1, binned_k)
-    s_ZI_est = bg_est("ZInv_s_L"      +systematics[i], L_data, [L_TT[0],  L_MJ[0],          L_ZI[0], L_OT[0]], s_WJ[i], L_WJ[i], combine_bins, 1, binned_k)
+    #s_TT_est = bg_est("Top_s_T"       +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], s_TT[i], T_TT[i], combine_bins, binned_k)
+    s_TT_est = bg_est("Top_s_T"       +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], s_TT[i], T_TT[i], combine_bins, binned_k)
+    s_MJ_est = bg_est("MultiJet_s_Q"  +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], s_MJ[i], Q_MJ[i], combine_bins, binned_k)
+    s_WJ_est = bg_est("WJets_s_W"     +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], s_WJ[i], W_WJ[i], combine_bins, binned_k)
+    if not use_G:
+        s_ZI_est = bg_est("ZInv_s_L"      +systematics[i], L_data, [L_TT[0],  L_MJ[0],          L_ZI[0], L_OT[0]], s_WJ[i], L_WJ[i], combine_bins, binned_k)
     if combine_bins:
         s_OT_est = combinebins(s_OT[i], "Other_s"+systematics[i])        
     else:
@@ -1665,7 +1659,8 @@ for i in range(0, len(systematics)):
     s_Top_est     .append(s_TT_est)
     s_MultiJet_est.append(s_MJ_est)
     s_WJets_est   .append(s_WJ_est)
-    s_ZInv_est    .append(s_ZI_est)
+    if not use_G:
+        s_ZInv_est    .append(s_ZI_est)
     s_Other_est   .append(s_OT_est)
 
 s_TT_nom, s_TT_up, s_TT_dn = calc_syst_err(s_Top_est,     "s_Top_syst")
@@ -1733,14 +1728,14 @@ print "- in Q'"
 q_Top_est      = []
 q_MultiJet_est = []
 q_WJets_est    = []
-q_ZInv_est     = []
+if not use_G: q_ZInv_est     = []
 q_Other_est    = []
 for i in range(0, len(systematics)):
-    #q_TT_est = bg_est("Top_q_T"         +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], q_TT[i], T_TT[i], combine_bins, 1, binned_k)
-    q_TT_est = bg_est("Top_q_T"         +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], q_TT[i], T_TT[i], combine_bins, 1, binned_k)
-    q_MJ_est = bg_est("MultiJet_q_Q"    +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], q_MJ[i], Q_MJ[i], combine_bins, 1, binned_k)
-    q_WJ_est = bg_est("WJets_q_W"       +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], q_WJ[i], W_WJ[i], combine_bins, 1, binned_k)
-    q_ZI_est = bg_est("ZInv_q_L"        +systematics[i], L_data, [L_TT[0],  L_MJ[0],          L_ZI[0], L_OT[0]], q_WJ[i], L_WJ[i], combine_bins, 1, binned_k)
+    #q_TT_est = bg_est("Top_q_T"         +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], q_TT[i], T_TT[i], combine_bins, binned_k)
+    q_TT_est = bg_est("Top_q_T"         +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], q_TT[i], T_TT[i], combine_bins, binned_k)
+    q_MJ_est = bg_est("MultiJet_q_Q"    +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], q_MJ[i], Q_MJ[i], combine_bins, binned_k)
+    q_WJ_est = bg_est("WJets_q_W"       +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], q_WJ[i], W_WJ[i], combine_bins, binned_k)
+    if not use_G: q_ZI_est = bg_est("ZInv_q_L"        +systematics[i], L_data, [L_TT[0],  L_MJ[0],          L_ZI[0], L_OT[0]], q_WJ[i], L_WJ[i], combine_bins, binned_k)
     if combine_bins:
         q_OT_est = combinebins(q_OT[i], "Other_q"+systematics[i])        
     else:
@@ -1753,7 +1748,7 @@ for i in range(0, len(systematics)):
     q_Top_est     .append(q_TT_est)
     q_MultiJet_est.append(q_MJ_est)
     q_WJets_est   .append(q_WJ_est)
-    q_ZInv_est    .append(q_ZI_est)
+    if not use_G: q_ZInv_est    .append(q_ZI_est)
     q_Other_est   .append(q_OT_est)
 
 q_TT_nom, q_TT_up, q_TT_dn = calc_syst_err(q_Top_est,     "q_Top_syst")
@@ -1811,24 +1806,24 @@ ROOT.gPad.Update()
 can.Write()
 ratio = add_stack_ratio_plot(can, 0,q_data.GetNbinsX(), 1, combine_bins, mrbins, r2bins)
 
-
 fout.Close()
 
 # Save the plots, but load them fresh from file
 # because objects were lost in memory in the function add_stack_ratio_plot()
-f = ROOT.TFile("closure_test_"+opt.box+".root")
+f = ROOT.TFile(fname_closure,"READ")
 can = f.Get("Closure_test_s_"+opt.box+"_Ratio")
+zinv_region = "G_region" if use_G else "L_region"
 if binned_k:
-    save_plot(can, "", "Plots/closure_test/"+DATE+"/binned_k/"+can.GetName(), 0)
+    save_plot(can, "", "Plots/closure_test/"+DATE+"/binned_k/"+zinv_region+"/"+can.GetName(), 0)
 else:
-    save_plot(can, "", "Plots/closure_test/"+DATE+"/factorized_k/"+can.GetName(), 0)
+    save_plot(can, "", "Plots/closure_test/"+DATE+"/factorized_k/"+zinv_region+"/"+can.GetName(), 0)
 can = f.Get("Closure_test_q_"+opt.box+"_Ratio")
 if binned_k:
-    save_plot(can, "", "Plots/closure_test/"+DATE+"/binned_k/"+can.GetName(), 0)
+    save_plot(can, "", "Plots/closure_test/"+DATE+"/binned_k/"+zinv_region+"/"+can.GetName(), 0)
 else:
-    save_plot(can, "", "Plots/closure_test/"+DATE+"/factorized_k/"+can.GetName(), 0)
+    save_plot(can, "", "Plots/closure_test/"+DATE+"/factorized_k/"+zinv_region+"/"+can.GetName(), 0)
 f.Close()
-sys.exit()
+#sys.exit()
 
 # --------------- Background Estimation ------------------
 
@@ -1856,12 +1851,12 @@ MultiJet_est = []
 WJets_est    = []
 ####    ZInv_est     = []
 Other_est    = []
-#T_MJ_est = bg_est("MultiJet_T_Q_est",         Q_data, [Q_TT[0],            Q_WJ[0], Q_ZI[0], Q_OT[0]], T_MJ[0], Q_MJ[0], combine_bins, 1, binned_k)
+#T_MJ_est = bg_est("MultiJet_T_Q_est",         Q_data, [Q_TT[0],            Q_WJ[0], Q_ZI[0], Q_OT[0]], T_MJ[0], Q_MJ[0], combine_bins, binned_k)
 for i in range(0, len(systematics)):
-    #S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], S_TT[i], T_TT[i], combine_bins, 1, binned_k)
-    S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], S_TT[i], T_TT[i], combine_bins, 1, binned_k)
-    S_MJ_est = bg_est("MultiJet"    +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], S_MJ[i], Q_MJ[i], combine_bins, 1, binned_k)
-    S_WJ_est = bg_est("WJets"       +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], S_WJ[i], W_WJ[i], combine_bins, 1, binned_k)
+    #S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ_est, T_WJ[0], T_ZI[0], T_OT[0]], S_TT[i], T_TT[i], combine_bins, binned_k)
+    S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], S_TT[i], T_TT[i], combine_bins, binned_k)
+    S_MJ_est = bg_est("MultiJet"    +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], S_MJ[i], Q_MJ[i], combine_bins, binned_k)
+    S_WJ_est = bg_est("WJets"       +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], S_WJ[i], W_WJ[i], combine_bins, binned_k)
     ####    S_ZI_est = S_ZI[i].Clone("ZInv" +systematics[i])
     if combine_bins:
         S_OT_est = combinebins(S_OT[i], "Other"+systematics[i])
@@ -1878,7 +1873,7 @@ for i in range(0, len(systematics)):
     ####    ZInv_est    .append(S_ZI_est)
     Other_est   .append(S_OT_est)
 fout.Close()
-sys.exit()
+#sys.exit()
 
 # Now save a different root file for each signal point
 if not opt.nocards:
