@@ -501,17 +501,51 @@ def merge_output(ana_arguments, last_known_status):
     if ready_to_merge: all_mergeables.append(mergeables)
     # Merge them if they are ready
     for i in range(0, len(all_mergeables)):
-        if not os.path.exists(all_mergeables[i][0]):
-            if len(all_mergeables[i])>2:
-                print str(len(all_mergeables[i])-1)+" files for "+all_mergeables[i][0]+" are ready to be merged"
-                while not os.path.exists(all_mergeables[i][0]):
-                    logged_call(["hadd", "-f", "-v", "-n", "200"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"))
-                    if os.path.isfile(all_mergeables[i][0]):
-                        if os.path.getsize(all_mergeables[i][0]) < 1000: os.remove(all_mergeables[i][0])
-            else:
+        output   = all_mergeables[i][0]
+        log      = output.rsplit("/",1)[0]+"/log/"+output.rsplit("/",1)[1].replace(".root",".log")
+        allinput = all_mergeables[i][1:]
+        if not os.path.exists(output):
+            if len(allinput)==1:
+                # Single files can simply be copied
                 print "File for "+all_mergeables[i][0]+" is ready"
-                special_call(["cp","-p"]+[all_mergeables[i][1]]+[all_mergeables[i][0]], 0)
-
+                special_call(["cp","-p", allinput[0], output], 0)
+            else:
+                # Multiple files will be hadded
+                print str(len(allinput))+" files for "+output+" are ready to be merged"
+                while not os.path.exists(output):
+                    #logged_call(["hadd", "-f", "-v", "-n", "200"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"))
+                    # hadd produces problems when merging too many files
+                    # so we merge files in chunks of 100 files each
+                    # problems happen typically over a few hundred input files
+                    Nmerge = 100
+                    alltmp = []
+                    if len(allinput)<Nmerge:
+                        # Simple hadding all output files
+                        logged_call(["hadd", "-f", "-v", output]+allinput, log)
+                    else:
+                        # Two staged hadding:
+                        # - First merge every Nmerge files to temp files
+                        for n in range(1, (len(allinput)-1)/Nmerge+2):
+                            tmplist = []
+                            for i in range((n-1)*Nmerge, min(n*Nmerge,len(allinput))): tmplist.append(allinput[i])
+                            tmpoutput = output.replace(".root","_"+str(n)+".root")
+                            tmplog    = tmpoutput.rsplit("/",1)[0]+"/log/"+tmpoutput.rsplit("/",1)[1].replace(".root",".log")
+                            alltmp.append(tmpoutput)
+                            print "- Merging into temp file: "+tmpoutput
+                            logged_call(["hadd", "-f", "-v", tmpoutput]+tmplist, tmplog)
+                        # - then merge the resulting temp files into a single file
+                        #   and remove the temporary files
+                        print "- Merging temp files into: "+output
+                        logged_call(["hadd", "-f", "-v", output]+alltmp, log)
+                        for tmpfile in alltmp:
+                            if os.path.isfile(tmpfile):
+                                os.remove(tmpfile)
+                            else:
+                                print "Something went wrong with the hadding of tmp file: "+tmpfile
+                                sys.exit()
+                    #  Check that the result has the right size (if not, delete)
+                    if os.path.isfile(output):
+                        if os.path.getsize(output) < 1000: os.remove(output)
 
 # Run all Analyzer jobs in parallel
 def analysis(ana_arguments, nproc):
