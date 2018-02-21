@@ -872,7 +872,7 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
     // For Top jet mass, similarly apply only JES + JER for now
     // (Since there's no other recommendation)
 #if VER == 0
-    data.jetsAK8.softDropMass[i]    = AK8_softDropMass[i] * scaleJES; * rescale_v4;
+    data.jetsAK8.softDropMass[i]    = AK8_softDropMass[i] * scaleJES * rescale_v4;
     //data.jetsAK8.softDropMass[i]    = AK8_softDropMass[i] * scaleJES;
     if (applySmearing) data.jetsAK8.softDropMass[i] *= scaleJER;
 #else

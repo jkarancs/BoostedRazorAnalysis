@@ -1896,9 +1896,9 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
 
   // HT
   //sh.AddNewFillParam("HT",                   { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={200, 4000}});
-  sh.AddNewFillParam("HT",                   { .nbin= 100, .bins={    0,   10000}, .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={400, 3000}});
-  sh.AddNewFillParam("OnlineHT",             { .nbin= 100, .bins={    0,   10000}, .fill=[&d] { return AK4_HtOnline;       }, .axis_title="H_{T}^{HLT} (GeV)",    .def_range={400, 3000}});
-  sh.AddNewFillParam("HTNoLep",              { .nbin= 100, .bins={    0,   10000}, .fill=[&d] { return AK4_HtNoLep;        }, .axis_title="H_{T} (GeV)",          .def_range={400, 3000}});
+  sh.AddNewFillParam("HT",                   { .nbin=  50, .bins={    0,    5000}, .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={400, 3000}});
+  sh.AddNewFillParam("OnlineHT",             { .nbin=  50, .bins={    0,    5000}, .fill=[&d] { return AK4_HtOnline;       }, .axis_title="H_{T}^{HLT} (GeV)",    .def_range={400, 3000}});
+  sh.AddNewFillParam("HTNoLep",              { .nbin=  50, .bins={    0,    5000}, .fill=[&d] { return AK4_HtNoLep;        }, .axis_title="H_{T} (GeV)",          .def_range={400, 3000}});
   sh.AddNewFillParam("HTBins",               { .nbin=HTB.size()-1, .bins=HTB,      .fill=[&d] { return AK4_Ht;             }, .axis_title="H_{T} (GeV)",          .def_range={400, 1500}});
   sh.AddNewFillParam("GenHT",                { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return d.evt.Gen_Ht;            }, .axis_title="H_{T}^{Gen} (GeV)",    .def_range={0, 2000}});
   sh.AddNewFillParam("AK8HT",                { .nbin=HT.size()-1, .bins=HT,        .fill=[&d] { return AK8_Ht;             }, .axis_title="H_{T}^{AK8} (GeV)",    .def_range={0, 2000}});
@@ -1932,8 +1932,8 @@ Analysis::define_histo_options(const double& weight, const DataStruct& d, const 
   sh.AddNewFillParam("DeltaPhiLLJet",        { .nbin=MDP.size()-1, .bins=MDP,      .fill=[]   { return dPhi_ll_jet;             }, .axis_title="#Delta#phi_{min} (ll, jet)"});
   sh.AddNewFillParam("DeltaRWb",             { .nbin=  60, .bins={    0,       6}, .fill=[]   { return minDeltaR_W_b;           }, .axis_title="#DeltaR_{min} (W, b)"});
   // MT/Mll
-  sh.AddNewFillParam("MT",                   { .nbin= 100, .bins={    0,    2000}, .fill=[]   { return MT_vetolep;              }, .axis_title="m_{T} (GeV)",  .def_range={0,500}});
-  sh.AddNewFillParam("mT",                   { .nbin= 100, .bins={    0,    2000}, .fill=[]   { return MT;                      }, .axis_title="m_{T} (GeV)",  .def_range={0,500}});
+  sh.AddNewFillParam("MT",                   { .nbin=  50, .bins={    0,    1000}, .fill=[]   { return MT_vetolep;              }, .axis_title="m_{T} (GeV)",  .def_range={0,500}});
+  sh.AddNewFillParam("mT",                   { .nbin=  50, .bins={    0,    1000}, .fill=[]   { return MT;                      }, .axis_title="m_{T} (GeV)",  .def_range={0,500}});
   sh.AddNewFillParam("Mll",                  { .nbin=  50, .bins={    0,     500}, .fill=[]   { return M_ll;                    }, .axis_title="m_{ll} (GeV)", .def_range={0,200}});
   // SUSY
   sh.AddNewFillParam("MGluino",              { .nbin= 121, .bins={-12.5, 3012.5 }, .fill=[&d] { return d.evt.SUSY_Gluino_Mass;  }, .axis_title="M_{#tilde{g}} (GeV)",        .def_range={550,2350}});
@@ -2327,21 +2327,21 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
       sh.AddHistos(s+"AK4",  { .fill=c+"JetEta",                          .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
       sh.AddHistos(s+"AK4",  { .fill=c+"JetPhi",                          .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
       sh.AddHistos(s+"AK4",  { .fill=c+"JetCSV",                          .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetPhotonDR",                     .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetPhotonPtRatio",                .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetPhotonPtRatio",                .pfs={Stack,data,cut,"JetPhotonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetPhotonPtRatio",                .pfs={Stack,data,cut,"JetPhotonDR0.4"},  .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetPhotonDR_vs_JetPhotonPtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetEleDR",                        .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetElePtRatio",                   .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetElePtRatio",                   .pfs={Stack,data,cut,"JetEleDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetElePtRatio",                   .pfs={Stack,data,cut,"JetEleDR0.4"},  .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetEleDR_vs_JetElePtRatio",       .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetMuonDR",                       .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetMuonPtRatio",                  .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetMuonPtRatio",                  .pfs={Stack,data,cut,"JetMuonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetMuonPtRatio",                  .pfs={Stack,data,cut,"JetMuonDR0.4"},  .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-      sh.AddHistos(s+"AK4",  { .fill=c+"JetMuonDR_vs_JetMuonPtRatio",     .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
+      sh.AddHistos("AK4",    { .fill="JetPhotonDR",                       .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetPhotonPtRatio",                  .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetPhotonPtRatio",                  .pfs={Stack,data,cut,"JetPhotonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetPhotonPtRatio",                  .pfs={Stack,data,cut,"JetPhotonDR0.4"},  .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetPhotonDR_vs_JetPhotonPtRatio",   .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
+      sh.AddHistos("AK4",    { .fill="JetEleDR",                          .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetElePtRatio",                     .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetElePtRatio",                     .pfs={Stack,data,cut,"JetEleDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetElePtRatio",                     .pfs={Stack,data,cut,"JetEleDR0.4"},  .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetEleDR_vs_JetElePtRatio",         .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
+      sh.AddHistos("AK4",    { .fill="JetMuonDR",                         .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetMuonPtRatio",                    .pfs={Stack,data,cut}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetMuonPtRatio",                    .pfs={Stack,data,cut,"JetMuonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetMuonPtRatio",                    .pfs={Stack,data,cut,"JetMuonDR0.4"},  .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos("AK4",    { .fill="JetMuonDR_vs_JetMuonPtRatio",       .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
     }
   }
 
@@ -2518,21 +2518,21 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8Tau21",        .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk2});
 	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8Tau32",        .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk2});
 	sh.AddHistos(s+"AK8",  { .fill=c+"MaxAK8SubjetCSV",    .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk2});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8PhotonDR",     .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8PhotonPtRatio",.pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8PhotonPtRatio",.pfs={Stack,data,cut,"JetAK8PhotonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8PhotonPtRatio",.pfs={Stack,data,cut,"JetAK8PhotonDR0.8"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8PhotonDR_vs_JetAK8PhotonPtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8EleDR",        .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8ElePtRatio",   .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8ElePtRatio",   .pfs={Stack,data,cut,"JetAK8EleDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8ElePtRatio",   .pfs={Stack,data,cut,"JetAK8EleDR0.8"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8EleDR_vs_JetAK8ElePtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8MuonDR",       .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8MuonPtRatio",  .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8MuonPtRatio",  .pfs={Stack,data,cut,"JetAK8MuonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8MuonPtRatio",  .pfs={Stack,data,cut,"JetAK8MuonDR0.8"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
-	sh.AddHistos(s+"AK8",  { .fill=c+"JetAK8MuonDR_vs_JetAK8MuonPtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
+	sh.AddHistos("AK8",    { .fill="JetAK8PhotonDR",       .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8PhotonPtRatio",  .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8PhotonPtRatio",  .pfs={Stack,data,cut,"JetAK8PhotonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8PhotonPtRatio",  .pfs={Stack,data,cut,"JetAK8PhotonDR0.8"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8PhotonDR_vs_JetAK8PhotonPtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
+	sh.AddHistos("AK8",    { .fill="JetAK8EleDR",          .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8ElePtRatio",     .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8ElePtRatio",     .pfs={Stack,data,cut,"JetAK8EleDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8ElePtRatio",     .pfs={Stack,data,cut,"JetAK8EleDR0.8"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8EleDR_vs_JetAK8ElePtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
+	sh.AddHistos("AK8",    { .fill="JetAK8MuonDR",         .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8MuonPtRatio",    .pfs={Stack,data,cut},               .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8MuonPtRatio",    .pfs={Stack,data,cut,"JetAK8MuonDR0.05"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8MuonPtRatio",    .pfs={Stack,data,cut,"JetAK8MuonDR0.8"}, .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+	sh.AddHistos("AK8",    { .fill="JetAK8MuonDR_vs_JetAK8MuonPtRatio", .pfs={"Data_MC",cut},  .cuts={},.draw="COLZ",.opt=o_1or2d_d, .ranges={}});
 
 #if TOP == 0
 	// Mass-tagged Ws
@@ -4692,6 +4692,11 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   // h_full_fake_aTop_total = new TH1D("h_full_fake_aTop_total","fake aTop p_{T} GeV", 17,ptbins);
   // h_fast_Top_pass	 = new TH1D("h_fast_Top_pass",       "Top p_{T} GeV",       17,ptbins);
   // h_fast_Top_total       = new TH1D("h_fast_Top_total",      "Top p_{T} GeV",       17,ptbins);
+
+  std::cout<<"-------------------------------------------------------"<<std::endl;
+  std::cout<<"  Total cell count for each SmartHisto:"<<std::endl;
+  sh.GetTotalNCells();
+  std::cout<<"-------------------------------------------------------"<<std::endl;
 
 }
 

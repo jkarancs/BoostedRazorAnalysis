@@ -1359,10 +1359,6 @@ for syst in systematics:
 print "Calculate photon based Z(nunu) estimate"
 
 # Loading plots
-#ZInv_dir = "syst_"+opt.dir
-# TODO: remove this
-ZInv_dir = "syst_"+(opt.dir.replace("2018_01_08_syst","2018_01_11_CHIsoNoEACorr")) # njet cut was messed up in G region
-
 # Templates for purity
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
 CHIsoTemplate_Prompt_EB = loadclone(f, "CHIsoTemplate_Prompt_g_EB", "_MC")
@@ -1383,7 +1379,7 @@ G_data_EB = loadclone(f, "MR_R2_G_EB", "_data")
 G_data_EE = loadclone(f, "MR_R2_G_EE", "_data")
 
 # Direct photon fraction
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/bkg.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
 IsDirect_G_EB = loadclone(f, "MR_R2_IsDirect_G_EB", "_MC")
 IsDirect_G_EE = loadclone(f, "MR_R2_IsDirect_G_EE", "_MC")
 
@@ -1635,7 +1631,6 @@ k_Z = (Z_data.Integral() - Z_NONDY.Integral())/Z_DY.Integral()
 # For GJets in G, instead use data measurement
 k_G = h_npromptdirect.Integral()/GDirectPrompt_GJ[0].Integral()
 double_ratio = k_Z / k_G
-double_ratio = 1.0
 print "Z_data:  "+str(Z_data.Integral())
 print "Z_nonDY: "+str(Z_NONDY.Integral())
 print "Z_DY:    "+str(Z_DY.Integral())
@@ -1657,7 +1652,7 @@ s_ZInv_est = zinv_est("s_ZInv", [s_ZI],               f_zinv_est, vh_npromptdire
 q_ZInv_est = zinv_est("q_ZInv", [q_ZI],               f_zinv_est, vh_npromptdirect, GDirectPrompt_GJ, L_data, L_subtract, L_WJ[0], combine_bins, binned_k, double_ratio)
 
 f_zinv_est.Close()
-sys.exit()
+#sys.exit()
 
 # ------------- Signal MET systematics ------------------
 

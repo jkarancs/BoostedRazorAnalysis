@@ -1356,6 +1356,51 @@ public:
     }
   }
 
+  int GetTotalNCells() {
+    int total = 0;
+    if (npf_==0) {
+      if (h1d_0p_) total += h1d_0p_->GetNcells();
+      if (h2d_0p_) total += h2d_0p_->GetNcells();
+      if (h3d_0p_) total += h3d_0p_->GetNcells();
+    } else if (npf_==1) {
+      for (size_t i=0; i<h1d_1p_.size(); ++i) total += h1d_1p_[i]->GetNcells();
+      for (size_t i=0; i<h2d_1p_.size(); ++i) total += h2d_1p_[i]->GetNcells();
+      for (size_t i=0; i<h3d_1p_.size(); ++i) total += h3d_1p_[i]->GetNcells();
+    } else if (npf_==2) {
+      for (size_t i=0; i<h1d_2p_.size(); ++i) for (size_t j=0; j<h1d_2p_[i].size(); ++j) total += h1d_2p_[i][j]->GetNcells();
+      for (size_t i=0; i<h2d_2p_.size(); ++i) for (size_t j=0; j<h2d_2p_[i].size(); ++j) total += h2d_2p_[i][j]->GetNcells();
+      for (size_t i=0; i<h3d_2p_.size(); ++i) for (size_t j=0; j<h3d_2p_[i].size(); ++j) total += h3d_2p_[i][j]->GetNcells();
+    } else if (npf_==3) {
+      for (size_t i=0; i<h1d_3p_.size(); ++i) for (size_t j=0; j<h1d_3p_[i].size(); ++j)
+        for (size_t k=0; k<h1d_3p_[i][j].size(); ++k) total += h1d_3p_[i][j][k]->GetNcells();
+      for (size_t i=0; i<h2d_3p_.size(); ++i) for (size_t j=0; j<h2d_3p_[i].size(); ++j) 
+        for (size_t k=0; k<h2d_3p_[i][j].size(); ++k) total += h2d_3p_[i][j][k]->GetNcells();
+      for (size_t i=0; i<h3d_3p_.size(); ++i) for (size_t j=0; j<h3d_3p_[i].size(); ++j) 
+        for (size_t k=0; k<h3d_3p_[i][j].size(); ++k) total += h3d_3p_[i][j][k]->GetNcells();
+    } else if (npf_==4) {
+      for (size_t i=0; i<h1d_4p_.size(); ++i) for (size_t j=0; j<h1d_4p_[i].size(); ++j) 
+        for (size_t k=0; k<h1d_4p_[i][j].size(); ++k) for (size_t l=0; l<h1d_4p_[i][j][k].size(); ++l) 
+	  total += h1d_4p_[i][j][k][l]->GetNcells();
+      for (size_t i=0; i<h2d_4p_.size(); ++i) for (size_t j=0; j<h2d_4p_[i].size(); ++j) 
+        for (size_t k=0; k<h2d_4p_[i][j].size(); ++k) for (size_t l=0; l<h2d_4p_[i][j][k].size(); ++l) 
+	  total += h2d_4p_[i][j][k][l]->GetNcells();
+      for (size_t i=0; i<h3d_4p_.size(); ++i) for (size_t j=0; j<h3d_4p_[i].size(); ++j) 
+        for (size_t k=0; k<h3d_4p_[i][j].size(); ++k) for (size_t l=0; l<h3d_4p_[i][j][k].size(); ++l) 
+	  total += h3d_4p_[i][j][k][l]->GetNcells();
+    } else if (npf_==5) {
+      for (size_t i=0; i<h1d_5p_.size(); ++i) for (size_t j=0; j<h1d_5p_[i].size(); ++j) 
+        for (size_t k=0; k<h1d_5p_[i][j].size(); ++k) for (size_t l=0; l<h1d_5p_[i][j][k].size(); ++l)
+	  for (size_t m=0; m<h1d_5p_[i][j][k][l].size(); ++m) total += h1d_5p_[i][j][k][l][m]->GetNcells();
+      for (size_t i=0; i<h2d_5p_.size(); ++i) for (size_t j=0; j<h2d_5p_[i].size(); ++j) 
+        for (size_t k=0; k<h2d_5p_[i][j].size(); ++k) for (size_t l=0; l<h2d_5p_[i][j][k].size(); ++l)
+	  for (size_t m=0; m<h2d_5p_[i][j][k][l].size(); ++m) total += h2d_5p_[i][j][k][l][m]->GetNcells();
+      for (size_t i=0; i<h3d_5p_.size(); ++i) for (size_t j=0; j<h3d_5p_[i].size(); ++j) 
+        for (size_t k=0; k<h3d_5p_[i][j].size(); ++k) for (size_t l=0; l<h3d_5p_[i][j][k].size(); ++l)
+	  for (size_t m=0; m<h3d_5p_[i][j][k][l].size(); ++m) total += h3d_5p_[i][j][k][l][m]->GetNcells();
+    }
+    return total;
+  }
+
 private:
   //______________________________________________________________________
   //                       Multidraw functions
@@ -2727,6 +2772,24 @@ public:
 	  std::cout<<" - ";
 	  for (size_t j=0; j<npf; ++j) {
 	    std::cout<<it->second[i]->GetPFNames()[j];
+	    if (j+1!=npf) std::cout<<", ";
+	  }
+	}
+	std::cout<<"\n";
+      }
+    }
+  }
+
+  void GetTotalNCells() {
+    for(const auto& sh : sh_) {
+      for (size_t i=0; i<sh.second.size(); ++i)  {
+	std::cout<<sh.second[i]->GetTotalNCells()<<" - ";
+	std::cout<<sh.second[i]->GetName();
+	size_t npf = sh.second[i]->GetPFNames().size();
+	if (npf>0) {
+	  std::cout<<" - ";
+	  for (size_t j=0; j<npf; ++j) {
+	    std::cout<<sh.second[i]->GetPFNames()[j];
 	    if (j+1!=npf) std::cout<<", ";
 	  }
 	}
