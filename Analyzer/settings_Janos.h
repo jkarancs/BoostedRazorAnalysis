@@ -7,7 +7,7 @@
 #define VER     4
 #define SKIM    0
 #define SYST    1
-#define TOP     0
+#define TOP     1
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
