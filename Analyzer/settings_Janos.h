@@ -7,7 +7,7 @@
 #define VER     4
 #define SKIM    0
 #define SYST    1
-#define TOP     1
+#define TOP     0
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -71,6 +71,7 @@ struct settings {
     varySystematics          ( SYST  ),
     systematicsFileName      ( "systematics/2017_12_26_1SigmaUpDown_NoPdf.txt" ),
 //  systematicsFileName      ( "systematics/2017_12_26_AllUpDown_NoPdf.txt" ),
+//  systematicsFileName      ( "systematics/2018_03_19_JESOnly.txt" ),
     useJSON                  ( false ), // by default: no need to apply, but can be useful if some lumisections need to be excluded additionally
 #if VER != 0
     jsonFileName             ( "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/ReReco/Final/"

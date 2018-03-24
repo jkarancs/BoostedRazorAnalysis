@@ -56,6 +56,8 @@ public:
     //  ss<<"pdf"<<i;
     //  bkg_syst.push_bask(ss.str());
     //}
+
+    other_trigger_eff = 1.0;
   }
   ~AnalysisBase() {
     delete sw_1_;
@@ -70,7 +72,7 @@ public:
   // Functions used by the Analyzer
   void define_preselections(const DataStruct&);
 
-  void calculate_common_variables(DataStruct&, const unsigned int&);
+  void calculate_common_variables(DataStruct&, const unsigned int&, int);
 
   void init_common_histos(const bool&);
 
@@ -132,6 +134,8 @@ public:
   std::map<char, std::vector<double> > scale_factors;
   std::map<char, double> sf_weight;
   std::vector<double> all_weights;
+
+  double other_trigger_eff;
 
   const bool isData;
   const bool isSignal;
@@ -629,9 +633,9 @@ std::vector<float> AK8_E, AK8_Pt, AK8_softDropMass;//, AK8_trimmedMass, AK8_prun
 std::vector<float> AK8_softDropMass0;
 std::vector<float> AK8_softDropMass1;
 std::vector<float> AK8_softDropMass2;
-std::vector<float> AK8_softDropMass3;
 std::vector<float> AK8_softDropMassCorr; // Correction for W tagging
-std::vector<float> softDropMassCorr;     // Correction + uncertainties for W tagging
+std::vector<float> softDropMassCorr;     // POG Correction + uncertainties for W tagging
+std::vector<float> softDropMass;         // JES Correction + uncertainties for top tagging
 
 std::vector<float> AK4_JERSmearFactor,     AK8_JERSmearFactor;
 std::vector<float> AK4_JERSmearFactorUp,   AK8_JERSmearFactorUp;
@@ -667,11 +671,11 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
 #elif VER == 1
     AK8_softDropMass = data.jetsAK8.softDropMassPuppi;
 #else
-    AK8_softDropMass = data.jetsAK8.corrSDMassPuppi;
-    AK8_softDropMass0 = data.jetsAK8.uncorrSDMassPuppi;
-    AK8_softDropMass1 = data.jetsAK8.corrSDMassPuppi;
-    AK8_softDropMass2 = data.jetsAK8.softDropMassCHS;
-    AK8_softDropMass3 = data.jetsAK8.softDropMassPuppi;
+    //AK8_softDropMass = data.jetsAK8.softDropMassPuppi; 
+    AK8_softDropMass = data.jetsAK8.corrSDMassPuppi; // Make sure to change also sd_mass_top if needed!!!
+    AK8_softDropMass0 = data.jetsAK8.uncorrSDMassPuppi; // No correction (needed for W)
+    AK8_softDropMass1 = data.jetsAK8.corrSDMassPuppi;   // L1L2L3 on subjet
+    AK8_softDropMass2 = data.jetsAK8.softDropMassPuppi; // L2L3 on fatjet
 #endif
     //AK8_trimmedMass  = data.jetsAK8.trimmedMass;
     //AK8_prunedMass   = data.jetsAK8.prunedMass;
@@ -692,21 +696,21 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
 #if VER == 0
 	double puppi_pt  = data.jetsAK8.Pt[i];
 	double puppi_eta = data.jetsAK8.Eta[i];
-	double puppi_sd_mass = data.jetsAK8.softDropMass[i];
+	double puppi_sd_mass_w = data.jetsAK8.softDropMass[i];
 #else
 	double puppi_pt  = data.jetsAK8.PtPuppi[i];
 	double puppi_eta = data.jetsAK8.EtaPuppi[i];
 #if VER == 1
-	double puppi_sd_mass = data.jetsAK8.softDropMassPuppi[i];
+	double puppi_sd_mass_w = data.jetsAK8.softDropMassPuppi[i];
 #else
-	double puppi_sd_mass = data.jetsAK8.uncorrSDMassPuppi[i];
+	double puppi_sd_mass_w = data.jetsAK8.uncorrSDMassPuppi[i];
 #endif
 #endif
 	double corr = puppisd_corrGEN_->Eval(puppi_pt);
 	if(std::abs(puppi_eta)<=1.3) corr *= puppisd_corrRECO_cen_->Eval(puppi_pt);
 	else corr *= puppisd_corrRECO_for_->Eval(puppi_pt);
 	
-	AK8_softDropMassCorr.push_back(puppi_sd_mass * corr);
+	AK8_softDropMassCorr.push_back(puppi_sd_mass_w * corr);
       }
     } // end sys_index==0
 
@@ -837,6 +841,7 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
   }
   // AK8 jets
   softDropMassCorr.clear();
+  softDropMass    .clear();
   while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
     double scaleJES = get_syst_weight(1.0, data.jetsAK8.jecUncertainty[i], nSigmaJES);
@@ -858,7 +863,8 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
 #if USE_ISO_TRK_VETO > 0
       double scale = 0.858 + 0.047*nSigmaRescaleAK8, offset = 30.8 + 38.6 *nSigmaRescaleAK8;
 #else
-      double scale = 0.840 + 0.037*nSigmaRescaleAK8, offset = 50.5 + 35.0 *nSigmaRescaleAK8;
+      //double scale = 0.840 + 0.037*nSigmaRescaleAK8, offset = 50.5 + 35.0 *nSigmaRescaleAK8;
+      double scale = 0.848 + 0.047*nSigmaRescaleAK8, offset = 39.6 + 38.7 *nSigmaRescaleAK8;
 #endif
       // Use original pt without any scale/smear to determine the right scaling
       double orig_pt = AK8_Pt[i];
@@ -869,21 +875,6 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
     }
     //AK8_Ht += data.jetsAK8.Pt[i];
 
-    // For Top jet mass, similarly apply only JES + JER for now
-    // (Since there's no other recommendation)
-#if VER == 0
-    data.jetsAK8.softDropMass[i]    = AK8_softDropMass[i] * scaleJES * rescale_v4;
-    //data.jetsAK8.softDropMass[i]    = AK8_softDropMass[i] * scaleJES;
-    if (applySmearing) data.jetsAK8.softDropMass[i] *= scaleJER;
-#else
-    data.jetsAK8.softDropMassPuppi[i]    = AK8_softDropMass[i] * scaleJES * rescale_v4;
-    //data.jetsAK8.softDropMassPuppi[i]    = AK8_softDropMass[i] * scaleJES;
-    if (applySmearing) data.jetsAK8.softDropMassPuppi[i] *= scaleJER;
-#endif
-    //data.jetsAK8.trimmedMass[i]  = AK8_trimmedMass[i]  * scaleJES * scaleJER;
-    //data.jetsAK8.prunedMass[i]   = AK8_prunedMass[i]   * scaleJES * scaleJER;
-    //data.jetsAK8.filteredMass[i] = AK8_filteredMass[i] * scaleJES * scaleJER;
-    
     // For W jet mass apply combination of both JES+JMS and JMR (JER not needed)
     // JES uncertainty is added on top of the JMS one (in quadrature)
     double comb_unc = std::sqrt(W_TAG_JMS_SF_ERR*W_TAG_JMS_SF_ERR + data.jetsAK8.jecUncertainty[i]*data.jetsAK8.jecUncertainty[i]);
@@ -899,6 +890,20 @@ AnalysisBase::rescale_smear_jet_met(DataStruct& data, const bool& applySmearing,
       }
     }
     softDropMassCorr.push_back(scaled_corrected_mass);
+
+    // For Top jet mass, apply only JES + JER for now
+    // (Since there's no other recommendation)
+#if VER == 0
+    //double scaled_top_mass = AK8_softDropMass[i] * scaleJES * rescale_v4;
+    double scaled_top_mass = AK8_softDropMass[i] * scaleJES;
+    if (applySmearing) scaled_top_mass *= scaleJER;
+#else
+    //double scaled_top_mass = AK8_softDropMass[i] * scaleJES * rescale_v4;
+    double scaled_top_mass = AK8_softDropMass[i] * scaleJES;
+    if (applySmearing) scaled_top_mass *= scaleJER;
+#endif
+    softDropMass.push_back(scaled_top_mass);
+
   }
 
   TVector3 dmet(0,0,0);
@@ -1025,6 +1030,8 @@ std::vector<double> AK8_muonDR;
 std::vector<double> AK8_muonPtRatio;
 std::vector<float> softDropMassW;
 std::vector<float> softDropMassTop;
+std::vector<float> softDropMassTop1;
+std::vector<float> softDropMassTop2;
 #if VER == 0
 std::vector<double> maxSubjetCSV;
 #endif
@@ -1039,6 +1046,13 @@ std::vector<bool> passHadTopMassTag;
 std::vector<bool> passHadTop1BMassTag;
 std::vector<bool> passHadTop0BMassTag;
 std::vector<bool> passHadTop0BAntiTag;
+std::vector<bool> passOtherWMassTag;
+std::vector<bool> passOtherTightWTag;
+std::vector<bool> passOtherTightWAntiTag;
+std::vector<bool> passOtherHadTopTag;
+std::vector<bool> passOtherHadTopMassTag;
+std::vector<bool> passOtherHadTop0BMassTag;
+std::vector<bool> passOtherHadTop0BAntiTag;
 std::vector<bool> hasGenW;
 std::vector<bool> hasGenTop;
 unsigned int nJetAK8;
@@ -1176,11 +1190,13 @@ TLorentzVector lep_pair;
 //std::vector<bool> veto_mu_in_jet, selected_mu_in_jet;
 
 void
-AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index)
+AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& syst_index, int debug = 0)
 {
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: start (new event)"<<std::endl;
 
   // It only makes sense to calculate certain variables only once 
   // if they don't depend on jet energy (eg. leptons)
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: init start"<<std::endl;
   if (syst_index == 0) {
     veto_electrons     .clear();
     veto_muons         .clear();
@@ -1229,6 +1245,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 #endif
 #endif
     }
+    if (debug) std::cout<<"AnalysisBase::calc_common_var: end init AK8"<<std::endl;
 
     // Event Letpons
     iEleVeto     .clear();
@@ -1353,6 +1370,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	r_iso_tight_leptons.push_back(r_iso);
       }
     }
+    if (debug) std::cout<<"AnalysisBase::calc_common_var: end init ele"<<std::endl;
 
     // Number of Veto/Select Muons
     iMuVeto      .clear();
@@ -1468,6 +1486,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	r_iso_tight_leptons.push_back(r_iso);
       }
     } // end of muon loop
+    if (debug) std::cout<<"AnalysisBase::calc_common_var: end init mu"<<std::endl;
 
     nLepVetoNoIso = nEleVetoNoIso + nMuVetoNoIso;
     nLepVeto      = nEleVeto   + nMuVeto;
@@ -1496,6 +1515,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	itTauVeto[i] = nTauVeto++;
       }
     }
+    if (debug) std::cout<<"AnalysisBase::calc_common_var: end init tau"<<std::endl;
 
     // MT
     MT = 9999;
@@ -1534,8 +1554,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	dPhi_ll_met = std::abs(TVector2::Phi_mpi_pi(lep_pair.Phi() - data.met.Phi[0]));
       }
     }
+    if (debug) std::cout<<"AnalysisBase::calc_common_var: end init razor"<<std::endl;
   } // end if (syst_index==0)
-
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end init"<<std::endl;
+    
   // Event Letpons
 #if VER < 4
   // Do a first loop to reverse engineer the rho value (which is used later)
@@ -1706,6 +1728,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     //    }
     //  }
   }
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end pho"<<std::endl;
 
   // Add the lepton (pair) to MET
   TVector3 met_1l, met_1vl, met_ll;
@@ -1750,6 +1773,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     pho_met.SetPtEtaPhi(faked_photons[0].Pt(), 0, faked_photons[0].Phi());
     met_fakepho += pho_met;
   }
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end met+lep/pho"<<std::endl;
 
   // Rest of the vairables need to be recalculated each time the jet energy is changed
   // eg. Jet selection, W/top tags, HT (obviously), etc. that depends on jet pt
@@ -1992,6 +2016,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       }
     }
   }
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end AK4"<<std::endl;
 
 
   // Add isolated leptons to HT computation
@@ -2012,8 +2037,10 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   iHadTopTag      .clear();
   iHadTop0BMassTag.clear();
   iHadTop0BAntiTag.clear();
-  softDropMassW  .clear();
-  softDropMassTop.clear();
+  softDropMassW   .clear();
+  softDropMassTop .clear();
+  softDropMassTop1.clear();
+  softDropMassTop2.clear();
   itJetAK8             .assign(data.jetsAK8.size, (size_t)-1);
   itWMassTag           .assign(data.jetsAK8.size, (size_t)-1);
   itLooseWTag          .assign(data.jetsAK8.size, (size_t)-1);
@@ -2034,6 +2061,13 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   passHadTop1BMassTag  .assign(data.jetsAK8.size, 0);
   passHadTop0BMassTag  .assign(data.jetsAK8.size, 0);
   passHadTop0BAntiTag  .assign(data.jetsAK8.size, 0);
+  passOtherWMassTag       .assign(data.jetsAK8.size, 0);
+  passOtherTightWTag      .assign(data.jetsAK8.size, 0);
+  passOtherTightWAntiTag  .assign(data.jetsAK8.size, 0);
+  passOtherHadTopTag      .assign(data.jetsAK8.size, 0);
+  passOtherHadTopMassTag  .assign(data.jetsAK8.size, 0);
+  passOtherHadTop0BMassTag.assign(data.jetsAK8.size, 0);
+  passOtherHadTop0BAntiTag.assign(data.jetsAK8.size, 0);
   AK8_photonDR         .assign(data.jetsAK8.size, 9999);
   AK8_photonPtRatio    .assign(data.jetsAK8.size, 0);
   AK8_eleDR            .assign(data.jetsAK8.size, 9999);
@@ -2060,9 +2094,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   minDeltaR_W_b = 9999;
   while(data.jetsAK8.Loop()) {
     size_t i = data.jetsAK8.it;
+    if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" start"<<std::endl;
     TLorentzVector AK8_v4; AK8_v4.SetPtEtaPhiE(data.jetsAK8.Pt[i], data.jetsAK8.Eta[i], data.jetsAK8.Phi[i], data.jetsAK8.E[i]);
-    // For W   tagging in MC we use: GEN/RECO corrected +scaled+smeared softdrop mass
-    // For top tagging in MC we use: L1L2L3 subjet corrected +scaled+smeared softdrop mass
 #if VER == 0
     double sd_mass_w = isData ? data.jetsAK8.softDropMass[i] : softDropMassCorr[i];
     double sd_mass_top = data.jetsAK8.softDropMass[i];
@@ -2070,11 +2103,24 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     double sd_mass_w = isData ? data.jetsAK8.softDropMassPuppi[i] : softDropMassCorr[i];
     double sd_mass_top = data.jetsAK8.softDropMassPuppi[i];
 #else
-    double sd_mass_w = isData ? data.jetsAK8.uncorrSDMassPuppi[i] : softDropMassCorr[i];
-    double sd_mass_top = data.jetsAK8.softDropMassPuppi[i];
+    // For W   tagging in MC we use: GEN/RECO corrected +scaled+smeared softdrop mass
+    // For top tagging in MC we use: L1L2L3 subjet corrected +scaled+smeared softdrop mass
+    double puppi_pt  = data.jetsAK8.PtPuppi[i];
+    double puppi_eta = data.jetsAK8.EtaPuppi[i];
+    double corr = puppisd_corrGEN_->Eval(puppi_pt);
+    if(std::abs(puppi_eta)<=1.3) corr *= puppisd_corrRECO_cen_->Eval(puppi_pt);
+    else corr *= puppisd_corrRECO_for_->Eval(puppi_pt);
+    double sd_mass_w_uncorr = data.jetsAK8.uncorrSDMassPuppi[i];
+    double sd_mass_w        = isData ? data.jetsAK8.uncorrSDMassPuppi[i] * corr : softDropMassCorr[i];
+    double sd_mass_top      = isData ? data.jetsAK8.corrSDMassPuppi[i]          : softDropMass[i];
+    double sd_mass_top1     = isData ? data.jetsAK8.corrSDMassPuppi[i]          : AK8_softDropMass1[i];
+    double sd_mass_top2     = isData ? data.jetsAK8.softDropMassPuppi[i]        : AK8_softDropMass2[i];
 #endif
-    softDropMassW.push_back(sd_mass_w);
-    softDropMassTop.push_back(sd_mass_top);
+    softDropMassW   .push_back(sd_mass_w);
+    softDropMassTop .push_back(sd_mass_top);
+    softDropMassTop1.push_back(sd_mass_top1);
+    softDropMassTop2.push_back(sd_mass_top2);
+    if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" mass ok"<<std::endl;
 
     // Jet ID
     if ( passLooseJetAK8[i] = 
@@ -2082,6 +2128,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	   data.jetsAK8.Pt[i]         >= JET_AK8_PT_CUT &&
 	   std::abs(data.jetsAK8.Eta[i])  <  JET_AK8_ETA_CUT ) ) {
 
+      if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" id ok"<<std::endl;
       // Photon jet veto (not applied):
       // - Calculate DR and Pt ratio of photons overlapping with the jet
       // - Remove jet if DR<0.8
@@ -2117,6 +2164,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       double abseta  = data.jetsAK8.Eta[i];
       double tau_21 = tau21[i];
       double tau_32 = tau32[i];
+      if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" overlap ok"<<std::endl;
 
       // _______________________________________________________
       //                   Hadronic W Tag definition
@@ -2140,9 +2188,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  itTightWTag[i] = nTightWTag++;
 	  // DR between W and b
 	  while(data.jetsAK4.Loop()) {
-	    size_t i = data.jetsAK4.it;
-	    TLorentzVector AK4_v4; AK4_v4.SetPtEtaPhiE(data.jetsAK4.Pt[i], data.jetsAK4.Eta[i], data.jetsAK4.Phi[i], data.jetsAK4.E[i]);
-	    if (passMediumBTag[i]) {
+	    size_t j = data.jetsAK4.it;
+	    TLorentzVector AK4_v4; AK4_v4.SetPtEtaPhiE(data.jetsAK4.Pt[j], data.jetsAK4.Eta[j], data.jetsAK4.Phi[j], data.jetsAK4.E[j]);
+	    if (passMediumBTag[j]) {
 	      double dR = AK4_v4.DeltaR(AK8_v4);
 	      if (dR<minDeltaR_W_b) minDeltaR_W_b = dR;
 	    }
@@ -2153,6 +2201,16 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	  itTightWAntiTag[i] = nTightWAntiTag++;
 	}
       }
+      // Same without mass smearing
+      if (passOtherWMassTag[i] = 
+          ( pt        >= W_PT_CUT &&
+            abseta    <  W_ETA_CUT &&
+            sd_mass_w_uncorr >= W_SD_MASS_CUT_LOW && 
+            sd_mass_w_uncorr <  W_SD_MASS_CUT_HIGH) ) {
+        passOtherTightWTag[i] = (tau_21 < W_TAU21_TIGHT_CUT);
+        passOtherTightWAntiTag[i] = !passOtherTightWTag[i];
+      }
+      if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" wtag ok"<<std::endl;
 
       // _______________________________________________________
       //                  Hadronic Top Tag definition
@@ -2179,9 +2237,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 #if USE_BTAG == 1
 	} else {
 	  while(data.jetsAK4.Loop()) {
-	    size_t i = data.jetsAK4.it;
-	    TLorentzVector AK4_v4; AK4_v4.SetPtEtaPhiE(data.jetsAK4.Pt[i], data.jetsAK4.Eta[i], data.jetsAK4.Phi[i], data.jetsAK4.E[i]);
-	    if (passMediumBTag[i]) {
+	    size_t j = data.jetsAK4.it;
+	    TLorentzVector AK4_v4; AK4_v4.SetPtEtaPhiE(data.jetsAK4.Pt[j], data.jetsAK4.Eta[j], data.jetsAK4.Phi[j], data.jetsAK4.E[j]);
+	    if (passMediumBTag[j]) {
 	      double dR = AK4_v4.DeltaR(AK8_v4);
 	      if (dR<minDeltaR_W_b) minDeltaR_W_b = dR;
 	    }
@@ -2198,6 +2256,30 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
 	}
 #endif
       }
+      // Other top mass correction
+      minDeltaR_W_b = 9999;
+      if (passOtherHadTopMassTag[i] = 
+          ( pt           >= TOP_PT_CUT && 
+            sd_mass_top2 >= TOP_SD_MASS_CUT_LOW &&
+            sd_mass_top2 <  TOP_SD_MASS_CUT_HIGH) ) {
+        if (passSubjetBTag[i]) {
+          passOtherHadTopTag[i] = (tau_32 < TOP_TAU32_CUT);
+        } else {
+          while(data.jetsAK4.Loop()) {
+            size_t j = data.jetsAK4.it;
+            TLorentzVector AK4_v4; AK4_v4.SetPtEtaPhiE(data.jetsAK4.Pt[j], data.jetsAK4.Eta[j], data.jetsAK4.Phi[j], data.jetsAK4.E[j]);
+            if (passMediumBTag[j]) {
+              double dR = AK4_v4.DeltaR(AK8_v4);
+              if (dR<minDeltaR_W_b) minDeltaR_W_b = dR;
+            }
+          }
+          if(minDeltaR_W_b > 0.8) {
+            passOtherHadTop0BMassTag[i] = minDeltaR_W_b > 0.8;
+            passOtherHadTop0BAntiTag[i] = (tau_32 >= TOP_TAU32_CUT);
+          }
+        }
+      }
+      if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" top tag ok"<<std::endl;
 
       //} // End photon jet veto
 
@@ -2210,7 +2292,9 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       AK8_Ht += data.jetsAK8.Pt[i];
     }
 
+    if (debug>1) std::cout<<"AnalysisBase::calc_common_var: AK8 "<<i<<" end"<<std::endl;
   } // End AK8 Jet Loop
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end AK8"<<std::endl;
   
   // Loop on generator particles
   iGenHadW   .clear();
@@ -2434,6 +2518,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   //  data.evt.R   = data.evt.MTR/data.evt.MR;
   //  data.evt.R2  = data.evt.R*data.evt.R;    
   //} else if (syst_index!=0) {
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end gen"<<std::endl;
 
   // Recalculation of Razor variables
   // Has to be done after jet uncertainties applied
@@ -2517,6 +2602,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     R2_pho  = R_pho*R_pho;
     dPhiRazorNoPho = std::abs(TVector2::Phi_mpi_pi(hemis_AK4_nophoton[0].Phi() - hemis_AK4_nophoton[1].Phi()));
   }
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end razor"<<std::endl;
+  if (debug) std::cout<<"AnalysisBase::calc_common_var: end"<<std::endl;
 }
 
 //_______________________________________________________
@@ -3898,6 +3985,10 @@ TH2D* eff_trigger_pho_down;
 TH2D* eff_trigger_mu;
 TH2D* eff_trigger_mu_up;
 TH2D* eff_trigger_mu_down;
+TH2D* eff_trigger_F_met;
+TH2D* eff_trigger_F_mu;
+TH2D* eff_trigger_F_ele;
+TH2D* eff_trigger_F_pho;
 
 TGraphAsymmErrors* eff_full_fake_bW;
 TGraphAsymmErrors* eff_full_fake_eW;
@@ -4124,6 +4215,12 @@ void AnalysisBase::init_syst_input() {
       eff_trigger_mu     ->SetBinError(i,j,mu_total);
     }
   }
+  // Same trigger efficiencies but in the F region (needed for fake rates)
+  const char* fin = "trigger_eff/Dec02_Golden_JSON/F_Region.root";
+  eff_trigger_F_met = utils::getplot_TH2D(fin, "met", "trig_f_met");
+  eff_trigger_F_mu  = utils::getplot_TH2D(fin, "mu",  "trig_f_mu");
+  eff_trigger_F_ele = utils::getplot_TH2D(fin, "ele", "trig_f_ele");
+  eff_trigger_F_pho = utils::getplot_TH2D(fin, "pho", "trig_f_pho");
 
   // W/Top (anti-/mass-)tag (and fake rate) scale factors
   // From Changgi
@@ -4881,19 +4978,28 @@ double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSi
   TH2D *h      = eff_trigger_veto;
   TH2D *h_up   = eff_trigger_veto_up;
   TH2D *h_down = eff_trigger_veto_down;
+  TH2D *h_F    = eff_trigger_F_met;
   if (nEleVeto>=1) {
     h      = eff_trigger_ele;
     h_up   = eff_trigger_ele_up;
     h_down = eff_trigger_ele_down;
+    h_F    = eff_trigger_F_ele;
   } else if (nMuVeto>=1) {
     h      = eff_trigger_mu;
     h_up   = eff_trigger_mu_up;
     h_down = eff_trigger_mu_down;
+    h_F    = eff_trigger_F_mu;
   } else if (nPhotonPreSelect>=1) {
     h      = eff_trigger_pho;
     h_up   = eff_trigger_pho_up;
     h_down = eff_trigger_pho_down;
+    h_F    = eff_trigger_F_pho;
   }
+
+  // Trigger efficiency in the F region
+  if (nJetAK8>0) {
+    other_trigger_eff = utils::geteff2D(h_F, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
+  } else other_trigger_eff = 0.0;
 
   // 2D trigger efficiency (New)
   if (nJetAK8>0) {

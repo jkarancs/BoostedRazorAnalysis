@@ -2406,7 +2406,8 @@ public:
 	if (skip==dps1d[i].hvec.size()) break; 
       }
       // Do not draw data also if the plot is blinded
-      if (approval_/10==5&&skip==0) ++skip;
+      //if (std::string(dps1d[i].hvec[skip]->GetName()).find("Blind")!=std::string::npos&&
+      //    (approval_/10==5)&&skip==0) ++skip;
       if (skip<dps1d[i].hvec.size()) {
 	TCanvas *c = custom_can_(dps1d[i].hvec[skip], dps1d[i].canname, 1,1, (1+doublex_)*500,500);
 	bool y_range_set = 0;

@@ -20,11 +20,8 @@ parser.add_option('--nproc',       dest="NPROC",       type="int",          defa
 (opt,args) = parser.parse_args()
 
 BIN = ""
-if   "_nj35" in opt.box: BIN = "_nj35"
-elif "_nj45" in opt.box: BIN = "_nj45"
-elif "_nj46" in opt.box: BIN = "_nj46"
+if   "_nj45" in opt.box: BIN = "_nj45"
 elif "_nj6"  in opt.box: BIN = "_nj6"
-elif "_nj7"  in opt.box: BIN = "_nj7"
 DATE = "_".join(opt.dir.split("/")[-1].split("_")[1:4])
 
 # ---------------------- Settings ------------------------
@@ -397,10 +394,17 @@ def calc_factorized_kappa(sr_2d, cr_2d, name, title):
 def fix_low_stat_bins(fout, h_S, h_S_LWP):
     names = { "TT":"Top", "MJ": "Multijet", "WJ": "WJets", "ZI":"ZToNunu", "OT":"Other" }
     sample = names[h_S_LWP.GetName().replace("_combined","").split("_")[-1]]
+    nosyst = not ("Up" in h_S.GetName() or "Down" in h_S.GetName())
+    syst = ""
+    if "Up" in h_S.GetName() or "Down" in h_S.GetName():
+        if "Other" in h_S.GetName():
+            syst = "_"+h_S.GetName().split("_")[-1]
+        else:
+            syst = "_"+h_S.GetName().split("_")[-3]
     # Count the number of missing bins
     nmissing1 = 0
     nmissing2 = 0
-    if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+    if nosyst:
         h_added_LWP = h_S_LWP.Clone(h_S_LWP.GetName()+"_added")
     for binx in range(1, h_S.GetNbinsX()+1):
         c1 = h_S.GetBinContent(binx)
@@ -414,16 +418,16 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             #if i == 0: print "Counts for bin "+str(binx)+" is missing in loose region for "+sample+" setting content and error: "+str(w)
             h_S_LWP.SetBinContent(binx, 0)
             h_S_LWP.SetBinError  (binx, w)
-            if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+            if nosyst:
                 #h_added_LWP.SetBinContent(binx, 0)
                 h_added_LWP.SetBinContent(binx, 1.01e-3) # To allow showing it on the plot
                 h_added_LWP.SetBinError  (binx, w) 
-        elif not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+        elif nosyst:
             h_added_LWP.SetBinContent(binx, 0)
             h_added_LWP.SetBinError  (binx, 0)
         prev_w = avgw2
     if nmissing1>0:
-        if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+        if nosyst:
             print ("- Fixed %2d missing bins for %s" % (nmissing1, sample) )
         # Calculate event ratio between S and LooseWP region
         sum1 = 0
@@ -433,8 +437,8 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             sum2 += h_S_LWP.GetBinContent(binx)
         ratio = sum1/sum2
         # Plot the event ratios
-        if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
-            can = custom_can(h_S, "Loose_S_Region_"+sample+"_"+opt.box)
+        if nosyst:
+            can = custom_can(h_S, "Loose_S_Region_"+sample+"_"+opt.box+syst)
             can.SetLogy(1)
             h_S.GetYaxis().SetTitle("Events")
             h_S.GetYaxis().SetRangeUser(1.01e-3,1e4)
@@ -465,7 +469,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             leg.Draw("SAME")
             can2 = add_ratio_plot(can, 0,h_S.GetNbinsX(), 1, combine_bins, mrbins, r2bins, ratio)
         # Set counts for bins where there are counts in the loose region
-        if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+        if nosyst:
             h_extrap = h_S.Clone(h_S.GetName()+"_extrap")
         for binx in range(1, h_S.GetNbinsX()+1):
             c1 = h_S.GetBinContent(binx)
@@ -476,17 +480,17 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             if c1<=0 and (c2>0 or e2>0):
                 h_S.SetBinContent(binx, c2*ratio)                    
                 h_S.SetBinError  (binx, e2*ratio)
-                if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+                if nosyst:
                     if c2>0:
                         h_extrap.SetBinContent(binx, c2*ratio)
                     else:
                         h_extrap.SetBinContent(binx, 1.01e-3) # To allow showing it on the plot
                     h_extrap.SetBinError  (binx, e2*ratio)
-            elif (nmissing1 and not ("Up" in h_S.GetName() or "Down" in h_S.GetName())):
+            elif (nmissing1 and nosyst):
                 h_extrap.SetBinContent(binx, 0)
                 h_extrap.SetBinError  (binx, 0)
                 #h_extrap.SetBinContent(binx, 1.01e-3) # To allow showing it on the plot
-        if not ("Up" in h_S.GetName() or "Down" in h_S.GetName()):
+        if nosyst:
             can3 = fout.Get(can2.GetName())
             pad1 = can3.GetListOfPrimitives().At(0)
             pad1.cd()
@@ -509,8 +513,8 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             extrap_ratio.Draw("SAME PE1")
             can3.SetName(can2.GetName()+"_PointsAdded")
             can3.Write()
-            can4 = fout.Get(can3.GetName())
-            save_plot(can4, "", "Plots/lowstat_bins/Loose_S_Region_"+sample+"_"+opt.box, 0)
+            #can4 = fout.Get(can3.GetName())
+            #save_plot(can4, "", "Plots/lowstat_bins/Loose_S_Region_"+sample+"_"+opt.box, 0)
 
 def div_err(b1, e1, b2, e2):
     # Taken from ROOT
@@ -581,7 +585,8 @@ def bg_est(name, data, sub, sr, fout, cr, combine_bins, binned_k = True, scale=1
     
     
     # ----------------- Data/MC Control Region---------------------
-    # Check which empty (low, 0 or negative) bins needs to be combined for CR (both data and MC)
+    # Check which empty (low, 0 or negative) bins needs to be combined for CR
+    # Both data and MC --> Requested by convenors, that only check in MC
     threshold_cr = 1 # Specify this, so the bin combination will yield more than that much events
     if merge_CR_bins:
         if not ("Up" in name or "Down" in name):
@@ -591,7 +596,8 @@ def bg_est(name, data, sub, sr, fout, cr, combine_bins, binned_k = True, scale=1
         for binx in range(1, h_cr.GetNbinsX()+1):
             c_data = h_cr_data. GetBinContent(binx)
             c_mc   = h_cr.GetBinContent(binx)
-            if (c_data<=threshold_cr or c_mc<=threshold_cr):
+            #if (c_data<=threshold_cr or c_mc<=threshold_cr):
+            if c_mc<=threshold_cr:
                 empty_bins.append(binx)
         found_combos = []
         selected_combos = {}
@@ -1379,7 +1385,7 @@ G_data_EB = loadclone(f, "MR_R2_G_EB", "_data")
 G_data_EE = loadclone(f, "MR_R2_G_EE", "_data")
 
 # Direct photon fraction
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/bkg.root")
 IsDirect_G_EB = loadclone(f, "MR_R2_IsDirect_G_EB", "_MC")
 IsDirect_G_EE = loadclone(f, "MR_R2_IsDirect_G_EE", "_MC")
 
