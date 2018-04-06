@@ -5,12 +5,14 @@ Run II Search for Supersymmetry using Razor variables in the boosted regime
 
 ```Shell
 export SCRAM_ARCH=slc6_amd64_gcc530
-cmsrel CMSSW_8_0_20
-cd CMSSW_8_0_20/src
+cmsrel CMSSW_8_0_28
+cd CMSSW_8_0_28src
 cmsenv
 git cms-addpkg RecoLuminosity/LumiDB
 git clone https://github.com/jkarancs/BoostedRazorAnalysis
+bash <(curl -s https://raw.githubusercontent.com/cms-analysis/CombineHarvester/master/CombineTools/scripts/sparse-checkout-https.sh)
 scram b -j 20
+cd BoostedRazorAnalysis/Analyzer
 ```
 
 ## Run the Analyzer
@@ -18,7 +20,6 @@ scram b -j 20
 When running for the first time, run the setup script in order  
 to mount eos on lxplus, create softlinks and create/update filelists
 ```Shell
-cd BoostedRazorAnalysis/Analyzer
 python scripts/setup.py
 ```
 
@@ -38,7 +39,8 @@ Run your anaylsis code with
 make clean; make Analyzer
 ./Analyzer <output filename> <filelist.txt or root file(s) ... >
 eg:
-./Analyzer Bkg_TTJets_madgraph.root filelists/backgrounds/TTJets_madgraph.txt
+./Analyzer test.root ntuple/Latest/TT_powheg-pythia8/Skim_1.root
+./Analyzer ttbar.root filelists/backgrounds/TT_powheg-pythia8.txt
 ```
 
 There is a py script to run the Analyzer to run on filelists of datasets
@@ -47,40 +49,25 @@ with lot of options to use (use option --help)
 python scripts/run_all.py --help
 ```
 
-Run a quick (1/Nth events) interactive test, using 4 cpus on all/selected samples
+Run a quick (1/Nth events) interactive test, using 4 cpus on selected/all samples
 ```Shell
-python scripts/run_all.py --full --nproc=4 --quick=100 --run
-python scripts/run_all.py --full --nproc=4 --quick=100 --run filelists/data/*.txt
-```
-
-Run a full analysis on all/selected samples in parallel interactive jobs, using 4 processors
-```Shell
-python scripts/run_all.py --full --nproc=4 --run
-python scripts/run_all.py --full --nproc=4 --run filelists/data/*.txt
+python scripts/run_all.py --full --nproc=4 --quick=1000 --outdir=test/quicktest --run
+python scripts/run_all.py --plot --nproc=4 --quick=100 --outdir=test/quicktest_data_bkg --run filelists/data/JetHT_Run2016* filelists/backgrounds/*
 ```
 
 If you are on lxplus, it is highly recommended to run full analysis on the batch
 First a quick test on a faster queue
 N.B: you need to generate a temp filelist for split jobs, this is a bit slow, so next time you can reuse previous list
+For this example, please make sure the varySystematics is set to False in the settings file you include in the Analyzer.cc
 ```Shell
-python scripts/run_all.py --batch --queue=8nm --quick=100 --sleep=0 --nevt=6000000 filelists/backgrounds/TT_powheg-pythia8_ext3_reHLT.txt
-python scripts/run_all.py --batch --queue=8nm --quick=100 --sleep=1 --useprev --run filelists/backgrounds/TT_powheg-pythia8_ext3_reHLT.txt
+python scripts/run_all.py --full --plot --batch --run --outdir=results/run_2018_03_23 --queue=8nh --optim --nevt=2000000
 ```
-
-Then, do a full analysis on the recommended default 1nh queue, default 3s sleep between submits
-```Shell
-python scripts/run_all.py --full --batch --sleep=0 --nevt=2000000
-python scripts/run_all.py --full --batch --useprev --run
-python scripts/run_all.py --full --batch --useprev --run filelists/data/*.txt
-```
-
 Run systematics (first, set varySystematics = true in settings.h)  
 when running systematics, make sure you define one histogram for each variation
 syst.index in the Analyzer.cc files can be used to select a histogram from a vector
 
-You can remake the systematics file with:
 ```Shell
-python scripts/write_syst.py <nline>
+python scripts/run_all.py --full --plot --batch --nohadd --run --outdir=results/run_2018_03_24_syst --queue=2nd --optim --nevt=300000
 ```
 
 ## Contact Information
