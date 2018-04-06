@@ -4,6 +4,8 @@ from optparse import OptionParser
 from common_functions import *
 import tdrstyle
 
+keep = [] # Keep ROOT objects in memory
+
 # ---------------------- Cmd Line  -----------------------
 
 # Read options from command line
@@ -34,6 +36,7 @@ binned_k = True
 use_G = True
 
 mrbins = [ 800, 1000, 1200, 1600, 2000, 4000 ]
+mrbins_TeV = [ 0.8, 1.0, 1.2, 1.6, 2.0, 4.0 ]
 r2bins = [ 0.08, 0.12, 0.16, 0.24, 0.4, 2.0 ]
 nrazorbin = (len(mrbins)-1)*(len(r2bins)-1)
 
@@ -467,7 +470,8 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             leg.SetFillStyle(0)
             leg.SetBorderSize(0)
             leg.Draw("SAME")
-            can2 = add_ratio_plot(can, 0,h_S.GetNbinsX(), 1, combine_bins, mrbins, r2bins, ratio)
+            draw_mr_bins(h_S, 1.01e-3,1e4, combine_bins, keep, mrbins_TeV, r2bins)
+            can2 = add_ratio_plot(can, 0,h_S.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, ratio)
         # Set counts for bins where there are counts in the loose region
         if nosyst:
             h_extrap = h_S.Clone(h_S.GetName()+"_extrap")
@@ -513,8 +517,8 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP):
             extrap_ratio.Draw("SAME PE1")
             can3.SetName(can2.GetName()+"_PointsAdded")
             can3.Write()
-            #can4 = fout.Get(can3.GetName())
-            #save_plot(can4, "", "Plots/lowstat_bins/Loose_S_Region_"+sample+"_"+opt.box, 0)
+            can4 = fout.Get(can3.GetName())
+            save_plot(can4, "", "Plots/lowstat_bins/Loose_S_Region_"+sample+"_"+opt.box, 0)
 
 def div_err(b1, e1, b2, e2):
     # Taken from ROOT
@@ -886,6 +890,7 @@ def zinv_est(name, vvh_sr, fout, vh_g_data_promptdirect, vh_g_cr, l_data, l_subt
     ztonunu_lepton_est.SetMarkerColor(418)
     ztonunu_lepton_est.SetLineColor(418)
     ztonunu_lepton_est.Draw("SAME LE1")
+    draw_mr_bins(ztonunu_photon_est, 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins)
     title = {
         "WAna_nj35": "W analysis, 3#seqN_{jet}#seq5",
         "WAna_nj45": "W analysis, 4#seqN_{jet}#seq5",
@@ -1966,6 +1971,7 @@ s_total.Add(s_TT_nom)
 s_total.Draw("SAME HIST")
 s_syst_err.Draw("SAME E2")
 s_data.Draw("SAMEPE1")
+draw_mr_bins(s_data, 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
 leg = ROOT.TLegend(0.65,0.55,0.95,0.85,"")
 leg.AddEntry(s_data,   "#color[1]{Data}",                         "pl")
 leg.AddEntry(s_TT_nom, "#color[633]{t#bar{t} + single top est.}", "l")
@@ -1979,7 +1985,7 @@ leg.SetBorderSize(0)
 leg.Draw("SAME")
 ROOT.gPad.Update()
 can.Write()
-ratio = add_stack_ratio_plot(can, 0,s_data.GetNbinsX(), 1, combine_bins, mrbins, r2bins)
+ratio = add_stack_ratio_plot(can, 0,s_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins)
 
 # Q'
 # q_MJ_est = (Q_data - Q_notMJ) * q_MJ / Q_MJ
@@ -2053,6 +2059,7 @@ q_total.Add(q_TT_nom)
 q_total.Draw("SAME HIST")
 q_syst_err.Draw("SAME E2")
 q_data.Draw("SAMEPE1")
+draw_mr_bins(q_data, 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
 leg = ROOT.TLegend(0.65,0.55,0.95,0.85,"")
 leg.AddEntry(q_data,   "#color[1]{Data}",                         "pl")
 leg.AddEntry(q_TT_nom, "#color[633]{t#bar{t} + single top est.}", "l")
@@ -2066,7 +2073,7 @@ leg.SetBorderSize(0)
 leg.Draw("SAME")
 ROOT.gPad.Update()
 can.Write()
-ratio = add_stack_ratio_plot(can, 0,q_data.GetNbinsX(), 1, combine_bins, mrbins, r2bins)
+ratio = add_stack_ratio_plot(can, 0,q_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins)
 
 fout.Close()
 
@@ -2111,13 +2118,13 @@ fout = ROOT.TFile.Open("bkg_estimate_"+opt.box+".root","RECREATE")
 Top_est      = []
 MultiJet_est = []
 WJets_est    = []
-####    ZInv_est     = []
+if not use_G: ZInv_est     = []
 Other_est    = []
 for i in range(0, len(systematics)):
-    S_TT_est = bg_est("Top"         +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], [S_TT[i], S_LooseWP_TT[i]], fout, T_TT[i], combine_bins, binned_k)
-    S_MJ_est = bg_est("MultiJet"    +systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], [S_MJ[i], S_LooseWP_MJ[i]], fout, Q_MJ[i], combine_bins, binned_k)
-    S_WJ_est = bg_est("WJets"       +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], [S_WJ[i], S_LooseWP_WJ[i]], fout, W_WJ[i], combine_bins, binned_k)
-    ####    S_ZI_est = S_ZI[i].Clone("ZInv" +systematics[i])
+    S_TT_est = bg_est("Top"     +systematics[i], T_data, [          T_MJ[0], T_WJ[0], T_ZI[0], T_OT[0]], [S_TT[i], S_LooseWP_TT[i]], fout, T_TT[i], combine_bins, binned_k)
+    S_MJ_est = bg_est("MultiJet"+systematics[i], Q_data, [Q_TT[0],           Q_WJ[0], Q_ZI[0], Q_OT[0]], [S_MJ[i], S_LooseWP_MJ[i]], fout, Q_MJ[i], combine_bins, binned_k)
+    S_WJ_est = bg_est("WJets"   +systematics[i], W_data, [W_TT[0],  W_MJ[0],          W_ZI[0], W_OT[0]], [S_WJ[i], S_LooseWP_WJ[i]], fout, W_WJ[i], combine_bins, binned_k)
+    if not use_G: S_ZI_est = bg_est("ZInv"+systematics[i], L_data, [L_TT[0],  L_MJ[0],          L_ZI[0], L_OT[0]], [S_ZI[i], S_LooseWP_ZI[i]], fout, L_WJ[i], combine_bins, binned_k)
     if combine_bins:
         S_OT_est = combinebins(S_OT[i], "Other"+systematics[i])
         fix_low_stat_bins(fout, S_OT_est, combinebins(S_LooseWP_OT[i], S_LooseWP_OT[i].GetName()+"_combined"))
@@ -2132,10 +2139,74 @@ for i in range(0, len(systematics)):
     Top_est     .append(S_TT_est)
     MultiJet_est.append(S_MJ_est)
     WJets_est   .append(S_WJ_est)
-    ####    ZInv_est    .append(S_ZI_est)
+    if not use_G: ZInv_est.append(S_ZI_est)
     Other_est   .append(S_OT_est)
+
+# Unblinded plot
+S_TT_nom, S_TT_up, S_TT_dn = calc_syst_err(Top_est,     "S_Top_syst")
+S_MJ_nom, S_MJ_up, S_MJ_dn = calc_syst_err(MultiJet_est,"S_MultiJet_syst")
+S_WJ_nom, S_WJ_up, S_WJ_dn = calc_syst_err(WJets_est,   "S_WJets_syst")
+S_ZI_nom, S_ZI_up, S_ZI_dn = calc_syst_err(ZInv_est,    "S_ZInv_syst")
+S_OT_nom, S_OT_up, S_OT_dn = calc_syst_err(Other_est,   "S_Other_syst")
+S_syst_err = S_TT_nom.Clone("S_Total")
+S_syst_err.SetFillColor(1)
+S_syst_err.SetFillStyle(3002)
+S_syst_err.SetMarkerStyle(0)
+for binx in range(1, S_syst_err.GetNbinsX()+1):
+    err_up = (S_TT_up.GetBinContent(binx)**2 + S_MJ_up.GetBinContent(binx)**2 + S_WJ_up.GetBinContent(binx)**2 + S_ZI_up.GetBinContent(binx)**2 + S_OT_up.GetBinContent(binx)**2) ** 0.5
+    err_dn = (S_TT_dn.GetBinContent(binx)**2 + S_MJ_dn.GetBinContent(binx)**2 + S_WJ_dn.GetBinContent(binx)**2 + S_ZI_dn.GetBinContent(binx)**2 + S_OT_dn.GetBinContent(binx)**2) ** 0.5
+    nom = S_TT_nom.GetBinContent(binx) + S_MJ_nom.GetBinContent(binx) + S_WJ_nom.GetBinContent(binx) + S_ZI_nom.GetBinContent(binx) + S_OT_nom.GetBinContent(binx)
+    S_syst_err.SetBinContent(binx, nom + (err_up - err_dn)/2)
+    S_syst_err.SetBinError(binx, (err_up+err_dn)/2)
+
+can = custom_can(S_data, "BkgEstimate_"+opt.box)
+can.SetLogy(1)
+S_data.GetYaxis().SetRangeUser(1.01e-1,1e4)
+S_data.GetYaxis().SetTitle("Events/Bins")
+S_data.Draw("PE1")
+S_TT_nom.SetLineColor(633)
+S_MJ_nom.SetLineColor(619)
+S_WJ_nom.SetLineColor(418)
+S_ZI_nom.SetLineColor(401)
+S_OT_nom.SetLineColor(803)
+S_TT_nom.SetLineWidth(2)
+S_MJ_nom.SetLineWidth(2)
+S_WJ_nom.SetLineWidth(2)
+S_ZI_nom.SetLineWidth(2)
+S_OT_nom.SetLineWidth(2)
+S_total = ROOT.THStack("S_TotBkgEst","")
+S_total.Add(S_OT_nom)
+S_total.Add(S_ZI_nom)
+S_total.Add(S_WJ_nom)
+S_total.Add(S_MJ_nom)
+S_total.Add(S_TT_nom)
+S_total.Draw("SAME HIST")
+S_syst_err.Draw("SAME E2")
+S_data.Draw("SAMEPE1")
+leg = ROOT.TLegend(0.65,0.55,0.95,0.85,"")
+leg.AddEntry(S_data,   "#color[1]{Data}",                         "pl")
+leg.AddEntry(S_TT_nom, "#color[633]{t#bar{t} + single top est.}", "l")
+leg.AddEntry(S_MJ_nom, "#color[619]{Multijet est.}",              "l")
+leg.AddEntry(S_WJ_nom, "#color[418]{W(#rightarrowl#nu) est.}",    "l")
+leg.AddEntry(S_ZI_nom, "#color[401]{Z(#rightarrow#nu#nu) est.}",  "l")
+leg.AddEntry(S_OT_nom, "#color[803]{Other (MC)}",                 "l")
+leg.SetFillColor(0)
+leg.SetFillStyle(0)
+leg.SetBorderSize(0)
+leg.Draw("SAME")
+draw_mr_bins(S_data, 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
+ROOT.gPad.Update()
+can.Write()
+ratio = add_stack_ratio_plot(can, 0,S_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins)
 fout.Close()
-#sys.exit()
+
+# Save the plots, but load them fresh from file
+# because objects were lost in memory in the function add_stack_ratio_plot()
+f = ROOT.TFile("bkg_estimate_"+opt.box+".root","READ")
+can = f.Get("BkgEstimate_"+opt.box+"_Ratio")
+save_plot(can, "", "Plots/result/"+DATE+"/"+can.GetName().replace("_Ratio",""), 0)
+f.Close()
+sys.exit()
 
 # Now save a different root file for each signal point
 if not opt.nocards:

@@ -205,8 +205,10 @@ for filelist in input_filelists:
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
         if opt.recover:
             os.chdir(saved_path)
-        for jobnum in range(1, len(prev_lists)+1):
-            tmp_filelist = prev_lists[jobnum-1]
+        for i in range(0, len(prev_lists)):
+            tmp_filelist = prev_lists[i-1]
+            #jobnum = tmp_filelist.replace(".txt","").split("_")[-1]
+            jobnum = i+1
             job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
             ana_arguments.append(job_args)
     elif opt.NEVT != -1 or opt.optim:
@@ -564,7 +566,7 @@ def analysis(ana_arguments, nproc):
                 file_size = os.path.getsize(output_file)
                 if file_size > 1000:
                     output_files.append(output_file)
-                    last_known_status[jobindex] = 0        
+                    last_known_status[jobindex] = 0
         merge_output(ana_arguments, last_known_status)
     elif not opt.batch:
         print "Running "+str(njob)+" instances of Analyzer jobs:"

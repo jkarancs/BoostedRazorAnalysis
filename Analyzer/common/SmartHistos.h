@@ -1606,6 +1606,53 @@ private:
       era_lat->SetLineWidth(2);
       era_lat->Draw();
     }
+    gPad->Update();
+  }
+
+  void draw_mr_bins(TH1D *h, double ymin, double ymax, bool combine_bins=true,
+		    std::vector<double> mrbins = { 0.8, 1.0, 1.2, 1.6, 2.0, 4.0 },
+		    std::vector<double> r2bins = { 0.08, 0.12, 0.16, 0.24, 0.4, 2.0 }) {
+    for (size_t i=0; i<mrbins.size(); ++i) {
+      int bin1 = i*5+1, bin2 = i*5+5;
+      if (combine_bins) {
+	if (i==3) {
+	  bin1 = 16;
+	  bin2 = 19;
+	} else if (i==4) {
+	  bin1 = 20;
+	  bin2 = 22;
+	}
+      }
+      double maxcont = -9999;
+      for (int binx=bin1; binx<=bin2; ++binx) {
+	if (h->GetBinContent(binx)>maxcont) 
+	  maxcont = h->GetBinContent(binx);
+      }
+      std::vector<double> y2 = {maxcont+(ymax-ymin)*0.05, maxcont+(ymax-ymin)*0.125};
+      if (ymin!=0) y2 = {maxcont*std::pow(ymax/ymin,0.05), maxcont*std::pow(ymax/ymin,0.125)};
+      double x = i*5;
+      if (i==4 && combine_bins) x = x-1;
+      if (i!=0) {
+	TLine *line = new TLine(x,ymin,x,y2[0]);
+	line->SetLineStyle(2);
+	line->Draw();
+      }
+      x = 2.0 + i*5;
+      if (i==3 && combine_bins) x = x-0.5;
+      if (i==4 && combine_bins) x = x-2;
+      if (i==0) {
+	TLatex* bin_lat = new TLatex(x, y2[1], "M_{R} (TeV)");
+	bin_lat->SetTextAlign(22);
+	bin_lat->SetTextSize(0.04);
+	bin_lat->Draw();
+      }
+      std::stringstream ss;
+      ss<<"["<<std::setprecision(2)<<mrbins[i]<<", "<<mrbins[i+1]<<"]";
+      TLatex* lat = new TLatex(x, y2[0], ss.str().c_str());
+      lat->SetTextAlign(22);
+      lat->SetTextSize(0.04);
+      lat->Draw();
+    }
   }
   
   std::vector<int> string_to_vector_(std::string val) {
@@ -1873,16 +1920,16 @@ private:
     float padsize2 = std::min(mar_bottom+y2+mid2, x_can);
     float labelfontsize = 20;
     float titlefontsize = 32;
-    float leg_y2 = 0.9; // not used values, read from orig
+    float leg_y2 = 0.87;
     bool ok = 0;
     if (debug) std::cout<<"Start debugging: "<<c->GetName()<<std::endl;
     if (debug) std::cout<<"ok"<<std::endl;
     if (c->GetListOfPrimitives()->GetEntries()>2) {
       // Histos
       if (debug) std::cout<<"ok1"<<std::endl;
-      TH1D* Data = (TH1D*)c->GetListOfPrimitives()->At(0);
+      TH1D* Data = (TH1D*)c->GetListOfPrimitives()->At(1);
       if (debug) std::cout<<"ok1"<<std::endl;
-      THStack* MCstack = (THStack*)c->GetListOfPrimitives()->At(1);
+      THStack* MCstack = (THStack*)c->GetListOfPrimitives()->At(2);
       if (debug) std::cout<<"ok1"<<std::endl;
       if (std::string(MCstack->GetTitle())!="0") {
         TH1D* ratio = (TH1D*)Data->Clone();
@@ -1960,14 +2007,13 @@ private:
         // Remove Non-Data non-stack plots (eg. signal)
         std::vector<TH1D*> rest;
         // indices:
-        // 0: Data, 1: stack, 2: Data again, 3+: (signals), 3+nsig: Legend
+        // 0: TFrame, 1: Data, 2: stack, 3: Data again, 4+: (signals), 4+nsig: Legend
 	if (debug) std::cout<<"ok2"<<std::endl;
-        for (int i=2; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
+        for (int i=3; i<c->GetListOfPrimitives()->GetEntries(); ++i) {
           std::string prim_name = c->GetListOfPrimitives()->At(i)->GetName();
           if (prim_name=="TPave") {
 	    leg = (TLegend*)c->GetListOfPrimitives()->At(i);
-	    leg_y2 = leg->GetY2();
-          } else if (!remove&&prim_name!=Data->GetName())
+          } else if (!remove&&prim_name!=Data->GetName()&&prim_name.size()>0)
             rest.push_back((TH1D*)c->GetListOfPrimitives()->At(i));
         }
 	if (debug) std::cout<<"ok2"<<std::endl;
@@ -1986,7 +2032,7 @@ private:
         Data ->SetTitleOffset(Data->GetYaxis()->GetTitleOffset()*heightratio1,"y");
         Data ->SetLabelSize(labelfontsize/padsize1,"xyz");
         ratio->SetLabelSize(labelfontsize/padsize2,"xyz");
-	if (set_bin_labels) ratio->SetLabelSize(labelfontsize*1.5/padsize2,"xyz");
+	if (set_bin_labels) ratio->SetLabelSize(labelfontsize*1.5/padsize2,"x");
         ratio->SetTitleSize(titlefontsize/padsize2,"xyz");
         ratio->GetYaxis()->SetRangeUser(0,2);
         ratio->GetYaxis()->SetNdivisions(305);
@@ -2020,7 +2066,14 @@ private:
 	if (debug) std::cout<<"ok2"<<std::endl;
         for (size_t i=0; i<rest.size(); ++i) rest[i]->Draw("SAMEHIST");
         Data->Draw("SAMEPE1");
+	if (debug) std::cout<<"ok3"<<std::endl;
+	// Move/Resize legend to fit divided canvas better
+	leg->SetTextSize(0.04);
+	leg->SetY1(leg_y2 - leg->GetNRows()*0.04);
+	leg->SetY2(leg_y2);
         leg->Draw("SAME");
+	if (debug) std::cout<<"ok3"<<std::endl;
+	add_labels_(Data);
 	if (debug) std::cout<<"ok3"<<std::endl;
         gPad->Update();
 	if (debug) std::cout<<"ok3"<<std::endl;
@@ -2053,35 +2106,28 @@ private:
 	l->Draw();
 	if (debug) std::cout<<"ok3"<<std::endl;
 	ok = 1;
+	gPad->Update();
       }
     }
     if (ok) {
       if (debug) std::cout<<"ok4"<<std::endl;
       TPad* pad = (TPad*)c->GetListOfPrimitives()->At(0);
-      // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), cms, era, data, legend
-      int extra = 3;
-      if (approval_/10>0) extra++;
-      if (approval_%10>0) extra++;
-      if (debug) std::cout<<"ok4"<<std::endl;
-      if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+extra) { 
+      // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), data, legend, cms, era
+      if (debug) std::cout<<"ok5"<<std::endl;
+      if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+4) {
         // Resize CMS label and era text
-        extra = 1;
+        int index = n_nostack_+4;
         if (debug) std::cout<<"ok5"<<std::endl;
         if (approval_/10>0) {
-          TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
+          TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(index++);
           cms_lat->SetTextSize(cms_lat->GetTextSize()*(y1+y2)/y1);
         }
         if (debug) std::cout<<"ok5"<<std::endl;
         if (approval_%10>0) {
-          TLatex* era_lat = (TLatex*)pad->GetListOfPrimitives()->At(n_nostack_+(++extra));
+          TLatex* era_lat = (TLatex*)pad->GetListOfPrimitives()->At(index);
           era_lat->SetTextSize(era_lat->GetTextSize()*(y1+y2)/y1);
         }
         if (debug) std::cout<<"ok5"<<std::endl;
-        // Resize Legend (Back to default)
-        TLegend* leg = (TLegend*)pad->GetListOfPrimitives()->At(n_nostack_+(extra+=2));
-        leg->SetTextSize(0.04);
-        leg->SetY1(leg_y2 - leg->GetNRows()*1.2*0.04);
-        leg->SetY2(1-(1-leg_y2)*1.25);
       }
     }
   }
@@ -2426,6 +2472,10 @@ public:
 	write_(c);
 	if (stack_&&ratio_&&skip==0) {
 	  add_stack_ratio_plot_(c,ranges_[0],ranges_[1]);
+	  if (TString(name_).Contains("Razor")) {
+	    c->cd(1);
+	    draw_mr_bins(dps1d[i].hvec[skip], ranges_[2], ranges_[3]);
+	  }
 	  write_(c);
 	}
       }

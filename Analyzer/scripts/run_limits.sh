@@ -10,11 +10,11 @@ cp -p "syst_results/run_"$date2"_syst_TopAna/cards/RazorBoost_SMS-"$model"_"*"_T
 
 # Combine
 cd Combine; cmsenv; cd -
+python scripts/run_combine.py -n 5 --nproc=10 -d "syst_results/run_"$date1"_syst" -m $model WAna_nj45 WAna_nj6 TopAna
 python scripts/run_combine.py -n 5 --nproc=10 -d "syst_results/run_"$date1"_syst" -m $model WAna_nj45
 python scripts/run_combine.py -n 5 --nproc=10 -d "syst_results/run_"$date1"_syst" -m $model WAna_nj6
 python scripts/run_combine.py -n 5 --nproc=10 -d "syst_results/run_"$date1"_syst" -m $model TopAna
 python scripts/run_combine.py -n 5 --nproc=10 -d "syst_results/run_"$date1"_syst" -m $model WAna_nj45 WAna_nj6
-python scripts/run_combine.py -n 5 --nproc=10 -d "syst_results/run_"$date1"_syst" -m $model WAna_nj45 WAna_nj6 TopAna
 cmsenv
 python scripts/Get2DContour.py -d "syst_results/run_"$date1"_syst" -m $model -b WAna_nj45
 python scripts/Get2DContour.py -d "syst_results/run_"$date1"_syst" -m $model -b WAna_nj6
