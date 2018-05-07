@@ -65,11 +65,12 @@ struct settings {
     doISRReweighting         ( true  ),
     doPileupReweighting      ( true  ),
     doAK8JetPtRescaling      ( true  ),
+    doNJetReweighting        ( true  ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 22    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 6 W, 2b, 7 top
     varySystematics          ( SYST  ),
-    systematicsFileName      ( "systematics/2017_12_26_1SigmaUpDown_NoPdf.txt" ),
+    systematicsFileName      ( "systematics/2018_05_02_1SigmaUpDown_NoPdf.txt" ),
 //  systematicsFileName      ( "systematics/2017_12_26_AllUpDown_NoPdf.txt" ),
 //  systematicsFileName      ( "systematics/2018_03_19_JESOnly.txt" ),
     useJSON                  ( false ), // by default: no need to apply, but can be useful if some lumisections need to be excluded additionally
@@ -90,6 +91,7 @@ struct settings {
   const bool doISRReweighting;
   const bool doPileupReweighting;
   const bool doAK8JetPtRescaling;
+  const bool doNJetReweighting;
   const bool applySmearing;
   const bool applyScaleFactors;
   const int  nSigmaScaleFactors;

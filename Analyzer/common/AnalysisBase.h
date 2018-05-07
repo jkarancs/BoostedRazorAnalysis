@@ -42,7 +42,7 @@ public:
 
     syst = {
       "lumi", "toppt", "isr", "pileup",
-      "alphas", "facscale", "renscale", "facrenscale", 
+      "alphas", "facscale", "renscale", "facrenscale", "njet",
       "trigger", "jes", "jer", "met", "ak8scale",
       "elereco", "eleid", "eleiso", "elefastsim",
       "muontrk", "muonidiso", "muonfastsim",
@@ -127,6 +127,8 @@ public:
 
   std::tuple<double, double, double> calc_muon_sf(DataStruct&, const double&, const double&, const double&, const bool&);
   
+  double calc_njet_weight(DataStruct&, const double&);
+
   double calc_trigger_efficiency(DataStruct&, const double&);
 
   int calc_mrr2_bin(DataStruct&, const char&);
@@ -420,13 +422,13 @@ Choose:
   - for pt<20  absolute iso03 (EA) < 5 
   - Mini-Isolation (EA)/pt < 0.1 (Medium WP [4])
   - pt >= 5
-  - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
+  - |eta| < 2.5
   - |d0| < 0.2, |dz| < 0.5 (Loose IP2D [6])
   OR when using MVA:
   - Spring16 MVA Loose ID
   - for pt>=20 Mini-Isolation (EA)/pt < 0.2 (RazorInclusive cut [5])
   - pt >= 5
-  - |eta| < 2.5, also exclude barrel-endcap gap [1.442,1556]
+  - |eta| < 2.5
   - 3D IP sig < 4
 
   For Selection (Z) Choose:
@@ -1301,7 +1303,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if (passEleVeto[i] = 
 	  ( id_veto_noiso &&
 	    pt      >= ELE_VETO_PT_CUT &&
-	    abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
+	    abseta  <  ELE_VETO_ETA_CUT && //!(abseta>=1.442 && abseta< 1.556) &&
 	    absd0   <  ELE_VETO_IP_D0_CUT &&
 	    absdz   <  ELE_VETO_IP_DZ_CUT) ) {
 	veto_leptons_noiso.push_back(ele_v4);
@@ -1318,7 +1320,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       if (passEleVeto[i] = 
 	  ( id_veto_noiso &&
 	    pt      >= ELE_VETO_PT_CUT &&
-	    abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
+	    abseta  <  ELE_VETO_ETA_CUT && //!(abseta>=1.442 && abseta< 1.556) &&
 	    ipsig   <  ELE_VETO_IP_3D_CUT) ) {
 	veto_leptons_noiso.push_back(ele_v4);
 	nEleVetoNoIso++;
@@ -3457,7 +3459,7 @@ AnalysisBase::get_xsec_totweight_from_txt_file(const std::string& txt_file)
       // For skimmed samples, remove certain postfixes
       // Please, synchronize with setup.py script
       std::string dirname = sample;
-      for (std::string pf : { "_2", "_ext1", "_ext2", "_ext3", "_backup", "_unskimmed" })
+      for (std::string pf : { "_2", "_ext1", "_ext2", "_ext3", "_ext4", "_backup", "_unskimmed" })
 	if (TString(dirname).EndsWith(pf.c_str())) dirname.erase(dirname.size()-pf.size(), pf.size());
       if (dirname==shortname) {
 	XSec = xsec;
@@ -4641,7 +4643,7 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
     // Apply ID + IP scale factor
     if ( id_veto_noiso &&
 	 pt      >= ELE_VETO_PT_CUT &&
-	 abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) &&
+	 abseta  <  ELE_VETO_ETA_CUT //&& !(abseta>=1.442 && abseta< 1.556) &&
 	 absd0   <  ELE_VETO_IP_D0_CUT &&
 	 absdz   <  ELE_VETO_IP_DZ_CUT ) {
       utils::geteff2D(eff_full_ele_mvalooseid_tightip2d, pt, eta, sf, sf_err);
@@ -4688,7 +4690,7 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
     // Apply ID scale factor
     if ( id_veto_noiso &&
 	 pt      >= ELE_VETO_PT_CUT &&
-	 abseta  <  ELE_VETO_ETA_CUT && !(abseta>=1.442 && abseta< 1.556) ) {
+	 abseta  <  ELE_VETO_ETA_CUT //&& !(abseta>=1.442 && abseta< 1.556) ) {
       utils::geteff2D(eff_full_ele_vetoid, pt, eta, sf, sf_err);
       weight_veto *= get_syst_weight(sf, sf_err, nSigmaEleIDSF);
       if (isFastSim) {
@@ -4968,6 +4970,19 @@ std::tuple<double, double, double> AnalysisBase::calc_muon_sf(DataStruct& data, 
 }
 
 
+double AnalysisBase::calc_njet_weight(DataStruct& data, const double& nSigmaNJetWeight) {
+  // QCD Njet Reweighting
+  // Firts run this script to obtain the expo fit parameters
+  // root scripts/calc_njet_weight.C
+  // Up variation taken from Q region
+  // Down variation taken from G-1 region
+  double w_up = std::exp(-4.15259e-01 + 9.97141e-02 * nJet);
+  double w_dn = std::exp( 1.02951e+00 - 1.90498e-01 * nJet);
+  double weight = get_syst_weight(1.0, w_up, w_dn, nSigmaNJetWeight);
+  return weight;
+}
+
+
 double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSigmaTrigger) {
   // 1D trigger efficiency method
   //  double eff, err_up, err_down;
@@ -5010,7 +5025,7 @@ double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSi
     if (total>0) {
       double eff_up   = utils::geteff2D(h_up,   AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
       double eff_down = utils::geteff2D(h_down, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
-      double w = get_syst_weight(eff, eff_down, eff_up, nSigmaTrigger);
+      double w = get_syst_weight(eff, eff_up, eff_down, nSigmaTrigger);
       return w;
     } else return 0;
   } else return 0;

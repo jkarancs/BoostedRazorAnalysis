@@ -38,7 +38,7 @@ LATEST_NTUPLE_EOS="Skim_Dec12"
 #LATEST_NTUPLE_GRID18="Sep26_part1"
 #LATEST_NTUPLE_GRID18="Sep26_part2"
 #LATEST_NTUPLE_GRID18="Skim_Oct11"
-#LATEST_NTUPLE_GRID18="Nov30_part1"
+#LATEST_NTUPLE_GRID18="Nov30_part3"
 LATEST_NTUPLE_GRID18="Skim_Dec12"
 
 ANA_BASE = os.environ['CMSSW_BASE']+'/src/BoostedRazorAnalysis/Analyzer'
@@ -176,6 +176,7 @@ for directory in os.listdir(DIR):
                 if txtname.endswith('_ext1'):   txtname = txtname[:-5]
                 if txtname.endswith('_ext2'):   txtname = txtname[:-5]
                 if txtname.endswith('_ext3'):   txtname = txtname[:-5]
+                if txtname.endswith('_ext4'):   txtname = txtname[:-5]
                 if txtname.endswith('_backup'): txtname = txtname[:-7]
                 flist = open(ANA_BASE+'/filelists/backgrounds/'+txtname+'.txt', 'a')
                 for files in os.listdir(DIR+'/'+directory):

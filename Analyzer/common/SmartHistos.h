@@ -1654,6 +1654,35 @@ private:
       lat->Draw();
     }
   }
+
+  void draw_ak8pt_bins(TH1D *h, bool high,
+		       std::vector<double> HTB = {400, 500, 600, 700, 750, 800, 850, 900, 950, 1000, 1500, 10000},
+		       std::vector<double> PtB = {200, 300, 400, 450, 500, 550, 600, 1000, 10000}) {
+    size_t ilow  = high ? PtB.size()/2 : 0;
+    size_t ihigh = high ? PtB.size()-1 : PtB.size()/2;
+    for (size_t i=ilow; i<ihigh; ++i) {
+      double x = (i-ilow)*(HTB.size()-1);
+      if (i!=ilow) {
+	TLine *line = new TLine(x,0,x,1);
+	line->SetLineStyle(2);
+	line->SetLineWidth(2);
+	line->Draw();
+      }
+      x = (HTB.size()-1)/4.0 + x + (i>5)*0.5+(i>6)*0.5;
+      if (i==ilow) {
+	TLatex* bin_lat = new TLatex(x, 0.55, "p_{T} (GeV)");
+	bin_lat->SetTextAlign(22);
+	bin_lat->SetTextSize(0.04);
+	bin_lat->Draw();
+      }
+      std::stringstream ss;
+      ss<<"["<<PtB[i]<<", "<<PtB[i+1]<<"]";
+      TLatex* lat = new TLatex(x, 0.475, ss.str().c_str());
+      lat->SetTextAlign(22);
+      lat->SetTextSize(0.04);
+      lat->Draw();
+    }
+  }
   
   std::vector<int> string_to_vector_(std::string val) {
     std::vector<int> vec;
@@ -2467,15 +2496,15 @@ public:
 	  if (ranges_.size()==6)
 	    multidraw_with_legend_(skip, dps1d[i].hvec, pfs_[0].leg, pfs_[0].colz, dps1d[i].legtitle, ranges_[4], ranges_[5]);
 	  else multidraw_with_legend_(skip, dps1d[i].hvec, pfs_[0].leg, pfs_[0].colz, dps1d[i].legtitle);
+	  if (TString(name_).Contains("HTJet1AK8PtLow"))  draw_ak8pt_bins(dps1d[i].hvec[skip], 0);
+	  if (TString(name_).Contains("HTJet1AK8PtHigh")) draw_ak8pt_bins(dps1d[i].hvec[skip], 1);
 	} else draw_one_(dps1d[i].hvec[0]);
 	if (!norm_ && y_range_set) add_labels_(dps1d[i].hvec[skip]);
 	write_(c);
 	if (stack_&&ratio_&&skip==0) {
+	  gPad->Update();
 	  add_stack_ratio_plot_(c,ranges_[0],ranges_[1]);
-	  if (TString(name_).Contains("Razor")) {
-	    c->cd(1);
-	    draw_mr_bins(dps1d[i].hvec[skip], ranges_[2], ranges_[3]);
-	  }
+	  if (TString(name_).Contains("Razor")) { c->cd(1); draw_mr_bins(dps1d[i].hvec[skip], ranges_[2], ranges_[3]); }
 	  write_(c);
 	}
       }

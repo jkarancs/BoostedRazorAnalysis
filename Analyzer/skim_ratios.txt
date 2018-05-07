@@ -104,6 +104,16 @@
    1.37  WGJets_MonoPhoton_PtG-130
   15.92  WGJets_MonoPhoton_PtG-40to130
   67.74  WGToLNuG
+   5.44  WJetsToLNu_Pt-100To250
+   5.41  WJetsToLNu_Pt-100To250_ext1
+   5.45  WJetsToLNu_Pt-100To250_ext4
+   1.14  WJetsToLNu_Pt-250To400
+   1.14  WJetsToLNu_Pt-250To400_ext1
+   1.14  WJetsToLNu_Pt-250To400_ext4
+   1.05  WJetsToLNu_Pt-400To600
+   1.05  WJetsToLNu_Pt-400To600_ext1
+   1.03  WJetsToLNu_Pt-600ToInf
+   1.03  WJetsToLNu_Pt-600ToInf_ext1
 1367.63  WJetsToLNu_Wpt-0To50
    6.25  WJetsToLNu_Wpt-100to200
    1.25  WJetsToLNu_Wpt-200toInf

@@ -73,3 +73,7 @@ WGToLNuG                                           WGToLNuG_TuneCUETP8M1_13TeV-m
 ZGTo2NuG                                           ZGTo2NuG_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                                      32.300000 118142695.200000
 ST_tW_top_5f_NoFullyHadronicDecays                 ST_tW_top_5f_NoFullyHadronicDecays_13TeV-powheg_TuneCUETP8M1                          19.466550 11345619.000000
 ST_tW_antitop_5f_NoFullyHadronicDecays             ST_tW_antitop_5f_NoFullyHadronicDecays_13TeV-powheg_TuneCUETP8M1                      19.466550 11408144.000000
+WJetsToLNu_Pt-100To250                             WJetsToLNu_Pt-100To250_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        676.300000 178208669420.000000
+WJetsToLNu_Pt-250To400                             WJetsToLNu_Pt-250To400_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        23.940000 617769205.940000
+WJetsToLNu_Pt-400To600                             WJetsToLNu_Pt-400To600_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        3.031000 11692372.712000
+WJetsToLNu_Pt-600ToInf                             WJetsToLNu_Pt-600ToInf_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8                        0.452400 1830415.549200

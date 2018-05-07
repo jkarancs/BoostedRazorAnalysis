@@ -122,6 +122,7 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
     //std::vector<double> nSigmaHT          = std::vector<double>(1,0);
+    std::vector<double> nSigmaNJetWeight  = std::vector<double>(1,0);
     std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaJES         = std::vector<double>(1,0);
     std::vector<double> nSigmaJER         = std::vector<double>(1,0);
@@ -156,6 +157,7 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
       //nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaNJetWeight.push_back(dbl);
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJES.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJER.push_back(dbl);
@@ -248,6 +250,7 @@ int main(int argc, char** argv) {
   cout << endl;
   double weightnorm = 1;
   int signal_index = -1;
+  TString samplename(cmdline.dirname);
   if ( cmdline.isBkg ) {
     cout << "intLumi (settings): " << settings.intLumi << endl; // given in settings.h
 
@@ -279,7 +282,7 @@ int main(int argc, char** argv) {
 					  settings.runOnSkim, settings.varySystematics, out_dir); // histo names given in settings.h
 
     // Find the index of the current signal
-    signal_index = TString(cmdline.dirname).Contains("T2tt");
+    signal_index = samplename.Contains("T2tt");
   }
   if (debug) std::cout<<"Analyzer::main: calc lumi weight norm ok"<<std::endl;
 
@@ -319,7 +322,7 @@ int main(int argc, char** argv) {
   
   // Top pt reweighting
   bool doTopPtReweighting = false;
-  if ( settings.doTopPtReweighting && TString(cmdline.dirname).Contains("TT_powheg-pythia8")) {
+  if ( settings.doTopPtReweighting && samplename.Contains("TT_powheg-pythia8")) {
     cout << "doTopPtReweighting (settings): true" << endl;    
     doTopPtReweighting = true;
   } else {
@@ -346,8 +349,11 @@ int main(int argc, char** argv) {
   // Scale QCD to match data in a QCD dominated region
   //cout << "scaleQCD (settings): " << ( settings.scaleQCD ? "true" : "false" ) << endl;
 
-  // AK8 Jet Pt Reweighting
+  // AK8 Jet Pt rescaling
   cout << "doAK8JetPtRescaling (settings): " << ( settings.doAK8JetPtRescaling ? "true" : "false" ) << endl;
+
+  // NJet Reweighting
+  cout << "doNJetReweighting (settings): " << ( settings.doNJetReweighting ? "true" : "false" ) << endl;
 
   // Scale factors
   cout << "applySmearing (settings): " << ( settings.applySmearing ? "true" : "false" ) << endl;
@@ -380,8 +386,9 @@ int main(int argc, char** argv) {
     ofile->count("w_alphas",  0);
     ofile->count("w_scale",   0);
     ofile->count("w_pdf",     0);
+    ofile->count("w_njet",    0);
     ofile->count("w_trigger", 0);
-    ana.all_weights.resize(8,1);
+    ana.all_weights.resize(9,1);
   }
   ofile->count("NoCuts",    0);
   cout << endl;
@@ -619,7 +626,7 @@ int main(int argc, char** argv) {
 	  if (debug>1) std::cout<<"Analyzer::main: apply pwd weight ok"<<std::endl;
 
 	  // Scale QCD to match data in QCD dominated region
-	  //  if (TString(cmdline.dirname).Contains("QCD")) {
+	  //  if (samplename.Contains("QCD")) {
 	  //    // Scale factor
 	  //    // value obtained with ROOT macro: scripts/CalcQCDNormFactor.C
 	  //    if (settings.scaleQCD)
@@ -631,7 +638,6 @@ int main(int argc, char** argv) {
 	  // AK8 jet pt reweighting for madgraph Z/gamma samples
 	  bool rescaleAK8 = 0;
 	  if (settings.doAK8JetPtRescaling) {
-	    TString samplename(cmdline.dirname);
 	    if (samplename.Contains("ZJetsToNuNu")||samplename.Contains("DYJetsToLL")||samplename.Contains("GJets_HT")) { 
 	      rescaleAK8 = 1;
 	    }
@@ -649,8 +655,18 @@ int main(int argc, char** argv) {
 	  ana.calculate_variables(data, syst.index);
 	  if (debug>1) std::cout<<"Analyzer::main: calculate_variables ok"<<std::endl;
 
+	  // QCD/GJets NJet Reweighting
+	  if (settings.doNJetReweighting) {
+	    if (samplename.Contains("QCD")||samplename.Contains("GJets_HT")) { 
+	      w *= (ana.all_weights[7] = ana.calc_njet_weight(data, syst.nSigmaNJetWeight[syst.index]));
+	    }
+	  }
+	  if (syst.index==0) ofile->count("w_njet", w);
+	  if (debug==-1) std::cout<<" njet = "<<ana.calc_njet_weight(data, syst.nSigmaNJetWeight[syst.index]);
+	  if (debug>1) std::cout<<"Analyzer::main: apply njet weight ok"<<std::endl;
+
 	  // Apply Trigger Efficiency
-	  w *= (ana.all_weights[7] = ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]));
+	  w *= (ana.all_weights[8] = ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]));
 	  if (syst.index==0) ofile->count("w_trigger", w);
 	  if (debug==-1) std::cout<<" trigger = "<<ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]);
 	  if (debug>1) std::cout<<"Analyzer::main: apply trigger weight ok"<<std::endl;
