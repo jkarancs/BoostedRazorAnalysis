@@ -1412,14 +1412,15 @@ private:
     if (std::string(h->GetTitle()).size()>0||approval_) mar_top += 25;
     // Increase bottom margin to accomodate bin labels
     bool set_bin_labels = 0;
+    float titlefontsize = 32;
+    float labelfontsize = 20;
     if (!bin_labels_[0].empty()) {
       size_t maxlength=0;
       for (const auto& label : bin_labels_[0]) if (label.second.size()>maxlength) maxlength = label.second.size();
       if (maxlength>6) mar_bottom = maxlength*10;
+      if (std::string(h->GetXaxis()->GetTitle()).size()>0) mar_bottom += labelfontsize;
       set_bin_labels = 1;
     }
-    float titlefontsize = 32;
-    float labelfontsize = 20;
     float yoffset_x = mar_left - titlefontsize - 4;
     float xoffset_y = mar_bottom - titlefontsize - 4;
     float zoffset_x = mar_right - titlefontsize - 4;
@@ -1611,8 +1612,9 @@ private:
 
   void draw_mr_bins(TH1D *h, double ymin, double ymax, bool combine_bins=true,
 		    std::vector<double> mrbins = { 0.8, 1.0, 1.2, 1.6, 2.0, 4.0 },
-		    std::vector<double> r2bins = { 0.08, 0.12, 0.16, 0.24, 0.4, 2.0 }) {
+		    std::vector<double> r2bins = { 0.08, 0.12, 0.16, 0.24, 0.4, 1.5 }) {
     for (size_t i=0; i<mrbins.size(); ++i) {
+      // Find maximum bin height
       int bin1 = i*5+1, bin2 = i*5+5;
       if (combine_bins) {
 	if (i==3) {
@@ -1628,12 +1630,13 @@ private:
 	if (h->GetBinContent(binx)>maxcont) 
 	  maxcont = h->GetBinContent(binx);
       }
+      // Set line/text height
       std::vector<double> y2 = {maxcont+(ymax-ymin)*0.05, maxcont+(ymax-ymin)*0.125};
       if (ymin!=0) y2 = {maxcont*std::pow(ymax/ymin,0.05), maxcont*std::pow(ymax/ymin,0.125)};
       double x = i*5;
       if (i==4 && combine_bins) x = x-1;
       if (i!=0) {
-	TLine *line = new TLine(x,ymin,x,y2[0]);
+	TLine *line = new TLine(x,ymin,x, ymax<=1.0 ? ymax : y2[0]);
 	line->SetLineStyle(2);
 	line->Draw();
       }
@@ -1641,14 +1644,14 @@ private:
       if (i==3 && combine_bins) x = x-0.5;
       if (i==4 && combine_bins) x = x-2;
       if (i==0) {
-	TLatex* bin_lat = new TLatex(x, y2[1], "M_{R} (TeV)");
+	TLatex* bin_lat = new TLatex(ymax<=1.0 ? x+1 : x, ymax<=1.0 ? 0.475*ymax : y2[1], "M_{R} (TeV)");
 	bin_lat->SetTextAlign(22);
 	bin_lat->SetTextSize(0.04);
 	bin_lat->Draw();
       }
       std::stringstream ss;
       ss<<"["<<std::setprecision(2)<<mrbins[i]<<", "<<mrbins[i+1]<<"]";
-      TLatex* lat = new TLatex(x, y2[0], ss.str().c_str());
+      TLatex* lat = new TLatex(ymax<=1.0 ? x+0.5 : x, ymax<=1.0 ? 0.425*ymax : y2[0], ss.str().c_str());
       lat->SetTextAlign(22);
       lat->SetTextSize(0.04);
       lat->Draw();
@@ -1727,7 +1730,8 @@ private:
   }
   
   void multidraw_with_legend_(size_t skip, std::vector<TH1D*>& hvec, std::vector<std::string> pf, std::string colz,
-			      std::string legtitle="", float x1=0.15, float y2=0.9) {
+			      std::string legtitle="", float x1=0.15, float y2=0.9, bool debug = 0) {
+    if (debug) std::cout<<"Multidraw start"<<std::endl;
     // Draw multiple histograms, set their marker/line color/style
     // Then Draw legend for all histo with titles from a postfix
     std::vector<int> col = string_to_vector_(colz);
@@ -1750,6 +1754,7 @@ private:
       if (stat_) hvec[i]->SetStats(1);
       ++nrow;
     }
+    if (debug) std::cout<<"Style set"<<std::endl;
     if (twocol_) nrow = std::max(twocol_/10, twocol_%10);
     if (legtitle.size()>0) ++nrow;
     std::vector<TLegendEntry*> legentries;
@@ -1760,12 +1765,15 @@ private:
     bool draw_axis=1;
     size_t n_nonstack_drawn = 0;
     for (size_t i=skip; i<hvec.size() ; ++i) if (hvec[i]->GetEntries()>0) {
+      if (debug) std::cout<<i<<" start"<<std::endl;
       std::stringstream colored_text;
       colored_text<<"#color["<<(Color_t)col[i-(keep_color_?skip:0)]<<"]{"<<pf[i]<<"}";
       if (stack_) {
+	if (debug) std::cout<<"stack"<<i<<" start"<<std::endl;
 	// Set special styles for Stack histos
 	if (i<n_nostack_) {
 	  if (i==0) {
+	    if (debug) std::cout<<"stack"<<i<<" data"<<std::endl;
 	    // Data
 	    hvec[i]->SetFillColor(0);
 	    //hvec[i]->SetLineColor(0);
@@ -1774,7 +1782,9 @@ private:
 	    hvec[i]->Draw("PE1");
 	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), "P"));
 	    n_nonstack_drawn++;
+	    if (debug) std::cout<<"stack"<<i<<" data ok"<<std::endl;
 	  } else {
+	    if (debug) std::cout<<"stack"<<i<<" signal"<<std::endl;
 	    // Signal
 	    hvec[i]->SetLineStyle(2);
 	    hvec[i]->SetLineWidth(2);
@@ -1782,24 +1792,33 @@ private:
 	    if (skip!=0&&i==skip) hvec[i]->Draw("HIST");
 	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), "L"));
 	    n_nonstack_drawn++;
+	    if (debug) std::cout<<"stack"<<i<<" signal ok"<<std::endl;
 	  }
 	  add_integ_(legentries,hvec[i]);
+	  if (debug) std::cout<<"stack"<<i<<" ok"<<std::endl;
 	} else {
+	  if (debug) std::cout<<"stack"<<i<<" stack"<<std::endl;
 	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  hvec[i]->SetFillColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  vh.push_back(hvec[i]);
 	  vlegtext.push_back(colored_text.str());
+	  if (debug) std::cout<<"stack"<<i<<" stack ok"<<std::endl;
 	}
       } else {
+	if (debug) std::cout<<"nostack"<<i<<" start"<<std::endl;
 	// Draw ordinary histos and legend
 	if (norm_&&hvec[i]->Integral()>0) {
+	  if (debug) std::cout<<"nostack"<<i<<" norm"<<std::endl;
 	  hvec[i]->DrawNormalized((i==skip) ? draw_.c_str() : same.c_str());
 	  legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
 	  add_integ_(legentries, hvec[i]);
+	  if (debug) std::cout<<"nostack"<<i<<" norm ok"<<std::endl;
 	} else if (plot_asymm_err_) {
+	  if (debug) std::cout<<"nostack"<<i<<" asym"<<std::endl;
 	  hvec[i]->SetLineWidth(2);
 	  //if (name_=="HitEfficiency_vs_BiasVoltage") std::cout<<hvec[i]->GetName()<<std::endl;
 	  TGraphAsymmErrors* tgae = asym_(hvec[i], mother_2d_[hvec[i]]->ProjectionX());
+	  if (debug) std::cout<<"nostack"<<i<<" asym ok"<<std::endl;
 	  if (tgae->GetN()) {
 	    if (draw_axis) {
 	      tgae->Draw("AP");
@@ -1812,9 +1831,11 @@ private:
 	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
 	    add_integ_(legentries, hvec[i]);
 	  }
+	  if (debug) std::cout<<"nostack"<<i<<" legentry ok"<<std::endl;
 	  //tgae->Draw((i==skip) ? "AP" : "SAMEP");
 	  if (i==skip) asym_labels_(hvec[i], tgae, 0);
 	  TGraphAsymmErrors* tgae_allbins = asym_(hvec[i], mother_2d_[hvec[i]]->ProjectionX(), true);
+	  if (debug) std::cout<<"nostack"<<i<<" asym2 ok"<<std::endl;
 	  graphs.push_back(tgae_allbins);
 	  if (ratio_&&graphs.size()==2) {
 	    TGraphAsymmErrors* ratio = get_tgae_ratio_(graphs[0], graphs[1]);
@@ -1825,15 +1846,21 @@ private:
 	    legentries.push_back(new TLegendEntry(ratio, "#color[417]{Ratio}", "P"));
 	    if (addint_) legentries.push_back(new TLegendEntry((TObject*)0, "", ""));
 	  }
+	  if (debug) std::cout<<"nostack"<<i<<" leg2 ok"<<std::endl;
 	} else {
+	  if (debug) std::cout<<"nostack"<<i<<" norm"<<std::endl;
 	  hvec[i]->Draw((i==skip) ? draw_.c_str() : same.c_str());
 	  legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
 	  add_integ_(legentries, hvec[i]);
+	  if (debug) std::cout<<"nostack"<<i<<" norm ok"<<std::endl;
 	}
       }
       if (stat_) set_stat_(hvec[i], (Color_t)col[i-(keep_color_?skip:0)], i-skip);
+      if (debug) std::cout<<"nostack"<<i<<" done"<<std::endl;
     }
+    if (debug) std::cout<<"all loop ok"<<std::endl;
     if (stack_) {
+      if (debug) std::cout<<"stackdraw start"<<std::endl;
       // Draw stacked histos and legend
       THStack *s = new THStack("s","");
       std::vector<TH1D*> vh_max;
@@ -1862,12 +1889,15 @@ private:
 	  add_integ_(legentries, vh[i]);
 	}
       }
+      if (debug) std::cout<<"stackdraw reorder ok"<<std::endl;
       for (int i=(int)vh_max.size()-1; i>=0; --i) s->Add(vh_max[i]);
       s->SetTitle(std::to_string(vh_max.size()).c_str());
       s->Draw(n_nostack_ ? "SAMEHIST" : "HIST");
       for (int i=n_nostack_-1; i>=(int)skip; --i)
 	hvec[i]->Draw(i==0 ? "SAMEPE1" : "SAMEHIST");
+      if (debug) std::cout<<"stackdraw done"<<std::endl;
     } else if (ratio_&&!plot_asymm_err_) {
+      if (debug) std::cout<<"asymratio start"<<std::endl;
       // Additionally draw ratio of first 2 plots
       TH1D* ratio = (TH1D*)hvec[0]->Clone();
       TH1D* den_err = (TH1D*)hvec[1]->Clone();
@@ -1879,6 +1909,7 @@ private:
 	den_err->SetBinContent(bin, 1);
 	den_err->SetBinError  (bin, hvec[1]->GetBinError(bin)  /hvec[1]->GetBinContent(bin));
       }
+      if (debug) std::cout<<"asymratio set ok"<<std::endl;
       ratio->SetMarkerColor(417);
       ratio->SetMarkerStyle(22);
       ratio->SetLineColor(417);
@@ -1886,6 +1917,7 @@ private:
       ratio->Draw(same.c_str());
       legentries.push_back(new TLegendEntry(ratio, "#color[417]{Ratio}", "P"));
       if (addint_) legentries.push_back(new TLegendEntry((TObject*)0, "", ""));
+      if (debug) std::cout<<"asymratio draw ok"<<std::endl;
     }
     // Legend
     float textsize = ratio_ ? 0.028 : 0.04;
@@ -1897,8 +1929,10 @@ private:
     leg->SetBorderSize(0);
     leg->SetTextSize(textsize);
     leg->SetNColumns(ncol);
+    if (debug) std::cout<<"legend set ok"<<std::endl;
     // Reorganize legend entries into two columns before drawing
     if (twocol_) {
+      if (debug) std::cout<<"twocol start"<<std::endl;
       size_t nrow1 = twocol_/10, nrow2 = twocol_%10;
       if (n_nonstack_drawn>0) nrow1 = std::min(n_nonstack_drawn, nrow1);
       for (size_t irow=0, n = std::max(nrow1,nrow2); irow<n; ++irow) {
@@ -1921,8 +1955,11 @@ private:
 	  if (addint_) leg->AddEntry((TObject*)0,"","");
 	}
       }
+      if (debug) std::cout<<"twocol ok"<<std::endl;
     } else for (auto e : legentries) leg->AddEntry(e->GetObject(), e->GetLabel(), e->GetOption());
     leg->Draw("SAME");
+    if (debug) std::cout<<"legend draw ok"<<std::endl;
+    if (debug) std::cout<<"   !!!ALL OK!!!"<<std::endl;
   }
   
   void add_stack_ratio_plot_(TCanvas*& c, double xmin, double xmax , bool remove=false, bool debug = 0) {
@@ -1970,7 +2007,66 @@ private:
         for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) {
 	  TH1D* h = (TH1D*)MCstack->GetHists()->At(iStack);
 	  mc_sum->Add((TH1D*)h->Clone());
-	  if (syst_) mc_sum_syst->Add(mother_2d_[h]);
+	  TH2D* mother = mother_2d_[h];
+	  if (mother) {
+	    /*
+	    if (debug) std::cout<<"oktemp"<<std::endl;
+	    // Temporarily change NJet syst to flat QCD/DYToLL syst
+	    // QCD: 24% W, 13% top
+	    // ZToLL: 29% W, 19% top
+	    // run script to get above numbers: python scripts/calc_systematics.py
+	    bool  W = 1;
+	    double qW = 0.29, qTop = 0.13, dW = 0.29, dTop = 0.19;
+	    if (TString(mother->GetName()).Contains("Multijet")) {
+	      for (int binx=1; binx<=mother->GetNbinsX(); ++binx) {
+                if (W) {
+                  mother->SetBinContent(binx, 18, mother->GetBinContent(binx, 1)*(1+qW));
+                  mother->SetBinError  (binx, 18, mother->GetBinError  (binx, 1)*(1+qW));
+                  mother->SetBinContent(binx, 19, mother->GetBinContent(binx, 1)*(1-qW));
+                  mother->SetBinError  (binx, 19, mother->GetBinError  (binx, 1)*(1-qW));
+                } else {
+                  mother->SetBinContent(binx, 18, mother->GetBinContent(binx, 1)*(1+qTop));
+                  mother->SetBinError  (binx, 18, mother->GetBinError  (binx, 1)*(1+qTop));
+                  mother->SetBinContent(binx, 19, mother->GetBinContent(binx, 1)*(1-qTop));
+                  mother->SetBinError  (binx, 19, mother->GetBinError  (binx, 1)*(1-qTop));
+                }
+              }
+            }
+	    if (debug) std::cout<<"oktemp"<<std::endl;
+            if (TString(mother->GetName()).Contains("DYToLL")) {
+              for (int binx=1; binx<=mother->GetNbinsX(); ++binx) {
+                if (W) {
+                  mother->SetBinContent(binx, 18, mother->GetBinContent(binx, 1)*(1+dW));
+                  mother->SetBinError  (binx, 18, mother->GetBinError  (binx, 1)*(1+dW));
+                  mother->SetBinContent(binx, 19, mother->GetBinContent(binx, 1)*(1-dW));
+                  mother->SetBinError  (binx, 19, mother->GetBinError  (binx, 1)*(1-dW));
+                } else {
+                  mother->SetBinContent(binx, 18, mother->GetBinContent(binx, 1)*(1+dTop));
+                  mother->SetBinError  (binx, 18, mother->GetBinError  (binx, 1)*(1+dTop));
+                  mother->SetBinContent(binx, 19, mother->GetBinContent(binx, 1)*(1-dTop));
+                  mother->SetBinError  (binx, 19, mother->GetBinError  (binx, 1)*(1-dTop));
+                }
+              }
+            }
+	    if (TString(mother->GetName()).Contains("GJets")) {
+	      for (int binx=1; binx<=mother->GetNbinsX(); ++binx) {
+                if (W) {
+                  mother->SetBinContent(binx, 18, mother->GetBinContent(binx, 1));
+                  mother->SetBinError  (binx, 18, mother->GetBinError  (binx, 1));
+                  mother->SetBinContent(binx, 19, mother->GetBinContent(binx, 1));
+                  mother->SetBinError  (binx, 19, mother->GetBinError  (binx, 1));
+                } else {
+                  mother->SetBinContent(binx, 18, mother->GetBinContent(binx, 1));
+                  mother->SetBinError  (binx, 18, mother->GetBinError  (binx, 1));
+                  mother->SetBinContent(binx, 19, mother->GetBinContent(binx, 1));
+                  mother->SetBinError  (binx, 19, mother->GetBinError  (binx, 1));
+                }
+              }
+            }
+	    */
+	    if (debug) std::cout<<"oktemp"<<std::endl;
+	    if (syst_) mc_sum_syst->Add(mother_2d_[h]);
+	  }
 	}
 	if (debug) std::cout<<"ok2"<<std::endl;
 	TH1D* den_stat_err = (TH1D*)mc_sum->Clone("den_stat_err");
@@ -2023,11 +2119,17 @@ private:
 	  }
 	}
 	if (debug) std::cout<<"ok2"<<std::endl;
+	den_stat_err->SetMarkerStyle(0);
+	den_stat_err->SetMarkerColor(0);
 	den_stat_err->SetFillColor(1);
 	den_stat_err->SetFillStyle(3004);
 	if (syst_) {
+	  den_all_up_err->SetMarkerStyle(0);
+	  den_all_up_err->SetMarkerColor(0);
 	  den_all_up_err->SetFillColor(kGray);
 	  den_all_up_err->SetFillStyle(1001);
+	  den_all_down_err->SetMarkerStyle(0);
+	  den_all_down_err->SetMarkerColor(0);
 	  den_all_down_err->SetFillColor(kGray);
 	  den_all_down_err->SetFillStyle(1001);
 	}
@@ -2076,7 +2178,8 @@ private:
 	if (debug) std::cout<<"ok2"<<std::endl;
         // New Canvas
 	float left_mar = c->GetLeftMargin(), right_mar = c->GetRightMargin();
-        bool logScale = c->GetLogy();
+        bool logX = c->GetLogx();
+        bool logY = c->GetLogy();
         c = new TCanvas((std::string(c->GetName())+"_Ratio").c_str(), c->GetTitle(), x_can+4,y_can+26); // 600, 600
         c->Divide(1,2);
 	if (debug) std::cout<<"ok2"<<std::endl;
@@ -2089,7 +2192,8 @@ private:
 	p->SetLeftMargin(left_mar);
 	p->SetRightMargin(right_mar);
 	if (debug) std::cout<<"ok2"<<std::endl;
-        if (logScale) p->SetLogy(1);
+        if (logX) p->SetLogx(1);
+        if (logY) p->SetLogy(1);
         Data->Draw("PE1");
         MCstack->Draw("SAMEHIST");
 	if (debug) std::cout<<"ok2"<<std::endl;
@@ -2109,6 +2213,7 @@ private:
         // Pad 2 (x: 90+500+20 x y: 60+150+10)
         p = c->cd(2);
         p->SetGrid(0,1);
+        if (logX) p->SetLogx(1);
         p->SetPad(0,0,1,padsize2/y_can);
         p->SetTopMargin(mid2/padsize2);
         p->SetBottomMargin(mar_bottom/padsize2);
@@ -2464,7 +2569,7 @@ private:
   }
   
 public:
-  void DrawPlots(bool debug=0) {
+  void DrawPlots(bool debug = 0) {
     if (debug) {
       std::cout<<name_<<" ";
       for (size_t i=0, n=pf_names_.size(); i<n; ++i) std::cout<<pf_names_[i]<<" ";
@@ -2500,6 +2605,7 @@ public:
 	  if (TString(name_).Contains("HTJet1AK8PtHigh")) draw_ak8pt_bins(dps1d[i].hvec[skip], 1);
 	} else draw_one_(dps1d[i].hvec[0]);
 	if (!norm_ && y_range_set) add_labels_(dps1d[i].hvec[skip]);
+	if (!stack_&&TString(name_).Contains("Razor")) { c->cd(1); draw_mr_bins(dps1d[i].hvec[skip], ranges_[2], ranges_[3]); }
 	write_(c);
 	if (stack_&&ratio_&&skip==0) {
 	  gPad->Update();

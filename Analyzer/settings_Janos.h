@@ -7,7 +7,7 @@
 #define VER     4
 #define SKIM    0
 #define SYST    1
-#define TOP     1
+#define TOP     0
 
 #if VER == 1
 #include "common/DataStruct_Jan12.h"
@@ -65,7 +65,6 @@ struct settings {
     doISRReweighting         ( true  ),
     doPileupReweighting      ( true  ),
     doAK8JetPtRescaling      ( true  ),
-    doNJetReweighting        ( true  ),
     applySmearing            ( true  ),
     applyScaleFactors        ( true  ),
     nSigmaScaleFactors       ( 22    ), // Count the number of sigmas you use in Analysis_*.h - 4 ele, 3 mu, 6 W, 2b, 7 top
@@ -91,7 +90,6 @@ struct settings {
   const bool doISRReweighting;
   const bool doPileupReweighting;
   const bool doAK8JetPtRescaling;
-  const bool doNJetReweighting;
   const bool applySmearing;
   const bool applyScaleFactors;
   const int  nSigmaScaleFactors;

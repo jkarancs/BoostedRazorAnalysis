@@ -463,7 +463,8 @@ def analyzer_job((jobindex)):
             #if not os.path.exists(os.path.dirname(job_log)):
             #    special_call(["mkdir", "-p", os.path.dirname(job_log)], 0)
             #    special_call(['chmod', '-R', '777', "/tmp/"+getpass.getuser()], 0)
-            cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+            #cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+            cmd = shlex.split('bsub -M 4000000 -v 4000000 -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
         special_call(cmd, not opt.run)
     else:
         if opt.NPROC>3: cmd = ['nice']+cmd
@@ -625,7 +626,7 @@ def analysis(ana_arguments, nproc):
                                 lines = jobstatus.readlines()
                                 if 'Job <'+jobname+'> is not found' in lines[0]:
                                     # Job is missing, so resubmit
-                                    print "Job "+jobname+" is missing, resubmitting ...         "
+                                    print "Job["+str(jobindex)+"] "+jobname+" is missing, resubmitting ...         "
                                     analyzer_job(jobindex)
                                 #else:
                                 #    status = lines[1].split()[2]

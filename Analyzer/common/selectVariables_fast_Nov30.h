@@ -367,9 +367,9 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   stream.select("gen_size", data.gen.size);
   stream.select("gen_ID", data.gen.ID);
   //++ stream.select("gen_Status", data.gen.Status);
-  //++ stream.select("gen_Mom0ID", data.gen.Mom0ID);
+  stream.select("gen_Mom0ID", data.gen.Mom0ID);
   //++ stream.select("gen_Mom0Status", data.gen.Mom0Status);
-  //++ stream.select("gen_Mom1ID", data.gen.Mom1ID);
+  stream.select("gen_Mom1ID", data.gen.Mom1ID);
   //++ stream.select("gen_Mom1Status", data.gen.Mom1Status);
   stream.select("gen_Dau0ID", data.gen.Dau0ID);
   //++ stream.select("gen_Dau0Status", data.gen.Dau0Status);
@@ -537,9 +537,9 @@ void selectVariables(itreestream& stream, DataStruct& data) {
   //stream.select("tau_eleVetoCategory", data.tau.eleVetoCategory);
   //stream.select("tau_eleVetoMVA", data.tau.eleVetoMVA);
   //stream.select("tau_E", data.tau.E);
-  //stream.select("tau_Pt", data.tau.Pt);
-  //stream.select("tau_Eta", data.tau.Eta);
-  //stream.select("tau_Phi", data.tau.Phi);
+  stream.select("tau_Pt", data.tau.Pt);
+  stream.select("tau_Eta", data.tau.Eta);
+  stream.select("tau_Phi", data.tau.Phi);
   //stream.select("tau_combinedIsoDeltaBetaCorr3Hits", data.tau.combinedIsoDeltaBetaCorr3Hits);
   //stream.select("tau_chargedIsoPtSum", data.tau.chargedIsoPtSum);
   //stream.select("tau_neutralIsoPtSum", data.tau.neutralIsoPtSum);

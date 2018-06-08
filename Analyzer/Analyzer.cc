@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
     std::vector<double> nSigmaAlphaS      = std::vector<double>(1,0);
     std::vector<double> nSigmaScale       = std::vector<double>(1,0);
     //std::vector<double> nSigmaHT          = std::vector<double>(1,0);
-    std::vector<double> nSigmaNJetWeight  = std::vector<double>(1,0);
+    std::vector<double> nSigmaLostLep  = std::vector<double>(1,0);
     std::vector<double> nSigmaTrigger     = std::vector<double>(1,0);
     std::vector<double> nSigmaJES         = std::vector<double>(1,0);
     std::vector<double> nSigmaJER         = std::vector<double>(1,0);
@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
       nth_line>>dbl; syst.nSigmaAlphaS.push_back(dbl);
       nth_line>>dbl; syst.nSigmaScale.push_back(dbl);
       //nth_line>>dbl; syst.nSigmaHT.push_back(dbl);
-      nth_line>>dbl; syst.nSigmaNJetWeight.push_back(dbl);
+      nth_line>>dbl; syst.nSigmaLostLep.push_back(dbl);
       nth_line>>dbl; syst.nSigmaTrigger.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJES.push_back(dbl);
       nth_line>>dbl; syst.nSigmaJER.push_back(dbl);
@@ -352,9 +352,6 @@ int main(int argc, char** argv) {
   // AK8 Jet Pt rescaling
   cout << "doAK8JetPtRescaling (settings): " << ( settings.doAK8JetPtRescaling ? "true" : "false" ) << endl;
 
-  // NJet Reweighting
-  cout << "doNJetReweighting (settings): " << ( settings.doNJetReweighting ? "true" : "false" ) << endl;
-
   // Scale factors
   cout << "applySmearing (settings): " << ( settings.applySmearing ? "true" : "false" ) << endl;
 
@@ -386,7 +383,7 @@ int main(int argc, char** argv) {
     ofile->count("w_alphas",  0);
     ofile->count("w_scale",   0);
     ofile->count("w_pdf",     0);
-    ofile->count("w_njet",    0);
+    ofile->count("w_lostlep",    0);
     ofile->count("w_trigger", 0);
     ana.all_weights.resize(9,1);
   }
@@ -655,15 +652,11 @@ int main(int argc, char** argv) {
 	  ana.calculate_variables(data, syst.index);
 	  if (debug>1) std::cout<<"Analyzer::main: calculate_variables ok"<<std::endl;
 
-	  // QCD/GJets NJet Reweighting
-	  if (settings.doNJetReweighting) {
-	    if (samplename.Contains("QCD")||samplename.Contains("GJets_HT")) { 
-	      w *= (ana.all_weights[7] = ana.calc_njet_weight(data, syst.nSigmaNJetWeight[syst.index]));
-	    }
-	  }
-	  if (syst.index==0) ofile->count("w_njet", w);
-	  if (debug==-1) std::cout<<" njet = "<<ana.calc_njet_weight(data, syst.nSigmaNJetWeight[syst.index]);
-	  if (debug>1) std::cout<<"Analyzer::main: apply njet weight ok"<<std::endl;
+	  // Lost Lepton Systematics
+	  w *= (ana.all_weights[7] = ana.calc_lostlep_weight(data, syst.nSigmaLostLep[syst.index]));
+	  if (syst.index==0) ofile->count("w_lostlep", w);
+	  if (debug==-1) std::cout<<" lostlep = "<<ana.calc_lostlep_weight(data, syst.nSigmaLostLep[syst.index]);
+	  if (debug>1) std::cout<<"Analyzer::main: apply lostlep weight ok"<<std::endl;
 
 	  // Apply Trigger Efficiency
 	  w *= (ana.all_weights[8] = ana.calc_trigger_efficiency(data, syst.nSigmaTrigger[syst.index]));

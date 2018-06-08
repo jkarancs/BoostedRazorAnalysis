@@ -42,7 +42,7 @@ public:
 
     syst = {
       "lumi", "toppt", "isr", "pileup",
-      "alphas", "facscale", "renscale", "facrenscale", "njet",
+      "alphas", "facscale", "renscale", "facrenscale", "lostlep",
       "trigger", "jes", "jer", "met", "ak8scale",
       "elereco", "eleid", "eleiso", "elefastsim",
       "muontrk", "muonidiso", "muonfastsim",
@@ -127,7 +127,7 @@ public:
 
   std::tuple<double, double, double> calc_muon_sf(DataStruct&, const double&, const double&, const double&, const bool&);
   
-  double calc_njet_weight(DataStruct&, const double&);
+  double calc_lostlep_weight(DataStruct&, const double&);
 
   double calc_trigger_efficiency(DataStruct&, const double&);
 
@@ -1138,7 +1138,8 @@ std::vector<bool> passPhotonPrompt;
 std::vector<bool> passPhotonFake;
 std::vector<double> ChargedHadronIsoEACorr;
 unsigned int nPhotonPreSelect, nPhotonSelect, nPhotonFake;
-double MT, MT_vetolep;
+double MT, MT_vetolep, MT_allvetolep;
+double vetoLepPt, vetoLepEta, vetoLepPhi;
 double MET_1l, MTR_1l, R_1l, R2_1l, minDeltaPhi_1l, M_1l;
 double MET_1vl, MTR_1vl, R_1vl, R2_1vl, minDeltaPhi_1vl, M_1vl;
 double MET_ll, MTR_ll, R_ll, R2_ll, minDeltaPhi_ll, M_ll;
@@ -1152,6 +1153,8 @@ std::vector<TLorentzVector> saved_hemis_AK4_nophoton;
 // gen particles
 std::vector<bool> passGenHadW;
 std::vector<bool> passGenTop;
+std::vector<bool> passGenLepton;
+std::vector<bool> genLepPassLepID;
 std::vector<bool> genHadWPassWTag;
 std::vector<bool> genTopPassTopTag;
 std::vector<bool> genHadWHasJetMatch;
@@ -1535,6 +1538,26 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       } else if (nMuVeto==1) {
 	MT_vetolep = sqrt( 2*data.mu.Pt[iMuVeto[0]]*data.met.Pt[0] * (1 - std::cos(data.met.Phi[0]-data.mu.Phi[iMuVeto[0]])) );
       }
+    }
+    MT_allvetolep = 9999;
+    vetoLepPt  = -9999;
+    vetoLepPhi = -9999;
+    vetoLepEta = -9999;
+    if (nEleVeto+nMuVeto+nTauVeto==1) {
+      if (nEleVeto==1) {
+	vetoLepPt  = data.ele.Pt[iEleVeto[0]];
+	vetoLepPhi = data.ele.Phi[iEleVeto[0]];
+	vetoLepEta = data.ele.Eta[iEleVeto[0]];
+      } else if (nMuVeto==1) {
+	vetoLepPt  = data.mu.Pt[iMuVeto[0]];
+	vetoLepPhi = data.mu.Phi[iMuVeto[0]];
+	vetoLepEta = data.mu.Eta[iMuVeto[0]];
+      } else if (nTauVeto==1) {
+	vetoLepPt  = data.tau.Pt[iTauVeto[0]];
+	vetoLepPhi = data.tau.Phi[iTauVeto[0]];
+	vetoLepEta = data.tau.Eta[iTauVeto[0]];
+      }
+      MT_allvetolep = sqrt( 2*vetoLepPt*data.met.Pt[0] * (1 - std::cos(data.met.Phi[0]-vetoLepPhi)) );
     }
     
     // M_ll, dPhi_ll_met
@@ -2313,6 +2336,8 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   itGenMassTop           .assign(data.gen.size, (size_t)-1);
   passGenHadW            .assign(data.gen.size, 0);
   passGenTop             .assign(data.gen.size, 0);
+  passGenLepton          .assign(data.gen.size, 0);
+  genLepPassLepID        .assign(data.gen.size, 0);
   genHadWHasJetMatch     .assign(data.gen.size, 0);
   genHadWPassWTag        .assign(data.gen.size, 0);
   genTopHasJetMatch      .assign(data.gen.size, 0);
@@ -2349,11 +2374,12 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
   hasGenTop          .assign(data.jetsAK8.size, 0);
   while(data.gen.Loop()) {
     size_t i = data.gen.it;
+    TLorentzVector gen_v4; gen_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
 
     while(data.pho.Loop()){
       size_t j = data.pho.it;
       if( passPhotonSelect[j]){
-	if( fabs(data.gen.ID[i]) == 22 && (fabs(data.gen.Mom0ID[i])==1||fabs(data.gen.Mom0ID[i])==2||fabs(data.gen.Mom0ID[i])==3||fabs(data.gen.Mom0ID[i])==4||fabs(data.gen.Mom0ID[i])==5||fabs(data.gen.Mom0ID[i])==6||fabs(data.gen.Mom0ID[i])==21)){
+	if( std::abs(data.gen.ID[i]) == 22 && (std::abs(data.gen.Mom0ID[i])==1||std::abs(data.gen.Mom0ID[i])==2||std::abs(data.gen.Mom0ID[i])==3||std::abs(data.gen.Mom0ID[i])==4||std::abs(data.gen.Mom0ID[i])==5||std::abs(data.gen.Mom0ID[i])==6||std::abs(data.gen.Mom0ID[i])==21)){
 	  photag.SetPtEtaPhiE(data.pho.Pt[j], data.pho.Eta[j], data.pho.Phi[j], data.pho.E[j]);
 	  genpho.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
 	  if(genpho.DeltaR(photag) < 0.1 && data.gen.Pt[i]/data.pho.Pt[j] > 0.5 && data.gen.Pt[i]/data.pho.Pt[j] < 2 && data.gen.Status[i] == 1) selected_genphoton.push_back(photag);
@@ -2363,9 +2389,64 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
     }
 
     // Select only final version of the particles (their daughters have different IDs)
-    // Apply cut |eta| < 2.4
     if (data.gen.Dau0ID[i]!=data.gen.ID[i]&&data.gen.Dau1ID[i]!=data.gen.ID[i]) {
-      if (fabs(data.gen.Eta[i])<2.4) {
+      
+      // Generator leptons with W mother
+      if (passGenLepton[i] = 
+	  ( std::abs(data.gen.ID[i])==11 ||
+	    std::abs(data.gen.ID[i])==13 ||
+	    std::abs(data.gen.ID[i])==15 ) &&
+	  std::abs(data.gen.Mom0ID[i])==24) {
+	
+	// Match to veto electrons
+        if (abs(data.gen.ID[i])==11) {
+          bool match = 0;
+          while(data.ele.Loop()) {
+            size_t j = data.ele.it;
+            if (passEleVeto[j]) {
+              TLorentzVector ele_v4; ele_v4.SetPtEtaPhiE(data.ele.Pt[j], data.ele.Eta[j], data.ele.Phi[j], data.ele.E[j]);
+              if (gen_v4.DeltaR(ele_v4)<0.1) {
+                match = 1;
+                //std::cout<<"gen/ele - pt = "<<gen_v4.Pt()<<"/"<<ele_v4.Pt()<<" - eta = "<<gen_v4.Eta()<<"/"<<ele_v4.Eta()<<"- DR = "<<gen_v4.DeltaR(ele_v4)<<std::endl;
+              }
+            }
+          }
+          if (match) genLepPassLepID[i] = 1;
+        }
+        // Match to veto muons
+        if (abs(data.gen.ID[i])==13) {
+          bool match = 0;
+          while(data.mu.Loop()) {
+            size_t j = data.mu.it;
+            if (passMuVeto[j]) {
+              TLorentzVector mu_v4; mu_v4.SetPtEtaPhiE(data.mu.Pt[j], data.mu.Eta[j], data.mu.Phi[j], data.mu.E[j]);
+              if (gen_v4.DeltaR(mu_v4)<0.1) {
+                match = 1;
+                //std::cout<<"gen/mu - pt = "<<gen_v4.Pt()<<"/"<<mu_v4.Pt()<<" - eta = "<<gen_v4.Eta()<<"/"<<mu_v4.Eta()<<"- DR = "<<gen_v4.DeltaR(mu_v4)<<std::endl;
+              }
+            }
+          }
+          if (match) genLepPassLepID[i] = 1;
+        }
+        // Match to veto taus
+        if (abs(data.gen.ID[i])==15) {
+          bool match = 0;
+          while(data.tau.Loop()) {
+            size_t j = data.tau.it;
+            if (passTauVeto[j]) {
+              TLorentzVector tau_v4; tau_v4.SetPtEtaPhiE(data.tau.Pt[j], data.tau.Eta[j], data.tau.Phi[j], data.tau.E[j]);
+              if (gen_v4.DeltaR(tau_v4)<0.1) {
+                match = 1;
+                //std::cout<<"gen/tau - pt = "<<gen_v4.Pt()<<"/"<<tau_v4.Pt()<<" - eta = "<<gen_v4.Eta()<<"/"<<tau_v4.Eta()<<"- DR = "<<gen_v4.DeltaR(tau_v4)<<std::endl;
+              }
+            }
+          }
+          if (match) genLepPassLepID[i] = 1;
+        }
+      }
+      
+      // Apply cut |eta| < 2.4
+      if (std::abs(data.gen.Eta[i])<2.4) {
 	// gen bs
 	if(abs(data.gen.ID[i])==5&&data.gen.Pt[i]>0) {
 	  genb_v4.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
@@ -2510,7 +2591,7 @@ AnalysisBase::calculate_common_variables(DataStruct& data, const unsigned int& s
       photag.SetPtEtaPhiE(data.pho.Pt[j], data.pho.Eta[j], data.pho.Phi[j], data.pho.E[j]);
       genpho.SetPtEtaPhiE(data.gen.Pt[i], data.gen.Eta[i], data.gen.Phi[i], data.gen.E[i]);
       dR = genpho.DeltaR(photag);
-      if(dR > 0.4 && (fabs(data.gen.ID[i])==1||fabs(data.gen.ID[i])==2||fabs(data.gen.ID[i])==3||fabs(data.gen.ID[i])==4||fabs(data.gen.ID[i])==5||fabs(data.gen.ID[i])==6||fabs(data.gen.ID[i])==21)) nDirectPromptPhoton++;
+      if(dR > 0.4 && (std::abs(data.gen.ID[i])==1||std::abs(data.gen.ID[i])==2||std::abs(data.gen.ID[i])==3||std::abs(data.gen.ID[i])==4||std::abs(data.gen.ID[i])==5||std::abs(data.gen.ID[i])==6||std::abs(data.gen.ID[i])==21)) nDirectPromptPhoton++;
       else nFragmentationPromptPhoton++;
     }
   }
@@ -2793,6 +2874,8 @@ TH3D* h_MR_R2_CHIso_gNoIso_EB_nj45;
 TH3D* h_MR_R2_CHIso_gNoIso_EB_nj6;
 TH3D* h_MR_R2_CHIso_gNoIso_EE_nj45;
 TH3D* h_MR_R2_CHIso_gNoIso_EE_nj6;
+TH3D* h_MR_R2_IsPrompt_G_EB; // MC truth for photon purity
+TH3D* h_MR_R2_IsPrompt_G_EE;
 TH3D* h_MR_R2_IsDirect_G_EB; // MC truth for direct fraction
 TH3D* h_MR_R2_IsDirect_G_EE;
 TH2D* h_MR_R2_S; // Counts for Transfer factor: S(mc)/G(mc)
@@ -2925,79 +3008,9 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   }
   // Signals --> Declare them later after the signal weight calculation
   // in calc_weightnorm_histo_from_ntuple()
-
-  /*
-    0 "nominal"
-    1 "lumiUp",
-    2 "lumiDown",
-    3 "TopPtUp",
-    4 "TopPtDown",
-    5 "ISRUp",
-    6 "ISRDown",
-    7 "pileupUp",
-    8 "pileupDown",
-    9 "alphasUp",
-    10 "alphasDown",
-    11 "facscaleUp",
-    12 "facscaleDown",
-    13 "renscaleUp",
-    14 "renscaleDown",
-    15 "facrenscaleUp", 
-    16 "facrenscaleDown", 
-    17 "triggerUp",
-    18 "triggerDown",
-    19 "jesUp",
-    20 "jesDown",
-    21 "jerUp",
-    22 "jerDown",
-    23 "metUp", 
-    24 "metDown", 
-    25 "ak8scaleUp",
-    26 "ak8scaleDown",
-    27 "elerecoUp",
-    28 "elerecoDown",
-    29 "eleidUp",
-    30 "eleidDown",
-    31 "eleisoUp",
-    32 "eleisoDown",
-    33 "elefastsimUp",
-    34 "elefastsimDown",
-    35 "muontrkUp",
-    36 "muontrkDown",
-    37 "muonidisoUp",
-    38 "muonidisoDown",
-    39 "muonfastsimUp",
-    40 "muonfastsimDown",
-    41 "btagUp",
-    42 "btagDown",
-    43 "btagfastsimUp",
-    44 "btagfastsimDown",
-    45 "wtagUp",
-    46 "wtagDown",
-    47 "wtagfastsimUp",
-    48 "wtagfastsimDown",
-    49 "wmistagUp",
-    50 "wmistagDown",
-    51 "wmasstagUp",
-    52 "wmasstagDown",
-    53 "wantitagUp",
-    54 "wantitagDown",
-    55 "toptagUp",
-    56 "toptagDown",
-    57 "toptagfastsimUp",
-    58 "toptagfastsimDown",
-    59 "topmistagUp",
-    60 "topmistagDown",
-    61 "top0bmasstagUp",
-    62 "top0bmasstagDown",
-    63 "topmasstagUp",
-    64 "topmasstagDown",
-    65 "topantitagUp",
-    66 "topantitagDown"
-  */
-
+  
   double mrbins[6]  = { 800, 1000, 1200, 1600, 2000, 4000 };
-  double r2bins[6]  = { 0.08, 0.12, 0.16, 0.24, 0.4, 2.0 }; 
+  double r2bins[6]  = { 0.08, 0.12, 0.16, 0.24, 0.4, 1.5 }; 
   double isdirectbins[3] = {-0.5,0.5,1.5};
   double chisobins[21] = { 0 };
   for (int i=0; i<21; ++i) chisobins[i] = float(i)/2.;
@@ -3027,6 +3040,8 @@ AnalysisBase::init_common_histos(const bool& varySystematics)
   h_MR_R2_CHIso_gNoIso_EB_nj6  = new TH3D("MR_R2_CHIso_gNoIso_EB_nj6",  "G-1 region (w/o CH iso.), EB nj6-;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EE_nj45 = new TH3D("MR_R2_CHIso_gNoIso_EE_nj45 ","G-1 region (w/o CH iso.), EE nj45;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
   h_MR_R2_CHIso_gNoIso_EE_nj6  = new TH3D("MR_R2_CHIso_gNoIso_EE_nj6",  "G-1 region (w/o CH iso.), EE nj6-;M_{R} (GeV);R^{2};Photon Charged Isolation (GeV)", 5,mrbins, 5,r2bins, 20,chisobins);
+  h_MR_R2_IsPrompt_G_EB        = new TH3D("MR_R2_IsPrompt_G_EB",        "G region, EB;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins, 2,isdirectbins);
+  h_MR_R2_IsPrompt_G_EE        = new TH3D("MR_R2_IsPrompt_G_EE",        "G region, EE;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins, 2,isdirectbins);
   h_MR_R2_IsDirect_G_EB        = new TH3D("MR_R2_IsDirect_G_EB",        "G region, EB;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins, 2,isdirectbins);
   h_MR_R2_IsDirect_G_EE        = new TH3D("MR_R2_IsDirect_G_EE",        "G region, EE;M_{R} (GeV);R^{2}", 5,mrbins, 5,r2bins, 2,isdirectbins);
   h_MR_R2_S                    = new TH2D("MR_R2_S",                    "S region;M_{R} (GeV);R^{2}",       5,mrbins, 5,r2bins);
@@ -3230,8 +3245,13 @@ AnalysisBase::fill_common_histos(DataStruct& d, const bool& varySystematics, con
 	// Direct photon ratio from MC
 	if (apply_all_cuts('G')) {
 	  //std::cout<<"Pass G: "<<MR_pho<<" "<<R2_pho<<" "<<d.evt.RunNumber<<" "<<d.evt.LumiBlock<<" "<<d.evt.EventNumber<<std::endl;
-	  if (d.pho.isPromptDirect[iPhotonSelect[0]]==1||d.pho.isPromptFrag[iPhotonSelect[0]]==1) {
-	    bool EB = std::abs(d.pho.SCEta[iPhotonSelect[0]])<1.479;
+	  bool EB = std::abs(d.pho.SCEta[iPhotonSelect[0]])<1.479;
+	  bool isPrompt = d.pho.isPromptDirect[iPhotonSelect[0]]==1||d.pho.isPromptFrag[iPhotonSelect[0]]==1;
+	  // Prompt photon fraction
+	  if (EB) h_MR_R2_IsPrompt_G_EB->Fill(MR_pho, R2_pho, isPrompt, sf_weight['G']);
+	  else    h_MR_R2_IsPrompt_G_EE->Fill(MR_pho, R2_pho, isPrompt, sf_weight['G']);
+	  // Direct photon fraction of prompt photons
+	  if (isPrompt) {
 	    if (EB) h_MR_R2_IsDirect_G_EB->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]], sf_weight['G']);
 	    else    h_MR_R2_IsDirect_G_EE->Fill(MR_pho, R2_pho, d.pho.isPromptDirect[iPhotonSelect[0]], sf_weight['G']);
 	  }
@@ -3854,7 +3874,7 @@ AnalysisBase::get_scale_weight(const std::vector<float>& scale_Weights, const st
   if (nSigmaScale==0) return 1; // No systematics
   if (scale_Weights.empty()) return 1; // ST samples are known to miss scale weights
   if (scale_weight_norm.empty()) {
-    utils::error("AnalysisBase - Scale weight normalizations were not provided for this sample, rerun scripts/get_signal_scaleweight_norm.py on unskimmed ntuple");
+    utils::error("AnalysisBase - Scale weight normalizations were not provided for this sample, rerun scripts/get_scaleweight_norm.py on unskimmed ntuple");
   }
   double w_scale = 1;
   double w_scale_up = 1;   // Corresponds to 0.5 (More signal events)
@@ -4631,7 +4651,7 @@ std::tuple<double, double, double> AnalysisBase::calc_ele_sf(DataStruct& data, c
     utils::geteff2D(eff_full_ele_reco, eta, pt, reco_sf, reco_sf_err);
     // If pt is below 20 or above 80 GeV increase error by 1%
     // https://twiki.cern.ch/twiki/bin/view/CMS/EgammaIDRecipesRun2?rev=38#Electron_efficiencies_and_scale
-    if (pt<20||pt>=80) reco_sf_err = std::sqrt(reco_sf_err*reco_sf_err + 0.01+0.01);
+    if (pt<20||pt>=80) reco_sf_err = std::sqrt(reco_sf_err*reco_sf_err + 0.01*0.01);
 
     // For FullSim scale factors, we apply syst error from each bin separately
     // For FastSim scale factors, we apply a 2% error (per electron leg)
@@ -4970,15 +4990,42 @@ std::tuple<double, double, double> AnalysisBase::calc_muon_sf(DataStruct& data, 
 }
 
 
-double AnalysisBase::calc_njet_weight(DataStruct& data, const double& nSigmaNJetWeight) {
-  // QCD Njet Reweighting
-  // Firts run this script to obtain the expo fit parameters
-  // root scripts/calc_njet_weight.C
-  // Up variation taken from Q region
-  // Down variation taken from G-1 region
-  double w_up = std::exp(-4.15259e-01 + 9.97141e-02 * nJet);
-  double w_dn = std::exp( 1.02951e+00 - 1.90498e-01 * nJet);
-  double weight = get_syst_weight(1.0, w_up, w_dn, nSigmaNJetWeight);
+//  double AnalysisBase::calc_njet_weight(DataStruct& data, const double& nSigmaNJetWeight) {
+//    // QCD Njet Reweighting
+//    // First run this script to obtain the expo fit parameters
+//    // root scripts/calc_njet_weight.C
+//    // Up variation taken from Q region
+//    // Down variation taken from G-1 region
+//    double w_up = std::exp(-4.15259e-01 + 9.97141e-02 * nJet);
+//    double w_dn = std::exp( 1.02951e+00 - 1.90498e-01 * nJet);
+//    double weight = get_syst_weight(1.0, w_up, w_dn, nSigmaNJetWeight);
+//    return weight;
+//  }
+
+
+double AnalysisBase::calc_lostlep_weight(DataStruct& data, const double& nSigmaLostLep) {
+  // Lost Lepton event weight
+  // First run this script to obtain the lost lepton uncertainties
+  // python scripts/calc_lostlepsyst.py
+  // Use the averages combination of all leptons for W/top
+  double weight = 1;
+  if (nEleVeto+nMuVeto+nTauVeto==0) {
+    while(data.gen.Loop()) {
+      size_t i = data.gen.it;
+      // Check if the gen particle is a final state lepton from W mother
+      if (passGenLepton[i]) {
+	double unc = 0;
+	double abseta = std::abs(data.gen.Eta[i]);
+	if      (abseta<0.5) unc = 0.125;
+	else if (abseta<1.0) unc = 0.126;
+	else if (abseta<1.5) unc = 0.129;
+	else if (abseta<2.0) unc = 0.143;
+	else if (abseta<2.5) unc = 0.175;
+	weight *= get_syst_weight(1.0, unc, nSigmaLostLep);
+	std::cout<<"Lost-lepton found: pt/eta/id = "<<data.gen.Pt[i]<<" "<<data.gen.Eta[i]<<" "<<data.gen.ID[i]<<" E/M/T="<<nEleVeto<<"/"<<nMuVeto<<"/"<<nTauVeto<<std::endl;
+      }
+    }
+  }
   return weight;
 }
 
@@ -5046,7 +5093,7 @@ int AnalysisBase::calc_mrr2_bin(DataStruct& d, const char& region) {
   int MRR2_bin = -1;
   if (MR>=800&&R2>=0.08) {
     MRR2_bin = 0;
-    for (const auto& r2 : { 0.12, 0.16, 0.24, 0.4, 2.0 }) {
+    for (const auto& r2 : { 0.12, 0.16, 0.24, 0.4, 1.5 }) {
       if (R2<r2) break;
       ++MRR2_bin;
     }

@@ -2,11 +2,11 @@ date1=$1
 date2=$2
 model=$3
 
-# Cards
-python scripts/run_syst.py -d "results/run_"$date1"_syst" -m $model -b WAna_nj45
-python scripts/run_syst.py -d "results/run_"$date1"_syst" -m $model -b WAna_nj6
-python scripts/run_syst.py -d "results/run_"$date2"_syst_TopAna" -m $model -b TopAna
-cp -p "syst_results/run_"$date2"_syst_TopAna/cards/RazorBoost_SMS-"$model"_"*"_TopAna."* "syst_results/run_"$date1"_syst/cards/"
+##  # Cards - Moved to scripts/make_cards.sh
+##  python scripts/run_syst.py -d "results/run_"$date1"_syst" -m $model -b WAna_nj45
+##  python scripts/run_syst.py -d "results/run_"$date1"_syst" -m $model -b WAna_nj6
+##  python scripts/run_syst.py -d "results/run_"$date2"_syst_TopAna" -m $model -b TopAna
+##  cp -p "syst_results/run_"$date2"_syst_TopAna/cards/RazorBoost_SMS-"$model"_"*"_TopAna."* "syst_results/run_"$date1"_syst/cards/"
 
 # Combine
 cd Combine; cmsenv; cd -
