@@ -637,7 +637,6 @@ def analysis(ana_arguments, nproc):
                             last_known_status[jobindex] = time.time()
                         else:
                             # 
-                            pass_nevent_check = True
                             # Check if processed events exactly match input event counts
                             input_count = 0
                             output_count = 0
@@ -704,7 +703,7 @@ def analysis(ana_arguments, nproc):
                                 output_files.append(output_file)
                                 last_known_status[jobindex] = 0
                             else:
-                                #os.remove(output_file)
+                                if os.path.isfile(output_file): os.remove(output_file)
                                 # Resubmit job
                                 print "Job["+str(jobindex)+"] "+output_file+" failed event check - input_count="+str(input_count)+" output_count="+str(output_count)
                                 analyzer_job(jobindex)
@@ -718,9 +717,31 @@ def analysis(ana_arguments, nproc):
                         file_size = 0
                         if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
                         if file_size > 1000:
-                            finished += 1
-                            output_files.append(output_file)
-                            last_known_status[jobindex] = 0
+                            # Check if processed events exactly match input event counts
+                            input_count = 0
+                            output_count = 0
+                            with open(input_txtfile) as txt:
+                                for infile in txt:
+                                    infile = infile.replace('\n','')
+                                    fin = ROOT.TFile.Open(infile)
+                                    tree = fin.Get("B2GTree")
+                                    input_count += tree.GetEntries()
+                                    fin.Close()
+                            fout = ROOT.TFile.Open(output_file)
+                            h_counts = fout.Get("counts")
+                            if h_counts: output_count += h_counts.GetBinContent(1)
+                            fout.Close()
+                            pass_nevent_check = (input_count == output_count)
+                            if pass_nevent_check:
+                                finished += 1
+                                output_files.append(output_file)
+                                last_known_status[jobindex] = 0
+                            else:
+                                os.remove(output_file)
+                                # Resubmit job
+                                print "Job["+str(jobindex)+"] "+output_file+" failed event check - input_count="+str(input_count)+" output_count="+str(output_count)
+                                analyzer_job(jobindex)
+                                last_known_status[jobindex] = time.time()                           
                         # If the last submission/check is older than 10 minutes check job status with bjobs
                         elif time.time() - last_known_status[jobindex] > (600 if opt.NQUICK<2 else 600/opt.NQUICK):
                             jobname = DATE+'_'+str(jobindex)
