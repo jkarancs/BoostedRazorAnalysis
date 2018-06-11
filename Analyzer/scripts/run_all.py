@@ -656,9 +656,10 @@ def analysis(ana_arguments, nproc):
                                     fin.Close()
                             if os.path.isfile(output_file):
                                 fout = ROOT.TFile.Open(output_file)
-                                h_counts = fout.Get("counts")
-                                if h_counts: output_count += h_counts.GetBinContent(1)
-                                fout.Close()
+                                if fout:
+                                    h_counts = fout.Get("counts")
+                                    if h_counts: output_count += h_counts.GetBinContent(1)
+                                    fout.Close()
                             pass_nevent_check = (input_count == output_count)
                             #print input_txtfile+"="+str(input_count)
                             #print output_file+"="+str(output_count)
@@ -667,9 +668,10 @@ def analysis(ana_arguments, nproc):
                                 # Check a file with messed up index (or previously found and renamed one) exists
                                 if os.path.exists(badfile):
                                     fout = ROOT.TFile.Open(badfile)
-                                    h_counts = fout.Get("counts")
-                                    if h_counts: bad_count += h_counts.GetBinContent(1)
-                                    fout.Close()
+                                    if fout:
+                                        h_counts = fout.Get("counts")
+                                        if h_counts: bad_count += h_counts.GetBinContent(1)
+                                        fout.Close()
                                     #print "1 - "+badfile+"="+str(bad_count)
                                     pass_nevent_check = (input_count == bad_count)
                                     if pass_nevent_check:
@@ -683,9 +685,10 @@ def analysis(ana_arguments, nproc):
                                         #print "mv "+badfile+" "+output_file
                                 elif os.path.exists(badfile.replace(".root","_tmp.root")):
                                     fout = ROOT.TFile.Open(badfile.replace(".root","_tmp.root"))
-                                    h_counts = fout.Get("counts")
-                                    if h_counts: bad_count += h_counts.GetBinContent(1)
-                                    fout.Close()
+                                    if fout:
+                                        h_counts = fout.Get("counts")
+                                        if h_counts: bad_count += h_counts.GetBinContent(1)
+                                        fout.Close()
                                     #print "2 - "+badfile.replace(".root","_tmp.root")+"="+str(bad_count)
                                     pass_nevent_check = (input_count == bad_count)
                                     if pass_nevent_check:
@@ -728,9 +731,10 @@ def analysis(ana_arguments, nproc):
                                     input_count += tree.GetEntries()
                                     fin.Close()
                             fout = ROOT.TFile.Open(output_file)
-                            h_counts = fout.Get("counts")
-                            if h_counts: output_count += h_counts.GetBinContent(1)
-                            fout.Close()
+                            if fout:
+                                h_counts = fout.Get("counts")
+                                if h_counts: output_count += h_counts.GetBinContent(1)
+                                fout.Close()
                             pass_nevent_check = (input_count == output_count)
                             if pass_nevent_check:
                                 finished += 1
