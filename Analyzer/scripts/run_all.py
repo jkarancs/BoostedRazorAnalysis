@@ -137,6 +137,7 @@ if opt.recover:
     input_filelists  = glob.glob("filelists/data/*.txt")
     input_filelists += glob.glob("filelists/backgrounds/*.txt")
     input_filelists += glob.glob("filelists/signals/*.txt")    
+    ####    input_filelists = glob.glob("filelists/signals/FastSim_SMS-T5ttcc_*.txt")    
     os.chdir(saved_path)
 elif opt.full:
     input_filelists  = glob.glob("filelists/data/*.txt")
@@ -180,6 +181,7 @@ elif (opt.NFILE != -1 or opt.NEVT != -1):
     for tmp_txtfile in glob.glob('filelists_tmp/*/*.txt'): os.remove(tmp_txtfile)
 
 ana_arguments = []
+bad_arguments = []
 # Loop over all filelists
 if opt.NEVT != -1 or opt.optim: bad_files = open("bad_files_found.txt", "w")
 for filelist in input_filelists:
@@ -197,20 +199,31 @@ for filelist in input_filelists:
     if opt.skim and not opt.plot: options.append("noPlots=1")
     # Temporary filelists
     if opt.useprev:
+        #print filelist
+        #print len(ana_arguments)
         # Use previously created lists
         if not opt.skim: options.append("fullFileList="+filelist) # Need full ntuple to correctly normalize weights
         if opt.recover:
             saved_path = os.getcwd()
             os.chdir(EXEC_PATH)
         prev_lists = glob.glob(filelist.replace("filelists","filelists_tmp").replace(".txt","_[0-9]*.txt"))
+        new_lists = []
+        for jobnum in range(1,1+len(prev_lists)):
+            new_lists.append(filelist.replace("filelists","filelists_tmp").replace(".txt","_"+str(jobnum)+".txt"))
+        #prev_lists = new_lists
         if opt.recover:
             os.chdir(saved_path)
-        for i in range(0, len(prev_lists)):
-            tmp_filelist = prev_lists[i-1]
+        for i in range(0, len(new_lists)):
+            tmp_filelist = new_lists[i]
             #jobnum = tmp_filelist.replace(".txt","").split("_")[-1]
             jobnum = i+1
             job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
-            ana_arguments.append(job_args)
+            ana_arguments.append(job_args)        
+        for i in range(0, len(prev_lists)):
+            tmp_filelist = prev_lists[i-1]
+            jobnum = i+1
+            job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
+            bad_arguments.append(job_args)
     elif opt.NEVT != -1 or opt.optim:
         # SPLIT MODE (recommended for batch): Each jobs runs on max opt.NEVT
         JOB_NEVT = opt.NEVT
@@ -596,21 +609,111 @@ def analysis(ana_arguments, nproc):
                 finished = 0
                 for jobindex in range(0, njob):
                     output_file = ana_arguments[jobindex][0]
+                    input_txtfile = ana_arguments[jobindex][1][0]
                     #output_log  = ana_arguments[jobindex][3]
+                    # find messed up file index
+                    badfile = ""
+                    for badindex in range(0, njob):
+                        if input_txtfile == bad_arguments[badindex][1][0]:
+                            badfile = bad_arguments[badindex][0]
+                    #print "- Start "+output_file
+                    #print "+ Bad   "+badfile
+                    #if jobindex==3: sys.exit()
                     if last_known_status[jobindex] == -1:
+                        # Initial step
                         file_size = 0
-                        if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
-                        if opt.recover and file_size > 1000:
-                            finished += 1
-                            output_files.append(output_file)
-                            last_known_status[jobindex] = 0
-                        else:
+                        if os.path.isfile(output_file):
+                            file_size = os.path.getsize(output_file)
+                            #print output_file+"="+str(file_size)
+                        elif os.path.isfile(output_file.replace(".root","_tmp.root")):
+                            file_size = os.path.getsize(output_file.replace(".root","_tmp.root"))
+                            #print "Alternative - "+output_file.replace(".root","_tmp.root")+"="+str(file_size)
+                        elif os.path.isfile(badfile):
+                            file_size = os.path.getsize(badfile)
+                            #print "Alternative - "+badfile+"="+str(file_size)
+                        if file_size <= 1000 or not opt.recover:
                             # Submit all jobs
                             analyzer_job(jobindex)
                             last_known_status[jobindex] = time.time()
+                        else:
+                            # 
+                            pass_nevent_check = True
+                            # Check if processed events exactly match input event counts
+                            input_count = 0
+                            output_count = 0
+                            bad_count = 0
+                            #print ana_arguments[jobindex]
+                            #print input_txtfile
+                            #print input_txtfile
+                            with open(input_txtfile) as txt:
+                                for infile in txt:
+                                    infile = infile.replace('\n','')
+                                    #infile = infile.replace("root://eosuser//eos/user/j/jkarancs/B2GTTreeNtuple/Skim_Dec12","ntuple/Latest")
+                                    #infile = infile.replace("root://eoscms//eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/Skim_Dec12","ntuple/Latest")
+                                    fin = ROOT.TFile.Open(infile)
+                                    tree = fin.Get("B2GTree")
+                                    input_count += tree.GetEntries()
+                                    #print tree.GetEntries()
+                                    fin.Close()
+                            if os.path.isfile(output_file):
+                                fout = ROOT.TFile.Open(output_file)
+                                h_counts = fout.Get("counts")
+                                if h_counts: output_count += h_counts.GetBinContent(1)
+                                fout.Close()
+                            pass_nevent_check = (input_count == output_count)
+                            #print input_txtfile+"="+str(input_count)
+                            #print output_file+"="+str(output_count)
+                            if not pass_nevent_check:
+                                #print "- Not match!"
+                                # Check a file with messed up index (or previously found and renamed one) exists
+                                if os.path.exists(badfile):
+                                    fout = ROOT.TFile.Open(badfile)
+                                    h_counts = fout.Get("counts")
+                                    if h_counts: bad_count += h_counts.GetBinContent(1)
+                                    fout.Close()
+                                    #print "1 - "+badfile+"="+str(bad_count)
+                                    pass_nevent_check = (input_count == bad_count)
+                                    if pass_nevent_check:
+                                        #print "- Match found!"
+                                        # Switch up files
+                                        if os.path.isfile(output_file):
+                                            os.rename(output_file, output_file.replace(".root","_tmp.root"))
+                                            time.sleep(2)
+                                        os.rename(badfile,    output_file)
+                                        #print "mv "+output_file+" "+output_file.replace(".root","_tmp.root")
+                                        #print "mv "+badfile+" "+output_file
+                                elif os.path.exists(badfile.replace(".root","_tmp.root")):
+                                    fout = ROOT.TFile.Open(badfile.replace(".root","_tmp.root"))
+                                    h_counts = fout.Get("counts")
+                                    if h_counts: bad_count += h_counts.GetBinContent(1)
+                                    fout.Close()
+                                    #print "2 - "+badfile.replace(".root","_tmp.root")+"="+str(bad_count)
+                                    pass_nevent_check = (input_count == bad_count)
+                                    if pass_nevent_check:
+                                        #print "- Match found!"
+                                        # Switch up files
+                                        if os.path.isfile(output_file):
+                                            os.rename(output_file, output_file.replace(".root","_tmp.root"))
+                                            time.sleep(2)
+                                        os.rename(badfile.replace(".root","_tmp.root"), output_file)
+                                        #print "mv "+output_file+" "+output_file.replace(".root","_tmp.root")
+                                        #print "mv "+badfile.replace(".root","_tmp.root")+" "+output_file
+                            if pass_nevent_check:
+                                print output_file+" - OK!"
+                                finished += 1
+                                output_files.append(output_file)
+                                last_known_status[jobindex] = 0
+                            else:
+                                #os.remove(output_file)
+                                # Resubmit job
+                                print "Job["+str(jobindex)+"] "+output_file+" failed event check - input_count="+str(input_count)+" output_count="+str(output_count)
+                                analyzer_job(jobindex)
+                                last_known_status[jobindex] = time.time()
                     elif last_known_status[jobindex] == 0:
+                        # Already completed
                         finished += 1
                     else:
+                        # Repeated step
                         # First check if output file exists and size is larger than 1000 bytes
                         file_size = 0
                         if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
