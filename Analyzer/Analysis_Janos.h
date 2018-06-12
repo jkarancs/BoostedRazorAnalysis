@@ -2885,6 +2885,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     std::string data = "JetHT";
     std::string opt  = o_stk_d;
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
@@ -2904,6 +2905,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("evt",    { .fill="Jet1AK8PtBins_vs_HTBins",   .pfs={ "Data_MC",cut},                    .cuts={},.draw="COLZ",.opt=o_1or2d_d,.ranges={}});
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
       sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
       sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
@@ -2926,6 +2928,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   // Unskimmed plots
   sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT","P_ExclNJet"},              .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk3});
   sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT","P_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
+  sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT","P_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
   sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT","P_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
   sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT","P_ExclMR"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
   sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT","P_ExclR2"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
@@ -2956,6 +2959,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   
   for (auto njet_bin : {"NJet45"}) {
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT","P_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT","P_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT","P_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT","P_ExclMR",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT","P_ExclR2",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk3});
@@ -2992,6 +2996,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto data : showdata ) {
       std::string opt  = (data=="Blind") ? o_stk_s : o_stk_d;
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,data,cut},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
@@ -3076,6 +3081,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
       //sh.AddHistos("evt",  { .fill="AvgStopLSPMassDiff_vs_MLSP_vs_MStop",   .pfs={"T2tt"  ,cut}, .cuts={},.draw="COLZ",.opt=o_1or2d_s,.ranges={150,1200, 0, 650}});
       for (auto njet_bin : {"NJet45"}) {
         sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
+        sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
         sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
         sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
         sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,data,cut,njet_bin},           .cuts={},.draw=d,.opt=opt,.ranges=r_stk});
@@ -3147,11 +3153,13 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   // Unskimmed plots
   sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"Blind","S_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
+  sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"Blind","S_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"Blind","S_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"Blind","S_ExclMR"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"Blind","S_ExclR2"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"R2",                      .pfs={Stack,"Blind","S_ExclR2"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT","S_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
+  sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT","S_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT","S_ExclMRR2"},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT","S_ExclMR"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
   sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT","S_ExclR2"},                   .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
@@ -3165,12 +3173,14 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   sh.AddHistos("evt",    { .fill="R2Fine_vs_MRFine",          .pfs={"Signals_Background","S_ExclMRR2"},          .cuts={},.draw="COLZ",.opt=o_1or2d_d+"Log",.ranges={}});
   for (auto njet_bin : {"NJet45"}) {
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"Blind","S_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"Blind","S_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"Blind","S_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"Blind","S_ExclMR",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"Blind","S_ExclR2",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"R2",                      .pfs={Stack,"Blind","S_ExclR2",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"RazorBins",               .pfs={Stack,"Blind","S",njet_bin},                 .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT","S_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT","S_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT","S_ExclMRR2",njet_bin},        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT","S_ExclMR",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT","S_ExclR2",njet_bin},          .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
@@ -3382,6 +3392,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3399,6 +3410,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3508,6 +3520,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3525,6 +3538,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3544,6 +3558,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3657,6 +3672,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3675,6 +3691,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut,"Ele_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3687,6 +3704,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3799,6 +3817,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET1vl",                  .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR1vl",                  .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3817,6 +3836,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MET1vl",                  .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR1vl",                  .pfs={Stack,"JetHT",cut,"Ele_or_Muon"},        .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3829,6 +3849,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MET1vl",                  .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTR1vl",                  .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3914,6 +3935,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"METll",                   .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTRll",                   .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3932,6 +3954,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"METll",                   .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTRll",                   .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -3944,6 +3967,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"METll",                   .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTRll",                   .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4062,6 +4086,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     //sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"METll",                   .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTRll",                   .pfs={Stack,"JetHT",cut},                   .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4080,6 +4105,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos(s+"evt",  { .fill=c+"NJet",                    .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"METll",                   .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTRll",                   .pfs={Stack,"JetHT",cut,"2Ele_2Muon"},      .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4092,6 +4118,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"NJetAK8",                 .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"METll",                   .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTRll",                   .pfs={Stack,"JetHT",cut,njet_bin},          .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4164,6 +4191,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   // Other
   sh.AddHistos(s+"evt",  { .fill=c+"HT",          .pfs={Stack,"JetHT","z_Excl1W"},                        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
+  sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",.pfs={Stack,"JetHT","z_Excl1W"},                        .cuts={},.draw=d,.opt=o_stk_s,.ranges=r_stk});
 #endif
 
 
@@ -4174,6 +4202,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   for (const auto& cut : {"G"}) {
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"METNoPho",                .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MRNoPho",                 .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTRNoPho",                .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4188,6 +4217,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("evt",    { .fill="Jet1AK8PtBins_vs_HTBins",   .pfs={ "Data_MC",cut},                       .cuts={},.draw="COLZ",.opt=o_1or2d_d,.ranges={}});
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"METNoPho",                .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MRNoPho",                 .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTRNoPho",                .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4332,6 +4362,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 
   for (const auto& cut : {"g"}) {
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"METNoPho",                .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MRNoPho",                 .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
     sh.AddHistos(s+"evt",  { .fill=c+"MTRNoPho",                .pfs={Stack,"JetHT",cut},                    .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4346,6 +4377,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("evt",    { .fill="Jet1AK8PtBins_vs_HTBins",   .pfs={ "Data_MC",cut},                       .cuts={},.draw="COLZ",.opt=o_1or2d_d,.ranges={}});
     for (auto njet_bin : {"NJet45"}) {
       sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
+      sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"METNoPho",                .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MRNoPho",                 .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
       sh.AddHistos(s+"evt",  { .fill=c+"MTRNoPho",                .pfs={Stack,"JetHT",cut,njet_bin},           .cuts={},.draw=d,.opt=o_stk_d,.ranges=r_stk});
@@ -4412,6 +4444,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     std::string data = "JetHT";
     std::string opt  = o_stk_d;
     sh.AddHistos(s+"evt",  { .fill=c+"HT",                      .pfs={Stack,data,cut1},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
+    sh.AddHistos(s+"evt",  { .fill=c+"Jet1AK8PtBins",           .pfs={Stack,data,cut1},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MET",                     .pfs={Stack,data,cut1},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MR",                      .pfs={Stack,data,cut1},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
     sh.AddHistos(s+"evt",  { .fill=c+"MTR",                     .pfs={Stack,data,cut1},                    .cuts={},.draw=d,.opt=opt,.ranges=r_stk3});
