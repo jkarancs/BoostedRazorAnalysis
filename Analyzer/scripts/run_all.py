@@ -182,7 +182,6 @@ elif (opt.NFILE != -1 or opt.NEVT != -1):
     for tmp_txtfile in glob.glob('filelists_tmp/*/*.txt'): os.remove(tmp_txtfile)
 
 ana_arguments = []
-bad_arguments = []
 # Loop over all filelists
 if opt.NEVT != -1 or opt.optim: bad_files = open("bad_files_found.txt", "w")
 for filelist in input_filelists:
@@ -220,11 +219,6 @@ for filelist in input_filelists:
             jobnum = i+1
             job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
             ana_arguments.append(job_args)        
-        for i in range(0, len(prev_lists)):
-            tmp_filelist = prev_lists[i-1]
-            jobnum = i+1
-            job_args = [output_file.replace(".root","_"+str(jobnum)+".root"), [EXEC_PATH+"/"+tmp_filelist], options, log_file.replace(".log","_"+str(jobnum)+".log")]
-            bad_arguments.append(job_args)
     elif opt.NEVT != -1 or opt.optim:
         # SPLIT MODE (recommended for batch): Each jobs runs on max opt.NEVT
         JOB_NEVT = opt.NEVT
@@ -613,13 +607,6 @@ def analysis(ana_arguments, nproc):
                     output_file = ana_arguments[jobindex][0]
                     input_txtfile = ana_arguments[jobindex][1][0]
                     #output_log  = ana_arguments[jobindex][3]
-                    # find messed up file index
-                    badfile = ""
-                    for badindex in range(0, njob):
-                        if input_txtfile == bad_arguments[badindex][1][0]:
-                            badfile = bad_arguments[badindex][0]
-                    #print "- Start "+output_file
-                    #print "+ Bad   "+badfile
                     #if jobindex==3: sys.exit()
                     if last_known_status[jobindex] == -1:
                         # Initial step (can be also a recovery task)
@@ -630,12 +617,6 @@ def analysis(ana_arguments, nproc):
                         if os.path.isfile(output_file):
                             file_size = os.path.getsize(output_file)
                             #print output_file+"="+str(file_size)
-                        elif os.path.isfile(output_file.replace(".root","_tmp.root")):
-                            file_size = os.path.getsize(output_file.replace(".root","_tmp.root"))
-                            #print "Alternative - "+output_file.replace(".root","_tmp.root")+"="+str(file_size)
-                        elif os.path.isfile(badfile):
-                            file_size = os.path.getsize(badfile)
-                            #print "Alternative - "+badfile+"="+str(file_size)
                         if file_size <= 1000 or not opt.recover:
                             # Submit all jobs
                             analyzer_job(jobindex)
@@ -645,19 +626,12 @@ def analysis(ana_arguments, nproc):
                             # Check if processed events exactly match input event counts
                             input_count = 0
                             output_count = 0
-                            bad_count = 0
-                            #print ana_arguments[jobindex]
-                            #print input_txtfile
-                            #print input_txtfile
                             with open(input_txtfile) as txt:
                                 for infile in txt:
                                     infile = infile.replace('\n','')
-                                    #infile = infile.replace("root://eosuser//eos/user/j/jkarancs/B2GTTreeNtuple/Skim_Dec12","ntuple/Latest")
-                                    #infile = infile.replace("root://eoscms//eos/cms/store/caf/user/jkarancs/B2GTTreeNtuple/Skim_Dec12","ntuple/Latest")
                                     fin = ROOT.TFile.Open(infile)
                                     tree = fin.Get("B2GTree")
                                     input_count += tree.GetEntries()
-                                    #print tree.GetEntries()
                                     fin.Close()
                             if os.path.isfile(output_file):
                                 with suppress_stdout_stderr():
@@ -669,45 +643,6 @@ def analysis(ana_arguments, nproc):
                             pass_nevent_check = (input_count == output_count)
                             #print input_txtfile+"="+str(input_count)
                             #print output_file+"="+str(output_count)
-                            if not pass_nevent_check:
-                                #print "- Not match!"
-                                # Check a file with messed up index (or previously found and renamed one) exists
-                                if os.path.exists(badfile):
-                                    with suppress_stdout_stderr():
-                                        fout = ROOT.TFile.Open(badfile)
-                                        if fout and not fout.TestBit(ROOT.TFile.kRecovered):
-                                            h_counts = fout.Get("counts")
-                                            if h_counts: bad_count += h_counts.GetBinContent(1)
-                                        if fout: fout.Close()
-                                    #print "1 - "+badfile+"="+str(bad_count)
-                                    pass_nevent_check = (input_count == bad_count)
-                                    if pass_nevent_check:
-                                        #print "- Match found!"
-                                        # Switch up files
-                                        if os.path.isfile(output_file):
-                                            os.rename(output_file, output_file.replace(".root","_tmp.root"))
-                                            time.sleep(2)
-                                        os.rename(badfile,    output_file)
-                                        #print "mv "+output_file+" "+output_file.replace(".root","_tmp.root")
-                                        #print "mv "+badfile+" "+output_file
-                                elif os.path.exists(badfile.replace(".root","_tmp.root")):
-                                    with suppress_stdout_stderr():
-                                        fout = ROOT.TFile.Open(badfile.replace(".root","_tmp.root"))
-                                        if fout and not fout.TestBit(ROOT.TFile.kRecovered):
-                                            h_counts = fout.Get("counts")
-                                            if h_counts: bad_count += h_counts.GetBinContent(1)
-                                        if fout: fout.Close()
-                                    #print "2 - "+badfile.replace(".root","_tmp.root")+"="+str(bad_count)
-                                    pass_nevent_check = (input_count == bad_count)
-                                    if pass_nevent_check:
-                                        #print "- Match found!"
-                                        # Switch up files
-                                        if os.path.isfile(output_file):
-                                            os.rename(output_file, output_file.replace(".root","_tmp.root"))
-                                            time.sleep(2)
-                                        os.rename(badfile.replace(".root","_tmp.root"), output_file)
-                                        #print "mv "+output_file+" "+output_file.replace(".root","_tmp.root")
-                                        #print "mv "+badfile.replace(".root","_tmp.root")+" "+output_file
                             if pass_nevent_check:
                                 #print output_file+" - OK!"
                                 finished += 1
