@@ -203,8 +203,8 @@ systematics = [
     "_renscaleDown",
     "_facrenscaleUp", 
     "_facrenscaleDown", 
-#    "_njetUp",
-#    "_njetDown",
+    "_lostlepUp",
+    "_lostlepDown",
     "_triggerUp",
     "_triggerDown",
     "_jesUp",
@@ -2780,6 +2780,7 @@ elefastsim		shape	1.0	-	-	-	-	-
 muontrk			shape	1.0	1.0	1.0	1.0	1.0	1.0
 muonidiso		shape	1.0	1.0	1.0	1.0	1.0	1.0
 muonfastsim		shape	1.0	-	-	-	-	-
+lostlep			shape	1.0	1.0	1.0	1.0	1.0	1.0
 btag			shape	1.0	1.0	1.0	1.0	1.0	1.0
 btagfastsim		shape	1.0	-	-	-	-	-
 wtag			shape	1.0	1.0	1.0	1.0	1.0	1.0

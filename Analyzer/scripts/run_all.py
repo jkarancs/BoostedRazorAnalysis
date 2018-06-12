@@ -622,7 +622,10 @@ def analysis(ana_arguments, nproc):
                     #print "+ Bad   "+badfile
                     #if jobindex==3: sys.exit()
                     if last_known_status[jobindex] == -1:
-                        # Initial step
+                        # Initial step (can be also a recovery task)
+                        # First check if output file exists, has a size larger than 1000 bytes
+                        # it can be opened, not corrupt and the counts histo
+                        # returns the same number of events as the total of all input files
                         file_size = 0
                         if os.path.isfile(output_file):
                             file_size = os.path.getsize(output_file)
@@ -721,7 +724,9 @@ def analysis(ana_arguments, nproc):
                         finished += 1
                     else:
                         # Repeated step
-                        # First check if output file exists and size is larger than 1000 bytes
+                        # First check if output file exists, has a size larger than 1000 bytes
+                        # it can be opened, not corrupt and the counts histo
+                        # returns the same number of events as the total of all input files
                         file_size = 0
                         if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
                         if file_size > 1000:

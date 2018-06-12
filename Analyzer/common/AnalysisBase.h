@@ -607,6 +607,7 @@ Choose:
 */
 
 #define USE_ISO_TRK_VETO 0
+#define USE_MRR2_TRIGGER 1
 
 
 /*
@@ -3995,6 +3996,7 @@ TH2D* eff_fast_muon_tightip2d;
 TH2F* eff_full_muon_veto;
 
 //TGraphAsymmErrors* eff_trigger;
+#if USE_MRR2_TRIGGER == 0
 TH2D* eff_trigger_veto;
 TH2D* eff_trigger_veto_up;
 TH2D* eff_trigger_veto_down;
@@ -4007,6 +4009,12 @@ TH2D* eff_trigger_pho_down;
 TH2D* eff_trigger_mu;
 TH2D* eff_trigger_mu_up;
 TH2D* eff_trigger_mu_down;
+#else
+TGraphAsymmErrors* eff_trigger_veto;
+TGraphAsymmErrors* eff_trigger_ele;
+TGraphAsymmErrors* eff_trigger_pho;
+TGraphAsymmErrors* eff_trigger_mu;
+#endif
 TH2D* eff_trigger_F_met;
 TH2D* eff_trigger_F_mu;
 TH2D* eff_trigger_F_ele;
@@ -4152,6 +4160,7 @@ void AnalysisBase::init_syst_input() {
   // eff_trigger = new TGraphAsymmErrors(pass, total);
 
   // 2D Trigger Efficiency (New) - Use combination of SingleElectron + MET datasets
+#if USE_MRR2_TRIGGER == 0
 #if USE_ISO_TRK_VETO > 0
   TH2D* veto_pass_2d  = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/MET.root",            "trigger2d_pass",   "trig1");
   TH2D* veto_total_2d = utils::getplot_TH2D("trigger_eff/Dec02_Golden_JSON_IsoTrkVeto/MET.root",            "trigger2d_total",  "trig2");
@@ -4237,6 +4246,13 @@ void AnalysisBase::init_syst_input() {
       eff_trigger_mu     ->SetBinError(i,j,mu_total);
     }
   }
+#else
+  // Trigger efficiency in unrolled bins of MRR2
+  eff_trigger_veto = utils::getplot_TGraphAsymmErrors("trigger_eff/Dec02_Golden_JSON/MRR2_binned.root", "met", "trig1");
+  eff_trigger_mu   = utils::getplot_TGraphAsymmErrors("trigger_eff/Dec02_Golden_JSON/MRR2_binned.root", "mu",  "trig2");
+  eff_trigger_ele  = utils::getplot_TGraphAsymmErrors("trigger_eff/Dec02_Golden_JSON/MRR2_binned.root", "ele", "trig3");
+  eff_trigger_pho  = utils::getplot_TGraphAsymmErrors("trigger_eff/Dec02_Golden_JSON/MRR2_binned.root", "pho", "trig4");
+#endif
   // Same trigger efficiencies but in the F region (needed for fake rates)
   const char* fin = "trigger_eff/Dec02_Golden_JSON/F_Region.root";
   eff_trigger_F_met = utils::getplot_TH2D(fin, "met", "trig_f_met");
@@ -5036,6 +5052,8 @@ double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSi
   //  utils::geteff_AE(eff_trigger, AK4_Ht, eff, err_up, err_down);
   //  double w = get_syst_weight(eff, eff+err_up, eff-err_down, nSigmaTrigger);
   
+#if USE_MRR2_TRIGGER == 0
+  // 2D trigger efficiency in bins of HT and Jet1Pt
   // Check the presence of a lepton/photon and apply different weights
   TH2D *h      = eff_trigger_veto;
   TH2D *h_up   = eff_trigger_veto_up;
@@ -5076,6 +5094,41 @@ double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSi
       return w;
     } else return 0;
   } else return 0;
+#else
+  TGraphAsymmErrors *h = eff_trigger_veto;
+  TH2D *h_F    = eff_trigger_F_met;
+  char region = 'S';
+  if (nEleVeto>=1) {
+    h   = eff_trigger_ele;
+    h_F = eff_trigger_F_ele;
+  } else if (nMuVeto>=1) {
+    h   = eff_trigger_mu;
+    h_F = eff_trigger_F_mu;
+  } else if (nPhotonPreSelect>=1) {
+    h   = eff_trigger_pho;
+    h_F = eff_trigger_F_pho;
+    region = 'G';
+  }
+  // Trigger efficiency in the F region
+  if (nJetAK8>0) {
+    other_trigger_eff = utils::geteff2D(h_F, AK4_Ht, data.jetsAK8.Pt[iJetAK8[0]]);
+  } else other_trigger_eff = 0.0;
+  
+  // Trigger efficiency in unrolled bins of MRR2
+  double eff = 0, err_up = 0, err_down = 0;
+  int MRR2_bin = calc_mrr2_bin(data, region);
+  if (MRR2_bin==-1) return other_trigger_eff; // Still return some weight for outside the baseline region
+#if COMBINE_MRR2_BINS > 0
+  if (MRR2_bin>=19&&MRR2_bin<=22) MRR2_bin--;
+  if (MRR2_bin>=23&&MRR2_bin<=24) MRR2_bin=21;
+#endif
+  utils::geteff_AE(h, double(MRR2_bin), eff, err_up, err_down);
+
+  std::cout<<region<<" "<<data.evt.MR<<" "<<MR_pho<<" "<<data.evt.R2<<" "<<R2_pho<<" MRR2="<<MRR2_bin<<" eff="<<eff<<std::endl;
+  double w = get_syst_weight(eff, eff+err_up, eff+err_down, nSigmaTrigger);
+  return w;
+#endif
+
 }
 
 
