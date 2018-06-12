@@ -1,5 +1,6 @@
 import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, getpass, ROOT
 from optparse import OptionParser
+from common_functions import *
 
 # ---------------------- Cmd Line  -----------------------
 
@@ -705,7 +706,7 @@ def analysis(ana_arguments, nproc):
                                         #print "mv "+output_file+" "+output_file.replace(".root","_tmp.root")
                                         #print "mv "+badfile.replace(".root","_tmp.root")+" "+output_file
                             if pass_nevent_check:
-                                print output_file+" - OK!"
+                                #print output_file+" - OK!"
                                 finished += 1
                                 output_files.append(output_file)
                                 last_known_status[jobindex] = 0
