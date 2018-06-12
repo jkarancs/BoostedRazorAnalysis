@@ -514,6 +514,7 @@ def merge_output(ana_arguments, last_known_status):
             else:
                 ready_to_merge = False
                 mergeables = []
+        #print ("%4d - %d - missing=%d - %s" % (i, ready_to_merge, last_known_status[i]==-1, ana_arguments[i][0]))
     if ready_to_merge: all_mergeables.append(mergeables)
     # Merge them if they are ready
     for i in range(0, len(all_mergeables)):
@@ -655,11 +656,12 @@ def analysis(ana_arguments, nproc):
                                     #print tree.GetEntries()
                                     fin.Close()
                             if os.path.isfile(output_file):
-                                fout = ROOT.TFile.Open(output_file)
-                                if fout:
-                                    h_counts = fout.Get("counts")
-                                    if h_counts: output_count += h_counts.GetBinContent(1)
-                                    fout.Close()
+                                with suppress_stdout_stderr():
+                                    fout = ROOT.TFile.Open(output_file)
+                                    if fout and not fout.TestBit(ROOT.TFile.kRecovered):
+                                        h_counts = fout.Get("counts")
+                                        if h_counts: output_count += h_counts.GetBinContent(1)
+                                    if fout: fout.Close()
                             pass_nevent_check = (input_count == output_count)
                             #print input_txtfile+"="+str(input_count)
                             #print output_file+"="+str(output_count)
@@ -667,11 +669,12 @@ def analysis(ana_arguments, nproc):
                                 #print "- Not match!"
                                 # Check a file with messed up index (or previously found and renamed one) exists
                                 if os.path.exists(badfile):
-                                    fout = ROOT.TFile.Open(badfile)
-                                    if fout:
-                                        h_counts = fout.Get("counts")
-                                        if h_counts: bad_count += h_counts.GetBinContent(1)
-                                        fout.Close()
+                                    with suppress_stdout_stderr():
+                                        fout = ROOT.TFile.Open(badfile)
+                                        if fout and not fout.TestBit(ROOT.TFile.kRecovered):
+                                            h_counts = fout.Get("counts")
+                                            if h_counts: bad_count += h_counts.GetBinContent(1)
+                                        if fout: fout.Close()
                                     #print "1 - "+badfile+"="+str(bad_count)
                                     pass_nevent_check = (input_count == bad_count)
                                     if pass_nevent_check:
@@ -684,11 +687,12 @@ def analysis(ana_arguments, nproc):
                                         #print "mv "+output_file+" "+output_file.replace(".root","_tmp.root")
                                         #print "mv "+badfile+" "+output_file
                                 elif os.path.exists(badfile.replace(".root","_tmp.root")):
-                                    fout = ROOT.TFile.Open(badfile.replace(".root","_tmp.root"))
-                                    if fout:
-                                        h_counts = fout.Get("counts")
-                                        if h_counts: bad_count += h_counts.GetBinContent(1)
-                                        fout.Close()
+                                    with suppress_stdout_stderr():
+                                        fout = ROOT.TFile.Open(badfile.replace(".root","_tmp.root"))
+                                        if fout and not fout.TestBit(ROOT.TFile.kRecovered):
+                                            h_counts = fout.Get("counts")
+                                            if h_counts: bad_count += h_counts.GetBinContent(1)
+                                        if fout: fout.Close()
                                     #print "2 - "+badfile.replace(".root","_tmp.root")+"="+str(bad_count)
                                     pass_nevent_check = (input_count == bad_count)
                                     if pass_nevent_check:
@@ -730,11 +734,12 @@ def analysis(ana_arguments, nproc):
                                     tree = fin.Get("B2GTree")
                                     input_count += tree.GetEntries()
                                     fin.Close()
-                            fout = ROOT.TFile.Open(output_file)
-                            if fout:
-                                h_counts = fout.Get("counts")
-                                if h_counts: output_count += h_counts.GetBinContent(1)
-                                fout.Close()
+                            with suppress_stdout_stderr():
+                                fout = ROOT.TFile.Open(output_file)
+                                if fout and not fout.TestBit(ROOT.TFile.kRecovered):
+                                    h_counts = fout.Get("counts")
+                                    if h_counts: output_count += h_counts.GetBinContent(1)
+                                if fout: fout.Close()
                             pass_nevent_check = (input_count == output_count)
                             if pass_nevent_check:
                                 finished += 1
