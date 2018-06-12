@@ -5124,7 +5124,7 @@ double AnalysisBase::calc_trigger_efficiency(DataStruct& data, const double& nSi
 #endif
   utils::geteff_AE(h, double(MRR2_bin), eff, err_up, err_down);
 
-  std::cout<<region<<" "<<data.evt.MR<<" "<<MR_pho<<" "<<data.evt.R2<<" "<<R2_pho<<" MRR2="<<MRR2_bin<<" eff="<<eff<<std::endl;
+  //std::cout<<region<<" "<<data.evt.MR<<" "<<MR_pho<<" "<<data.evt.R2<<" "<<R2_pho<<" MRR2="<<MRR2_bin<<" eff="<<eff<<std::endl;
   double w = get_syst_weight(eff, eff+err_up, eff+err_down, nSigmaTrigger);
   return w;
 #endif
