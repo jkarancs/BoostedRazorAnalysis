@@ -21,7 +21,7 @@ parser.add_option("--nfile",       dest="NFILE",       type="int",          defa
 parser.add_option("--sleep",       dest="SLEEP",       type="int",          default=3,       help="Wait for this number of seconds between submitting each batch job (Default 3s)")
 parser.add_option("--useprev",     dest="useprev",     action="store_true", default=False,   help="Use previously created temporary filelists")
 parser.add_option("--nproc",       dest="NPROC",       type="int",          default=1,       help="Tells how many parallel interactive jobs to start (Default=3)")
-parser.add_option("--outdir",      dest="OUTDIR",      type="string",       default="",      help="Output directory (Default: results/run_[DATE])")
+parser.add_option("--outdir",      dest="OUTDIR",      type="string",       default="",      help="Output directory (Default: results/run_[SUBTIME])")
 parser.add_option("--skimout",     dest="SKIMOUT",     type="string",       default="",      help="Output directory for skimming")
 parser.add_option("--skim",        dest="skim",        action="store_true", default=False,   help="Skim output to --skimout directory (change in script)")
 parser.add_option("--mirror",      dest="mirror",      action="store_true", default=False,   help="Also copy skim output to EOS")
@@ -37,15 +37,15 @@ parser.add_option("--haddonly",    dest="haddonly",    action="store_true", defa
 # Some further (usually) fixed settings, should edit them in this file
 
 # Output directories/files
-DATE = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
+SUBTIME = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
 TMPDIR = "/tmp/"+getpass.getuser()+"/"
 if opt.OUTDIR == "" and not opt.skim and not opt.replot:
-    opt.OUTDIR = "results/run_"+DATE # log files, backup files, output files for non-skims
+    opt.OUTDIR = "results/run_"+SUBTIME # log files, backup files, output files for non-skims
 
 if opt.skim:
     COPYSCRIPT = ""
     if opt.OUTDIR == "":
-        opt.OUTDIR = "results/skim_"+DATE # log files, backup files, output files for non-skims
+        opt.OUTDIR = "results/skim_"+SUBTIME # log files, backup files, output files for non-skims
     # Mirror also here
     if opt.SKIMOUT == "":
         print "ERROR: Give a suitable --skimout argument, eg. --skimout ntuple/grid18/Skim_Oct31_2Jet_1JetAK8"
@@ -335,8 +335,24 @@ for filelist in input_filelists:
 #print "Number of jobs: "+str(len(ana_arguments))
 #sys.exit()
 
-# for recovery (also uncomment backup, compile)
-#ana_arguments = ana_arguments[2833:]
+# Recover info about previously submitted jobs
+last_known_status = [1] * len(ana_arguments) # -1: start, 0: finished, 1: recovered, time(): last submit/status check
+if opt.recover and opt.batch:
+    # Check if the submission time is available
+    if os.path.exists(EXEC_PATH+"/submission_time.txt"):
+        with open(EXEC_PATH+"/submission_time.txt") as sub_time:
+            SUBTIME=sub_time.readline().replace('\n','')
+    print "Recovering previous jobs with submission time: "+SUBTIME
+    # Check status of all running/pending jobs on batch
+    logged_call(shlex.split('bjobs -W -noheader'), TMPDIR+'batchstatus_'+SUBTIME+'.txt', opt.run)
+    with open(TMPDIR+'batchstatus_'+SUBTIME+'.txt') as batchstatus:
+        lines = batchstatus.readlines()
+        for line in lines:
+            jobname = line.split()[6]
+            if jobname.startswith(SUBTIME):
+                jobindex = int(jobname.split("_")[-1])
+                last_known_status[jobindex] = 1
+    os.remove(TMPDIR+'batchstatus_'+SUBTIME+'.txt')
 
 if opt.NEVT != -1:
     ntry = 0
@@ -355,65 +371,6 @@ if opt.NFILE != -1 or opt.NEVT != -1 and not opt.useprev:
     print "All temporary filelist ready."
 
 # --------------------- Functions ------------------------
-# Show and run command with stdout on screen
-icommand=0
-def special_call(cmd, verbose=1):
-    global icommand, opt
-    if verbose:
-        if opt.run:
-            print("[%d]" % icommand),
-        else:
-            print("[dry]"),
-        for i in xrange(len(cmd)): print cmd[i],
-        print ""
-    if opt.run:
-        ntry = 0
-        while True:
-            try:
-                if subprocess.call(cmd):
-                    print "ERROR: Problem executing command:"
-                    print("[%d]" % icommand)
-                    for i in xrange(len(cmd)): print cmd[i],
-                    print ""
-                    print "exiting."
-                    sys.exit()
-            except:
-                print "Could not excecute command: "
-                print("[%d]" % icommand)
-                for i in xrange(len(cmd)): print cmd[i],
-                print ""
-                print "Wait 10s and continue"
-                time.sleep(10)
-                ntry += 1
-                if ntry == 20: sys.exit()
-                continue
-            break
-        if verbose: print ""
-    sys.stdout.flush()
-    icommand+=1
-
-# Run command with stdout/stderr saved to logfile
-def logged_call(cmd, logfile):
-    global opt
-    dirname = os.path.dirname(logfile)
-    if dirname != "" and not os.path.exists(dirname):
-        special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
-    if opt.run:
-        ntry = 0
-        while True:
-            try:
-                with open(logfile, "a") as log:
-                    proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
-                    proc.wait()
-            except:
-                print "Could not write to disk (IOError), wait 10s and continue"
-                time.sleep(10)
-                ntry += 1
-                if ntry == 20: sys.exit()
-                continue
-            break
-    else:
-        proc = subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
 
 # Compile programs
 def compile(Ana = 1, Plotter = 1):
@@ -422,26 +379,26 @@ def compile(Ana = 1, Plotter = 1):
     print
     saved_path = os.getcwd()
     if opt.run: os.chdir(EXEC_PATH)
-    special_call(["make", "clean"])
+    special_call(["make", "clean"], opt.run)
     if Ana:
-        special_call(["make", "-j8", "Analyzer"])
-        special_call(["chmod", "777", "Analyzer"])
+        special_call(["make", "-j8", "Analyzer"], opt.run)
+        special_call(["chmod", "777", "Analyzer"], opt.run)
     if Plotter:
-        special_call(["make", "-j8", "Plotter"])
-        special_call(["chmod", "777", "Plotter"])
+        special_call(["make", "-j8", "Plotter"], opt.run)
+        special_call(["chmod", "777", "Plotter"], opt.run)
     if opt.run: os.chdir(saved_path)
     print "Compilation successful."
     print
 
 # backup files for bookkeeping
-def backup_files(backup_dir):
+def backup_files(backup_dir, submission_time):
     print "Backing up files in: "+backup_dir
     print
-    special_call(["mkdir", "-p", backup_dir])
-    special_call(["cp", "-rp", "btag_eff", "pileup", "scale_factors", "trigger_eff", "common", "filelists", "filelists_tmp", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"])
+    special_call(["mkdir", "-p", backup_dir], opt.run)
+    special_call(["cp", "-rp", "btag_eff", "pileup", "scale_factors", "trigger_eff", "common", "filelists", "filelists_tmp", "scripts", "systematics"] + glob.glob("*.h") + glob.glob("*.cc") + glob.glob("Makefile*") + [backup_dir+"/"], opt.run)
+    with open(backup_dir+"/submission_time.txt","w") as sub_time:
+        print>>sub_time, submission_time
     print
-
-
 
 # Run a single Analyzer instance (on a single input list, i.e. one dataset)
 def analyzer_job((jobindex)):
@@ -456,32 +413,32 @@ def analyzer_job((jobindex)):
         else:
             print "Start Analyzing, expected output: "+output_file
     if not os.path.exists(os.path.dirname(output_file)):
-        special_call(["mkdir", "-p", os.path.dirname(output_file)], 0)
+        special_call(["mkdir", "-p", os.path.dirname(output_file)], opt.run, 0)
     cmd = [EXEC_PATH+"/Analyzer", output_file] + options + input_list
     if opt.batch:
         logdirname = os.path.dirname(output_log)
-        if logdirname != "" and not os.path.exists(logdirname): special_call(["mkdir", "-p", logdirname], 0)
+        if logdirname != "" and not os.path.exists(logdirname): special_call(["mkdir", "-p", logdirname], opt.run, 0)
         if os.getcwd().startswith("/afs"):
-            cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+            cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+output_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
         else:
             # Currently bsub cannot send the log file to EOS, so in order to avoid annoying e-mails and LSFJOB directories,
             # we send the output to a dummy afs file. The log output will be copied inside the script instead
             #job_log = "/tmp/"+getpass.getuser()+"/"+os.path.dirname(opt.OUTDIR+"/").split("/")[-1]+"/"+os.path.basename(output_log)
             job_log = "/tmp/"+os.path.basename(output_log)
             #if not os.path.exists(os.path.dirname(job_log)):
-            #    special_call(["mkdir", "-p", os.path.dirname(job_log)], 0)
-            #    special_call(['chmod', '-R', '777', "/tmp/"+getpass.getuser()], 0)
-            #cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
-            cmd = shlex.split('bsub -M 4000000 -v 6000000 -q '+opt.QUEUE+' -J '+DATE+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
-        special_call(cmd, not opt.run)
+            #    special_call(["mkdir", "-p", os.path.dirname(job_log)], opt.run, 0)
+            #    special_call(['chmod', '-R', '777', "/tmp/"+getpass.getuser()], opt.run, 0)
+            #cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+            cmd = shlex.split('bsub -M 4000000 -v 6000000 -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+        special_call(cmd, opt.run, not opt.run)
     else:
         if opt.NPROC>3: cmd = ['nice']+cmd
-        logged_call(cmd, output_log)
+        logged_call(cmd, output_log, opt.run)
     # Mirror output (copy to EOS)
     if opt.batch: time.sleep(opt.SLEEP)
     elif opt.skim:
         outpath = output_file.split("/")[-3]+"/"+output_file.split("/")[-2]+"/"+output_file.split("/")[-1]
-        if opt.mirror or opt.mirror_user: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-f", "-r", output_file, EOS_JANOS+outpath], output_log)
+        if opt.mirror or opt.mirror_user: logged_call(["env", "--unset=LD_LIBRARY_PATH", "gfal-copy", "-f", "-r", output_file, EOS_JANOS+outpath], output_log, opt.run)
         elif opt.run and opt.NQUICK==0:
             with open(COPYSCRIPT, "a") as script:
                 print>>script, 'env --unset=LD_LIBRARY_PATH gfal-copy -r '+output_file+' '+EOS_VIKTOR+outpath
@@ -490,7 +447,7 @@ def analyzer_job((jobindex)):
 
 def merge_output(ana_arguments, last_known_status):
     # Check list of files ready to be merged (with hadd)
-    if not os.path.exists(opt.OUTDIR+"/hadd"): special_call(["mkdir", "-p", opt.OUTDIR+"/hadd"], 0)
+    if not os.path.exists(opt.OUTDIR+"/hadd"): special_call(["mkdir", "-p", opt.OUTDIR+"/hadd"], opt.run, 0)
     prev_sample = ""
     mergeables = []
     all_mergeables = []
@@ -509,7 +466,7 @@ def merge_output(ana_arguments, last_known_status):
             else:
                 ready_to_merge = False
                 mergeables = []
-        #print ("%4d - %d - missing=%d - %s" % (i, ready_to_merge, last_known_status[i]==-1, ana_arguments[i][0]))
+        #print ("%4d - %d - missing=%d - %s" % (i, ready_to_merge, last_known_status[i]==1, ana_arguments[i][0]))
     if ready_to_merge: all_mergeables.append(mergeables)
     # Merge them if they are ready
     for i in range(0, len(all_mergeables)):
@@ -520,12 +477,12 @@ def merge_output(ana_arguments, last_known_status):
             if len(allinput)==1:
                 # Single files can simply be copied
                 print "File for "+all_mergeables[i][0]+" is ready"
-                special_call(["cp","-p", allinput[0], output], 0)
+                special_call(["cp","-p", allinput[0], output], opt.run, 0)
             else:
                 # Multiple files will be hadded
                 print str(len(allinput))+" files for "+output+" are ready to be merged"
                 while not os.path.exists(output):
-                    #logged_call(["hadd", "-f", "-v", "-n", "200"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"))
+                    #logged_call(["hadd", "-f", "-v", "-n", "200"]+all_mergeables[i], all_mergeables[i][0].rsplit("/",1)[0]+"/log/"+all_mergeables[i][0].rsplit("/",1)[1].replace(".root",".log"), opt.run)
                     # hadd produces problems when merging too many files
                     # so we merge files in chunks of 100 files each
                     # problems happen typically over a few hundred input files
@@ -533,7 +490,7 @@ def merge_output(ana_arguments, last_known_status):
                     alltmp = []
                     if len(allinput)<Nmerge:
                         # Simple hadding all output files
-                        logged_call(["hadd", "-f", "-v", output]+allinput, log)
+                        logged_call(["hadd", "-f", "-v", output]+allinput, log, opt.run)
                     else:
                         # Two staged hadding:
                         # - First merge every Nmerge files to temp files
@@ -544,11 +501,11 @@ def merge_output(ana_arguments, last_known_status):
                             tmplog    = tmpoutput.rsplit("/",1)[0]+"/log/"+tmpoutput.rsplit("/",1)[1].replace(".root",".log")
                             alltmp.append(tmpoutput)
                             print "- Merging into temp file: "+tmpoutput
-                            logged_call(["hadd", "-f", "-v", tmpoutput]+tmplist, tmplog)
+                            logged_call(["hadd", "-f", "-v", tmpoutput]+tmplist, tmplog, opt.run)
                         # - then merge the resulting temp files into a single file
                         #   and remove the temporary files
                         print "- Merging temp files into: "+output
-                        logged_call(["hadd", "-f", "-v", output]+alltmp, log)
+                        logged_call(["hadd", "-f", "-v", output]+alltmp, log, opt.run)
                         for tmpfile in alltmp:
                             if os.path.isfile(tmpfile):
                                 os.remove(tmpfile)
@@ -560,14 +517,13 @@ def merge_output(ana_arguments, last_known_status):
                         if os.path.getsize(output) < 1000: os.remove(output)
 
 # Run all Analyzer jobs in parallel
-def analysis(ana_arguments, nproc):
+def analysis(ana_arguments, last_known_status, nproc):
     global opt
     njob = len(ana_arguments)
     if not opt.batch and njob<nproc: nproc = njob
     output_files = []
     saved_path = os.getcwd()
     if opt.haddonly:
-        last_known_status = [-1] * njob # -1: start, 0: finished, time(): last submit/status check
         for jobindex in range(0, njob):
             # Check if output file exists and size is larger than 1000 bytes
             output_file = ana_arguments[jobindex][0]
@@ -597,7 +553,6 @@ def analysis(ana_arguments, nproc):
         output_files = []
         njob = len(ana_arguments)
         if opt.run:
-            last_known_status = [-1] * njob # -1: start, 0: finished, time(): last submit/status check
             finished = 0
             # Loop until all jobs are finished
             while finished != njob:
@@ -608,7 +563,7 @@ def analysis(ana_arguments, nproc):
                     input_txtfile = ana_arguments[jobindex][1][0]
                     #output_log  = ana_arguments[jobindex][3]
                     #if jobindex==3: sys.exit()
-                    if last_known_status[jobindex] == -1:
+                    if last_known_status[jobindex] == 1:
                         # Initial step (can be also a recovery task)
                         # First check if output file exists, has a size larger than 1000 bytes
                         # it can be opened, not corrupt and the counts histo
@@ -694,8 +649,8 @@ def analysis(ana_arguments, nproc):
                                 last_known_status[jobindex] = time.time()                           
                         # If the last submission/check is older than 10 minutes check job status with bjobs
                         elif time.time() - last_known_status[jobindex] > (600 if opt.NQUICK<2 else 600/opt.NQUICK):
-                            jobname = DATE+'_'+str(jobindex)
-                            logged_call(shlex.split('bjobs -J '+jobname), TMPDIR+'jobstatus_'+jobname+'.txt')
+                            jobname = SUBTIME+'_'+str(jobindex)
+                            logged_call(shlex.split('bjobs -J '+jobname), TMPDIR+'jobstatus_'+jobname+'.txt', opt.run)
                             with open(TMPDIR+'jobstatus_'+jobname+'.txt') as jobstatus:
                                 lines = jobstatus.readlines()
                                 if 'Job <'+jobname+'> is not found' in lines[0]:
@@ -726,21 +681,21 @@ def plotter(input_files, output_file):
     global opt, EXEC_PATH
     print "Start plotting from output files"
     print
-    special_call([EXEC_PATH+"/Plotter", output_file] + input_files)
+    special_call([EXEC_PATH+"/Plotter", output_file] + input_files, opt.run)
     print "Plotting finished."
     print
 
 def show_result(plotter_out):
     print "Showing the result in root: "
     print
-    special_call(["root", "-l", 'scripts/show_result.C("'+plotter_out+'")'])
+    special_call(["root", "-l", 'scripts/show_result.C("'+plotter_out+'")'], opt.run)
 
 # ---------------------- Running -------------------------
 
 # renew token before running
 if opt.replot:
     if not opt.recover:
-        backup_files(EXEC_PATH)
+        backup_files(EXEC_PATH, SUBTIME)
         compile(0)
     plotter(PLOTTER_IN, PLOTTER_OUT)
     #if not 'lxplus' in socket.gethostname():
@@ -748,9 +703,9 @@ if opt.replot:
 else:
     if not opt.recover:
         if not opt.test:
-            backup_files(EXEC_PATH)
+            backup_files(EXEC_PATH, SUBTIME)
         compile(1, opt.plot)
-    plotter_input_files = analysis(ana_arguments, opt.NPROC)
+    plotter_input_files = analysis(ana_arguments, last_known_status, opt.NPROC)
     if opt.plot:
         if not opt.nohadd: plotter_input_files = glob.glob(opt.OUTDIR+"/hadd/*.root")
         plotter(plotter_input_files, PLOTTER_OUT)
