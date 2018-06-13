@@ -37,6 +37,10 @@ parser.add_option("--haddonly",    dest="haddonly",    action="store_true", defa
 # ----------------------  Settings -----------------------
 # Some further (usually) fixed settings, should edit them in this file
 
+# Make sure we start with a fresh token (lasts 24h)
+currtime = time.time() # used for tokens/recovery jobs
+special_call(["kinit", "-R"], 0)
+
 # Output directories/files
 SUBTIME = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
 TMPDIR = "/tmp/"+getpass.getuser()+"/"
@@ -350,11 +354,12 @@ if opt.recover and opt.batch:
     with open(TMPDIR+'batchstatus_'+SUBTIME+'.txt') as batchstatus:
         lines = batchstatus.readlines()
         for line in lines:
-            jobname = line.split()[6]
-            if jobname.startswith(SUBTIME):
-                jobindex = int(jobname.split("_")[-1])
-                last_known_status[jobindex] = 1
-                nrecov += 1
+            if not "job found" in line: # output can be: "No unfinished job found"
+                jobname = line.split()[6]
+                if jobname.startswith(SUBTIME):
+                    jobindex = int(jobname.split("_")[-1])
+                    last_known_status[jobindex] = currtime
+                    nrecov += 1
     os.remove(TMPDIR+'batchstatus_'+SUBTIME+'.txt')
     print "Successfully recovered "+str(nrecov)+" jobs from previous submission"
 
@@ -525,7 +530,7 @@ def merge_output(ana_arguments, last_known_status):
 
 # Run all Analyzer jobs in parallel
 def analysis(ana_arguments, last_known_status, nproc):
-    global opt
+    global opt, currtime
     njob = len(ana_arguments)
     if not opt.batch and njob<nproc: nproc = njob
     output_files = []
@@ -563,6 +568,10 @@ def analysis(ana_arguments, last_known_status, nproc):
             finished = 0
             # Loop until all jobs are finished
             while finished != njob:
+                # Renew token every ~10 hours
+                if (time.time()-currtime)>36000:
+                    special_call(["kinit", "-R"], 0)
+                    currtime = time.time()
                 if finished != 0: time.sleep(30)
                 finished = 0
                 for jobindex in range(0, njob):
