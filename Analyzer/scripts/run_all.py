@@ -30,6 +30,7 @@ parser.add_option("--plot",        dest="plot",        action="store_true", defa
 parser.add_option("--replot",      dest="replot",      action="store_true", default=False,   help="Remake latest set of plots using Plotter (Janos)")
 parser.add_option("--recover",     dest="recover",     action="store_true", default=False,   help="Recover stopped task (eg. due to some error)")
 parser.add_option("--nohadd",      dest="nohadd",      action="store_true", default=False,   help="Disable hadding output files")
+parser.add_option("--nocheck",     dest="nocheck",     action="store_true", default=False,   help="Disable nevent check for output files")
 parser.add_option("--haddonly",    dest="haddonly",    action="store_true", default=False,   help="Do not submit any jobs, only merge output")
 (opt,args) = parser.parse_args()
 
@@ -585,25 +586,27 @@ def analysis(ana_arguments, last_known_status, nproc):
                         else:
                             # 
                             # Check if processed events exactly match input event counts
-                            input_count = 0
-                            output_count = 0
-                            with open(input_txtfile) as txt:
-                                for infile in txt:
-                                    infile = infile.replace('\n','')
-                                    fin = ROOT.TFile.Open(infile)
-                                    tree = fin.Get("B2GTree")
-                                    input_count += tree.GetEntries()
-                                    fin.Close()
-                            if os.path.isfile(output_file):
-                                with suppress_stdout_stderr():
-                                    fout = ROOT.TFile.Open(output_file)
-                                    if fout and not fout.TestBit(ROOT.TFile.kRecovered):
-                                        h_counts = fout.Get("counts")
-                                        if h_counts: output_count += h_counts.GetBinContent(1)
-                                    if fout: fout.Close()
-                            pass_nevent_check = (input_count == output_count)
-                            #print input_txtfile+"="+str(input_count)
-                            #print output_file+"="+str(output_count)
+                            pass_nevent_check = True
+                            if not opt.nocheck:
+                                input_count = 0
+                                output_count = 0
+                                with open(input_txtfile) as txt:
+                                    for infile in txt:
+                                        infile = infile.replace('\n','')
+                                        fin = ROOT.TFile.Open(infile)
+                                        tree = fin.Get("B2GTree")
+                                        input_count += tree.GetEntries()
+                                        fin.Close()
+                                if os.path.isfile(output_file):
+                                    with suppress_stdout_stderr():
+                                        fout = ROOT.TFile.Open(output_file)
+                                        if fout and not fout.TestBit(ROOT.TFile.kRecovered):
+                                            h_counts = fout.Get("counts")
+                                            if h_counts: output_count += h_counts.GetBinContent(1)
+                                        if fout: fout.Close()
+                                pass_nevent_check = (input_count == output_count)
+                                #print input_txtfile+"="+str(input_count)
+                                #print output_file+"="+str(output_count)
                             if pass_nevent_check:
                                 #print output_file+" - OK!"
                                 finished += 1
@@ -627,22 +630,24 @@ def analysis(ana_arguments, last_known_status, nproc):
                         if os.path.isfile(output_file): file_size = os.path.getsize(output_file)
                         if file_size > 1000:
                             # Check if processed events exactly match input event counts
-                            input_count = 0
-                            output_count = 0
-                            with open(input_txtfile) as txt:
-                                for infile in txt:
-                                    infile = infile.replace('\n','')
-                                    fin = ROOT.TFile.Open(infile)
-                                    tree = fin.Get("B2GTree")
-                                    input_count += tree.GetEntries()
-                                    fin.Close()
-                            with suppress_stdout_stderr():
-                                fout = ROOT.TFile.Open(output_file)
-                                if fout and not fout.TestBit(ROOT.TFile.kRecovered):
-                                    h_counts = fout.Get("counts")
-                                    if h_counts: output_count += h_counts.GetBinContent(1)
-                                if fout: fout.Close()
-                            pass_nevent_check = (input_count == output_count)
+                            pass_nevent_check = True
+                            if not opt.nocheck:
+                                input_count = 0
+                                output_count = 0
+                                with open(input_txtfile) as txt:
+                                    for infile in txt:
+                                        infile = infile.replace('\n','')
+                                        fin = ROOT.TFile.Open(infile)
+                                        tree = fin.Get("B2GTree")
+                                        input_count += tree.GetEntries()
+                                        fin.Close()
+                                with suppress_stdout_stderr():
+                                    fout = ROOT.TFile.Open(output_file)
+                                    if fout and not fout.TestBit(ROOT.TFile.kRecovered):
+                                        h_counts = fout.Get("counts")
+                                        if h_counts: output_count += h_counts.GetBinContent(1)
+                                    if fout: fout.Close()
+                                pass_nevent_check = (input_count == output_count)
                             if pass_nevent_check:
                                 finished += 1
                                 output_files.append(output_file)

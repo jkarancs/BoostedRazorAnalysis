@@ -1,5 +1,5 @@
 import ROOT
-import os
+import os, sys, subprocess
 
 def set_default_style_():
     ROOT.gStyle.SetPaperSize(20.,20.);
@@ -572,3 +572,62 @@ def save_plot(can, name, plotname, write=True):
             can.Write(name)
         else:
             can.Write()
+
+# Show and run command with stdout on screen
+icommand=0
+def special_call(cmd, run=1, verbose=1):
+    global icommand
+    if verbose:
+        if run:
+            print("[%d]" % icommand),
+        else:
+            print("[dry]"),
+        for i in xrange(len(cmd)): print cmd[i],
+        print ""
+    if run:
+        ntry = 0
+        while True:
+            try:
+                if subprocess.call(cmd):
+                    print "ERROR: Problem executing command:"
+                    print("[%d]" % icommand)
+                    for i in xrange(len(cmd)): print cmd[i],
+                    print ""
+                    print "exiting."
+                    sys.exit()
+            except:
+                print "Could not excecute command: "
+                print("[%d]" % icommand)
+                for i in xrange(len(cmd)): print cmd[i],
+                print ""
+                print "Wait 10s and continue"
+                time.sleep(10)
+                ntry += 1
+                if ntry == 20: sys.exit()
+                continue
+            break
+        if verbose: print ""
+    sys.stdout.flush()
+    icommand+=1
+
+# Run command with stdout/stderr saved to logfile
+def logged_call(cmd, logfile, run=1):
+    dirname = os.path.dirname(logfile)
+    if dirname != "" and not os.path.exists(dirname):
+        special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
+    if run:
+        ntry = 0
+        while True:
+            try:
+                with open(logfile, "a") as log:
+                    proc = subprocess.Popen(cmd, stdout=log, stderr=log, close_fds=True)
+                    proc.wait()
+            except:
+                print "Could not write to disk (IOError), wait 10s and continue"
+                time.sleep(10)
+                ntry += 1
+                if ntry == 20: sys.exit()
+                continue
+            break
+    else:
+        proc = subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
