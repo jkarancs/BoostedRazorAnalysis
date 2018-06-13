@@ -344,6 +344,7 @@ if opt.recover and opt.batch:
             SUBTIME=sub_time.readline().replace('\n','')
     print "Recovering previous jobs with submission time: "+SUBTIME
     # Check status of all running/pending jobs on batch
+    nrecov = 0
     logged_call(shlex.split('bjobs -W -noheader'), TMPDIR+'batchstatus_'+SUBTIME+'.txt', opt.run)
     with open(TMPDIR+'batchstatus_'+SUBTIME+'.txt') as batchstatus:
         lines = batchstatus.readlines()
@@ -352,7 +353,9 @@ if opt.recover and opt.batch:
             if jobname.startswith(SUBTIME):
                 jobindex = int(jobname.split("_")[-1])
                 last_known_status[jobindex] = 1
+                nrecov += 1
     os.remove(TMPDIR+'batchstatus_'+SUBTIME+'.txt')
+    print "Successfully recovered "+str(nrecov)+" jobs from previous submission"
 
 if opt.NEVT != -1:
     ntry = 0
@@ -466,7 +469,7 @@ def merge_output(ana_arguments, last_known_status):
             else:
                 ready_to_merge = False
                 mergeables = []
-        #print ("%4d - %d - missing=%d - %s" % (i, ready_to_merge, last_known_status[i]==1, ana_arguments[i][0]))
+        #print ("%4d - %d - missing=%d - %s" % (i, ready_to_merge, last_known_status[i]==-1, ana_arguments[i][0]))
     if ready_to_merge: all_mergeables.append(mergeables)
     # Merge them if they are ready
     for i in range(0, len(all_mergeables)):
@@ -563,7 +566,7 @@ def analysis(ana_arguments, last_known_status, nproc):
                     input_txtfile = ana_arguments[jobindex][1][0]
                     #output_log  = ana_arguments[jobindex][3]
                     #if jobindex==3: sys.exit()
-                    if last_known_status[jobindex] == 1:
+                    if last_known_status[jobindex] == -1:
                         # Initial step (can be also a recovery task)
                         # First check if output file exists, has a size larger than 1000 bytes
                         # it can be opened, not corrupt and the counts histo
