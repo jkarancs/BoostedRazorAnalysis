@@ -432,7 +432,10 @@ def analyzer_job((jobindex)):
             #    special_call(["mkdir", "-p", os.path.dirname(job_log)], opt.run, 0)
             #    special_call(['chmod', '-R', '777', "/tmp/"+getpass.getuser()], opt.run, 0)
             #cmd = shlex.split('bsub -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
-            cmd = shlex.split('bsub -M 4000000 -v 6000000 -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+            if vary_syst:
+                cmd = shlex.split('bsub -M 3500000 -v 5000000 -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd
+            else:
+                cmd = shlex.split('bsub -M 1500000 -v 3000000 -q '+opt.QUEUE+' -J '+SUBTIME+'_'+str(jobindex)+' -oo '+job_log+' -L /bin/bash '+os.getcwd()+'/scripts/Analyzer_batch_job.sh '+os.getcwd()+' '+output_log)+cmd                
         special_call(cmd, opt.run, not opt.run)
     else:
         if opt.NPROC>3: cmd = ['nice']+cmd
