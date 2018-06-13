@@ -341,7 +341,7 @@ for filelist in input_filelists:
 #sys.exit()
 
 # Recover info about previously submitted jobs
-last_known_status = [1] * len(ana_arguments) # -1: start, 0: finished, 1: recovered, time(): last submit/status check
+last_known_status = [-1] * len(ana_arguments) # -1: start, 0: finished, 1: recovered, time(): last submit/status check
 if opt.recover and opt.batch:
     # Check if the submission time is available
     if os.path.exists(EXEC_PATH+"/submission_time.txt"):
