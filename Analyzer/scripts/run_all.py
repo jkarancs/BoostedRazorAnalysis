@@ -39,7 +39,7 @@ parser.add_option("--haddonly",    dest="haddonly",    action="store_true", defa
 
 # Make sure we start with a fresh token (lasts 24h)
 currtime = time.time() # used for tokens/recovery jobs
-special_call(["kinit", "-R"], 0)
+if 'lxplus' in socket.gethostname(): special_call(["kinit", "-R"], opt.run, 0)
 
 # Output directories/files
 SUBTIME = time.strftime("%Y_%m_%d_%Hh%Mm%S", time.localtime())
@@ -350,7 +350,7 @@ if opt.recover and opt.batch:
     print "Recovering previous jobs with submission time: "+SUBTIME
     # Check status of all running/pending jobs on batch
     nrecov = 0
-    logged_call(shlex.split('bjobs -W -noheader'), TMPDIR+'batchstatus_'+SUBTIME+'.txt', opt.run)
+    logged_call(shlex.split('bjobs -W -noheader'), TMPDIR+'batchstatus_'+SUBTIME+'.txt', 1)
     with open(TMPDIR+'batchstatus_'+SUBTIME+'.txt') as batchstatus:
         lines = batchstatus.readlines()
         for line in lines:
@@ -570,7 +570,7 @@ def analysis(ana_arguments, last_known_status, nproc):
             while finished != njob:
                 # Renew token every ~10 hours
                 if (time.time()-currtime)>36000:
-                    special_call(["kinit", "-R"], 0)
+                    if 'lxplus' in socket.gethostname(): special_call(["kinit", "-R"], opt.run, 0)
                     currtime = time.time()
                 if finished != 0: time.sleep(30)
                 finished = 0
