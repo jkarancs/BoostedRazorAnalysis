@@ -1,5 +1,5 @@
 import ROOT
-import os, sys, subprocess, time
+import os, sys, subprocess, time, math
 
 def set_default_style_():
     ROOT.gStyle.SetPaperSize(20.,20.);
@@ -93,7 +93,7 @@ def draw_mr_bins(h, ymin, ymax, combine_bins, keep,
         for binx in bins:
             if h.GetBinContent(binx)>maxcont:
                 maxcont = h.GetBinContent(binx)
-        y2 = [maxcont+(ymax-ymin)*0.1, maxcont+(ymax-ymin)*0.175]
+        y2 = [maxcont+(ymax-ymin)*0.1, maxcont+(ymax-ymin)*0.2]
         if ymin!=0: y2 = [maxcont*((ymax/ymin)**0.1), maxcont*((ymax/ymin)**0.175)]
         x = i*5
         if i==4 and combine_bins: x = x-1
@@ -111,7 +111,9 @@ def draw_mr_bins(h, ymin, ymax, combine_bins, keep,
             bin_lat.SetTextSize(0.04)
             bin_lat.Draw()
             keep.append(bin_lat)
-        lat = ROOT.TLatex(x, y2[0], ("[%1.1f, %1.1f]" % (mrbins[i], mrbins[i+1])))
+        num1 = "%d" if mrbins[i]==float(int(mrbins[i])) else "%1.1f"
+        num2 = "%d" if mrbins[i+1]==float(int(mrbins[i+1])) else "%1.1f"
+        lat = ROOT.TLatex(x, y2[0], ("["+num1+", "+num2+"]") % (mrbins[i], mrbins[i+1]))
         lat.SetTextAlign(22)
         lat.SetTextSize(0.04)
         lat.Draw()
@@ -126,7 +128,7 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
     y1         = 365.
     mid2       = 10.
     y2         = 115.
-    mar_bottom = 100.
+    mar_bottom = 132.
     mar_left   = 90.
     x          = 500.
     mar_right  = 20.
@@ -145,18 +147,24 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
         if debug: print "ok1"
         Data = c.GetListOfPrimitives().At(1)
         if debug: print "ok1"
-        MCstack = c.GetListOfPrimitives().At(2)
+        syst_err = c.GetListOfPrimitives().At(2)
         if debug: print "ok1"
-        syst_err = c.GetListOfPrimitives().At(3)
+        stat_err = c.GetListOfPrimitives().At(3)
         if debug: print "ok1"
-        leg = c.GetListOfPrimitives().At(c.GetListOfPrimitives().GetEntries()-1)
+        MCstack = c.GetListOfPrimitives().At(4)
+        if debug: print "ok1"
+        for i in range(c.GetListOfPrimitives().GetEntries()):
+            prim = c.GetListOfPrimitives().At(i)
+            if prim.GetTitle().startswith("Legend"):
+                leg = prim
+                break
         if debug: print "ok1"
         if not MCstack.GetTitle()=="0":
             ratio = Data.Clone(Data.GetName()+"_num")
-            ratio.SetDirectory(0)
+            keep.append(ratio)
             if debug: print "ok2"
             mc_sum = MCstack.GetHists().At(0).Clone(Data.GetName()+"_den")
-            mc_sum.SetDirectory(0)
+            keep.append(mc_sum)
             mc_sum_syst = 0
             if debug: print "ok2"
             for iStack in range(1, MCstack.GetHists().GetEntries()):
@@ -164,8 +172,10 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
                 mc_sum.Add(h.Clone())
             if debug: print "ok2"
             den_stat_err     = mc_sum.Clone("den_stat_err")
+            keep.append(den_stat_err)
             if debug: print "ok2"
             den_total_err = syst_err.Clone("den_total_err")
+            keep.append(den_total_err)
             if debug: print "ok2"
             # Instead of Divide(), scale the error of num, and plot error of den around 1
             ratio.Divide(mc_sum)
@@ -198,8 +208,9 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
             Data .SetLabelSize(labelfontsize/padsize1,"xyz")
             ratio.SetLabelSize(labelfontsize/padsize2,"xyz")
             ratio.SetTitleSize(titlefontsize/padsize2,"xyz")
-            ratio.GetYaxis().SetRangeUser(0,3)
-            ratio.GetYaxis().SetNdivisions(305)
+            max_range = int(math.ceil(ratio.GetBinContent(ratio.GetMaximumBin())))
+            ratio.GetYaxis().SetRangeUser(0,max_range)
+            ratio.GetYaxis().SetNdivisions(501+max_range)
             ratio.GetYaxis().SetTitle("#frac{Data}{Estimate}")
             if debug: print "ok2"
             heightratio2 = float(padsize2)/y_can
@@ -215,6 +226,7 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
             right_mar = c.GetRightMargin()
             logScale = c.GetLogy()
             c = ROOT.TCanvas(c.GetName()+"_Ratio", c.GetTitle(), int(x_can+4), int(y_can+26)) # 600, 600
+            keep.append(c)
             c.Divide(1,2)
             if debug: print "ok2"
             # Pad 1 (x: 90+500+20 x y: 45+350+10)
@@ -229,8 +241,9 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
             if debug: print "ok2"
             if (logScale): p.SetLogy(1)
             Data.Draw("PE1")
-            MCstack.Draw("SAMEHIST")
             syst_err.Draw("SAME E2")
+            stat_err.Draw("SAME E2")
+            MCstack.Draw("SAME HIST")
             leg.Draw("SAME")
             if debug: print "ok2"
             Data.Draw("SAMEPE1")
@@ -271,43 +284,13 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
             #l.SetLineColor(2)
             l.SetLineStyle(2)
             l.Draw()
+            keep.append(l)
             ROOT.gPad.Update()
-            if add_labels:
-                Razor_labels = []
-                binx = 0
-                if combine_bins:
-                    for i in range(len(mrbins)-1):
-                        for j in range(len(r2bins)-1):
-                            binx += 1
-                            if binx<=18:
-                                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+1]) )
-                            elif binx==19:
-                                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+2]) )
-                            elif binx>=21 and binx<=22:
-                                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+1]) )
-                            elif binx==23:
-                                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+3]) )
-                else:
-                    for i in range(len(mrbins)-1):
-                        for j in range(len(r2bins)-1):
-                            binx += 1
-                            Razor_labels.append("[%.2f, %.2f]" % r2bins[j], r2bins[j+1])
-                ratio.GetXaxis().SetLabelColor(0)
-                labelsize = ratio.GetXaxis().GetLabelSize()
-                ymin = ratio.GetMinimum()
-                ymax = ratio.GetMaximum()
-                offset = (ymax-ymin) * ratio.GetXaxis().GetLabelOffset() * 5
-                for i in range(len(Razor_labels)):
-                    lat = ROOT.TLatex(0.5+i, ymin-offset, Razor_labels[i])
-                    lat.SetTextAlign(32)
-                    lat.SetTextAngle(90)
-                    lat.SetTextFont(ratio.GetXaxis().GetLabelFont())
-                    lat.SetTextSize(labelsize)
-                    lat.Draw("SAME")
-                    ROOT.SetOwnership(lat, False)
-            c.Write()
+            if add_labels: add_r2_labels(ratio, combine_bins, keep, mrbins, r2bins)
+            #c.Write()
             if debug: print "ok3"
             ok = 1
+    return c
 
 def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
                    mrbins  = [ 800, 1000, 1200, 1600, 2000, 4000 ],
@@ -318,7 +301,7 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     y1         = 365.
     mid2       = 10.
     y2         = 115.
-    mar_bottom = 100.
+    mar_bottom = 132.
     mar_left   = 90.
     x          = 500.
     mar_right  = 20.
@@ -340,13 +323,19 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     if debug: print "ok1"
     den2 = c.GetListOfPrimitives().At(2)
     if debug: print "ok1"
-    leg = c.GetListOfPrimitives().At(c.GetListOfPrimitives().GetEntries()-1)
+    for i in range(c.GetListOfPrimitives().GetEntries()):
+        prim = c.GetListOfPrimitives().At(i)
+        if prim.GetTitle().startswith("Legend"):
+            leg = prim
+            break
+    keep.append(leg)
     if debug: print "ok1"
     ratio = num.Clone(num.GetName()+"_ratio")
-    ratio.SetDirectory(0)
+    keep.append(ratio)
     if debug: print "ok2"
-    den_stat_err     = den.Clone("den_stat_err")
-    if debug: print "ok2"
+    #den_stat_err     = den.Clone("den_stat_err")
+    #keep.append(den_stat_err)
+    #if debug: print "ok2"
     # Instead of Divide(), scale the error of num, and plot error of den around 1
     #ratio.Divide(den)
     if debug: print "ok2"
@@ -357,13 +346,13 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
                 ratiomax = num.GetBinContent(binx)/den.GetBinContent(binx)
             ratio  .SetBinContent(binx, num.GetBinContent(binx) /den.GetBinContent(binx))
             ratio  .SetBinError  (binx, num.GetBinError(binx)   /den.GetBinContent(binx))
-            den_stat_err.SetBinContent(binx, yratio)
-            den_stat_err.SetBinError  (binx, yratio*den.GetBinError(binx)/den.GetBinContent(binx))
+            #den_stat_err.SetBinContent(binx, yratio)
+            #den_stat_err.SetBinError  (binx, yratio*den.GetBinError(binx)/den.GetBinContent(binx))
         else:
             ratio  .SetBinContent(binx, 0)
             ratio  .SetBinError  (binx, 0)
-            den_stat_err.SetBinContent(binx, 0)
-            den_stat_err.SetBinError  (binx, 0)
+            #den_stat_err.SetBinContent(binx, 0)
+            #den_stat_err.SetBinError  (binx, 0)
     if debug: print "ok2"
     # Legend
     # indices:
@@ -397,6 +386,7 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     right_mar = c.GetRightMargin()
     logScale = c.GetLogy()
     can2 = ROOT.TCanvas(c.GetName()+"_Ratio", c.GetTitle(), int(x_can+4), int(y_can+26)) # 600, 600
+    keep.append(can2)
     can2.Divide(1,2)
     if debug: print "ok2"
     # Pad 1 (x: 90+500+20 x y: 45+350+10)
@@ -431,11 +421,11 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     p2.SetRightMargin(right_mar)
     if debug: print "ok3"
     ratio.Draw("PE1")
-    den_stat_err.SetFillColor(1)
-    den_stat_err.SetFillStyle(3004)
-    den_stat_err.SetMarkerStyle(0)
-    den_stat_err.Draw("SAME E2")
-    ratio.Draw("SAME PE1")
+    #den_stat_err.SetFillColor(1)
+    #den_stat_err.SetFillStyle(3004)
+    #den_stat_err.SetMarkerStyle(0)
+    #den_stat_err.Draw("SAME E2")
+    #ratio.Draw("SAME PE1")
     if debug: print "ok3"
     if (xmin==xmax):
         xmin = ratio.GetYaxis().GetXmin()
@@ -445,48 +435,15 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     l.SetLineWidth(2)
     #l.SetLineColor(2)
     l.SetLineStyle(2)
-    l.Draw()
+    #l.Draw()
     ROOT.gPad.Update()
-    if add_labels:
-        add_r2_labels(ratio, combine_bins, mrbins, r2bins)
-        #Razor_labels = []
-        #binx = 0
-        #if combine_bins:
-        #    for i in range(len(mrbins)-1):
-        #        for j in range(len(r2bins)-1):
-        #            binx += 1
-        #            if binx<=18:
-        #                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+1]) )
-        #            elif binx==19:
-        #                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+2]) )
-        #            elif binx>=21 and binx<=22:
-        #                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+1]) )
-        #            elif binx==23:
-        #                Razor_labels.append("[%.2f, %.2f]" % (r2bins[j], r2bins[j+3]) )
-        #else:
-        #    for i in range(len(mrbins)-1):
-        #        for j in range(len(r2bins)-1):
-        #            binx += 1
-        #            Razor_labels.append("[%.2f, %.2f]" % r2bins[j], r2bins[j+1])
-        #ratio.GetXaxis().SetLabelColor(0)
-        #labelsize = ratio.GetXaxis().GetLabelSize()
-        #ymin = ratio.GetMinimum()
-        #ymax = ratio.GetMaximum()
-        #offset = (ymax-ymin) * ratio.GetXaxis().GetLabelOffset() * 5
-        #for i in range(len(Razor_labels)):
-        #    lat = ROOT.TLatex(0.5+i, ymin-offset, Razor_labels[i])
-        #    lat.SetTextAlign(32)
-        #    lat.SetTextAngle(90)
-        #    lat.SetTextFont(ratio.GetXaxis().GetLabelFont())
-        #    lat.SetTextSize(labelsize)
-        #    lat.Draw("SAME")
-        #    ROOT.SetOwnership(lat, False)
-    can2.Write()
+    if add_labels: add_r2_labels(ratio, combine_bins, keep, mrbins, r2bins)
+    #can2.Write()
     if debug: print "ok3"
     ok = 1
     return can2
 
-def add_r2_labels(h, combine_bins, 
+def add_r2_labels(h, combine_bins, keep, 
                   mrbins  = [ 800, 1000, 1200, 1600, 2000, 4000 ],
                   r2bins  = [ 0.08, 0.12, 0.16, 0.24, 0.4, 1.5  ]):
     Razor_labels = []
@@ -521,6 +478,9 @@ def add_r2_labels(h, combine_bins,
         lat.SetTextFont(h.GetXaxis().GetLabelFont())
         lat.SetTextSize(labelsize)
         lat.Draw("SAME")
+        keep.append(lat)
+    h.GetXaxis().SetTitle("R^{2}")
+    h.GetXaxis().SetTitleOffset(2.2)
 
 def add_bin_labels(h, combine_bins,
                    mrbins  = [ 800, 1000, 1200, 1600, 2000, 4000 ],
@@ -544,7 +504,8 @@ def add_bin_labels(h, combine_bins,
                 binx += 1
                 h.GetXaxis().SetBinLabel(binx,"[%.2f, %.2f]" % (r2bins[j], r2bins[j+1]))
     h.GetXaxis().LabelsOption("v")
-    h.GetXaxis().SetTitle("")
+    h.GetXaxis().SetTitle("R^{2}")
+    h.GetXaxis().SetTitleOffset(2.2)
 
 # Silence stdout/stderr
 class suppress_stdout_stderr(object):
@@ -561,6 +522,7 @@ class suppress_stdout_stderr(object):
             os.close(fd)
 
 def save_plot(can, name, plotname, write=True):
+    ROOT.gPad.Update()
     # Check if the directory exists (if not create it first)
     dirname = os.path.dirname(plotname)
     if dirname != "" and not os.path.exists(dirname):
@@ -614,7 +576,7 @@ def special_call(cmd, run=1, verbose=1):
 def logged_call(cmd, logfile, run=1):
     dirname = os.path.dirname(logfile)
     if dirname != "" and not os.path.exists(dirname):
-        special_call(["mkdir", "-p", os.path.dirname(logfile)], 0)
+        special_call(["mkdir", "-p", os.path.dirname(logfile)], run, 0)
     if run:
         ntry = 0
         while True:
@@ -631,3 +593,89 @@ def logged_call(cmd, logfile, run=1):
             break
     else:
         proc = subprocess.call(["echo", "[dry]"]+cmd+[">", logfile])
+
+def add_cms_era(plot, approval, keep, twoframe=False):
+    ROOT.gPad.Update() # Forces to create frames
+    if plot.InheritsFrom("TCanvas"):
+        # Check if its a two frame plot
+        if plot.GetListOfPrimitives().GetEntries()==2:
+            f1 = plot.GetListOfPrimitives().At(0).GetListOfPrimitives().At(0)
+            f2 = plot.GetListOfPrimitives().At(1).GetListOfPrimitives().At(0)
+            if f1.GetName()=="TFrame" and f2.GetName()=="TFrame": twoframe = True
+        if twoframe:
+            # cd to first frame and find histo
+            plot.GetListOfPrimitives().At(0).cd()
+            h = plot.GetListOfPrimitives().At(0).GetListOfPrimitives().At(1)
+            if h.InheritsFrom("TH1"): add_cms_era(h, approval, keep, twoframe)
+        else:
+            xmin = plot.GetListOfPrimitives().At(0).GetX1()
+            xmax = plot.GetListOfPrimitives().At(0).GetX2()
+            ymin = plot.GetListOfPrimitives().At(0).GetY1()
+            ymax = plot.GetListOfPrimitives().At(0).GetY2()
+            era_and_prelim_lat_(approval, xmin, xmax, ymin, ymax, keep, twoframe)
+    elif plot.InheritsFrom("TH2"):
+        xmin = plot.GetXaxis().GetBinLowEdge(plot.GetXaxis().GetFirst())
+        xmax = plot.GetXaxis().GetBinUpEdge(plot.GetXaxis().GetLast())
+        ymin = plot.GetYaxis().GetBinLowEdge(plot.GetYaxis().GetFirst())
+        ymax = plot.GetYaxis().GetBinUpEdge(plot.GetYaxis().GetLast())
+        era_and_prelim_lat_(approval, xmin, xmax, ymin, ymax, keep, twoframe)
+    elif plot.InheritsFrom("TH1"):
+        xmin = plot.GetXaxis().GetBinLowEdge(plot.GetXaxis().GetFirst())
+        xmax = plot.GetXaxis().GetBinUpEdge(plot.GetXaxis().GetLast())
+        ymin = plot.GetMinimum()
+        ymax = plot.GetMaximum()
+        era_and_prelim_lat_(approval, xmin, xmax, ymin, ymax, keep, twoframe)
+
+def era_and_prelim_lat_(approval, xmin, xmax, ymin, ymax, keep, twoframe=False, inside=False):
+    app = approval/10
+    scale = 1.0
+    if twoframe: scale = 10.0/7.0
+    if app:
+        # Latex example: #font[22]{Times bold} and #font[12]{Times Italic}
+        text = ""
+        if app==1: text = "CMS #scale[0.7]{#font[52]{Work in progress}}"
+        if app==2: text = "CMS #scale[0.7]{#font[52]{Preliminary}}"
+        if app==3: text = "CMS"
+        if app==4: text = "#scale[0.8]{CMS Simulation }#scale[0.6]{#font[52]{Work in progress}}"
+        if app==5: text = "#scale[0.8]{CMS Simulation }#scale[0.6]{#font[52]{Preliminary}}"
+        if app==6: text = "CMS Simulation"
+        if app==7: text = "CMS #scale[0.7]{#font[52]{Work in progress 2016}}"
+        if app==8: text = "CMS #scale[0.7]{#font[52]{Preliminary 2016}}"
+        if app==9: text = "CMS #scale[0.7]{#font[52]{Preliminary 2017}}"
+        x = xmin+(xmax-xmin)/20.0 if inside else xmin
+        y = ymax-(ymax-ymin)/10.0 if inside else ymax+(ymax-ymin)/40.0
+        if ymin>0:
+            # Assume log scale
+            if ymax/ymin>1000:
+                if inside:
+                    y = math.exp(math.log(ymax)-(math.log(ymax)-math.log(ymin))/10.0)
+                else:
+                    y = math.exp(math.log(ymax)+(math.log(ymax)-math.log(ymin))/40.0)
+        cms_lat = ROOT.TLatex(x, y, text) 
+        cms_lat.SetLineWidth(2)
+        cms_lat.SetTextSize(cms_lat.GetTextSize()*scale)
+        cms_lat.Draw()
+        keep.append(cms_lat)
+    era = approval%10
+    if era:
+        text = ""
+        if era==1: text = "#sqrt{s}=7 TeV"
+        if era==2: text = "#sqrt{s}=8 TeV"
+        if era==3: text = "#sqrt{s}=13 TeV"
+        if era==4: text = "Run 2, #sqrt{s}=13 TeV"
+        if era==5: text = "#scale[0.7]{35.9 fb^{-1} (13 TeV)}"
+        if era==6: text = "#scale[0.65]{W ana, 35.9 fb^{-1} (13 TeV)}"
+        if era==7: text = "#scale[0.65]{Top ana, 35.9 fb^{-1} (13 TeV)}"
+        y = ymax+(ymax-ymin)/25.0
+        if ymin>0:
+            # Assume log scale
+            if ymax/ymin>1000:
+                y = math.exp(math.log(ymax)+(math.log(ymax)-math.log(ymin))/25.0)
+        era_lat = ROOT.TLatex(xmax, y, text)
+        era_lat.SetTextAlign(32)
+        era_lat.SetTextSize(0.04*scale)
+        era_lat.SetTextFont(42)
+        era_lat.SetLineWidth(2)
+        era_lat.Draw()
+        keep.append(era_lat)
+    ROOT.gPad.Update()
