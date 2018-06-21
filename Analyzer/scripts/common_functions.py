@@ -342,8 +342,8 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     ratiomax = 0
     for binx in range(1, ratio.GetNbinsX()+1):
         if (den.GetBinContent(binx)!=0):
-            if num.GetBinContent(binx)/den.GetBinContent(binx)>ratiomax:
-                ratiomax = num.GetBinContent(binx)/den.GetBinContent(binx)
+            ymax = (num.GetBinContent(binx)+num.GetBinError(binx))/den.GetBinContent(binx)
+            if ymax>ratiomax: ratiomax = ymax
             ratio  .SetBinContent(binx, num.GetBinContent(binx) /den.GetBinContent(binx))
             ratio  .SetBinError  (binx, num.GetBinError(binx)   /den.GetBinContent(binx))
             #den_stat_err.SetBinContent(binx, yratio)
@@ -369,7 +369,7 @@ def add_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True,
     if yratio == 1.0:
         ratio.GetYaxis().SetRangeUser(0,3)
     else:
-        ratio.GetYaxis().SetRangeUser(0,(min(4,int(ratiomax/yratio))+1)*yratio)
+        ratio.GetYaxis().SetRangeUser(0,(int(ratiomax/yratio)+1)*yratio)
     ratio.GetYaxis().SetNdivisions(305)
     ratio.GetYaxis().SetTitle("Ratio")
     if debug: print "ok2"

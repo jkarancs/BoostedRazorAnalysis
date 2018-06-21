@@ -534,7 +534,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             h_added_LWP.SetMarkerStyle(0)
             h_added_LWP.Draw("SAME PE1")
         final_state = { "WAna_nj45": "Wn45 final state", "WAna_nj6": "Wn6 final state", "TopAna": "Top final state" }
-        leg = ROOT.TLegend(0.52,0.65,0.97,0.87, sample+", "+final_state[opt.box])
+        leg = ROOT.TLegend(0.35,0.65,0.95,0.87, sample+", "+final_state[opt.box])
         if "WAna" in opt.box:
             leg.AddEntry(h_S_LWP, "#color[1]{S with no tau_{21} req.}"+(" #color[2]{+Added}" if nmissing2>0 else ""), "l")
         else:
@@ -583,7 +583,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
                 gaus.SetLineColor(605+xbin)
                 functions.append(gaus)
                 if gaus.GetMaximum() > fmax: fmax = gaus.GetMaximum()
-        h_ratio_unc = ROOT.TH1D("ratio_unc_"+sample+"_"+opt.box, ";Event Ratio - Signal/Loose Region;A.U.", 4*integ_range,-integ_range,integ_range)
+        h_ratio_unc = ROOT.TH1D("ratio_unc_"+sample+"_"+opt.box, ";Signal/loose ratio;A.U.", 4*integ_range,-integ_range,integ_range)
         h_ratio_unc.GetYaxis().SetRangeUser(0,fmax*1.3)
         h_ratio_unc.SetStats(0)
         if nosyst:
@@ -639,9 +639,9 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             l2 = ROOT.TLine(up,     0, up,     conv.GetMaximum())
             l1.SetLineColor(4)
             l2.SetLineColor(2)
-            l0.SetLineWidth(2)
-            l1.SetLineWidth(2)
-            l2.SetLineWidth(2)
+            l0.SetLineStyle(7)
+            l1.SetLineStyle(7)
+            l2.SetLineStyle(7)
             l0.Draw("SAME")
             l1.Draw("SAME")
             l2.Draw("SAME")
@@ -667,9 +667,9 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             avg_l2 = ROOT.TLine(avg_up,     0, avg_up,     conv.GetMaximum())
             avg_l1.SetLineColor(ROOT.kBlue)
             avg_l2.SetLineColor(ROOT.kRed)
-            avg_l0.SetLineStyle(7)
-            avg_l1.SetLineStyle(7)
-            avg_l2.SetLineStyle(7)
+            avg_l0.SetLineWidth(2)
+            avg_l1.SetLineWidth(2)
+            avg_l2.SetLineWidth(2)
             avg_l0.Draw("SAME")
             avg_l1.Draw("SAME")
             avg_l2.Draw("SAME")
@@ -2265,6 +2265,7 @@ for i in range(len(S_signal)):
                      fitCov(0,0) + 2*npv * fitCov(0,1) )**(0.5)
         averageAcceptance += npvWeight * fitPred
         averageAcceptanceErr += npvWeight * fitError
+        #print ("npv=%.1f fitPred=%.3f npvWeight=%f avgAcc+=%f accErr+=%f" %(npv, fitPred, npvWeight, npvWeight * fitPred, npvWeight * fitError)) 
     averageAcceptance = max(0.01, averageAcceptance)
     w_pileup_nom.SetBinContent(mg_bin, mch_bin, averageAcceptance)
     w_pileup_err.SetBinContent(mg_bin, mch_bin, averageAcceptanceErr)
@@ -2762,61 +2763,61 @@ f.Close()
 #sys.exit()
 
 # Now save a different root file for each signal point
-if not opt.nocards:
+if not opt.nocards and opt.TEST==0:
     print "Looping on Signal points and creating data cards"
     if not os.path.exists("syst_"+opt.dir+"/cards"):
         special_call(["mkdir", "-p", "syst_"+opt.dir+"/cards"], 0)
 
-cards = []
-for signal_syst in S_signal:
-    scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
-    #root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
-    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_"+scan_point+"_"+opt.box+".root"
-    if not opt.nocards:
-        fout = ROOT.TFile.Open(root_filename,"RECREATE")
-        #print "  Creating root file: "+root_filename
-        # Add signal systematics
-        for i in range(0, len(systematics)-2):
-            signal_syst[i].Write("Signal"+systematics[i])
-        # Add background estimates
-        for bkg in [Top_est, MultiJet_est, WJets_est, ZInv_est, Other_est]:
-            for syst_var in bkg:
-                syst_var.Write()
-        # Add data counts
-        S_data.Write("data_obs")
-    card_filename = root_filename.replace(".root",".txt")
-    cards.append(card_filename)
-    if not opt.nocards:
-        #print "  Creating data card: "+card_filename
-        card=open(card_filename, 'w+')
-        card.write(
+    cards = []
+    for signal_syst in S_signal:
+        scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
+        #root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
+        root_filename = "syst_"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_"+scan_point+"_"+opt.box+".root"
+        if not opt.nocards:
+            fout = ROOT.TFile.Open(root_filename,"RECREATE")
+            #print "  Creating root file: "+root_filename
+            # Add signal systematics
+            for i in range(0, len(systematics)-2):
+                signal_syst[i].Write("Signal"+systematics[i])
+            # Add background estimates
+            for bkg in [Top_est, MultiJet_est, WJets_est, ZInv_est, Other_est]:
+                for syst_var in bkg:
+                    syst_var.Write()
+            # Add data counts
+            S_data.Write("data_obs")
+        card_filename = root_filename.replace(".root",".txt")
+        cards.append(card_filename)
+        if not opt.nocards:
+            #print "  Creating data card: "+card_filename
+            card=open(card_filename, 'w+')
+            card.write(
 '''imax 1 number of channels
 jmax 5 number of backgrounds
 kmax * number of nuisance parameters
 ------------------------------------------------------------
 observation	'''
             )
-        card.write(str(S_data.Integral()))
-        card.write(
+            card.write(str(S_data.Integral()))
+            card.write(
 '''
 ------------------------------------------------------------
 shapes * * '''
             )
-        card.write(root_filename)
-        card.write(
+            card.write(root_filename)
+            card.write(
 ''' $PROCESS $PROCESS_$SYSTEMATIC
 ------------------------------------------------------------
 bin		'''
             )
-        card.write("%s\t%s\t%s\t%s\t%s\t%s" % (opt.box, opt.box, opt.box, opt.box, opt.box, opt.box))
-        card.write(
+            card.write("%s\t%s\t%s\t%s\t%s\t%s" % (opt.box, opt.box, opt.box, opt.box, opt.box, opt.box))
+            card.write(
 '''
 process		Signal	Top	MultiJet	WJets	ZInv	Other
 process		0	1	2	3	4	5
 rate		'''
             )
-        card.write("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f" % (signal_syst[0].Integral(), Top_est[0].Integral(), MultiJet_est[0].Integral(), WJets_est[0].Integral(), ZInv_est[0].Integral(), Other_est[0].Integral()) )
-        card.write(
+            card.write("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f" % (signal_syst[0].Integral(), Top_est[0].Integral(), MultiJet_est[0].Integral(), WJets_est[0].Integral(), ZInv_est[0].Integral(), Other_est[0].Integral()) )
+            card.write(
 '''
 ------------------------------------------------------------
 lumi			lnN	1.025	1.025	1.025	1.025	1.025	1.025
@@ -2860,9 +2861,9 @@ dirfrac			shape	-	-	-	-	1.0	-
 leptonest		shape	-	-	-	-	1.0	-
 '''
             )
-        card.write("qcd\t\t\tlnN\t-\t-\t%2.2f\t-\t-\t-\n" % (1.0+qcd_syst))
-        card.write("dytoll\t\t\tlnN\t-\t-\t-\t-\t%2.2f\t-\n" % (1.0+dy_syst))
-        card.close()
-
-print "All data cards ready"
-print "Done."
+            card.write("qcd\t\t\tlnN\t-\t-\t%2.2f\t-\t-\t-\n" % (1.0+qcd_syst))
+            card.write("dytoll\t\t\tlnN\t-\t-\t-\t-\t%2.2f\t-\n" % (1.0+dy_syst))
+            card.close()
+    
+    print "All data cards ready"
+    print "Done."
