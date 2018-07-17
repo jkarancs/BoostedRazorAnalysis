@@ -53,7 +53,7 @@ bool isT2tt = TString(sample).Contains("T2tt");
   baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
             //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
             //return d.evt.SUSY_Gluino_Mass==2000 && d.evt.SUSY_LSP_Mass==300;
-            return d.evt.SUSY_Stop_Mass==850 && d.evt.SUSY_LSP_Mass==100;
+            return d.evt.SUSY_Stop_Mass==1100 && d.evt.SUSY_LSP_Mass==0;
 	    } });}
 bool isT5tttt = TString(sample).Contains("T5tttt");
   if(isT5tttt){ 
@@ -70,62 +70,33 @@ bool isT1tttt = TString(sample).Contains("T1tttt");
 bool isT5ttcc = TString(sample).Contains("T5ttcc");
   if(isT5ttcc){ 
   baseline_cuts.push_back({ .name="signal_mass_selection",   .func = [&d]{ 
-            //return d.evt.SUSY_Gluino_Mass==mGluino[num] && d.evt.SUSY_LSP_Mass==mLSP[num];
-            return d.evt.SUSY_Gluino_Mass==1400 && d.evt.SUSY_LSP_Mass==300;
-            //return d.evt.SUSY_Stop_Mass==800 && d.evt.SUSY_LSP_Mass==100;
+            return d.evt.SUSY_Gluino_Mass==1700 && d.evt.SUSY_LSP_Mass==300;
 	    } });}
 
-  //baseline_cuts.push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  //baseline_cuts.push_back({ .name="R2",         .func = [&d]  { return d.evt.R2>=0.04;                  }}); // New skim cut introduced in 2017 february
-
-  // S: Signal region
-  analysis_cuts['S'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['S'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['S'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
-  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
-  //analysis_cuts['S'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
-  analysis_cuts['S'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
-
-  // S': DPhi Control region of Signal region
-  analysis_cuts['s'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['s'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['s'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['s'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
-  analysis_cuts['s'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
-  //analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return minDeltaPhi<0.5;                  }});
-  analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return dPhiRazor>=2.8;                  }});
-
-  // Top quark anti tag fake rate
+  // fake rate
   analysis_cuts['K'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['K'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['K'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['K'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['K'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
   analysis_cuts['K'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
   analysis_cuts['K'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  analysis_cuts['K'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['K'].push_back({ .name="1a0bTop",    .func = []    { return nHadTop0BAntiTag>=1;              }});
-  analysis_cuts['K'].push_back({ .name="InvmDPhi0p3",.func = []    { return dPhiRazor>=2.8;                  }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['K'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['K'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['K'].push_back({ .name="InvmDPhi",.func = []    { return dPhiRazor>=2.8;                  }});
 
-  // k: Photon enriched sample
   analysis_cuts['k'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['k'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
-  //analysis_cuts['k'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
-  //analysis_cuts['k'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }});
+  analysis_cuts['k'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['k'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1         || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['k'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
   analysis_cuts['k'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['k'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  //analysis_cuts['k'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }});
-  analysis_cuts['k'].push_back({ .name="1a0bTop",    .func = []    { return nHadTop0BAntiTag>=1;              }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['k'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['k'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
   analysis_cuts['k'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
 
   // Gen Level Information
@@ -139,60 +110,107 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
     analysis_cuts['B'].push_back({ .name="TopTag",   .func = []    { return nTopTag > 0;                      }});
   }
   
+  // preselection
+  analysis_cuts['P'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  analysis_cuts['P'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['P'].push_back({ .name="MR_R2",    .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;     }});
+  analysis_cuts['P'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+
+#if TOP == 0
+  // S: Signal region
+  analysis_cuts['S'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  analysis_cuts['S'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['S'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+  //analysis_cuts['S'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['S'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['S'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
+  analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
+  //analysis_cuts['S'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
+  analysis_cuts['S'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+
+  // S': DPhi Control region of Signal region
+  analysis_cuts['s'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  analysis_cuts['s'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['s'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+  //analysis_cuts['s'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['s'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['s'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['s'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
+  analysis_cuts['s'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
+  //analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return minDeltaPhi<0.5;                  }});
+  analysis_cuts['s'].push_back({ .name="InvmDPhi",   .func = []    { return dPhiRazor>=2.8;                  }});
+
   // Q: QCD enriched control sample
   analysis_cuts['Q'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['Q'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['Q'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['Q'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
   analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
   analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['Q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['Q'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['Q'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
   analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
   analysis_cuts['Q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;                }});
-  //analysis_cuts['Q'].push_back({ .name="InvmDPhi0p3",.func = []    { return minDeltaPhi<0.3;                  }});
-  analysis_cuts['Q'].push_back({ .name="InvmDPhi0p3",.func = []    { return dPhiRazor>=2.8;                  }});
+  //analysis_cuts['Q'].push_back({ .name="InvmDPhi",.func = []    { return minDeltaPhi<0.3;                  }});
+  analysis_cuts['Q'].push_back({ .name="InvmDPhi",.func = []    { return dPhiRazor>=2.8;                  }});
 
   // Q': Dphi Control region of QCD enriched sample
   analysis_cuts['q'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['q'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['q'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['q'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
   analysis_cuts['q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
   analysis_cuts['q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['q'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['q'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['q'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
   analysis_cuts['q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
   analysis_cuts['q'].push_back({ .name="1aW",        .func = []    { return nTightWAntiTag>=1;                }});
-  //analysis_cuts['q'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
   analysis_cuts['q'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
-  //analysis_cuts['q'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.3 && minDeltaPhi<0.5;         }});
 
   // T: Top enriched control sample
   analysis_cuts['T'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['T'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['T'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['T'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
   analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
   analysis_cuts['T'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
   analysis_cuts['T'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
-  //analysis_cuts['T'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
   analysis_cuts['T'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
   analysis_cuts['T'].push_back({ .name="MT",         .func = []    { return MT_vetolep<100;                   }});
 
   // W: W enriched control sample
   analysis_cuts['W'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['W'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['W'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['W'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
   analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
   analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
   analysis_cuts['W'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
-  //analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
   analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
   analysis_cuts['W'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
 
   // L: 1-lepton invisible control sample with veto lepton
   analysis_cuts['L'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }});
-  analysis_cuts['L'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['L'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
   analysis_cuts['L'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
   analysis_cuts['L'].push_back({ .name="R2",         .func = [&d]  { return R2_1vl>=0.08;                     }});
   analysis_cuts['L'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
@@ -204,7 +222,7 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
 
   // Z: Z->ll enriched control sample
   analysis_cuts['Z'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['Z'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['Z'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }}); // Separate cut, so one can exclude (N-1)
   analysis_cuts['Z'].push_back({ .name="MR_R2ll",    .func = [&d]  { return d.evt.MR>=800 && R2_ll>=0.08;     }});
   analysis_cuts['Z'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['Z'].push_back({ .name="2Lep",       .func = []    { return (nEleSelect==2&&nMuVeto==0)||(nMuSelect==2&&nEleVeto==0); }});
@@ -214,162 +232,278 @@ bool isT5ttcc = TString(sample).Contains("T5ttcc");
 				   return false;
 				 }});
   analysis_cuts['Z'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
-  //analysis_cuts['Z'].push_back({ .name="mDPhill",    .func = []    { return minDeltaPhi_ll>=0.5;              }});
   analysis_cuts['Z'].push_back({ .name="mDPhill",    .func = []    { return dPhiRazor<2.8;              }});
   analysis_cuts['Z'].push_back({ .name="Mll",        .func = []    { return std::abs(M_ll-91.2)<10;           }});
 
   // G: Photon enriched sample
-  analysis_cuts['G'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); // Similar         to pt>200, one AK8 jet has pt>200
-  analysis_cuts['G'].push_back({ .name="3Jet",       .func = []    { return nJetNoPho>=3;                     }});
-  analysis_cuts['G'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
+  analysis_cuts['G'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }});
+  analysis_cuts['G'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }     });
+  analysis_cuts['G'].push_back({ .name="NJet",       .func = []    { return nJetNoPho>=3;                     }});
+  analysis_cuts['G'].push_back({ .name="MR",         .func = [&d]  { return MR_pho>=800;                    }});
   analysis_cuts['G'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }});
   analysis_cuts['G'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1         || d.hlt.PFHT900==1 : 1; }});
   analysis_cuts['G'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
   analysis_cuts['G'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['G'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['G'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }});
-  //analysis_cuts['G'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['G'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['G'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
   analysis_cuts['G'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
-  //analysis_cuts['G'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi_pho>=0.5;             }});
   analysis_cuts['G'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
 
-  // z: Photon enriched sample
-  analysis_cuts['z'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                    }}); // Similar         to pt>200, one AK8 jet has pt>200
-  analysis_cuts['z'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                       }});
-  //analysis_cuts['z'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
-  //analysis_cuts['z'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }});
-  //analysis_cuts['z'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.Photon165_HE10==1 : 1; }});
-  analysis_cuts['z'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1         || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['z'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                   }});
-  analysis_cuts['z'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                    }});
-  analysis_cuts['z'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;              }});
-  //analysis_cuts['z'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;              }});
-  //analysis_cuts['z'].push_back({ .name="1FakePho",       .func = []    { return nPhotonFake==1;         }});
-  //analysis_cuts['z'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
-  //analysis_cuts['G'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  //analysis_cuts['z'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
+  // z: Z->ll enriched control sample (with full tag)
+  analysis_cuts['z'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); 
+  analysis_cuts['z'].push_back({ .name="NJet",       .func = []    { return nJet>=4;                          }});
+  analysis_cuts['z'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }}); 
+  analysis_cuts['z'].push_back({ .name="R2ll",       .func = [&d]  { return R2_ll>=0.08;                      }}); 
+  analysis_cuts['z'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }}); 
+  analysis_cuts['z'].push_back({ .name="2Lep",       .func = []    { return (nEleSelect==2&&nMuVeto==0)||(nMuSelect==2&&nEleVeto==0); }});
+  analysis_cuts['z'].push_back({ .name="OppCharge",  .func = [&d]  { 
+           if (nEleSelect==2) return (d.ele.Charge[iEleSelect[0]] + d.ele.Charge[iEleSelect[1]])==0;
+           else if (nMuSelect==2) return (d.mu.Charge[iMuSelect[0]] + d.mu.Charge[iMuSelect[1]])==0;
+           return false;
+         }}); 
+  analysis_cuts['z'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }}); 
+//analysis_cuts['z'].push_back({ .name="1mW",        .func = []    { return nWMassTag>=1;                     }});
+  analysis_cuts['z'].push_back({ .name="mDPhill",    .func = []    { return dPhiRazor<2.8;                    }}); 
+  analysis_cuts['z'].push_back({ .name="Mll",        .func = []    { return std::abs(M_ll-91.2)<10;           }}); 
+
+#else
 
   // t: Boosted Top Signal region
-  analysis_cuts['A'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['A'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['A'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['A'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['A'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['A'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['A'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['A'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
-  //analysis_cuts['A'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
-  analysis_cuts['A'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['S'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['S'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['S'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['S'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['S'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['S'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['S'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['S'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['S'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
+  analysis_cuts['S'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
 
   // a: Boosted Top' Signal region
-  analysis_cuts['a'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['a'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['a'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['a'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['a'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['a'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['a'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['a'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
-  //analysis_cuts['a'].push_back({ .name="InvmDPhi",      .func = []    { return minDeltaPhi<0.5;                 }});
-  analysis_cuts['a'].push_back({ .name="InvmDPhi",      .func = []    { return dPhiRazor>=2.8;                 }});
+  analysis_cuts['s'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['s'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['s'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['s'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['s'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['s'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['s'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['s'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['s'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
+  //analysis_cuts['s'].push_back({ .name="InvmDPhi",      .func = []    { return minDeltaPhi<0.5;                 }});
+  analysis_cuts['s'].push_back({ .name="InvmDPhi",      .func = []    { return dPhiRazor>=2.8;                 }});
 
   // t: Boosted Top Q region
-  analysis_cuts['X'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['X'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['X'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['X'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['X'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['X'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['X'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['X'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  analysis_cuts['X'].push_back({ .name="1aTop",       .func = []   { return nHadTop0BAntiTag>=1;                    }});
-  //analysis_cuts['X'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi<0.3;                 }});
-  analysis_cuts['X'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor>=2.8;                 }});
+  analysis_cuts['Q'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['Q'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['Q'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['Q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['Q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['Q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['Q'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['Q'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['Q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
+  analysis_cuts['Q'].push_back({ .name="1aTop",       .func = []   { return nHadTop0BAntiTag>=1;                    }});
+  //analysis_cuts['Q'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi<0.3;                 }});
+  analysis_cuts['Q'].push_back({ .name="InvmDPhi",      .func = []    { return dPhiRazor>=2.8;                 }});
 
   // t: Boosted Top Q' region
-  analysis_cuts['x'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['x'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['x'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['x'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['x'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['x'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['x'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['x'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  analysis_cuts['x'].push_back({ .name="1aTop",       .func = []   { return nHadTop0BAntiTag>=1;                    }});
-  //analysis_cuts['x'].push_back({ .name="InvmDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
-  analysis_cuts['x'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['q'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['q'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['q'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['q'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['q'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['q'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['q'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['q'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['q'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
+  analysis_cuts['q'].push_back({ .name="1aTop",       .func = []   { return nHadTop0BAntiTag>=1;                    }});
+  //analysis_cuts['q'].push_back({ .name="InvmDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
+  analysis_cuts['q'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
 
   // t: Boosted Top T region
-  analysis_cuts['V'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['V'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['V'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['V'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['V'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
-  analysis_cuts['V'].push_back({ .name="1Top",       .func = []   { return nHadTopTag>=1;                    }});
-  //analysis_cuts['V'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
-  analysis_cuts['V'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
-  analysis_cuts['V'].push_back({ .name="MT",         .func = []    { return     MT_vetolep<100;               }});
+  analysis_cuts['T'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['T'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['T'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['T'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['T'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
+  analysis_cuts['T'].push_back({ .name="1Top",       .func = []   { return nHadTopTag>=1;                    }});
+  //analysis_cuts['T'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
+  analysis_cuts['T'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['T'].push_back({ .name="MT",         .func = []    { return     MT_vetolep<100;               }});
 
   // t: Boosted Top W region
-  analysis_cuts['C'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['C'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['C'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
-  analysis_cuts['C'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['C'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
-  analysis_cuts['C'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  analysis_cuts['C'].push_back({ .name="1mTop",       .func = []   { return nHadTop0BMassTag>=1;                    }});
-  //analysis_cuts['C'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
-  analysis_cuts['C'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
-  analysis_cuts['C'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
+  analysis_cuts['W'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['W'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['W'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['W'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['W'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
+  analysis_cuts['W'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
+  analysis_cuts['W'].push_back({ .name="1mTop",       .func = []   { return nHadTop0BMassTag>=1;                    }});
+  //analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
+  analysis_cuts['W'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['W'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
 
   // L: 1-lepton invisible control sample with veto lepton
-  analysis_cuts['l'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }});
-  analysis_cuts['l'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }});
-  analysis_cuts['l'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
-  analysis_cuts['l'].push_back({ .name="R2",         .func = [&d]  { return R2_1vl>=0.08;                     }});
-  analysis_cuts['l'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['l'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
-  analysis_cuts['l'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
-  analysis_cuts['l'].push_back({ .name="1mTop",      .func = []    { return nHadTop0BMassTag>=1;              }});
-  analysis_cuts['l'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
-  analysis_cuts['l'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
+  analysis_cuts['L'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }});
+  analysis_cuts['L'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['L'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }});
+  analysis_cuts['L'].push_back({ .name="R2",         .func = [&d]  { return R2_1vl>=0.08;                     }});
+  analysis_cuts['L'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['L'].push_back({ .name="1Lep",       .func = []    { return nLepVeto==1;                      }});
+  analysis_cuts['L'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
+  analysis_cuts['L'].push_back({ .name="1mTop",      .func = []    { return nHadTop0BMassTag>=1;              }});
+  analysis_cuts['L'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                    }});
+  analysis_cuts['L'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
 
   // Z: Z->ll enriched control sample
-  analysis_cuts['F'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['F'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['F'].push_back({ .name="MR_R2ll",    .func = [&d]  { return d.evt.MR>=800 && R2_ll>=0.08;     }});
-  analysis_cuts['F'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['F'].push_back({ .name="2Lep",       .func = []    { return (nEleSelect==2&&nMuVeto==0)||(nMuSelect==2&&nEleVeto==0); }});
-  analysis_cuts['F'].push_back({ .name="OppCharge",  .func = [&d]  { 
+  analysis_cuts['Z'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); 
+  analysis_cuts['Z'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['Z'].push_back({ .name="MR_R2ll",    .func = [&d]  { return d.evt.MR>=800 && R2_ll>=0.08;     }});
+  analysis_cuts['Z'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['Z'].push_back({ .name="2Lep",       .func = []    { return (nEleSelect==2&&nMuVeto==0)||(nMuSelect==2&&nEleVeto==0); }});
+  analysis_cuts['Z'].push_back({ .name="OppCharge",  .func = [&d]  { 
 				   if (nEleSelect==2) return (d.ele.Charge[iEleSelect[0]] + d.ele.Charge[iEleSelect[1]])==0;
 				   else if (nMuSelect==2) return (d.mu.Charge[iMuSelect[0]] + d.mu.Charge[iMuSelect[1]])==0;
 				   return false;
 				 }});
-  analysis_cuts['F'].push_back({ .name="1mTop",        .func = []    { return nHadTopMassTag>=1;                     }});
-  analysis_cuts['F'].push_back({ .name="mDPhill",    .func = []    { return dPhiRazor<2.8;              }});
-  analysis_cuts['F'].push_back({ .name="Mll",        .func = []    { return std::abs(M_ll-91.2)<10;           }});
+  analysis_cuts['Z'].push_back({ .name="1mTop",        .func = []    { return nHadTopMassTag>=1;                     }});
+  analysis_cuts['Z'].push_back({ .name="mDPhill",    .func = []    { return dPhiRazor<2.8;              }});
+  analysis_cuts['Z'].push_back({ .name="Mll",        .func = []    { return std::abs(M_ll-91.2)<10;           }});
   // G: Photon enriched sample
-  analysis_cuts['g'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }});
-  analysis_cuts['g'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }});
-  analysis_cuts['g'].push_back({ .name="3Jet",       .func = []    { return nJetNoPho>=3;                     }});
-  analysis_cuts['g'].push_back({ .name="MR",         .func = [&d]  { return MR_pho>=800;                      }});
-  analysis_cuts['g'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }});
-  analysis_cuts['g'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
-  analysis_cuts['g'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
-  analysis_cuts['g'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
-  analysis_cuts['g'].push_back({ .name="0IsoTrk",    .func = [&d]  { return d.evt.NIsoTrk==0;                 }});
-  analysis_cuts['g'].push_back({ .name="1MTop",      .func = []    { return nHadTopMassTag>=1;                }});
-//analysis_cuts['g'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi_pho>=0.5;             }});
-  analysis_cuts['g'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazorNoPho<2.8;               }});
+  analysis_cuts['G'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }});
+  analysis_cuts['G'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }});
+  analysis_cuts['G'].push_back({ .name="NJet",       .func = []    { return nJetNoPho>=3;                     }});
+  analysis_cuts['G'].push_back({ .name="MR",         .func = [&d]  { return MR_pho>=800;                      }});
+  analysis_cuts['G'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }});
+  analysis_cuts['G'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['G'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }});
+  analysis_cuts['G'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }});
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['G'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }});  
+#else  
+  analysis_cuts['G'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif 
+  analysis_cuts['G'].push_back({ .name="1mTop",      .func = []    { return nHadTopMassTag>=1;                }});
+//analysis_cuts['G'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi_pho>=0.5;             }});
+  analysis_cuts['G'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazorNoPho<2.8;               }});
 
+/*
+  analysis_cuts['p'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }});
+  analysis_cuts['p'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['p'].push_back({ .name="MR_R2",    .func = [&d]  { return d.evt.MR>=800 && R2_1vl>=0.08;     }});
+  analysis_cuts['p'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['p'].push_back({ .name="1Lep",       .func = []    { return nLepTest==1 && (dR_2D > 0.4 || rel_pT_2D > 25); }});
+  analysis_cuts['p'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
+  analysis_cuts['p'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
 
+  analysis_cuts['D'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }});
+  analysis_cuts['D'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }});
+  analysis_cuts['D'].push_back({ .name="MR_R2",    .func = [&d]  { return d.evt.MR>=800 && R2_1vl>=0.08;     }});
+  analysis_cuts['D'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['D'].push_back({ .name="1Lep",       .func = []    { return nLepTest==1 && (dR_2D > 0.4 || rel_pT_2D > 25); }});
+  analysis_cuts['D'].push_back({ .name="1Top",       .func = []    { return nHadTopTag>=1;                    }});
+  analysis_cuts['D'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['D'].push_back({ .name="MT",         .func = []    { return MT_vetolep<100;               }});
 
-  // preselection
-  analysis_cuts['P'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
-  analysis_cuts['P'].push_back({ .name="3Jet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
-  analysis_cuts['P'].push_back({ .name="MR_R2",    .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;     }});
-  analysis_cuts['P'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['d'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                      }}); // Similar to pt>200, one AK8 jet has pt>200
+  analysis_cuts['d'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }}); // Separate cut, so one can exclude (N-1)
+  analysis_cuts['d'].push_back({ .name="MR_R2",      .func = [&d]  { return d.evt.MR>=800 && d.evt.R2>=0.08;  }});
+  analysis_cuts['d'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }});
+  analysis_cuts['d'].push_back({ .name="1Lep",       .func = []    { return nLepTest==1 && (dR_2D > 0.4 || rel_pT_2D > 25); }});
+  analysis_cuts['d'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }});
+  analysis_cuts['d'].push_back({ .name="1mTop",       .func = []   { return nHadTop0BMassTag>=1;                    }});
+  analysis_cuts['d'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazor<2.8;                 }});
+  analysis_cuts['d'].push_back({ .name="MT",         .func = []    { return MT_vetolep>=30 && MT_vetolep<100; }});
+*/
+#endif
 
+  // G-1: Photon enriched sample (G without boosted object)
+  analysis_cuts['g'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); 
+  analysis_cuts['g'].push_back({ .name="1Pho",       .func = []    { return nPhotonSelect==1;                 }}); 
+  analysis_cuts['g'].push_back({ .name="NJet",       .func = []    { return nJetNoPho>=3;                     }}); 
+  analysis_cuts['g'].push_back({ .name="MR",         .func = [&d]  { return MR_pho>=800;                      }}); 
+  analysis_cuts['g'].push_back({ .name="R2",         .func = [&d]  { return R2_pho>=0.08;                     }}); 
+  analysis_cuts['g'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }}); 
+  analysis_cuts['g'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }}); 
+  analysis_cuts['g'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }}); 
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['g'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }}); 
+#else
+  analysis_cuts['g'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }}); 
+#endif
+  analysis_cuts['g'].push_back({ .name="mDPhi",      .func = []    { return dPhiRazorNoPho<2.8;               }}); 
+
+  // w: Inclusive Razor-like W enriched region
+  analysis_cuts['w'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); 
+  analysis_cuts['w'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=300;                    }}); 
+  analysis_cuts['w'].push_back({ .name="R2",         .func = [&d]  { return d.evt.R2>=0.15;                   }}); 
+  analysis_cuts['w'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }}); 
+  analysis_cuts['w'].push_back({ .name="1Lep",       .func = []    { return nLepSelect==1;                    }}); 
+  analysis_cuts['w'].push_back({ .name="MET",        .func = [&d]  { return d.met.Pt[0]>=30;                  }}); 
+  analysis_cuts['w'].push_back({ .name="MT",         .func = []    { return MT>=30 && MT<100;                 }}); 
+  analysis_cuts['w'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }}); 
+
+  // F: Fake rate measurement region
+  analysis_cuts['F'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); 
+  analysis_cuts['F'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }}); 
+  analysis_cuts['F'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }}); 
+  analysis_cuts['F'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }}); 
+  analysis_cuts['F'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }}); 
+  analysis_cuts['F'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }}); 
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['F'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }}); 
+#else
+  analysis_cuts['F'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }}); 
+#endif
+  analysis_cuts['F'].push_back({ .name="0b",         .func = []    { return nLooseBTag==0;                    }}); 
+//analysis_cuts['F'].push_back({ .name="InvmDPhi0p3",.func = []    { return minDeltaPhi<0.3;                  }});
+  analysis_cuts['F'].push_back({ .name="InvmDPhi0p3",.func = []    { return dPhiRazor>=2.8;                   }}); 
+
+  // F: F+1b
+  analysis_cuts['f'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); 
+  analysis_cuts['f'].push_back({ .name="MR",         .func = [&d]  { return d.evt.MR>=800;                    }}); 
+  analysis_cuts['f'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }}); 
+  analysis_cuts['f'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }}); 
+  analysis_cuts['f'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }}); 
+  analysis_cuts['f'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }}); 
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['f'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }}); 
+#else
+  analysis_cuts['f'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }}); 
+#endif
+  analysis_cuts['f'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }}); 
+//analysis_cuts['f'].push_back({ .name="InvmDPhi0p3",.func = []    { return minDeltaPhi<0.3;                  }});
+  analysis_cuts['f'].push_back({ .name="InvmDPhi0p3",.func = []    { return dPhiRazor>=2.8;                   }}); 
+
+  // H: HT>=1TeV+1b
+  analysis_cuts['H'].push_back({ .name="1JetAK8",    .func = []    { return nJetAK8>=1;                       }}); 
+  analysis_cuts['H'].push_back({ .name="NJet",       .func = []    { return nJet>=3;                          }}); 
+  analysis_cuts['H'].push_back({ .name="HLT",   .func = [this,&d]  { return isData ? d.hlt.AK8PFJet450==1 || d.hlt.PFHT800==1 || d.hlt.PFHT900==1 : 1; }}); 
+  analysis_cuts['H'].push_back({ .name="0Ele",       .func = []    { return nEleVeto==0;                      }}); 
+  analysis_cuts['H'].push_back({ .name="0Mu",        .func = []    { return nMuVeto==0;                       }}); 
+#if USE_ISO_TRK_VETO > 0
+  analysis_cuts['H'].push_back({ .name="0Tau",       .func = [&d]  { return d.evt.NIsoTrk==0;                 }}); 
+#else
+  analysis_cuts['H'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
+#endif
+  analysis_cuts['H'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
+  analysis_cuts['H'].push_back({ .name="HT",         .func = []    { return AK4_Ht>=1000;                     }});
 }
 
 //____________________________________________________
@@ -394,28 +528,39 @@ Analysis::apply_scale_factors(DataStruct& data, const unsigned int& s, const std
   std::tie(sf_muon_veto, sf_muon_loose, sf_muon_medium) =  calc_muon_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], isFastSim);
   i+=3;
 
-  // b tagging SFs (1 sigma)
+  // b tagging SFs (2 sigma - fullsim, fastsim)
   std::pair<double, double> sf_btag = calc_b_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], isFastSim);
+#if TOP == 0
   double sf_btag_loose = sf_btag.first, sf_btag_medium = sf_btag.second;
+#else
+  double sf_btag_loose = sf_btag.first;//, sf_btag_medium = sf_btag.second;
+#endif
   i+=2;
 
-  // W tagging SF  (3 sigma - fullsim, fastsim, mistag)
-  double sf_w = calc_w_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], isFastSim);
-  // fake W tagging SFs (no varriation of systematics) 
-  double sf_fake_mW = calc_fake_w_mass_tagging_sf(data, nSigmaSFs[i][s]);
-  double sf_fake_aW = calc_fake_w_anti_tagging_sf(data, nSigmaSFs[i][s]);
-  i+=5;
-
-  // top tagging SF (3 sigma - fullsim, fastsim, mistag)
-  double sf_top = calc_top_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], isFastSim);
-  double sf_fake_0b_mTop = calc_fake_top_0b_mass_tagging_sf(data, nSigmaSFs[i][s]);
-  double sf_fake_mTop = calc_fake_top_mass_tagging_sf(data, nSigmaSFs[i][s]);
-  double sf_fake_aTop = calc_fake_top_anti_tagging_sf(data, nSigmaSFs[i][s]);
+#if TOP == 0
+  // W tagging SF  (4 sigma - fullsim, fastsim, mistag, mistag fastsim)
+  double sf_w = calc_w_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s], isFastSim);
+  // fake W tagging SFs (2 sigma)
+  double sf_fake_mW = calc_fake_w_mass_tagging_sf(data, nSigmaSFs[i+4][s]);
+  double sf_fake_aW = calc_fake_w_anti_tagging_sf(data, nSigmaSFs[i+5][s]);
+#endif
   i+=6;
 
+#if TOP != 0
+  // top tagging SF (4 sigma - fullsim, fastsim, mistag, mistag fastsim)
+  double sf_top = calc_top_tagging_sf(data, nSigmaSFs[i][s], nSigmaSFs[i+1][s], nSigmaSFs[i+2][s], nSigmaSFs[i+3][s], isFastSim);
+  // fake top tagging SFs (3 sigmas)
+  double sf_fake_0b_mTop = calc_fake_top_0b_mass_tagging_sf(data, nSigmaSFs[i+4][s]);
+  double sf_fake_MTop = calc_fake_top_mass_tagging_sf(data, nSigmaSFs[i+5][s]);
+  double sf_fake_aTop = calc_fake_top_anti_tagging_sf(data, nSigmaSFs[i+6][s]);
+#endif
+  i+=7;
 
   // Select scale factors to use
   for (auto& sf : scale_factors) sf.second.clear();
+
+#if TOP == 0
+
   scale_factors['S'].push_back(sf_ele_veto);
   scale_factors['S'].push_back(sf_muon_veto);
   scale_factors['S'].push_back(sf_btag_medium);
@@ -454,64 +599,61 @@ Analysis::apply_scale_factors(DataStruct& data, const unsigned int& s, const std
   scale_factors['z'].push_back(sf_muon_medium);
   scale_factors['z'].push_back(sf_w);
 
+#else
+
+  // Top Analysis
+  scale_factors['S'].push_back(sf_ele_veto);
+  scale_factors['S'].push_back(sf_muon_veto);
+  scale_factors['S'].push_back(sf_top);
+
+  scale_factors['s'] = scale_factors['S'];
+
+  scale_factors['Q'].push_back(sf_ele_veto);
+  scale_factors['Q'].push_back(sf_muon_veto);
+  scale_factors['Q'].push_back(sf_fake_aTop);
+  scale_factors['Q'].push_back(sf_btag_loose);
+
+  scale_factors['q'] = scale_factors['Q'];
+
+  scale_factors['T'].push_back(sf_ele_veto);
+  scale_factors['T'].push_back(sf_muon_veto);
+  scale_factors['T'].push_back(sf_top);
+
+  scale_factors['W'].push_back(sf_ele_veto);
+  scale_factors['W'].push_back(sf_muon_veto);
+  scale_factors['W'].push_back(sf_fake_0b_mTop);
+  scale_factors['W'].push_back(sf_btag_loose);
+
+  scale_factors['G'].push_back(sf_ele_veto);
+  scale_factors['G'].push_back(sf_muon_veto);
+  scale_factors['G'].push_back(sf_fake_MTop);
+
+  scale_factors['Z'].push_back(sf_ele_medium);
+  scale_factors['Z'].push_back(sf_muon_medium);
+  scale_factors['Z'].push_back(sf_fake_MTop);
+
+  scale_factors['L'] = scale_factors['W'];
+
+/*
+  scale_factors['p'].push_back(sf_ele_veto);
+  scale_factors['p'].push_back(sf_muon_veto);
+  scale_factors['p'].push_back(sf_top);
+  scale_factors['D'].push_back(sf_ele_veto);
+  scale_factors['D'].push_back(sf_muon_veto);
+  scale_factors['D'].push_back(sf_top);
+  scale_factors['d'].push_back(sf_ele_veto);
+  scale_factors['d'].push_back(sf_muon_veto);
+  scale_factors['d'].push_back(sf_btag_loose);
+  scale_factors['d'].push_back(sf_fake_0b_mTop);
+*/
+#endif
+
   scale_factors['K'].push_back(sf_ele_veto);
   scale_factors['K'].push_back(sf_muon_veto);
   scale_factors['K'].push_back(sf_btag_loose);
   scale_factors['k'].push_back(sf_ele_veto);
   scale_factors['k'].push_back(sf_muon_veto);
 
-  // Top analysis
-  scale_factors['A'].push_back(sf_ele_veto);
-  scale_factors['A'].push_back(sf_muon_veto);
-  scale_factors['A'].push_back(sf_top);
-  // Top analysis
-  scale_factors['a'].push_back(sf_ele_veto);
-  scale_factors['a'].push_back(sf_muon_veto);
-  scale_factors['a'].push_back(sf_top);
-  // Top analysis
-  scale_factors['X'].push_back(sf_ele_veto);
-  scale_factors['X'].push_back(sf_muon_veto);
-  scale_factors['X'].push_back(sf_btag_loose);
-  scale_factors['X'].push_back(sf_fake_aTop);
-  // Top analysis
-  scale_factors['x'].push_back(sf_ele_veto);
-  scale_factors['x'].push_back(sf_muon_veto);
-  scale_factors['x'].push_back(sf_btag_loose);
-  scale_factors['x'].push_back(sf_fake_aTop);
-  // Top analysis
-  scale_factors['C'].push_back(sf_ele_veto);
-  scale_factors['C'].push_back(sf_muon_veto);
-  scale_factors['C'].push_back(sf_btag_loose);
-  scale_factors['C'].push_back(sf_fake_0b_mTop);
-  // Top analysis
-  scale_factors['V'].push_back(sf_ele_veto);
-  scale_factors['V'].push_back(sf_muon_veto);
-  scale_factors['V'].push_back(sf_top);
-  // Top analysis
-  scale_factors['F'].push_back(sf_ele_medium);
-  scale_factors['F'].push_back(sf_muon_medium);
-  scale_factors['F'].push_back(sf_fake_mTop);
-  // Top analysis
-  scale_factors['g'].push_back(sf_ele_veto);
-  scale_factors['g'].push_back(sf_muon_veto);
-  scale_factors['g'].push_back(sf_fake_mTop);
-
-  scale_factors['l'] = scale_factors['C'];
-
-/*
-  // N-1 weights
-  // Calculate weight for all search regions, but without a specific weight
-  if (!isData) for (const auto& region : analysis_cuts) {
-    size_t n=all_weights.size()+scale_factors[region.first].size();
-    for (size_t i=0; i<n; ++i) {
-      w_nm1[region.first][i] = 1;
-      for (size_t j=0; j<n; ++j) if (j!=i) {
-  if (j<all_weights.size()) w_nm1[region.first][i] *= all_weights[j];
-  else w_nm1[region.first][i] *= scale_factors[region.first][j-all_weights.size()];
-      }
-    }
-  }
-*/
 }
 
 //_______________________________________________________
@@ -527,19 +669,26 @@ Analysis::signal_selection(const DataStruct& data) {
 //_______________________________________________________
 //                 List of Histograms
 
-TH1D* h_njet_S;
-TH1D* h_njet_Q;
-TH1D* h_njet_T;
-TH1D* h_njet_W;
-TH1D* h_njet_S_MRR2;
-TH1D* h_njet_S_3Jet;
-TH1D* h_njet_Q_3Jet;
-TH1D* h_njet_W_3Jet;
-TH1D* h_njet_T_3Jet;
-TH1D* h_njetAK8_S;
-TH1D* h_njetAK8_Q;
-TH1D* h_njetAK8_W;
-TH1D* h_njetAK8_T;
+TH1D* h_dR_min;
+TH1D* h_rel_pT;
+TH2D* h_rel_pT_dR_min;
+TH1D* h_dR_min_tag;
+TH1D* h_rel_pT_tag;
+TH2D* h_rel_pT_dR_min_tag;
+TH1D* h_dR_min_untag;
+TH1D* h_rel_pT_untag;
+TH2D* h_rel_pT_dR_min_untag;
+
+TH1D* h_MR_S_1Lep;
+TH1D* h_R2_S_1Lep;
+TH2D* h_R2_MR_S_1Lep;
+TH1D* h_MR_T_1Lep;
+TH1D* h_R2_T_1Lep;
+TH2D* h_R2_MR_T_1Lep;
+TH1D* h_MR_W_1Lep;
+TH1D* h_R2_W_1Lep;
+TH2D* h_R2_MR_W_1Lep;
+
 
 TH1D* h_njet;
 TH1D* h_nb;
@@ -807,18 +956,6 @@ TH1D* h_tau21_nodPhi_Q;
 TH1D* h_MET_nodPhi_Q;
 TH1D* h_dPhiRazor_nodPhi_Q;
 
-TH1D* h_ht_AK4_notau21_Q;
-TH1D* h_ht_AK8_notau21_Q;
-TH1D* h_jet1_pt_notau21_Q;
-TH1D* h_jet2_pt_notau21_Q;
-TH1D* h_jet3_pt_notau21_Q;
-TH1D* h_MR_notau21_Q;
-TH1D* h_MTR_notau21_Q;
-TH1D* h_R_notau21_Q;
-TH1D* h_R2_notau21_Q;
-TH1D* h_tau21_notau21_Q;
-TH1D* h_MET_notau21_Q;
-
 TH1D* h_ht_AK4_nonb_Q;
 TH1D* h_ht_AK8_nonb_Q;
 TH1D* h_jet1_pt_nonb_Q;
@@ -855,18 +992,6 @@ TH1D* h_R2_nodPhi_Q_nj35;
 TH1D* h_tau21_nodPhi_Q_nj35;
 TH1D* h_MET_nodPhi_Q_nj35;
 TH1D* h_dPhiRazor_nodPhi_Q_nj35;
-
-TH1D* h_ht_AK4_notau21_Q_nj35;
-TH1D* h_ht_AK8_notau21_Q_nj35;
-TH1D* h_jet1_pt_notau21_Q_nj35;
-TH1D* h_jet2_pt_notau21_Q_nj35;
-TH1D* h_jet3_pt_notau21_Q_nj35;
-TH1D* h_MR_notau21_Q_nj35;
-TH1D* h_MTR_notau21_Q_nj35;
-TH1D* h_R_notau21_Q_nj35;
-TH1D* h_R2_notau21_Q_nj35;
-TH1D* h_tau21_notau21_Q_nj35;
-TH1D* h_MET_notau21_Q_nj35;
 
 TH1D* h_ht_AK4_nonb_Q_nj35;
 TH1D* h_ht_AK8_nonb_Q_nj35;
@@ -905,17 +1030,6 @@ TH1D* h_tau21_nodPhi_Q_nj6;
 TH1D* h_MET_nodPhi_Q_nj6;
 TH1D* h_dPhiRazor_nodPhi_Q_nj6;
 
-TH1D* h_ht_AK4_notau21_Q_nj6;
-TH1D* h_ht_AK8_notau21_Q_nj6;
-TH1D* h_jet1_pt_notau21_Q_nj6;
-TH1D* h_jet2_pt_notau21_Q_nj6;
-TH1D* h_jet3_pt_notau21_Q_nj6;
-TH1D* h_MR_notau21_Q_nj6;
-TH1D* h_MTR_notau21_Q_nj6;
-TH1D* h_R_notau21_Q_nj6;
-TH1D* h_R2_notau21_Q_nj6;
-TH1D* h_tau21_notau21_Q_nj6;
-TH1D* h_MET_notau21_Q_nj6;
 
 TH1D* h_ht_AK4_nonb_Q_nj6;
 TH1D* h_ht_AK8_nonb_Q_nj6;
@@ -1179,152 +1293,17 @@ TH1D* h_GluinoMass;
 TH1D* h_LSPMass;
 TH2D* h_GluinoLSPMass;
 
-TH1D* h_ht_AK4_topana_S;
-TH1D* h_ht_AK8_topana_S;
-TH1D* h_jet1_pt_topana_S;
-TH1D* h_jet2_pt_topana_S;
-TH1D* h_jet3_pt_topana_S;
-TH1D* h_MR_topana_S;
-TH1D* h_MTR_topana_S;
-TH1D* h_R_topana_S;
-TH1D* h_R2_topana_S;
-TH1D* h_tau21_topana_S;
-TH1D* h_MET_topana_S;
-TH1D* h_AK8_jet1_pt_topana_S;
-TH1D* h_AK8_jet1_eta_topana_S;
-TH1D* h_MET_phi_topana_S;
 
-TH1D* h_ht_AK4_topana_s;
-TH1D* h_ht_AK8_topana_s;
-TH1D* h_jet1_pt_topana_s;
-TH1D* h_jet2_pt_topana_s;
-TH1D* h_jet3_pt_topana_s;
-TH1D* h_MR_topana_s;
-TH1D* h_MTR_topana_s;
-TH1D* h_R_topana_s;
-TH1D* h_R2_topana_s;
-TH1D* h_tau21_topana_s;
-TH1D* h_MET_topana_s;
-TH1D* h_AK8_jet1_pt_topana_s;
-TH1D* h_AK8_jet1_eta_topana_s;
-TH1D* h_MET_phi_topana_s;
 
-TH1D* h_ht_AK4_topana_Q;
-TH1D* h_ht_AK8_topana_Q;
-TH1D* h_jet1_pt_topana_Q;
-TH1D* h_jet2_pt_topana_Q;
-TH1D* h_jet3_pt_topana_Q;
-TH1D* h_MR_topana_Q;
-TH1D* h_MTR_topana_Q;
-TH1D* h_R_topana_Q;
-TH1D* h_R2_topana_Q;
-TH1D* h_tau21_topana_Q;
-TH1D* h_MET_topana_Q;
-TH1D* h_AK8_jet1_pt_topana_Q;
-TH1D* h_AK8_jet1_eta_topana_Q;
-TH1D* h_MET_phi_topana_Q;
 
-TH1D* h_ht_AK4_topana_q;
-TH1D* h_ht_AK8_topana_q;
-TH1D* h_jet1_pt_topana_q;
-TH1D* h_jet2_pt_topana_q;
-TH1D* h_jet3_pt_topana_q;
-TH1D* h_MR_topana_q;
-TH1D* h_MTR_topana_q;
-TH1D* h_R_topana_q;
-TH1D* h_R2_topana_q;
-TH1D* h_tau21_topana_q;
-TH1D* h_MET_topana_q;
-TH1D* h_AK8_jet1_pt_topana_q;
-TH1D* h_AK8_jet1_eta_topana_q;
-TH1D* h_MET_phi_topana_q;
 
-TH1D* h_ht_AK4_topana_T;
-TH1D* h_ht_AK8_topana_T;
-TH1D* h_jet1_pt_topana_T;
-TH1D* h_jet2_pt_topana_T;
-TH1D* h_jet3_pt_topana_T;
-TH1D* h_MR_topana_T;
-TH1D* h_MTR_topana_T;
-TH1D* h_R_topana_T;
-TH1D* h_R2_topana_T;
-TH1D* h_tau21_topana_T;
-TH1D* h_MET_topana_T;
-TH1D* h_AK8_jet1_pt_topana_T;
-TH1D* h_AK8_jet1_eta_topana_T;
-TH1D* h_MET_phi_topana_T;
 
-TH1D* h_ht_AK4_topana_W;
-TH1D* h_ht_AK8_topana_W;
-TH1D* h_jet1_pt_topana_W;
-TH1D* h_jet2_pt_topana_W;
-TH1D* h_jet3_pt_topana_W;
-TH1D* h_MR_topana_W;
-TH1D* h_MTR_topana_W;
-TH1D* h_R_topana_W;
-TH1D* h_R2_topana_W;
-TH1D* h_tau21_topana_W;
-TH1D* h_MET_topana_W;
-TH1D* h_AK8_jet1_pt_topana_W;
-TH1D* h_AK8_jet1_eta_topana_W;
-TH1D* h_MET_phi_topana_W;
 
-TH1D* h_ht_AK4_topana_Z;
-TH1D* h_ht_AK8_topana_Z;
-TH1D* h_jet1_pt_topana_Z;
-TH1D* h_jet2_pt_topana_Z;
-TH1D* h_jet3_pt_topana_Z;
-TH1D* h_MR_topana_Z;
-TH1D* h_MTR_topana_Z;
-TH1D* h_R_topana_Z;
-TH1D* h_R2_topana_Z;
-TH1D* h_tau21_topana_Z;
-TH1D* h_MET_topana_Z;
-TH1D* h_AK8_jet1_pt_topana_Z;
-TH1D* h_AK8_jet1_eta_topana_Z;
-TH1D* h_MET_phi_topana_Z;
 
-TH1D* h_ht_AK4_topana_L;
-TH1D* h_ht_AK8_topana_L;
-TH1D* h_jet1_pt_topana_L;
-TH1D* h_jet2_pt_topana_L;
-TH1D* h_jet3_pt_topana_L;
-TH1D* h_MR_topana_L;
-TH1D* h_MTR_topana_L;
-TH1D* h_R_topana_L;
-TH1D* h_R2_topana_L;
-TH1D* h_tau21_topana_L;
-TH1D* h_MET_topana_L;
-TH1D* h_AK8_jet1_pt_topana_L;
-TH1D* h_AK8_jet1_eta_topana_L;
-TH1D* h_MET_phi_topana_L;
 
-TH1D* h_ht_AK4_topana_G;
-TH1D* h_ht_AK8_topana_G;
-TH1D* h_jet1_pt_topana_G;
-TH1D* h_jet2_pt_topana_G;
-TH1D* h_jet3_pt_topana_G;
-TH1D* h_MR_topana_G;
-TH1D* h_MTR_topana_G;
-TH1D* h_R_topana_G;
-TH1D* h_R2_topana_G;
-TH1D* h_tau21_topana_G;
-TH1D* h_MET_topana_G;
-TH1D* h_AK8_jet1_pt_topana_G;
-TH1D* h_AK8_jet1_eta_topana_G;
-TH1D* h_MET_phi_topana_G;
 
 TH2D* h_R2_MR;
 
-TH2D* h_R2_MR_topana_S;
-TH2D* h_R2_MR_topana_s;
-TH2D* h_R2_MR_topana_Q;
-TH2D* h_R2_MR_topana_q;
-TH2D* h_R2_MR_topana_T;
-TH2D* h_R2_MR_topana_W;
-TH2D* h_R2_MR_topana_Z;
-TH2D* h_R2_MR_topana_L;
-TH2D* h_R2_MR_topana_G;
 
 TH2D* h_R2_MR_s;
 TH2D* h_MR_MET_s;
@@ -1337,7 +1316,22 @@ TH2D* h_AK8Jet1pT_MET_q;
 TH2D* h_R2_MR_S;
 TH2D* h_MR_MET_S;
 TH2D* h_R2_MET_S;
+TH2D* h_HT_MET_S;
+TH2D* h_MR_HT_S;
+TH2D* h_R2_HT_S;
 TH2D* h_AK8Jet1pT_MET_S;
+TH2D* h_MR_MET_S_nj35;
+TH2D* h_R2_MET_S_nj35;
+TH2D* h_HT_MET_S_nj35;
+TH2D* h_MR_HT_S_nj35;
+TH2D* h_R2_HT_S_nj35;
+TH2D* h_AK8Jet1pT_MET_S_nj35;
+TH2D* h_MR_MET_S_nj6;
+TH2D* h_R2_MET_S_nj6;
+TH2D* h_HT_MET_S_nj6;
+TH2D* h_MR_HT_S_nj6;
+TH2D* h_R2_HT_S_nj6;
+TH2D* h_AK8Jet1pT_MET_S_nj6;
 TH2D* h_R2_MR_Q;
 TH2D* h_MR_MET_Q;
 TH2D* h_R2_MET_Q;
@@ -1387,488 +1381,6 @@ TH1D *h_HT_pre_pass;
 
 TH2D *h_HT_j1pt_pre;
 TH2D *h_HT_j1pt_pre_pass;
-
-TH1D* h_MR_0mW_EB_DPP;
-TH1D* h_R2_0mW_EB_DPP;
-TH2D* h_R2_MR_0mW_EB_DPP;
-TH1D* h_MR_0mW_EB_FPP;
-TH1D* h_R2_0mW_EB_FPP;
-TH2D* h_R2_MR_0mW_EB_FPP;
-TH1D* h_MR_0mW_EB_FP;
-TH1D* h_R2_0mW_EB_FP;
-TH2D* h_R2_MR_0mW_EB_FP;
-TH1D* h_MR_1mW_EB_DPP;
-TH1D* h_R2_1mW_EB_DPP;
-TH2D* h_R2_MR_1mW_EB_DPP;
-TH1D* h_MR_1mW_EB_FPP;
-TH1D* h_R2_1mW_EB_FPP;
-TH2D* h_R2_MR_1mW_EB_FPP;
-TH1D* h_MR_1mW_EB_FP;
-TH1D* h_R2_1mW_EB_FP;
-TH2D* h_R2_MR_1mW_EB_FP;
-TH1D* h_MR_0mW_EE_DPP;
-TH1D* h_R2_0mW_EE_DPP;
-TH2D* h_R2_MR_0mW_EE_DPP;
-TH1D* h_MR_0mW_EE_FPP;
-TH1D* h_R2_0mW_EE_FPP;
-TH2D* h_R2_MR_0mW_EE_FPP;
-TH1D* h_MR_0mW_EE_FP;
-TH1D* h_R2_0mW_EE_FP;
-TH2D* h_R2_MR_0mW_EE_FP;
-TH1D* h_MR_1mW_EE_DPP;
-TH1D* h_R2_1mW_EE_DPP;
-TH2D* h_R2_MR_1mW_EE_DPP;
-TH1D* h_MR_1mW_EE_FPP;
-TH1D* h_R2_1mW_EE_FPP;
-TH2D* h_R2_MR_1mW_EE_FPP;
-TH1D* h_MR_1mW_EE_FP;
-TH1D* h_R2_1mW_EE_FP;
-TH2D* h_R2_MR_1mW_EE_FP;
-
-TH1D* h_MR_zinv_0mW_EB;
-TH1D* h_R2_zinv_0mW_EB;
-TH2D* h_R2_MR_zinv_0mW_EB;
-TH1D* h_MR_zinv_0mW_EE;
-TH1D* h_R2_zinv_0mW_EE;
-TH2D* h_R2_MR_zinv_0mW_EE;
-TH1D* h_MR_zinv_1mW_EB;
-TH1D* h_R2_zinv_1mW_EB;
-TH2D* h_R2_MR_zinv_1mW_EB;
-TH1D* h_MR_zinv_1mW_EE;
-TH1D* h_R2_zinv_1mW_EE;
-TH2D* h_R2_MR_zinv_1mW_EE;
-TH1D* h_nmW_zinv_EB;
-TH1D* h_MR_zinv_EB;
-TH1D* h_R2_zinv_EB;
-TH2D* h_R2_MR_zinv_EB;
-TH1D* h_nmW_zinv_EE;
-TH1D* h_MR_zinv_EE;
-TH1D* h_R2_zinv_EE;
-TH2D* h_R2_MR_zinv_EE;
-
-TH1D* h_ChargedIso_MR_900_R2_010_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_010_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_010_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_010_SR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_010_SR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_014_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_014_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_014_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_014_SR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_014_SR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_020_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_020_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_020_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_020_SR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_020_SR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_037_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_037_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_037_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_037_SR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_037_SR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_075_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_075_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_075_SR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_075_SR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_075_SR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_010_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_010_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_010_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_010_CR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_010_CR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_014_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_014_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_014_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_014_CR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_014_CR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_020_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_020_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_020_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_020_CR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_020_CR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_037_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_037_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_037_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_037_CR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_037_CR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_075_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_075_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_075_CR_mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_075_CR_mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_075_CR_mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_010_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_010_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_010_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_010_SR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_010_SR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_014_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_014_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_014_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_014_SR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_014_SR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_020_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_020_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_020_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_020_SR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_020_SR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_037_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_037_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_037_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_037_SR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_037_SR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_075_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_075_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_075_SR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_075_SR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_075_SR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_010_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_010_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_010_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_010_CR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_010_CR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_014_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_014_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_014_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_014_CR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_014_CR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_020_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_020_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_020_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_020_CR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_020_CR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_037_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_037_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_037_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_037_CR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_037_CR_mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_075_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_075_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_075_CR_mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_075_CR_mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_075_CR_mW_EE;
-
-TH1D* h_ChargedIso_MR_900_R2_010_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_010_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_010_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_010_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_010_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_014_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_014_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_014_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_014_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_014_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_020_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_020_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_020_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_020_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_020_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_037_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_037_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_037_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_037_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_037_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_075_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_075_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_075_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_075_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_075_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_010_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_010_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_010_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_010_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_010_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_014_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_014_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_014_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_014_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_014_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_020_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_020_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_020_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_020_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_020_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_037_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_037_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_037_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_037_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_037_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_075_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_075_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_075_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_075_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_075_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_010_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_010_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_010_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_010_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_010_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_014_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_014_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_014_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_014_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_014_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_020_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_020_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_020_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_020_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_020_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_037_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_037_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_037_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_037_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_037_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_075_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_075_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_075_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_075_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_075_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_010_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_010_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_010_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_010_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_010_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_014_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_014_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_014_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_014_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_014_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_020_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_020_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_020_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_020_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_020_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_037_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_037_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_037_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_037_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_037_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_075_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_R2_075_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_R2_075_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_R2_075_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_R2_075_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_R2_010_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_010_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_010_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_010_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_010_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_014_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_014_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_014_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_014_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_014_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_020_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_020_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_020_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_020_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_020_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_037_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_037_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_037_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_037_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_037_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_075_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_075_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_075_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_075_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_075_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_010_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_010_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_010_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_010_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_010_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_014_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_014_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_014_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_014_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_014_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_020_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_020_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_020_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_020_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_020_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_037_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_037_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_037_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_037_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_037_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_075_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_075_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_075_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_075_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_075_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_010_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_010_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_010_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_010_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_010_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_014_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_014_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_014_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_014_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_014_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_020_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_020_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_020_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_020_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_020_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_037_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_037_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_037_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_037_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_037_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_075_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_075_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_075_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_075_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_075_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_010_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_010_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_010_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_010_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_010_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_014_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_014_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_014_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_014_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_014_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_020_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_020_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_020_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_020_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_020_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_037_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_037_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_037_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_037_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_037_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_R2_075_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_R2_075_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_R2_075_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_R2_075_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_R2_075_CR_1mW_EE;
-
-TH1D* h_ChargedIso_MR_900_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_SR_0mW_EB;
-TH1D* h_ChargedIso_R2_010_SR_0mW_EB;
-TH1D* h_ChargedIso_R2_014_SR_0mW_EB;
-TH1D* h_ChargedIso_R2_020_SR_0mW_EB;
-TH1D* h_ChargedIso_R2_037_SR_0mW_EB;
-TH1D* h_ChargedIso_R2_075_SR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1100_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1400_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_1800_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_3000_CR_0mW_EB;
-TH1D* h_ChargedIso_R2_010_CR_0mW_EB;
-TH1D* h_ChargedIso_R2_014_CR_0mW_EB;
-TH1D* h_ChargedIso_R2_020_CR_0mW_EB;
-TH1D* h_ChargedIso_R2_037_CR_0mW_EB;
-TH1D* h_ChargedIso_R2_075_CR_0mW_EB;
-TH1D* h_ChargedIso_MR_900_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_SR_1mW_EB;
-TH1D* h_ChargedIso_R2_010_SR_1mW_EB;
-TH1D* h_ChargedIso_R2_014_SR_1mW_EB;
-TH1D* h_ChargedIso_R2_020_SR_1mW_EB;
-TH1D* h_ChargedIso_R2_037_SR_1mW_EB;
-TH1D* h_ChargedIso_R2_075_SR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1100_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1400_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_1800_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_3000_CR_1mW_EB;
-TH1D* h_ChargedIso_R2_010_CR_1mW_EB;
-TH1D* h_ChargedIso_R2_014_CR_1mW_EB;
-TH1D* h_ChargedIso_R2_020_CR_1mW_EB;
-TH1D* h_ChargedIso_R2_037_CR_1mW_EB;
-TH1D* h_ChargedIso_R2_075_CR_1mW_EB;
-TH1D* h_ChargedIso_MR_900_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_SR_0mW_EE;
-TH1D* h_ChargedIso_R2_010_SR_0mW_EE;
-TH1D* h_ChargedIso_R2_014_SR_0mW_EE;
-TH1D* h_ChargedIso_R2_020_SR_0mW_EE;
-TH1D* h_ChargedIso_R2_037_SR_0mW_EE;
-TH1D* h_ChargedIso_R2_075_SR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1100_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1400_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_1800_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_3000_CR_0mW_EE;
-TH1D* h_ChargedIso_R2_010_CR_0mW_EE;
-TH1D* h_ChargedIso_R2_014_CR_0mW_EE;
-TH1D* h_ChargedIso_R2_020_CR_0mW_EE;
-TH1D* h_ChargedIso_R2_037_CR_0mW_EE;
-TH1D* h_ChargedIso_R2_075_CR_0mW_EE;
-TH1D* h_ChargedIso_MR_900_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_SR_1mW_EE;
-TH1D* h_ChargedIso_R2_010_SR_1mW_EE;
-TH1D* h_ChargedIso_R2_014_SR_1mW_EE;
-TH1D* h_ChargedIso_R2_020_SR_1mW_EE;
-TH1D* h_ChargedIso_R2_037_SR_1mW_EE;
-TH1D* h_ChargedIso_R2_075_SR_1mW_EE;
-TH1D* h_ChargedIso_MR_900_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1100_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1400_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_1800_CR_1mW_EE;
-TH1D* h_ChargedIso_MR_3000_CR_1mW_EE;
-TH1D* h_ChargedIso_R2_010_CR_1mW_EE;
-TH1D* h_ChargedIso_R2_014_CR_1mW_EE;
-TH1D* h_ChargedIso_R2_020_CR_1mW_EE;
-TH1D* h_ChargedIso_R2_037_CR_1mW_EE;
-TH1D* h_ChargedIso_R2_075_CR_1mW_EE;
-
-TH1D* h_ChargedIso_MR_900_SR_1mTop_EB;
-TH1D* h_ChargedIso_MR_1100_SR_1mTop_EB;
-TH1D* h_ChargedIso_MR_1400_SR_1mTop_EB;
-TH1D* h_ChargedIso_MR_1800_SR_1mTop_EB;
-TH1D* h_ChargedIso_MR_3000_SR_1mTop_EB;
-TH1D* h_ChargedIso_R2_010_SR_1mTop_EB;
-TH1D* h_ChargedIso_R2_014_SR_1mTop_EB;
-TH1D* h_ChargedIso_R2_020_SR_1mTop_EB;
-TH1D* h_ChargedIso_R2_037_SR_1mTop_EB;
-TH1D* h_ChargedIso_R2_075_SR_1mTop_EB;
-TH1D* h_ChargedIso_MR_900_CR_1mTop_EB;
-TH1D* h_ChargedIso_MR_1100_CR_1mTop_EB;
-TH1D* h_ChargedIso_MR_1400_CR_1mTop_EB;
-TH1D* h_ChargedIso_MR_1800_CR_1mTop_EB;
-TH1D* h_ChargedIso_MR_3000_CR_1mTop_EB;
-TH1D* h_ChargedIso_R2_010_CR_1mTop_EB;
-TH1D* h_ChargedIso_R2_014_CR_1mTop_EB;
-TH1D* h_ChargedIso_R2_020_CR_1mTop_EB;
-TH1D* h_ChargedIso_R2_037_CR_1mTop_EB;
-TH1D* h_ChargedIso_R2_075_CR_1mTop_EB;
-TH1D* h_ChargedIso_MR_900_SR_1mTop_EE;
-TH1D* h_ChargedIso_MR_1100_SR_1mTop_EE;
-TH1D* h_ChargedIso_MR_1400_SR_1mTop_EE;
-TH1D* h_ChargedIso_MR_1800_SR_1mTop_EE;
-TH1D* h_ChargedIso_MR_3000_SR_1mTop_EE;
-TH1D* h_ChargedIso_R2_010_SR_1mTop_EE;
-TH1D* h_ChargedIso_R2_014_SR_1mTop_EE;
-TH1D* h_ChargedIso_R2_020_SR_1mTop_EE;
-TH1D* h_ChargedIso_R2_037_SR_1mTop_EE;
-TH1D* h_ChargedIso_R2_075_SR_1mTop_EE;
-TH1D* h_ChargedIso_MR_900_CR_1mTop_EE;
-TH1D* h_ChargedIso_MR_1100_CR_1mTop_EE;
-TH1D* h_ChargedIso_MR_1400_CR_1mTop_EE;
-TH1D* h_ChargedIso_MR_1800_CR_1mTop_EE;
-TH1D* h_ChargedIso_MR_3000_CR_1mTop_EE;
-TH1D* h_ChargedIso_R2_010_CR_1mTop_EE;
-TH1D* h_ChargedIso_R2_014_CR_1mTop_EE;
-TH1D* h_ChargedIso_R2_020_CR_1mTop_EE;
-TH1D* h_ChargedIso_R2_037_CR_1mTop_EE;
-TH1D* h_ChargedIso_R2_075_CR_1mTop_EE;
 
 TH1D* h_AK8Jet1Pt_W_fakerate;
 TH1D* h_AK8Jet1Pt_no_W_fakerate;
@@ -1959,15 +1471,6 @@ TH2D* h_pt_Genb_Taggedb;
 TH2D* h_eta_Genb_Taggedb;
 TH2D* h_dR_GenTagb_GenTagW;
 
-std::vector<TH2D*> vh_R2_MR_topana_s;
-std::vector<TH2D*> vh_R2_MR_topana_q;
-std::vector<TH2D*> vh_R2_MR_topana_S;
-std::vector<TH2D*> vh_R2_MR_topana_Q;
-std::vector<TH2D*> vh_R2_MR_topana_T;
-std::vector<TH2D*> vh_R2_MR_topana_W;
-std::vector<TH2D*> vh_R2_MR_topana_Z;
-std::vector<TH2D*> vh_R2_MR_topana_L;
-std::vector<TH2D*> vh_R2_MR_topana_G;
 
 std::vector<TH2D*> vh_R2_MR_s_nj35;
 std::vector<TH2D*> vh_R2_MR_s_nj6;
@@ -2056,20 +1559,57 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   Double_t bn_eta_tmp[] = {0.,1.5,2.5};
   Double_t* bn_eta = 0;
   bn_eta = utils::getVariableBinEdges(nbn_eta+1,bn_eta_tmp);
+/*
+  std::vector<double> MR  = {0, 600, 800, 1000, 1200, 1600, 2000, 4000, 10000};
+  std::vector<double> R2  = {0, 0.04, 0.08, 0.12, 0.16, 0.24, 0.4, 2.0, 5.0};
+  // Unrolled bin labels
+  std::map<int, std::string> Razor_labels; int bin = 1; size_t n, m;
+  for (size_t i=2, n=MR.size(); i<n-2; ++i) for (size_t j=2, m=R2.size(); j<m-2; ++j) {
+    std::stringstream ss;
+    ss.precision(2);
+    if (bin<=18) {
+      ss<<fixed<<"["<<R2[j]<<", "<<R2[j+1]<<"]";
+      Razor_labels[bin] = ss.str();                                                                                                                                           
+    } else if (bin==19) {
+      ss<<fixed<<"["<<R2[j]<<", "<<R2[j+2]<<"]";
+      Razor_labels[bin] = ss.str();
+    } else if (bin>=21&&bin<=22) {
+      ss<<fixed<<"["<<R2[j]<<", "<<R2[j+1]<<"]";
+      Razor_labels[bin-1] = ss.str();
+    } else if (bin==23) {
+      ss<<fixed<<"["<<R2[j]<<", "<<R2[j+3]<<"]";
+      Razor_labels[bin-1] = ss.str();
+    }    
+    bin++;
+  }
 
-  h_njet_S = new TH1D("njet_S",         ";N_{jet}",                20, 0,  20);
-  h_njet_Q = new TH1D("njet_Q",         ";N_{jet}",                20, 0,  20);
-  h_njet_T = new TH1D("njet_T",         ";N_{jet}",                20, 0,  20);
-  h_njet_W = new TH1D("njet_W",         ";N_{jet}",                20, 0,  20);
-  h_njet_S_MRR2 = new TH1D("njet_S_MRR2",         ";N_{jet}",                20, 0,  20);
-  h_njet_S_3Jet = new TH1D("njet_S_3Jet",         ";N_{jet}",                20, 0,  20);
-  h_njet_Q_3Jet = new TH1D("njet_Q_3Jet",         ";N_{jet}",                20, 0,  20);
-  h_njet_W_3Jet = new TH1D("njet_W_3Jet",         ";N_{jet}",                20, 0,  20);
-  h_njet_T_3Jet = new TH1D("njet_T_3Jet",         ";N_{jet}",                20, 0,  20);
-  h_njetAK8_S = new TH1D("njetAK8_S",         ";N_{jet}",                20, 0,  20);
-  h_njetAK8_Q = new TH1D("njetAK8_Q",         ";N_{jet}",                20, 0,  20);
-  h_njetAK8_W = new TH1D("njetAK8_W",         ";N_{jet}",                20, 0,  20);
-  h_njetAK8_T = new TH1D("njetAK8_T",         ";N_{jet}",                20, 0,  20);
+  size_t bin = -1;
+  for (size_t i=2, n=MR.size(); i<n-2; ++i) if (d.evt.MR>=MR[i]&&d.evt.MR<MR[i+1])
+    for (size_t j=2, m=R2.size(); j<m-2; ++j) if (d.evt.R2>=R2[j]&&d.evt.R2<R2[j+1])
+      bin = (i-2)*(m-4)+j-2;
+      if (bin>=19&&bin<=22) bin--;
+      if (bin>=23&&bin<=24) bin=21;
+*/
+
+  h_dR_min = new TH1D("dR_min",	";dR_{min}(l, jet)", 40, 0, 2);
+  h_rel_pT = new TH1D("rel_pT", ";p_{T, rel}(l, jet)", 40, 0, 100);
+  h_rel_pT_dR_min = new TH2D("rel_pT_dR_min", ";dR_{min}(l, jet);p_{T, rel}(l, jet)", 40,0,2,40,0,100);
+  h_dR_min_tag = new TH1D("dR_min_tag",	";dR_{min}(l, jet)", 40, 0, 2);
+  h_rel_pT_tag = new TH1D("rel_pT_tag", ";p_{T, rel}(l, jet)", 40, 0, 100);
+  h_rel_pT_dR_min_tag = new TH2D("rel_pT_dR_min_tag", ";dR_{min}(l, jet);p_{T, rel}(l, jet)", 40,0,2,40,0,100);
+  h_dR_min_untag = new TH1D("dR_min_untag",	";dR_{min}(l, jet)", 40, 0, 2);
+  h_rel_pT_untag = new TH1D("rel_pT_untag", ";p_{T, rel}(l, jet)", 40, 0, 100);
+  h_rel_pT_dR_min_untag = new TH2D("rel_pT_dR_min_untag", ";dR_{min}(l, jet);p_{T, rel}(l, jet)", 40,0,2,40,0,100);
+
+  h_MR_S_1Lep = new TH1D("MR_S_1Lep",   ";MR_{AK4}",     nbn_MR,    bn_MR);
+  h_R2_S_1Lep = new TH1D("R2_S_1Lep",   ";R2_{AK4}",         nbn_R2,bn_R2);
+  h_R2_MR_S_1Lep = new TH2D("R2_MR_S_1Lep", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
+  h_MR_T_1Lep = new TH1D("MR_T_1Lep",   ";MR_{AK4}",     nbn_MR,    bn_MR);
+  h_R2_T_1Lep = new TH1D("R2_T_1Lep",   ";R2_{AK4}",         nbn_R2,bn_R2);
+  h_R2_MR_T_1Lep = new TH2D("R2_MR_T_1Lep", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
+  h_MR_W_1Lep = new TH1D("MR_W_1Lep",   ";MR_{AK4}",     nbn_MR,    bn_MR);
+  h_R2_W_1Lep = new TH1D("R2_W_1Lep",   ";R2_{AK4}",         nbn_R2,bn_R2);
+  h_R2_MR_W_1Lep = new TH2D("R2_MR_W_1Lep", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
 
   h_njet         = new TH1D("njet",         ";N_{jet}",                20, 0,  20);
   h_nw           = new TH1D("nw",           ";N_{W tag}",              20, 0,  20);
@@ -2357,17 +1897,6 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_MET_nodPhi_Q = new TH1D("MET_nodPhi_Q", ";MET", 400,0,2000);
   h_dPhiRazor_nodPhi_Q = new TH1D("dPhiRazor_nodPhi_Q", ";#Delta#phi_{megajets}", 64,0,3.2);
 
-  h_ht_AK4_notau21_Q = new TH1D("ht_AK4_notau21_Q",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_notau21_Q = new TH1D("ht_AK8_notau21_Q",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_notau21_Q = new TH1D("jet1_pt_notau21_Q",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_notau21_Q = new TH1D("jet2_pt_notau21_Q",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_notau21_Q = new TH1D("jet3_pt_notau21_Q",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_notau21_Q = new TH1D("MR_notau21_Q",   ";MR_{AK4}",         nbn_MR,bn_MR);
-  h_MTR_notau21_Q = new TH1D("MTR_notau21_Q",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_notau21_Q = new TH1D("R_notau21_Q",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_notau21_Q = new TH1D("R2_notau21_Q",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_notau21_Q = new TH1D("tau21_notau21_Q", ";tau21", 200,0,1);
-  h_MET_notau21_Q = new TH1D("MET_notau21_Q", ";MET", 400,0,2000);
 
   h_ht_AK4_nonb_Q = new TH1D("ht_AK4_nonb_Q",  ";H_{T}",                  nbn_HT, bn_HT);
   h_ht_AK8_nonb_Q = new TH1D("ht_AK8_nonb_Q",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
@@ -2406,17 +1935,6 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_MET_nodPhi_Q_nj35 = new TH1D("MET_nodPhi_Q_nj35", ";MET", 400,0,2000);
   h_dPhiRazor_nodPhi_Q_nj35 = new TH1D("dPhiRazor_nodPhi_Q_nj35", ";#Delta#phi_{megajets}", 64,0,3.2);
 
-  h_ht_AK4_notau21_Q_nj35 = new TH1D("ht_AK4_notau21_Q_nj35",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_notau21_Q_nj35 = new TH1D("ht_AK8_notau21_Q_nj35",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_notau21_Q_nj35 = new TH1D("jet1_pt_notau21_Q_nj35",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_notau21_Q_nj35 = new TH1D("jet2_pt_notau21_Q_nj35",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_notau21_Q_nj35 = new TH1D("jet3_pt_notau21_Q_nj35",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_notau21_Q_nj35 = new TH1D("MR_notau21_Q_nj35",   ";MR_{AK4}",         nbn_MR,bn_MR);
-  h_MTR_notau21_Q_nj35 = new TH1D("MTR_notau21_Q_nj35",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_notau21_Q_nj35 = new TH1D("R_notau21_Q_nj35",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_notau21_Q_nj35 = new TH1D("R2_notau21_Q_nj35",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_notau21_Q_nj35 = new TH1D("tau21_notau21_Q_nj35", ";tau21", 200,0,1);
-  h_MET_notau21_Q_nj35 = new TH1D("MET_notau21_Q_nj35", ";MET", 400,0,2000);
 
   h_ht_AK4_nonb_Q_nj35 = new TH1D("ht_AK4_nonb_Q_nj35",  ";H_{T}",                  nbn_HT, bn_HT);
   h_ht_AK8_nonb_Q_nj35 = new TH1D("ht_AK8_nonb_Q_nj35",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
@@ -2454,18 +1972,6 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_tau21_nodPhi_Q_nj6 = new TH1D("tau21_nodPhi_Q_nj6", ";tau21", 200,0,1);
   h_MET_nodPhi_Q_nj6 = new TH1D("MET_nodPhi_Q_nj6", ";MET", 400,0,2000);
   h_dPhiRazor_nodPhi_Q_nj6 = new TH1D("dPhiRazor_nodPhi_Q_nj6", ";#Delta#phi_{megajets}", 64,0,3.2);
-
-  h_ht_AK4_notau21_Q_nj6 = new TH1D("ht_AK4_notau21_Q_nj6",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_notau21_Q_nj6 = new TH1D("ht_AK8_notau21_Q_nj6",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_notau21_Q_nj6 = new TH1D("jet1_pt_notau21_Q_nj6",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_notau21_Q_nj6 = new TH1D("jet2_pt_notau21_Q_nj6",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_notau21_Q_nj6 = new TH1D("jet3_pt_notau21_Q_nj6",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_notau21_Q_nj6 = new TH1D("MR_notau21_Q_nj6",   ";MR_{AK4}",         nbn_MR,bn_MR);
-  h_MTR_notau21_Q_nj6 = new TH1D("MTR_notau21_Q_nj6",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_notau21_Q_nj6 = new TH1D("R_notau21_Q_nj6",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_notau21_Q_nj6 = new TH1D("R2_notau21_Q_nj6",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_notau21_Q_nj6 = new TH1D("tau21_notau21_Q_nj6", ";tau21", 200,0,1);
-  h_MET_notau21_Q_nj6 = new TH1D("MET_notau21_Q_nj6", ";MET", 400,0,2000);
 
   h_ht_AK4_nonb_Q_nj6 = new TH1D("ht_AK4_nonb_Q_nj6",  ";H_{T}",                  nbn_HT, bn_HT);
   h_ht_AK8_nonb_Q_nj6 = new TH1D("ht_AK8_nonb_Q_nj6",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
@@ -2742,7 +2248,22 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_R2_MR_S = new TH2D("R2_MR_S", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
   h_R2_MET_S = new TH2D("R2_MET_S", ";MET_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
   h_MR_MET_S = new TH2D("MR_MET_S", ";MET_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
+  h_HT_MET_S = new TH2D("HT_MET_S", ";MET_{AK4};HT_{AK4}",40,0,2000,40,0,2000);
+  h_R2_HT_S = new TH2D("R2_HT_S", ";HT_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
+  h_MR_HT_S = new TH2D("MR_HT_S", ";HT_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
   h_AK8Jet1pT_MET_S = new TH2D("AK8Jet1pT_MET_S", ";MET_{AK4};p_{T,AK8Jet1}",40,0,2000,40,0,2000);
+  h_R2_MET_S_nj35 = new TH2D("R2_MET_S_nj35", ";MET_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
+  h_MR_MET_S_nj35 = new TH2D("MR_MET_S_nj35", ";MET_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
+  h_HT_MET_S_nj35 = new TH2D("HT_MET_S_nj35", ";MET_{AK4};HT_{AK4}",40,0,2000,40,0,2000);
+  h_R2_HT_S_nj35 = new TH2D("R2_HT_S_nj35", ";HT_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
+  h_MR_HT_S_nj35 = new TH2D("MR_HT_S_nj35", ";HT_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
+  h_AK8Jet1pT_MET_S_nj35 = new TH2D("AK8Jet1pT_MET_S_nj35", ";MET_{AK4};p_{T,AK8Jet1}",40,0,2000,40,0,2000);
+  h_R2_MET_S_nj6 = new TH2D("R2_MET_S_nj6", ";MET_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
+  h_MR_MET_S_nj6 = new TH2D("MR_MET_S_nj6", ";MET_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
+  h_HT_MET_S_nj6 = new TH2D("HT_MET_S_nj6", ";MET_{AK4};HT_{AK4}",40,0,2000,40,0,2000);
+  h_R2_HT_S_nj6 = new TH2D("R2_HT_S_nj6", ";HT_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
+  h_MR_HT_S_nj6 = new TH2D("MR_HT_S_nj6", ";HT_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
+  h_AK8Jet1pT_MET_S_nj6 = new TH2D("AK8Jet1pT_MET_S_nj6", ";MET_{AK4};p_{T,AK8Jet1}",40,0,2000,40,0,2000);
   h_R2_MR_Q = new TH2D("R2_MR_Q", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
   h_R2_MET_Q = new TH2D("R2_MET_Q", ";MET_{AK4};R2_{AK4}",40,0,2000,nbn_R2,bn_R2);
   h_MR_MET_Q = new TH2D("MR_MET_Q", ";MET_{AK4};MR_{AK4}",40,0,2000,nbn_MR,bn_MR);
@@ -2786,664 +2307,10 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
   h_R2_MR_G_nj35 = new TH2D("R2_MR_G_nj35", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
   h_R2_MR_G_nj6 = new TH2D("R2_MR_G_nj6", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
   
-  h_ht_AK4_topana_S = new TH1D("ht_AK4_topana_S",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_S = new TH1D("ht_AK8_topana_S",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_S = new TH1D("jet1_pt_topana_S",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_S = new TH1D("jet2_pt_topana_S",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_S = new TH1D("jet3_pt_topana_S",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_S = new TH1D("MR_topana_S",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_S = new TH1D("MTR_topana_S",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_S = new TH1D("R_topana_S",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_S = new TH1D("R2_topana_S",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_S = new TH1D("tau21_topana_S", ";tau21", 200,0,1);
-  h_MET_topana_S = new TH1D("MET_topana_S", ";MET", 400,0,2000);
-  h_R2_MR_topana_S = new TH2D("R2_MR_topana_S", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_S = new TH1D("AK8_jet1_pt_topana_S",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_S = new TH1D("AK8_jet1_eta_topana_S",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_S = new TH1D("MET_phi_topana_S", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_s = new TH1D("ht_AK4_topana_s",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_s = new TH1D("ht_AK8_topana_s",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_s = new TH1D("jet1_pt_topana_s",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_s = new TH1D("jet2_pt_topana_s",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_s = new TH1D("jet3_pt_topana_s",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_s = new TH1D("MR_topana_s",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_s = new TH1D("MTR_topana_s",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_s = new TH1D("R_topana_s",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_s = new TH1D("R2_topana_s",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_s = new TH1D("tau21_topana_s", ";tau21", 200,0,1);
-  h_MET_topana_s = new TH1D("MET_topana_s", ";MET", 400,0,2000);
-  h_R2_MR_topana_s = new TH2D("R2_MR_topana_s", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_s = new TH1D("AK8_jet1_pt_topana_s",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_s = new TH1D("AK8_jet1_eta_topana_s",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_s = new TH1D("MET_phi_topana_s", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_Q = new TH1D("ht_AK4_topana_Q",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_Q = new TH1D("ht_AK8_topana_Q",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_Q = new TH1D("jet1_pt_topana_Q",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_Q = new TH1D("jet2_pt_topana_Q",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_Q = new TH1D("jet3_pt_topana_Q",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_Q = new TH1D("MR_topana_Q",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_Q = new TH1D("MTR_topana_Q",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_Q = new TH1D("R_topana_Q",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_Q = new TH1D("R2_topana_Q",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_Q = new TH1D("tau21_topana_Q", ";tau21", 200,0,1);
-  h_MET_topana_Q = new TH1D("MET_topana_Q", ";MET", 400,0,2000);
-  h_R2_MR_topana_Q = new TH2D("R2_MR_topana_Q", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_Q = new TH1D("AK8_jet1_pt_topana_Q",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_Q = new TH1D("AK8_jet1_eta_topana_Q",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_Q = new TH1D("MET_phi_topana_Q", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_q = new TH1D("ht_AK4_topana_q",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_q = new TH1D("ht_AK8_topana_q",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_q = new TH1D("jet1_pt_topana_q",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_q = new TH1D("jet2_pt_topana_q",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_q = new TH1D("jet3_pt_topana_q",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_q = new TH1D("MR_topana_q",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_q = new TH1D("MTR_topana_q",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_q = new TH1D("R_topana_q",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_q = new TH1D("R2_topana_q",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_q = new TH1D("tau21_topana_q", ";tau21", 200,0,1);
-  h_MET_topana_q = new TH1D("MET_topana_q", ";MET", 400,0,2000);
-  h_R2_MR_topana_q = new TH2D("R2_MR_topana_q", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_q = new TH1D("AK8_jet1_pt_topana_q",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_q = new TH1D("AK8_jet1_eta_topana_q",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_q = new TH1D("MET_phi_topana_q", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_T = new TH1D("ht_AK4_topana_T",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_T = new TH1D("ht_AK8_topana_T",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_T = new TH1D("jet1_pt_topana_T",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_T = new TH1D("jet2_pt_topana_T",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_T = new TH1D("jet3_pt_topana_T",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_T = new TH1D("MR_topana_T",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_T = new TH1D("MTR_topana_T",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_T = new TH1D("R_topana_T",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_T = new TH1D("R2_topana_T",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_T = new TH1D("tau21_topana_T", ";tau21", 200,0,1);
-  h_MET_topana_T = new TH1D("MET_topana_T", ";MET", 400,0,2000);
-  h_R2_MR_topana_T = new TH2D("R2_MR_topana_T", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_T = new TH1D("AK8_jet1_pt_topana_T",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_T = new TH1D("AK8_jet1_eta_topana_T",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_T = new TH1D("MET_phi_topana_T", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_W = new TH1D("ht_AK4_topana_W",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_W = new TH1D("ht_AK8_topana_W",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_W = new TH1D("jet1_pt_topana_W",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_W = new TH1D("jet2_pt_topana_W",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_W = new TH1D("jet3_pt_topana_W",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_W = new TH1D("MR_topana_W",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_W = new TH1D("MTR_topana_W",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_W = new TH1D("R_topana_W",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_W = new TH1D("R2_topana_W",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_W = new TH1D("tau21_topana_W", ";tau21", 200,0,1);
-  h_MET_topana_W = new TH1D("MET_topana_W", ";MET", 400,0,2000);
-  h_R2_MR_topana_W = new TH2D("R2_MR_topana_W", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_W = new TH1D("AK8_jet1_pt_topana_W",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_W = new TH1D("AK8_jet1_eta_topana_W",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_W = new TH1D("MET_phi_topana_W", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_Z = new TH1D("ht_AK4_topana_Z",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_Z = new TH1D("ht_AK8_topana_Z",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_Z = new TH1D("jet1_pt_topana_Z",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_Z = new TH1D("jet2_pt_topana_Z",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_Z = new TH1D("jet3_pt_topana_Z",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_Z = new TH1D("MR_topana_Z",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_Z = new TH1D("MTR_topana_Z",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_Z = new TH1D("R_topana_Z",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_Z = new TH1D("R2_topana_Z",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_Z = new TH1D("tau21_topana_Z", ";tau21", 200,0,1);
-  h_MET_topana_Z = new TH1D("MET_topana_Z", ";MET", 400,0,2000);
-  h_R2_MR_topana_Z = new TH2D("R2_MR_topana_Z", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_Z = new TH1D("AK8_jet1_pt_topana_Z",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_Z = new TH1D("AK8_jet1_eta_topana_Z",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_Z = new TH1D("MET_phi_topana_Z", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_L = new TH1D("ht_AK4_topana_L",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_L = new TH1D("ht_AK8_topana_L",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_L = new TH1D("jet1_pt_topana_L",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_L = new TH1D("jet2_pt_topana_L",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_L = new TH1D("jet3_pt_topana_L",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_L = new TH1D("MR_topana_L",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_L = new TH1D("MTR_topana_L",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_L = new TH1D("R_topana_L",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_L = new TH1D("R2_topana_L",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_L = new TH1D("tau21_topana_L", ";tau21", 200,0,1);
-  h_MET_topana_L = new TH1D("MET_topana_L", ";MET", 400,0,2000);
-  h_R2_MR_topana_L = new TH2D("R2_MR_topana_L", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_L = new TH1D("AK8_jet1_pt_topana_L",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_L = new TH1D("AK8_jet1_eta_topana_L",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_L = new TH1D("MET_phi_topana_L", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_ht_AK4_topana_G = new TH1D("ht_AK4_topana_G",  ";H_{T}",                  nbn_HT, bn_HT);
-  h_ht_AK8_topana_G = new TH1D("ht_AK8_topana_G",  ";H_{T}^{AK8}",            nbn_HT, bn_HT);
-  h_jet1_pt_topana_G = new TH1D("jet1_pt_topana_G",      ";p_{T, jet1}",            200, 0,2000);
-  h_jet2_pt_topana_G = new TH1D("jet2_pt_topana_G",      ";p_{T, jet2}",            200, 0,2000);
-  h_jet3_pt_topana_G = new TH1D("jet3_pt_topana_G",      ";p_{T, jet3}",            200, 0,2000);
-  h_MR_topana_G = new TH1D("MR_topana_G",   ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_MTR_topana_G = new TH1D("MTR_topana_G",  ";MTR_{AK4}",        200, 0,2000);
-  h_R_topana_G = new TH1D("R_topana_G",    ";R_{AK4}",          nbn_R,bn_R);
-  h_R2_topana_G = new TH1D("R2_topana_G",   ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_tau21_topana_G = new TH1D("tau21_topana_G", ";tau21", 200,0,1);
-  h_MET_topana_G = new TH1D("MET_topana_G", ";MET", 400,0,2000);
-  h_R2_MR_topana_G = new TH2D("R2_MR_topana_G", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_AK8_jet1_pt_topana_G = new TH1D("AK8_jet1_pt_topana_G",      ";p_{T, jet1}",            200, 0,2000);
-  h_AK8_jet1_eta_topana_G = new TH1D("AK8_jet1_eta_topana_G",      ";#eta_{jet1}",            640, -3.2,3.2);
-  h_MET_phi_topana_G = new TH1D("MET_phi_topana_G", ";#phi_{MET}", 640, -3.2,3.2);
-
-  h_MR_0mW_EB_DPP = new TH1D("MR_0mW_EB_DPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_0mW_EB_DPP = new TH1D("R2_0mW_EB_DPP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_0mW_EB_DPP = new TH2D("R2_MR_0mW_EB_DPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_0mW_EB_FPP = new TH1D("MR_0mW_EB_FPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_0mW_EB_FPP = new TH1D("R2_0mW_EB_FPP", ";R2_{AK4}",         nbn_R2,bn_R2);   
-  h_R2_MR_0mW_EB_FPP = new TH2D("R2_MR_0mW_EB_FPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_0mW_EB_FP = new TH1D("MR_0mW_EB_FP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_0mW_EB_FP = new TH1D("R2_0mW_EB_FP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_0mW_EB_FP  = new TH2D("R2_MR_0mW_EB_FP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_1mW_EB_DPP = new TH1D("MR_1mW_EB_DPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_1mW_EB_DPP = new TH1D("R2_1mW_EB_DPP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_1mW_EB_DPP = new TH2D("R2_MR_1mW_EB_DPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_1mW_EB_FPP = new TH1D("MR_1mW_EB_FPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_1mW_EB_FPP = new TH1D("R2_1mW_EB_FPP", ";R2_{AK4}",         nbn_R2,bn_R2);   
-  h_R2_MR_1mW_EB_FPP = new TH2D("R2_MR_1mW_EB_FPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_1mW_EB_FP = new TH1D("MR_1mW_EB_FP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_1mW_EB_FP = new TH1D("R2_1mW_EB_FP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_1mW_EB_FP  = new TH2D("R2_MR_1mW_EB_FP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_0mW_EE_DPP = new TH1D("MR_0mW_EE_DPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_0mW_EE_DPP = new TH1D("R2_0mW_EE_DPP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_0mW_EE_DPP = new TH2D("R2_MR_0mW_EE_DPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_0mW_EE_FPP = new TH1D("MR_0mW_EE_FPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_0mW_EE_FPP = new TH1D("R2_0mW_EE_FPP", ";R2_{AK4}",         nbn_R2,bn_R2);   
-  h_R2_MR_0mW_EE_FPP = new TH2D("R2_MR_0mW_EE_FPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_0mW_EE_FP = new TH1D("MR_0mW_EE_FP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_0mW_EE_FP = new TH1D("R2_0mW_EE_FP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_0mW_EE_FP  = new TH2D("R2_MR_0mW_EE_FP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_1mW_EE_DPP = new TH1D("MR_1mW_EE_DPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_1mW_EE_DPP = new TH1D("R2_1mW_EE_DPP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_1mW_EE_DPP = new TH2D("R2_MR_1mW_EE_DPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_1mW_EE_FPP = new TH1D("MR_1mW_EE_FPP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_1mW_EE_FPP = new TH1D("R2_1mW_EE_FPP", ";R2_{AK4}",         nbn_R2,bn_R2);   
-  h_R2_MR_1mW_EE_FPP = new TH2D("R2_MR_1mW_EE_FPP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_1mW_EE_FP = new TH1D("MR_1mW_EE_FP", ";MR_{AK4}",     nbn_MR,    bn_MR);
-  h_R2_1mW_EE_FP = new TH1D("R2_1mW_EE_FP", ";R2_{AK4}",         nbn_R2,bn_R2);
-  h_R2_MR_1mW_EE_FP  = new TH2D("R2_MR_1mW_EE_FP", ";MR_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-
-  h_MR_zinv_0mW_EB = new TH1D("MR_zinv_0mW_EB",";MR_{AK4}",nbn_MR,bn_MR);
-  h_R2_zinv_0mW_EB = new TH1D("R2_zinv_0mW_EB",";R2_{AK4}",nbn_R2,bn_R2);
-  h_R2_MR_zinv_0mW_EB  = new TH2D("R2_MR_zinv_0mW_EB", ";MR_zinv_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_zinv_0mW_EE = new TH1D("MR_zinv_0mW_EE",";MR_{AK4}",nbn_MR,bn_MR);
-  h_R2_zinv_0mW_EE = new TH1D("R2_zinv_0mW_EE",";R2_{AK4}",nbn_R2,bn_R2);
-  h_R2_MR_zinv_0mW_EE  = new TH2D("R2_MR_zinv_0mW_EE", ";MR_zinv_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_zinv_1mW_EB = new TH1D("MR_zinv_1mW_EB",";MR_{AK4}",nbn_MR,bn_MR);
-  h_R2_zinv_1mW_EB = new TH1D("R2_zinv_1mW_EB",";R2_{AK4}",nbn_R2,bn_R2);
-  h_R2_MR_zinv_1mW_EB  = new TH2D("R2_MR_zinv_1mW_EB", ";MR_zinv_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_MR_zinv_1mW_EE = new TH1D("MR_zinv_1mW_EE",";MR_{AK4}",nbn_MR,bn_MR);
-  h_R2_zinv_1mW_EE = new TH1D("R2_zinv_1mW_EE",";R2_{AK4}",nbn_R2,bn_R2);
-  h_R2_MR_zinv_1mW_EE  = new TH2D("R2_MR_zinv_1mW_EE", ";MR_zinv_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_nmW_zinv_EB = new TH1D("nmW_zinv_EB",";nmW",10,0,10);
-  h_MR_zinv_EB = new TH1D("MR_zinv_EB",";MR_{AK4}",nbn_MR,bn_MR);
-  h_R2_zinv_EB = new TH1D("R2_zinv_EB",";R2_{AK4}",nbn_R2,bn_R2);
-  h_R2_MR_zinv_EB  = new TH2D("R2_MR_zinv_EB", ";MR_zinv_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-  h_nmW_zinv_EE = new TH1D("nmW_zinv_EE",";nmW",10,0,10);
-  h_MR_zinv_EE = new TH1D("MR_zinv_EE",";MR_{AK4}",nbn_MR,bn_MR);
-  h_R2_zinv_EE = new TH1D("R2_zinv_EE",";R2_{AK4}",nbn_R2,bn_R2);
-  h_R2_MR_zinv_EE  = new TH2D("R2_MR_zinv_EE", ";MR_zinv_{AK4};R2_{AK4}",nbn_MR,bn_MR,nbn_R2,bn_R2);
-
-  h_ChargedIso_MR_900_R2_010_SR_mW_EB = new TH1D("ChargedIso_MR_900_R2_010_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_SR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_010_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_SR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_010_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_SR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_010_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_SR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_010_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_SR_mW_EB = new TH1D("ChargedIso_MR_900_R2_014_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_SR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_014_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_SR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_014_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_SR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_014_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_SR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_014_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_SR_mW_EB = new TH1D("ChargedIso_MR_900_R2_020_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_SR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_020_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_SR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_020_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_SR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_020_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_SR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_020_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_SR_mW_EB = new TH1D("ChargedIso_MR_900_R2_037_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_SR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_037_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_SR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_037_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_SR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_037_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_SR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_037_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_SR_mW_EB = new TH1D("ChargedIso_MR_900_R2_075_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_SR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_075_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_SR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_075_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_SR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_075_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_SR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_075_SR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_CR_mW_EB = new TH1D("ChargedIso_MR_900_R2_010_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_CR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_010_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_CR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_010_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_CR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_010_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_CR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_010_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_CR_mW_EB = new TH1D("ChargedIso_MR_900_R2_014_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_CR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_014_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_CR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_014_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_CR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_014_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_CR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_014_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_CR_mW_EB = new TH1D("ChargedIso_MR_900_R2_020_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_CR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_020_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_CR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_020_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_CR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_020_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_CR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_020_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_CR_mW_EB = new TH1D("ChargedIso_MR_900_R2_037_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_CR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_037_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_CR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_037_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_CR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_037_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_CR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_037_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_CR_mW_EB = new TH1D("ChargedIso_MR_900_R2_075_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_CR_mW_EB = new TH1D("ChargedIso_MR_1100_R2_075_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_CR_mW_EB = new TH1D("ChargedIso_MR_1400_R2_075_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_CR_mW_EB = new TH1D("ChargedIso_MR_1800_R2_075_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_CR_mW_EB = new TH1D("ChargedIso_MR_3000_R2_075_CR_mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_SR_mW_EE = new TH1D("ChargedIso_MR_900_R2_010_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_SR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_010_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_SR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_010_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_SR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_010_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_SR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_010_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_SR_mW_EE = new TH1D("ChargedIso_MR_900_R2_014_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_SR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_014_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_SR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_014_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_SR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_014_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_SR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_014_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_SR_mW_EE = new TH1D("ChargedIso_MR_900_R2_020_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_SR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_020_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_SR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_020_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_SR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_020_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_SR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_020_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_SR_mW_EE = new TH1D("ChargedIso_MR_900_R2_037_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_SR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_037_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_SR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_037_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_SR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_037_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_SR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_037_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_SR_mW_EE = new TH1D("ChargedIso_MR_900_R2_075_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_SR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_075_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_SR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_075_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_SR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_075_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_SR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_075_SR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_CR_mW_EE = new TH1D("ChargedIso_MR_900_R2_010_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_CR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_010_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_CR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_010_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_CR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_010_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_CR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_010_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_CR_mW_EE = new TH1D("ChargedIso_MR_900_R2_014_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_CR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_014_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_CR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_014_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_CR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_014_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_CR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_014_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_CR_mW_EE = new TH1D("ChargedIso_MR_900_R2_020_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_CR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_020_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_CR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_020_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_CR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_020_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_CR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_020_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_CR_mW_EE = new TH1D("ChargedIso_MR_900_R2_037_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_CR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_037_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_CR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_037_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_CR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_037_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_CR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_037_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_CR_mW_EE = new TH1D("ChargedIso_MR_900_R2_075_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_CR_mW_EE = new TH1D("ChargedIso_MR_1100_R2_075_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_CR_mW_EE = new TH1D("ChargedIso_MR_1400_R2_075_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_CR_mW_EE = new TH1D("ChargedIso_MR_1800_R2_075_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_CR_mW_EE = new TH1D("ChargedIso_MR_3000_R2_075_CR_mW_EE", ";Charged Isolation", 100, 0, 10);
-
-  h_ChargedIso_MR_900_R2_010_SR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_010_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_SR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_010_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_SR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_010_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_SR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_010_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_SR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_010_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_SR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_014_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_SR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_014_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_SR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_014_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_SR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_014_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_SR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_014_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_SR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_020_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_SR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_020_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_SR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_020_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_SR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_020_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_SR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_020_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_SR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_037_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_SR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_037_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_SR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_037_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_SR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_037_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_SR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_037_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_SR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_075_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_SR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_075_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_SR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_075_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_SR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_075_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_SR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_075_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_CR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_010_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_CR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_010_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_CR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_010_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_CR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_010_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_CR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_010_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_CR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_014_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_CR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_014_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_CR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_014_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_CR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_014_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_CR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_014_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_CR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_020_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_CR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_020_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_CR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_020_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_CR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_020_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_CR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_020_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_CR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_037_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_CR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_037_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_CR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_037_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_CR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_037_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_CR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_037_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_CR_0mW_EB = new TH1D("ChargedIso_MR_900_R2_075_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_CR_0mW_EB = new TH1D("ChargedIso_MR_1100_R2_075_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_CR_0mW_EB = new TH1D("ChargedIso_MR_1400_R2_075_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_CR_0mW_EB = new TH1D("ChargedIso_MR_1800_R2_075_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_CR_0mW_EB = new TH1D("ChargedIso_MR_3000_R2_075_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_SR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_010_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_SR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_010_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_SR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_010_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_SR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_010_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_SR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_010_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_SR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_014_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_SR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_014_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_SR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_014_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_SR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_014_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_SR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_014_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_SR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_020_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_SR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_020_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_SR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_020_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_SR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_020_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_SR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_020_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_SR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_037_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_SR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_037_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_SR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_037_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_SR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_037_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_SR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_037_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_SR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_075_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_SR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_075_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_SR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_075_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_SR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_075_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_SR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_075_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_CR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_010_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_CR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_010_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_CR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_010_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_CR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_010_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_CR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_010_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_CR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_014_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_CR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_014_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_CR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_014_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_CR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_014_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_CR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_014_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_CR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_020_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_CR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_020_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_CR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_020_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_CR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_020_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_CR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_020_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_CR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_037_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_CR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_037_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_CR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_037_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_CR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_037_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_CR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_037_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_CR_1mW_EB = new TH1D("ChargedIso_MR_900_R2_075_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_CR_1mW_EB = new TH1D("ChargedIso_MR_1100_R2_075_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_CR_1mW_EB = new TH1D("ChargedIso_MR_1400_R2_075_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_CR_1mW_EB = new TH1D("ChargedIso_MR_1800_R2_075_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_CR_1mW_EB = new TH1D("ChargedIso_MR_3000_R2_075_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_SR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_010_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_SR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_010_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_SR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_010_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_SR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_010_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_SR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_010_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_SR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_014_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_SR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_014_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_SR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_014_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_SR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_014_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_SR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_014_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_SR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_020_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_SR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_020_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_SR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_020_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_SR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_020_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_SR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_020_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_SR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_037_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_SR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_037_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_SR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_037_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_SR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_037_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_SR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_037_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_SR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_075_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_SR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_075_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_SR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_075_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_SR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_075_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_SR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_075_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_CR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_010_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_CR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_010_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_CR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_010_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_CR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_010_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_CR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_010_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_CR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_014_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_CR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_014_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_CR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_014_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_CR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_014_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_CR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_014_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_CR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_020_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_CR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_020_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_CR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_020_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_CR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_020_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_CR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_020_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_CR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_037_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_CR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_037_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_CR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_037_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_CR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_037_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_CR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_037_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_CR_0mW_EE = new TH1D("ChargedIso_MR_900_R2_075_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_CR_0mW_EE = new TH1D("ChargedIso_MR_1100_R2_075_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_CR_0mW_EE = new TH1D("ChargedIso_MR_1400_R2_075_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_CR_0mW_EE = new TH1D("ChargedIso_MR_1800_R2_075_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_CR_0mW_EE = new TH1D("ChargedIso_MR_3000_R2_075_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_SR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_010_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_SR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_010_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_SR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_010_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_SR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_010_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_SR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_010_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_SR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_014_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_SR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_014_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_SR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_014_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_SR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_014_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_SR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_014_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_SR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_020_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_SR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_020_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_SR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_020_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_SR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_020_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_SR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_020_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_SR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_037_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_SR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_037_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_SR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_037_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_SR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_037_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_SR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_037_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_SR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_075_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_SR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_075_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_SR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_075_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_SR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_075_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_SR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_075_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_010_CR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_010_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_010_CR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_010_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_010_CR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_010_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_010_CR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_010_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_010_CR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_010_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_014_CR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_014_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_014_CR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_014_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_014_CR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_014_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_014_CR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_014_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_014_CR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_014_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_020_CR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_020_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_020_CR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_020_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_020_CR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_020_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_020_CR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_020_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_020_CR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_020_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_037_CR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_037_CR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_037_CR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_037_CR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_037_CR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_R2_075_CR_1mW_EE = new TH1D("ChargedIso_MR_900_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_R2_075_CR_1mW_EE = new TH1D("ChargedIso_MR_1100_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_R2_075_CR_1mW_EE = new TH1D("ChargedIso_MR_1400_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_R2_075_CR_1mW_EE = new TH1D("ChargedIso_MR_1800_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_R2_075_CR_1mW_EE = new TH1D("ChargedIso_MR_3000_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-
-  h_ChargedIso_MR_900_SR_0mW_EB = new TH1D("ChargedIso_MR_900_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_SR_0mW_EB = new TH1D("ChargedIso_MR_1100_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_SR_0mW_EB = new TH1D("ChargedIso_MR_1400_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_SR_0mW_EB = new TH1D("ChargedIso_MR_1800_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_SR_0mW_EB = new TH1D("ChargedIso_MR_3000_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_SR_0mW_EB = new TH1D("ChargedIso_R2_010_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_SR_0mW_EB = new TH1D("ChargedIso_R2_014_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_SR_0mW_EB = new TH1D("ChargedIso_R2_020_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_SR_0mW_EB = new TH1D("ChargedIso_R2_037_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_SR_0mW_EB = new TH1D("ChargedIso_R2_075_SR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_CR_0mW_EB = new TH1D("ChargedIso_MR_900_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_CR_0mW_EB = new TH1D("ChargedIso_MR_1100_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_CR_0mW_EB = new TH1D("ChargedIso_MR_1400_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_CR_0mW_EB = new TH1D("ChargedIso_MR_1800_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_CR_0mW_EB = new TH1D("ChargedIso_MR_3000_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_CR_0mW_EB = new TH1D("ChargedIso_R2_010_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_CR_0mW_EB = new TH1D("ChargedIso_R2_014_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_CR_0mW_EB = new TH1D("ChargedIso_R2_020_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_CR_0mW_EB = new TH1D("ChargedIso_R2_037_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_CR_0mW_EB = new TH1D("ChargedIso_R2_075_CR_0mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_SR_1mW_EB = new TH1D("ChargedIso_MR_900_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_SR_1mW_EB = new TH1D("ChargedIso_MR_1100_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_SR_1mW_EB = new TH1D("ChargedIso_MR_1400_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_SR_1mW_EB = new TH1D("ChargedIso_MR_1800_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_SR_1mW_EB = new TH1D("ChargedIso_MR_3000_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_SR_1mW_EB = new TH1D("ChargedIso_R2_010_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_SR_1mW_EB = new TH1D("ChargedIso_R2_014_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_SR_1mW_EB = new TH1D("ChargedIso_R2_020_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_SR_1mW_EB = new TH1D("ChargedIso_R2_037_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_SR_1mW_EB = new TH1D("ChargedIso_R2_075_SR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_CR_1mW_EB = new TH1D("ChargedIso_MR_900_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_CR_1mW_EB = new TH1D("ChargedIso_MR_1100_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_CR_1mW_EB = new TH1D("ChargedIso_MR_1400_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_CR_1mW_EB = new TH1D("ChargedIso_MR_1800_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_CR_1mW_EB = new TH1D("ChargedIso_MR_3000_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_CR_1mW_EB = new TH1D("ChargedIso_R2_010_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_CR_1mW_EB = new TH1D("ChargedIso_R2_014_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_CR_1mW_EB = new TH1D("ChargedIso_R2_020_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_CR_1mW_EB = new TH1D("ChargedIso_R2_037_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_CR_1mW_EB = new TH1D("ChargedIso_R2_075_CR_1mW_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_SR_0mW_EE = new TH1D("ChargedIso_MR_900_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_SR_0mW_EE = new TH1D("ChargedIso_MR_1100_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_SR_0mW_EE = new TH1D("ChargedIso_MR_1400_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_SR_0mW_EE = new TH1D("ChargedIso_MR_1800_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_SR_0mW_EE = new TH1D("ChargedIso_MR_3000_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_SR_0mW_EE = new TH1D("ChargedIso_R2_010_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_SR_0mW_EE = new TH1D("ChargedIso_R2_014_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_SR_0mW_EE = new TH1D("ChargedIso_R2_020_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_SR_0mW_EE = new TH1D("ChargedIso_R2_037_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_SR_0mW_EE = new TH1D("ChargedIso_R2_075_SR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_CR_0mW_EE = new TH1D("ChargedIso_MR_900_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_CR_0mW_EE = new TH1D("ChargedIso_MR_1100_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_CR_0mW_EE = new TH1D("ChargedIso_MR_1400_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_CR_0mW_EE = new TH1D("ChargedIso_MR_1800_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_CR_0mW_EE = new TH1D("ChargedIso_MR_3000_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_CR_0mW_EE = new TH1D("ChargedIso_R2_010_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_CR_0mW_EE = new TH1D("ChargedIso_R2_014_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_CR_0mW_EE = new TH1D("ChargedIso_R2_020_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_CR_0mW_EE = new TH1D("ChargedIso_R2_037_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_CR_0mW_EE = new TH1D("ChargedIso_R2_075_CR_0mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_SR_1mW_EE = new TH1D("ChargedIso_MR_900_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_SR_1mW_EE = new TH1D("ChargedIso_MR_1100_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_SR_1mW_EE = new TH1D("ChargedIso_MR_1400_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_SR_1mW_EE = new TH1D("ChargedIso_MR_1800_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_SR_1mW_EE = new TH1D("ChargedIso_MR_3000_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_SR_1mW_EE = new TH1D("ChargedIso_R2_010_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_SR_1mW_EE = new TH1D("ChargedIso_R2_014_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_SR_1mW_EE = new TH1D("ChargedIso_R2_020_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_SR_1mW_EE = new TH1D("ChargedIso_R2_037_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_SR_1mW_EE = new TH1D("ChargedIso_R2_075_SR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_CR_1mW_EE = new TH1D("ChargedIso_MR_900_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_CR_1mW_EE = new TH1D("ChargedIso_MR_1100_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_CR_1mW_EE = new TH1D("ChargedIso_MR_1400_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_CR_1mW_EE = new TH1D("ChargedIso_MR_1800_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_CR_1mW_EE = new TH1D("ChargedIso_MR_3000_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_CR_1mW_EE = new TH1D("ChargedIso_R2_010_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_CR_1mW_EE = new TH1D("ChargedIso_R2_014_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_CR_1mW_EE = new TH1D("ChargedIso_R2_020_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_CR_1mW_EE = new TH1D("ChargedIso_R2_037_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_CR_1mW_EE = new TH1D("ChargedIso_R2_075_CR_1mW_EE", ";Charged Isolation", 100, 0, 10);
-
-  h_ChargedIso_MR_900_SR_1mTop_EB = new TH1D("ChargedIso_MR_900_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_SR_1mTop_EB = new TH1D("ChargedIso_MR_1100_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_SR_1mTop_EB = new TH1D("ChargedIso_MR_1400_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_SR_1mTop_EB = new TH1D("ChargedIso_MR_1800_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_SR_1mTop_EB = new TH1D("ChargedIso_MR_3000_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_SR_1mTop_EB = new TH1D("ChargedIso_R2_010_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_SR_1mTop_EB = new TH1D("ChargedIso_R2_014_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_SR_1mTop_EB = new TH1D("ChargedIso_R2_020_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_SR_1mTop_EB = new TH1D("ChargedIso_R2_037_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_SR_1mTop_EB = new TH1D("ChargedIso_R2_075_SR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_CR_1mTop_EB = new TH1D("ChargedIso_MR_900_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_CR_1mTop_EB = new TH1D("ChargedIso_MR_1100_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_CR_1mTop_EB = new TH1D("ChargedIso_MR_1400_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_CR_1mTop_EB = new TH1D("ChargedIso_MR_1800_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_CR_1mTop_EB = new TH1D("ChargedIso_MR_3000_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_CR_1mTop_EB = new TH1D("ChargedIso_R2_010_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_CR_1mTop_EB = new TH1D("ChargedIso_R2_014_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_CR_1mTop_EB = new TH1D("ChargedIso_R2_020_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_CR_1mTop_EB = new TH1D("ChargedIso_R2_037_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_CR_1mTop_EB = new TH1D("ChargedIso_R2_075_CR_1mTop_EB", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_SR_1mTop_EE = new TH1D("ChargedIso_MR_900_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_SR_1mTop_EE = new TH1D("ChargedIso_MR_1100_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_SR_1mTop_EE = new TH1D("ChargedIso_MR_1400_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_SR_1mTop_EE = new TH1D("ChargedIso_MR_1800_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_SR_1mTop_EE = new TH1D("ChargedIso_MR_3000_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_SR_1mTop_EE = new TH1D("ChargedIso_R2_010_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_SR_1mTop_EE = new TH1D("ChargedIso_R2_014_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_SR_1mTop_EE = new TH1D("ChargedIso_R2_020_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_SR_1mTop_EE = new TH1D("ChargedIso_R2_037_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_SR_1mTop_EE = new TH1D("ChargedIso_R2_075_SR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_900_CR_1mTop_EE = new TH1D("ChargedIso_MR_900_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1100_CR_1mTop_EE = new TH1D("ChargedIso_MR_1100_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1400_CR_1mTop_EE = new TH1D("ChargedIso_MR_1400_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_1800_CR_1mTop_EE = new TH1D("ChargedIso_MR_1800_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_MR_3000_CR_1mTop_EE = new TH1D("ChargedIso_MR_3000_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_010_CR_1mTop_EE = new TH1D("ChargedIso_R2_010_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_014_CR_1mTop_EE = new TH1D("ChargedIso_R2_014_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_020_CR_1mTop_EE = new TH1D("ChargedIso_R2_020_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_037_CR_1mTop_EE = new TH1D("ChargedIso_R2_037_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-  h_ChargedIso_R2_075_CR_1mTop_EE = new TH1D("ChargedIso_R2_075_CR_1mTop_EE", ";Charged Isolation", 100, 0, 10);
-
   for (unsigned int i=0; i<=syst_nSyst; ++i) {
     std::stringstream histoname, title;
     title<<"Systematic variation #="<<i;
 
-    histoname.str("");
-    histoname<<"R2_MR_topana_S_syst"<<i;
-    vh_R2_MR_topana_S.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_s_syst"<<i;
-    vh_R2_MR_topana_s.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_Q_syst"<<i;
-    vh_R2_MR_topana_Q.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_q_syst"<<i;
-    vh_R2_MR_topana_q.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_T_syst"<<i;
-    vh_R2_MR_topana_T.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_W_syst"<<i;
-    vh_R2_MR_topana_W.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_Z_syst"<<i;
-    vh_R2_MR_topana_Z.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_L_syst"<<i;
-    vh_R2_MR_topana_L.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
-    histoname<<"R2_MR_topana_G_syst"<<i;
-    vh_R2_MR_topana_G.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
-    histoname.str("");
     histoname<<"R2_MR_S_nj35_syst"<<i;
     vh_R2_MR_S_nj35.push_back(new TH2D(histoname.str().c_str(), (title.str()+";MR_{AK4};R2_{AK4}").c_str(),nbn_MR,bn_MR,nbn_R2, bn_R2));
     histoname.str("");
@@ -3603,7 +2470,7 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
 void
 Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index, const double& weight)
 {
-    double w = weight; // No scale factor applied
+  double w = weight; // No scale factor applied
   if (syst_index == 0) {
     // syst_index should only be non-0 if settings.varySystematics is true
     // in case of studying systematics, one should fill a different histogram for each syst_index
@@ -3640,6 +2507,58 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
 
     if (apply_all_cuts('P')) h_R2_MR->Fill(data.evt.MR, data.evt.R2, weight);
 
+/*
+  float sinangle=0;
+	TLorentzVector LepTag;
+	TLorentzVector JetTag;
+    if(apply_all_cuts('p')){
+      if(nEleTest==1)LepTag.SetPtEtaPhiE(data.ele.Pt[iLepTest[0]], data.ele.Eta[iLepTest[0]], data.ele.Phi[iLepTest[0]], data.ele.E[iLepTest[0]]);
+      if(nMuTest==1) LepTag.SetPtEtaPhiE(data.mu.Pt[iLepTest[0]], data.mu.Eta[iLepTest[0]], data.mu.Phi[iLepTest[0]], data.mu.E[iLepTest[0]]);
+      JetTag.SetPtEtaPhiE(data.jetsAK4.Pt[iJetTest[std::distance(dR_test.begin(), std::min_element(dR_test.begin(),dR_test.end()))]], data.jetsAK4.Eta[iJetTest[std::distance(dR_test.begin(), std::min_element(dR_test.begin(),dR_test.end()))]], data.jetsAK4.Phi[iJetTest[std::distance(dR_test.begin(), std::min_element(dR_test.begin(),dR_test.end()))]], data.jetsAK4.E[iJetTest[std::distance(dR_test.begin(), std::min_element(dR_test.begin(),dR_test.end()))]]);
+
+      TVector3 test1 = LepTag.Vect();
+      TVector3 test2 = JetTag.Vect();
+      sinangle = sqrt(abs(1-(test1.Dot(test2)*test1.Dot(test2)/test1.Mag2()/test2.Mag2())));
+
+      
+      //h_dR_min->Fill(*std::min_element(dR_test.begin(),dR_test.end()), w);
+      //h_rel_pT->Fill(sinangle*data.ele.Pt[iLepTest[0]], w);
+      //h_rel_pT_dR_min	->Fill(*std::min_element(dR_test.begin(),dR_test.end()), sinangle*data.ele.Pt[iLepTest[0]], w);
+      //std::cout << *std::min_element(dR_test.begin(),dR_test.end()) << std::endl;
+      //std::cout << sinangle*data.ele.Pt[iLepTest[0]] << std::endl;
+      if(nGenLep == 1){
+        if(selected_genlep[0].DeltaR(LepTag) < 0.4){
+          h_dR_min_tag->Fill(*std::min_element(dR_test.begin(),dR_test.end()), w);
+          h_rel_pT_tag->Fill(sinangle*data.ele.Pt[iLepTest[0]], w);
+          h_rel_pT_dR_min_tag->Fill(*std::min_element(dR_test.begin(),dR_test.end()), sinangle*data.ele.Pt[iLepTest[0]], w);
+        }
+        else if(selected_genlep[0].DeltaR(LepTag) >= 0.4){
+          h_dR_min_untag->Fill(*std::min_element(dR_test.begin(),dR_test.end()), w);
+          h_rel_pT_untag->Fill(sinangle*data.ele.Pt[iLepTest[0]], w);
+          h_rel_pT_dR_min_untag->Fill(*std::min_element(dR_test.begin(),dR_test.end()), sinangle*data.ele.Pt[iLepTest[0]], w);
+        }
+      }
+ 
+      //std::cout << dR_2D << std::endl;
+      //std::cout << rel_pT_2D << std::endl;
+      h_dR_min->Fill(dR_2D, w);
+      h_rel_pT->Fill(rel_pT_2D, w);
+      h_rel_pT_dR_min	->Fill(dR_2D, rel_pT_2D, w);
+      h_MR_S_1Lep->Fill(data.evt.MR, w);
+      h_R2_S_1Lep->Fill(data.evt.R2, w);
+      h_R2_MR_S_1Lep->Fill(data.evt.MR, data.evt.R2, w);
+    }
+    if(apply_all_cuts('D')){
+      h_MR_T_1Lep->Fill(data.evt.MR, w);
+      h_R2_T_1Lep->Fill(data.evt.R2, w);
+      h_R2_MR_T_1Lep->Fill(data.evt.MR, data.evt.R2, w);
+    }
+    if(apply_all_cuts('d')){
+      h_MR_W_1Lep->Fill(data.evt.MR, w);
+      h_R2_W_1Lep->Fill(data.evt.R2, w);
+      h_R2_MR_W_1Lep->Fill(data.evt.MR, data.evt.R2, w);
+    }
+*/
     if (apply_cut('S',"HLT")) {
       //h_HT_weight->Fill(AK4_Ht,1,w);
       h_njet   ->Fill(nJet,        w);
@@ -3650,26 +2569,8 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_ht_AK8->Fill(AK8_Ht, w); // Calculated in AnalysisBase.h
     }
 
-    w = sf_weight['Q'];
-    if (apply_all_cuts('Q')) h_njetAK8_Q->Fill(nJetAK8,w);
-    if (apply_all_cuts('Q')) h_njet_Q->Fill(nJet,w);
-    if (apply_all_cuts_except('Q', "3Jet")) h_njet_Q_3Jet->Fill(nJet,w);
-    w = sf_weight['S'];
-    if (apply_all_cuts('S')) h_njetAK8_S->Fill(nJetAK8,w);
-    if (apply_all_cuts('S')) h_njet_S->Fill(nJet,w);
-    if (apply_all_cuts_except('S', "3Jet")) h_njet_S_3Jet->Fill(nJet,w);
-    if (apply_all_cuts_except('S', "MR_R2")) h_njet_S_MRR2->Fill(nJet,w);
-    w = sf_weight['T'];
-    if (apply_all_cuts('T')) h_njetAK8_T->Fill(nJetAK8,w);
-    if (apply_all_cuts_except('T', "3Jet")) h_njet_T_3Jet->Fill(nJet,w);
-    if (apply_all_cuts('T')) h_njet_T->Fill(nJet,w);
-    w = sf_weight['W'];
-    if (apply_all_cuts('W')) h_njetAK8_W->Fill(nJetAK8,w);
-    if (apply_all_cuts_except('W', "3Jet")) h_njet_W_3Jet->Fill(nJet,w);
-    if (apply_all_cuts('W')) h_njet_W->Fill(nJet,w);
-
     w = sf_weight['K'];
-    if (apply_all_cuts_except('K', "1a0bTop")){
+    if (apply_all_cuts('K')){
     for (size_t i=0; i<data.jetsAK8.size; ++i) {
     h_AK8Jet1Pt_no_W_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     h_AK8Jet1Pt_no_m0bW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
@@ -3711,7 +2612,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
     }}
 
     w = sf_weight['k'];
-    if (apply_all_cuts_except('k', "1a0bTop")){
+    if (apply_all_cuts('k')){
     for (size_t i=0; i<data.jetsAK8.size; ++i) {
     h_AK8Jet1Pt_no_mW_fakerate->Fill(data.jetsAK8.Pt[i], w); 
     h_AK8Jet1Pt_Eta_no_mW_fakerate->Fill(data.jetsAK8.Pt[i], std::abs(data.jetsAK8.Eta[i]), w); 
@@ -3745,7 +2646,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_eta_W->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_W->Fill(data.met.Phi.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_W_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_W_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_W_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -3795,7 +2696,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_tau21_nonb_W->Fill(tau21.at(0),w);
       h_MET_nonb_W->Fill(data.met.Pt.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_nonb_W_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_nonb_W_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_nonb_W_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -3835,7 +2736,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_tau21_noMT_W->Fill(tau21.at(0),w);
       h_MET_noMT_W->Fill(data.met.Pt.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_noMT_W_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_noMT_W_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_noMT_W_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -3885,7 +2786,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_eta_T->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_T->Fill(data.met.Phi.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
       h_ht_AK4_T_nj35->Fill(AK4_Ht, w);
       h_ht_AK8_T_nj35->Fill(AK8_Ht, w);
       h_jet1_pt_T_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -3935,7 +2836,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_tau21_noMT_T->Fill(tau21.at(0),w);
       h_MET_noMT_T->Fill(data.met.Pt.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
       h_ht_AK4_noMT_T_nj35->Fill(AK4_Ht, w);
       h_ht_AK8_noMT_T_nj35->Fill(AK8_Ht, w);
       h_jet1_pt_noMT_T_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -3985,7 +2886,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_pt_Z->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_Z->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_Z->Fill(data.met.Phi.at(0),w);
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_Z_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_Z_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_Z_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4042,7 +2943,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_pt_L->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_L->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_L->Fill(data.met.Phi.at(0),w);
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_L_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_L_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_L_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4099,7 +3000,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_pt_G->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_G->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_G->Fill(data.met.Phi.at(0),w);
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_G_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_G_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_G_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4156,7 +3057,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_pt_q->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_q->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_q->Fill(data.met.Phi.at(0),w);
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_q_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_q_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_q_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4214,7 +3115,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_eta_Q->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_Q->Fill(data.met.Phi.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
       h_ht_AK4_Q_nj35->Fill(AK4_Ht, w);
       h_ht_AK8_Q_nj35->Fill(AK8_Ht, w);
       h_jet1_pt_Q_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4253,7 +3154,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       //h_j1_pt_Q->Fill(data.jetsAK8.Pt[iJetAK8[0]],w);
       //h_HT_j1pt_Q->Fill(AK4_Ht,data.jetsAK8.Pt[iJetAK8[0]],w);
     }
-    if (apply_all_cuts_except('Q', "InvmDPhi0p3")) {
+    if (apply_all_cuts_except('Q', "InvmDPhi")) {
       h_ht_AK4_nodPhi_Q->Fill(AK4_Ht, w);
       h_ht_AK8_nodPhi_Q->Fill(AK8_Ht, w);
       h_jet1_pt_nodPhi_Q->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4267,7 +3168,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_MET_nodPhi_Q->Fill(data.met.Pt.at(0),w);
       h_dPhiRazor_nodPhi_Q->Fill(dPhiRazor,w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
       h_ht_AK4_nodPhi_Q_nj35->Fill(AK4_Ht, w);
       h_ht_AK8_nodPhi_Q_nj35->Fill(AK8_Ht, w);
       h_jet1_pt_nodPhi_Q_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4309,7 +3210,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_tau21_nonb_Q->Fill(tau21.at(0),w);
       h_MET_nonb_Q->Fill(data.met.Pt.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
       h_ht_AK4_nonb_Q_nj35->Fill(AK4_Ht, w);
       h_ht_AK8_nonb_Q_nj35->Fill(AK8_Ht, w);
       h_jet1_pt_nonb_Q_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4336,46 +3237,6 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_MET_nonb_Q_nj6->Fill(data.met.Pt.at(0),w);
       }
     }
-    if (apply_all_cuts_except('Q', "1aW")) {
-      h_ht_AK4_notau21_Q->Fill(AK4_Ht, w);
-      h_ht_AK8_notau21_Q->Fill(AK8_Ht, w);
-      h_jet1_pt_notau21_Q->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_notau21_Q->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_notau21_Q->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_notau21_Q->Fill(data.evt.MR, w);
-      h_MTR_notau21_Q->Fill(data.evt.MTR, w);
-      h_R_notau21_Q->Fill(data.evt.R, w);
-      h_R2_notau21_Q->Fill(data.evt.R2, w);
-      h_tau21_notau21_Q->Fill(tau21.at(0),w);
-      h_MET_notau21_Q->Fill(data.met.Pt.at(0),w);
-
-      if(nJet>=3 && nJet<6){
-      h_ht_AK4_notau21_Q_nj35->Fill(AK4_Ht, w);
-      h_ht_AK8_notau21_Q_nj35->Fill(AK8_Ht, w);
-      h_jet1_pt_notau21_Q_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_notau21_Q_nj35->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_notau21_Q_nj35->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_notau21_Q_nj35->Fill(data.evt.MR, w);
-      h_MTR_notau21_Q_nj35->Fill(data.evt.MTR, w);
-      h_R_notau21_Q_nj35->Fill(data.evt.R, w);
-      h_R2_notau21_Q_nj35->Fill(data.evt.R2, w);
-      h_tau21_notau21_Q_nj35->Fill(tau21.at(0),w);
-      h_MET_notau21_Q_nj35->Fill(data.met.Pt.at(0),w);
-      }
-      if(nJet>=6){
-      h_ht_AK4_notau21_Q_nj6->Fill(AK4_Ht, w);
-      h_ht_AK8_notau21_Q_nj6->Fill(AK8_Ht, w);
-      h_jet1_pt_notau21_Q_nj6->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_notau21_Q_nj6->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_notau21_Q_nj6->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_notau21_Q_nj6->Fill(data.evt.MR, w);
-      h_MTR_notau21_Q_nj6->Fill(data.evt.MTR, w);
-      h_R_notau21_Q_nj6->Fill(data.evt.R, w);
-      h_R2_notau21_Q_nj6->Fill(data.evt.R2, w);
-      h_tau21_notau21_Q_nj6->Fill(tau21.at(0),w);
-      h_MET_notau21_Q_nj6->Fill(data.met.Pt.at(0),w);
-      }
-    }
 
 
     // Signal' region
@@ -4400,7 +3261,7 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_AK8_jet1_pt_s->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_s->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_s->Fill(data.met.Phi.at(0),w);
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_s_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_s_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_s_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4454,12 +3315,15 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       h_R2_MR_S->Fill(data.evt.MR, data.evt.R2, w);
       h_R2_MET_S->Fill(data.met.Pt.at(0), data.evt.R2, w);
       h_MR_MET_S->Fill(data.met.Pt.at(0), data.evt.MR, w);
+      h_R2_HT_S->Fill(AK4_Ht, data.evt.R2, w);
+      h_MR_HT_S->Fill(AK4_Ht, data.evt.MR, w);
+      h_HT_MET_S->Fill(data.met.Pt.at(0), AK4_Ht, w);
       h_AK8Jet1pT_MET_S->Fill(data.met.Pt.at(0), data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_pt_S->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_S->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_S->Fill(data.met.Phi.at(0),w);
 
-      if(nJet>=3 && nJet<6){
+      if(nJet>=4 && nJet<6){
         h_ht_AK4_S_nj35->Fill(AK4_Ht, w);
         h_ht_AK8_S_nj35->Fill(AK8_Ht, w);
         h_jet1_pt_S_nj35->Fill(data.jetsAK4.Pt[iJet[0]], w);
@@ -4472,6 +3336,12 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
         h_tau21_S_nj35->Fill(tau21.at(0),w);
         h_MET_S_nj35->Fill(data.met.Pt.at(0),w);
         h_R2_MR_S_nj35->Fill(data.evt.MR, data.evt.R2, w);
+      h_R2_MET_S_nj35->Fill(data.met.Pt.at(0), data.evt.R2, w);
+      h_MR_MET_S_nj35->Fill(data.met.Pt.at(0), data.evt.MR, w);
+      h_R2_HT_S_nj35->Fill(AK4_Ht, data.evt.R2, w);
+      h_MR_HT_S_nj35->Fill(AK4_Ht, data.evt.MR, w);
+      h_HT_MET_S_nj35->Fill(data.met.Pt.at(0), AK4_Ht, w);
+      h_AK8Jet1pT_MET_S_nj35->Fill(data.met.Pt.at(0), data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_pt_S_nj35->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_S_nj35->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_S_nj35->Fill(data.met.Phi.at(0),w);
@@ -4489,6 +3359,12 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
         h_tau21_S_nj6->Fill(tau21.at(0),w);
         h_MET_S_nj6->Fill(data.met.Pt.at(0),w);
         h_R2_MR_S_nj6->Fill(data.evt.MR, data.evt.R2, w);
+      h_R2_MET_S_nj6->Fill(data.met.Pt.at(0), data.evt.R2, w);
+      h_MR_MET_S_nj6->Fill(data.met.Pt.at(0), data.evt.MR, w);
+      h_R2_HT_S_nj6->Fill(AK4_Ht, data.evt.R2, w);
+      h_MR_HT_S_nj6->Fill(AK4_Ht, data.evt.MR, w);
+      h_HT_MET_S_nj6->Fill(data.met.Pt.at(0), AK4_Ht, w);
+      h_AK8Jet1pT_MET_S_nj6->Fill(data.met.Pt.at(0), data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_pt_S_nj6->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
       h_AK8_jet1_eta_S_nj6->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
       h_MET_phi_S_nj6->Fill(data.met.Phi.at(0),w);
@@ -4509,853 +3385,6 @@ Analysis::fill_analysis_histos(DataStruct& data, const unsigned int& syst_index,
       //}
       //h_dR_GenTagb_GenTagW->Fill(dRgentagW, dRgentagb);
     }
-
-
-
-    w = sf_weight['A'];
-    if (apply_all_cuts('A')) {
-      h_ht_AK4_topana_S->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_S->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_S->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_S->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_S->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_S->Fill(data.evt.MR, w);
-      h_R_topana_S->Fill(data.evt.R, w);
-      h_MTR_topana_S->Fill(data.evt.MTR, w);
-      h_R2_topana_S->Fill(data.evt.R2, w);
-      h_tau21_topana_S->Fill(tau21.at(0),w);
-      h_MET_topana_S->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_S->Fill(data.evt.MR, data.evt.R2, w);
-      h_AK8_jet1_pt_topana_S->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_S->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_S->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['a'];
-    if (apply_all_cuts('a')) {
-      h_ht_AK4_topana_s->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_s->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_s->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_s->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_s->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_s->Fill(data.evt.MR, w);
-      h_R_topana_s->Fill(data.evt.R, w);
-      h_MTR_topana_s->Fill(data.evt.MTR, w);
-      h_R2_topana_s->Fill(data.evt.R2, w);
-      h_tau21_topana_s->Fill(tau21.at(0),w);
-      h_MET_topana_s->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_s->Fill(data.evt.MR, data.evt.R2, w);
-      h_AK8_jet1_pt_topana_s->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_s->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_s->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['X'];
-    if (apply_all_cuts('X')) {
-      h_ht_AK4_topana_Q->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_Q->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_Q->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_Q->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_Q->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_Q->Fill(data.evt.MR, w);
-      h_R_topana_Q->Fill(data.evt.R, w);
-      h_MTR_topana_Q->Fill(data.evt.MTR, w);
-      h_R2_topana_Q->Fill(data.evt.R2, w);
-      h_tau21_topana_Q->Fill(tau21.at(0),w);
-      h_MET_topana_Q->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_Q->Fill(data.evt.MR, data.evt.R2, w);
-      h_AK8_jet1_pt_topana_Q->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_Q->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_Q->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['x'];
-    if (apply_all_cuts('x')) {
-      h_ht_AK4_topana_q->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_q->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_q->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_q->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_q->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_q->Fill(data.evt.MR, w);
-      h_R_topana_q->Fill(data.evt.R, w);
-      h_MTR_topana_q->Fill(data.evt.MTR, w);
-      h_R2_topana_q->Fill(data.evt.R2, w);
-      h_tau21_topana_q->Fill(tau21.at(0),w);
-      h_MET_topana_q->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_q->Fill(data.evt.MR, data.evt.R2, w);
-      h_AK8_jet1_pt_topana_q->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_q->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_q->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['V'];
-    if (apply_all_cuts('V')) {
-      h_ht_AK4_topana_T->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_T->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_T->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_T->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_T->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_T->Fill(data.evt.MR, w);
-      h_R_topana_T->Fill(data.evt.R, w);
-      h_MTR_topana_T->Fill(data.evt.MTR, w);
-      h_R2_topana_T->Fill(data.evt.R2, w);
-      h_tau21_topana_T->Fill(tau21.at(0),w);
-      h_MET_topana_T->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_T->Fill(data.evt.MR, data.evt.R2, w);
-      h_AK8_jet1_pt_topana_T->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_T->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_T->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['C'];
-    if (apply_all_cuts('C')) {
-      h_ht_AK4_topana_W->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_W->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_W->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_W->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_W->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_W->Fill(data.evt.MR, w);
-      h_R_topana_W->Fill(data.evt.R, w);
-      h_MTR_topana_W->Fill(data.evt.MTR, w);
-      h_R2_topana_W->Fill(data.evt.R2, w);
-      h_tau21_topana_W->Fill(tau21.at(0),w);
-      h_MET_topana_W->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_W->Fill(data.evt.MR, data.evt.R2, w);
-      h_AK8_jet1_pt_topana_W->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_W->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_W->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['F'];
-    if (apply_all_cuts('F')) {
-      h_ht_AK4_topana_Z->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_Z->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_Z->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_Z->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_Z->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_Z->Fill(data.evt.MR, w);
-      h_R_topana_Z->Fill(data.evt.R, w);
-      h_MTR_topana_Z->Fill(data.evt.MTR, w);
-      h_R2_topana_Z->Fill(R2_ll, w);
-      h_tau21_topana_Z->Fill(tau21.at(0),w);
-      h_MET_topana_Z->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_Z->Fill(data.evt.MR, R2_ll, w);
-      h_AK8_jet1_pt_topana_Z->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_Z->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_Z->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['l'];
-    if (apply_all_cuts('l')) {
-      h_ht_AK4_topana_L->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_L->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_L->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_L->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_L->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_L->Fill(data.evt.MR, w);
-      h_R_topana_L->Fill(data.evt.R, w);
-      h_MTR_topana_L->Fill(data.evt.MTR, w);
-      h_R2_topana_L->Fill(R2_1vl, w);
-      h_tau21_topana_L->Fill(tau21.at(0),w);
-      h_MET_topana_L->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_L->Fill(data.evt.MR, R2_1vl, w);
-      h_AK8_jet1_pt_topana_L->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_L->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_L->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['g'];
-    if (apply_all_cuts('g')) {
-      h_ht_AK4_topana_G->Fill(AK4_Ht, w);
-      h_ht_AK8_topana_G->Fill(AK8_Ht, w);
-      h_jet1_pt_topana_G->Fill(data.jetsAK4.Pt[iJet[0]], w);
-      h_jet2_pt_topana_G->Fill(data.jetsAK4.Pt[iJet[1]], w);
-      h_jet3_pt_topana_G->Fill(data.jetsAK4.Pt[iJet[2]], w);
-      h_MR_topana_G->Fill(data.evt.MR, w);
-      h_R_topana_G->Fill(data.evt.R, w);
-      h_MTR_topana_G->Fill(data.evt.MTR, w);
-      h_R2_topana_G->Fill(R2_ll, w);
-      h_tau21_topana_G->Fill(tau21.at(0),w);
-      h_MET_topana_G->Fill(data.met.Pt.at(0),w);
-      h_R2_MR_topana_G->Fill(data.evt.MR, R2_ll, w);
-      h_AK8_jet1_pt_topana_G->Fill(data.jetsAK8.Pt[iJetAK8[0]], w);
-      h_AK8_jet1_eta_topana_G->Fill(data.jetsAK8.Eta[iJetAK8[0]], w);
-      h_MET_phi_topana_G->Fill(data.met.Phi.at(0),w);
-      }
-
-    w = sf_weight['z'];
-		if (apply_all_cuts('z') && nPhotonSelect==1) {
-			if(std::abs(data.pho.Eta[iPhotonSelect[0]])<=1.479) {
-       if(nWMassTag == 0) {
-         if(nDirectPromptPhoton > 0){
-           h_MR_0mW_EB_DPP->Fill(data.evt.MR,w);
-           h_R2_0mW_EB_DPP->Fill(R2_pho,w);
-           h_R2_MR_0mW_EB_DPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nDirectPromptPhoton == 0 && nFragmentationPromptPhoton > 0){
-           h_MR_0mW_EB_FPP->Fill(data.evt.MR,w);
-           h_R2_0mW_EB_FPP->Fill(R2_pho,w);
-           h_R2_MR_0mW_EB_FPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nFakePhoton > 0){
-           h_MR_0mW_EB_FP->Fill(data.evt.MR,w);
-           h_R2_0mW_EB_FP->Fill(R2_pho,w);
-           h_R2_MR_0mW_EB_FP->Fill(data.evt.MR,R2_pho,w);
-         }
-       }
-       else if(nWMassTag == 1) {
-         if(nDirectPromptPhoton > 0){
-           h_MR_1mW_EB_DPP->Fill(data.evt.MR,w);
-           h_R2_1mW_EB_DPP->Fill(R2_pho,w);
-           h_R2_MR_1mW_EB_DPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nDirectPromptPhoton == 0 && nFragmentationPromptPhoton > 0){
-           h_MR_1mW_EB_FPP->Fill(data.evt.MR,w);
-           h_R2_1mW_EB_FPP->Fill(R2_pho,w);
-           h_R2_MR_1mW_EB_FPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nFakePhoton > 0){
-           h_MR_1mW_EB_FP->Fill(data.evt.MR,w);
-           h_R2_1mW_EB_FP->Fill(R2_pho,w);
-           h_R2_MR_1mW_EB_FP->Fill(data.evt.MR,R2_pho,w);
-         }
-       }
-      }
-			if(std::abs(data.pho.Eta[iPhotonSelect[0]])>1.479) {
-       if(nWMassTag == 0) {
-         if(nDirectPromptPhoton > 0){
-           h_MR_0mW_EE_DPP->Fill(data.evt.MR,w);
-           h_R2_0mW_EE_DPP->Fill(R2_pho,w);
-           h_R2_MR_0mW_EE_DPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nDirectPromptPhoton == 0 && nFragmentationPromptPhoton > 0){
-           h_MR_0mW_EE_FPP->Fill(data.evt.MR,w);
-           h_R2_0mW_EE_FPP->Fill(R2_pho,w);
-           h_R2_MR_0mW_EE_FPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nFakePhoton > 0){
-           h_MR_0mW_EE_FP->Fill(data.evt.MR,w);
-           h_R2_0mW_EE_FP->Fill(R2_pho,w);
-           h_R2_MR_0mW_EE_FP->Fill(data.evt.MR,R2_pho,w);
-         }
-       else if(nWMassTag == 1) {
-         if(nDirectPromptPhoton > 0){
-           h_MR_1mW_EE_DPP->Fill(data.evt.MR,w);
-           h_R2_1mW_EE_DPP->Fill(R2_pho,w);
-           h_R2_MR_1mW_EE_DPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nDirectPromptPhoton == 0 && nFragmentationPromptPhoton > 0){
-           h_MR_1mW_EE_FPP->Fill(data.evt.MR,w);
-           h_R2_1mW_EE_FPP->Fill(R2_pho,w);
-           h_R2_MR_1mW_EE_FPP->Fill(data.evt.MR,R2_pho,w);
-         }
-         else if(nFakePhoton > 0){
-           h_MR_1mW_EE_FP->Fill(data.evt.MR,w);
-           h_R2_1mW_EE_FP->Fill(R2_pho,w);
-           h_R2_MR_1mW_EE_FP->Fill(data.evt.MR,R2_pho,w);
-         }
-       }
-     }
-    }
-  }
-
-    if(apply_all_cuts('z') && nPhotonPreSelect==1) {
-      if(std::abs(data.pho.Eta[iPhotonPreSelect[0]])<=1.479) {
-       h_nmW_zinv_EB->Fill(nWMassTag,w);
-       h_MR_zinv_EB->Fill(data.evt.MR,w);
-       h_R2_zinv_EB->Fill(R2_pho,w);
-       h_R2_MR_zinv_EB->Fill(data.evt.MR,R2_pho,w);
-       if(nWMassTag == 0) {
-       h_MR_zinv_0mW_EB->Fill(data.evt.MR,w);
-       h_R2_zinv_0mW_EB->Fill(R2_pho,w);
-       h_R2_MR_zinv_0mW_EB->Fill(data.evt.MR,R2_pho,w);
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-        }
-       else if(nHadTopMassTag >= 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-				}
-       else if(nWMassTag >= 1) {
-       h_MR_zinv_1mW_EB->Fill(data.evt.MR,w);
-       h_R2_zinv_1mW_EB->Fill(R2_pho,w);
-       h_R2_MR_zinv_1mW_EB->Fill(data.evt.MR,R2_pho,w);
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-        }
-        if(R2_pho >= 0.08 && R2_pho < 0.12){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.12 && R2_pho < 0.16){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.16 && R2_pho < 0.24){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.24 && R2_pho < 0.50){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.50 && R2_pho < 1.00){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-       }
-      else if(std::abs(data.pho.Eta[iPhotonPreSelect[0]])>1.479) {
-       h_nmW_zinv_EE->Fill(nWMassTag,w);
-       h_MR_zinv_EE->Fill(data.evt.MR,w);
-       h_R2_zinv_EE->Fill(R2_pho,w);
-       h_R2_MR_zinv_EE->Fill(data.evt.MR,R2_pho,w);
-       if(nWMassTag == 0) {
-       h_MR_zinv_0mW_EE->Fill(data.evt.MR,w);
-       h_R2_zinv_0mW_EE->Fill(R2_pho,w);
-       h_R2_MR_zinv_0mW_EE->Fill(data.evt.MR,R2_pho,w);
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-       }
-       else if(nHadTopMassTag >= 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-       }
-       else if(nWMassTag >= 1) {
-       h_MR_zinv_1mW_EE->Fill(data.evt.MR,w);
-       h_R2_zinv_1mW_EE->Fill(R2_pho,w);
-       h_R2_MR_zinv_1mW_EE->Fill(data.evt.MR,R2_pho,w);
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         }
-        }
-        if(R2_pho >= 0.08 && R2_pho < 0.12){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.12 && R2_pho < 0.16){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.16 && R2_pho < 0.24){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.24 && R2_pho < 0.50){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-        else if(R2_pho >= 0.50 && R2_pho < 1.00){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_SR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonPreSelect[0]],w);
-        }
-       }
-      }
-
-    if (apply_all_cuts('z') && nPhotonFake==1) {
-      if(std::abs(data.pho.Eta[iPhotonFake[0]])<=1.479) {
-       if(nWMassTag == 0) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_0mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-        }
-       else if(nHadTopMassTag >= 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mTop_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-       else if(nWMassTag == 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_1mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-        }
-        if(R2_pho >= 0.08 && R2_pho < 0.12){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.12 && R2_pho < 0.16){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.16 && R2_pho < 0.24){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.24 && R2_pho < 0.50){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.50 && R2_pho < 1.00){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_mW_EB->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-       }
-      else if(std::abs(data.pho.Eta[iPhotonFake[0]])>1.479) {
-       if(nWMassTag == 0) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_0mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-        }
-       else if(nHadTopMassTag >= 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mTop_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-       else if(nWMassTag >= 1) {
-         if(data.evt.MR >= 800 && data.evt.MR < 1000)  h_ChargedIso_MR_900_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12) h_ChargedIso_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.12 && R2_pho < 0.16) h_ChargedIso_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.16 && R2_pho < 0.24) h_ChargedIso_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.24 && R2_pho < 0.50) h_ChargedIso_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.50 && R2_pho < 1.00) h_ChargedIso_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         if(R2_pho >= 0.08 && R2_pho < 0.12){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.12 && R2_pho < 0.16){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.16 && R2_pho < 0.24){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.24 && R2_pho < 0.50){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-         else if(R2_pho >= 0.50 && R2_pho < 1.00){
-          if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-          else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_1mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         }
-        }
-        if(R2_pho >= 0.08 && R2_pho < 0.12){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_010_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.12 && R2_pho < 0.16){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_014_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.16 && R2_pho < 0.24){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_020_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.24 && R2_pho < 0.50){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_037_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-        else if(R2_pho >= 0.50 && R2_pho < 1.00){
-         if(data.evt.MR >= 800 && data.evt.MR < 1000) h_ChargedIso_MR_900_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1000 && data.evt.MR < 1200) h_ChargedIso_MR_1100_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1200 && data.evt.MR < 1600) h_ChargedIso_MR_1400_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 1600 && data.evt.MR < 2000) h_ChargedIso_MR_1800_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-         else if(data.evt.MR >= 2000 && data.evt.MR < 4000) h_ChargedIso_MR_3000_R2_075_CR_mW_EE->Fill(ChargedHadronIsoEACorr[iPhotonFake[0]],w);
-        }
-       }
-      }
 
 
     // Trigger efficiencies
@@ -5452,7 +3481,7 @@ bool iscomFFsim = TString(sample).Contains("TTJets_madgraphMLM");
   }
 
   istriggerData = TString(sample).Contains("MET");
-  if(istriggerData && data.hlt.PFMET120_PFMHT120_IDTight==1&&data.met.Pt[0]>200&&nLepVeto==0&&data.evt.NIsoTrk==0){ 
+  if(istriggerData && data.hlt.PFMET120_PFMHT120_IDTight==1&&nLepVeto==0&&data.evt.NIsoTrk==0){ 
     h_HT_pre->Fill(AK4_Ht,w);
     h_HT_j1pt_pre->Fill(AK4_Ht,data.jetsAK8.Pt[iJetAK8[0]],w);
   
@@ -5513,68 +3542,49 @@ bool iscomFFsim = TString(sample).Contains("TTJets_madgraphMLM");
   // Switch on settings.varySystematics to be effective
   //if (apply_all_cuts('S')) vh_jet1_pt[syst_index]->Fill(data.jetsAK4.Pt[iJet[0]], w);
 
-    w = sf_weight['A'];
-    if (apply_all_cuts('A')) vh_R2_MR_topana_S[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['a'];
-    if (apply_all_cuts('a')) vh_R2_MR_topana_s[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['X'];
-    if (apply_all_cuts('X')) vh_R2_MR_topana_Q[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['x'];
-    if (apply_all_cuts('x')) vh_R2_MR_topana_q[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['V'];
-    if (apply_all_cuts('V')) vh_R2_MR_topana_T[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['C'];
-    if (apply_all_cuts('C')) vh_R2_MR_topana_W[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['F'];
-    if (apply_all_cuts('F')) vh_R2_MR_topana_Z[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['g'];
-    if (apply_all_cuts('g')) vh_R2_MR_topana_G[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-    w = sf_weight['l'];
-    if (apply_all_cuts('l')) vh_R2_MR_topana_L[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
-
     w = sf_weight['S'];
     if (apply_all_cuts('S')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_S_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_S_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_S_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['s'];
     if (apply_all_cuts('s')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_s_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_s_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_s_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['Q'];
     if (apply_all_cuts('Q')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_Q_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_Q_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_Q_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['q'];
     if (apply_all_cuts('q')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_q_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_q_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_q_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['T'];
     if (apply_all_cuts('T')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_T_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_T_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_T_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['W'];
     if (apply_all_cuts('W')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_W_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_W_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_W_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['Z'];
     if (apply_all_cuts('Z')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_Z_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_Z_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_Z_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['G'];
     if (apply_all_cuts('G')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_G_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_G_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_G_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
     w = sf_weight['L'];
     if (apply_all_cuts('L')) {
-      if(nJet>=3 && nJet<6) vh_R2_MR_L_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
+      if(nJet>=4 && nJet<6) vh_R2_MR_L_nj35[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
       if(nJet>=6)						vh_R2_MR_L_nj6[syst_index]->Fill(data.evt.MR, data.evt.R2, w);
     }
 
