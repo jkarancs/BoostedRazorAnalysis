@@ -607,7 +607,7 @@ Choose:
 */
 
 #define USE_ISO_TRK_VETO     0
-#define USE_MRR2_PHO_TRIGGER 1
+#define USE_MRR2_PHO_TRIGGER 0
 #define COMBINE_MRR2_BINS    1
 
 /*
