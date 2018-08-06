@@ -81,6 +81,7 @@ sms_models = {
         'T2qq':SMS(100, 1500, 0, 800,
             isGluino=False),
         'T5ttcc':SMS(600, 2300, 0, 1450),#, diagonalOffset=225),
+        'T5tttt':SMS(600, 2300, 0, 1650, diagonalOffset=225),
         'T5qqqqVV':SMS(600, 2300, 0, 1650),
 }
 # ------------------ End import by hand -----------------

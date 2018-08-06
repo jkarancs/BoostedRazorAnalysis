@@ -528,7 +528,7 @@ def save_plot(can, name, plotname, write=True):
     if dirname != "" and not os.path.exists(dirname):
         os.makedirs(dirname)
     with suppress_stdout_stderr():
-        can.SaveAs(plotname+".png")
+        can.SaveAs(plotname+".root")
     if write:
         if name != "":
             can.Write(name)
@@ -599,9 +599,10 @@ def add_cms_era(plot, approval, keep, twoframe=False):
     if plot.InheritsFrom("TCanvas"):
         # Check if its a two frame plot
         if plot.GetListOfPrimitives().GetEntries()==2:
-            f1 = plot.GetListOfPrimitives().At(0).GetListOfPrimitives().At(0)
-            f2 = plot.GetListOfPrimitives().At(1).GetListOfPrimitives().At(0)
-            if f1.GetName()=="TFrame" and f2.GetName()=="TFrame": twoframe = True
+            if plot.GetListOfPrimitives().At(0).GetName() != "TFrame":
+                f1 = plot.GetListOfPrimitives().At(0).GetListOfPrimitives().At(0)
+                f2 = plot.GetListOfPrimitives().At(1).GetListOfPrimitives().At(0)
+                if f1.GetName()=="TFrame" and f2.GetName()=="TFrame": twoframe = True
         if twoframe:
             # cd to first frame and find histo
             plot.GetListOfPrimitives().At(0).cd()
@@ -641,7 +642,7 @@ def era_and_prelim_lat_(approval, xmin, xmax, ymin, ymax, keep, twoframe=False, 
         if app==6: text = "CMS Simulation"
         if app==7: text = "CMS #scale[0.7]{#font[52]{Work in progress 2016}}"
         if app==8: text = "CMS #scale[0.7]{#font[52]{Preliminary 2016}}"
-        if app==9: text = "CMS #scale[0.7]{#font[52]{Preliminary 2017}}"
+        if app==9: text = "CMS #scale[0.7]{#font[52]{Preliminary 2018}}"
         x = xmin+(xmax-xmin)/20.0 if inside else xmin
         y = ymax-(ymax-ymin)/10.0 if inside else ymax+(ymax-ymin)/40.0
         if ymin>0:

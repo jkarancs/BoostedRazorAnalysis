@@ -767,6 +767,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             h_extrap.SetBinError  (binx, 0)
             #h_extrap.SetBinContent(binx, 1.01e-3) # To allow showing it on the plot
     if nosyst and nmissing1>0:
+        print can.GetName()
         pad1 = can.GetListOfPrimitives().At(0)
         pad1.cd()
         h_extrap.SetMarkerColor(3)
@@ -778,7 +779,6 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
         h_ratio = pad2.GetListOfPrimitives().At(1)
         extrap_ratio = pad2.GetListOfPrimitives().At(1).Clone(h_S.GetName()+"_extrap_ratio")
         # Green extrapolated points in the ratio
-        can.cd(0)
         for binx in range(1, h_ratio.GetNbinsX()+1):
             if h_ratio.GetBinContent(binx)>0 or h_S_LWP.GetBinContent(binx)==0:
                 extrap_ratio.SetBinContent(binx, 0)
@@ -2132,7 +2132,7 @@ print "Z_nonDY: "+str(nZ_NDY)+" +- "+str(eZ_NDY)
 print "Z_DY:    "+str(nZ_DY) +" +- "+str(eZ_DY)
 print "G_data (prompt, direct): "+str(nG)   +" +- "+str(eG)
 print "G_GJ   (prompt, direct): "+str(nG_GJ)+" +- "+str(eG_GJ)
-print ("k_Z = %4.3f +- %4.3f (%4.3f / %4.3f), k_G = %4.3f +- %4.3f (%4.3f / %4.3f), double ratio = %4.3f +- %4.3f" %
+print ("k_Z = %4.3f +- %4.3f (%4.3f / %4.3f), k_G = %4.3f +- %4.3f (%4.3f / %4.3f), double ratio = %3.2f +- %3.2f" %
        (k_Z, ek_Z, nZ - nZ_NDY, nZ_DY, k_G, ek_G, nG, nG_GJ, DR, eDR))
 #sys.exit()
 

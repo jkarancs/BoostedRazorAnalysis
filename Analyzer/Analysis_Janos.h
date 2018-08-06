@@ -228,6 +228,7 @@ Analysis::define_selections(const DataStruct& d)
 #else
   analysis_cuts['S'].push_back({ .name="0Tau",       .func = []    { return nTauVeto==0;                      }});
 #endif
+  analysis_cuts['S'].push_back({ .name="0Top",       .func = []    { return nHadTopTag==0;                    }});
   analysis_cuts['S'].push_back({ .name="1b",         .func = []    { return nMediumBTag>=1;                   }});
   analysis_cuts['S'].push_back({ .name="1W",         .func = []    { return nTightWTag>=1;                    }});
 //analysis_cuts['S'].push_back({ .name="mDPhi",      .func = []    { return minDeltaPhi>=0.5;                 }});
@@ -3196,6 +3197,12 @@ Analysis::init_analysis_histos(const unsigned int& syst_nSyst, const unsigned in
     sh.AddHistos("evt",    { .fill="MET_vs_HT",                 .pfs={"Signals_Background","S_ExclMRR2",njet_bin},   .cuts={},.draw="COLZ",.opt=o_1or2d_d+"Log",.ranges={}});
     sh.AddHistos("evt",    { .fill="R2Fine_vs_MRFine",          .pfs={"Signals_Background","S_ExclMRR2",njet_bin}, .cuts={},.draw="COLZ",.opt=o_1or2d_d+"Log",.ranges={}});
   }
+#if TOP == 0
+  sh.AddHistos("evt",    { .fill="NTop_vs_NW",          .pfs={"Data_MC","S_Excl1W"},          .cuts={},.draw="COLZ",.opt=o_1or2d_d,.ranges={}});
+  sh.AddHistos("evt",    { .fill="NTop_vs_NW",          .pfs={"Signals","S_Excl1W"},          .cuts={},.draw="COLZ",.opt=o_1or2d_s,.ranges={}});
+  sh.AddHistos("evt",    { .fill="NTop_vs_NW",          .pfs={"Data_MC","S_Excl1b1W"},        .cuts={},.draw="COLZ",.opt=o_1or2d_d,.ranges={}});
+  sh.AddHistos("evt",    { .fill="NTop_vs_NW",          .pfs={"Signals","S_Excl1b1W"},        .cuts={},.draw="COLZ",.opt=o_1or2d_s,.ranges={}});
+#endif
 
   // N-1 Cut plots
   // S
