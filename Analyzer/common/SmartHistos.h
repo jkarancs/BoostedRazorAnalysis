@@ -202,10 +202,13 @@ public:
     addint_ = opt.find("AddInt")!=std::string::npos;
     syst_ = name.find("Counts_vs_")!=std::string::npos;
     doublex_ = opt.find("DoubleX")!=std::string::npos;
+    nocomb_  = opt.find("NoComb")!=std::string::npos;
     n_nostack_ = 0;
+    n_nocomb_  = 9999;
     if (stack_)    { std::stringstream ss; ss<<opt.substr(opt.find("Stack")   +5,1); ss>>n_nostack_; }
     if (twocol_)   { std::stringstream ss; ss<<opt.substr(opt.find("TwoCol")  +6,2); ss>>twocol_; }
     if (approval_) { std::stringstream ss; ss<<opt.substr(opt.find("Approval")+8,2); ss>>approval_; }
+    if (nocomb_)   { std::stringstream ss; ss<<opt.substr(opt.find("NoComb")  +6,1); ss>>n_nocomb_; }
     ranges_=ranges;
     bin_labels_=bin_labels;
     if (npf_>5) std::cout<<"!!! ERROR: SmartHisto::constructor: Fixme! - More than 5 postfixes, only use max 4, or redefine functions!\n";
@@ -268,9 +271,11 @@ private:
   //                eg. 57 = first 5 entries in the first colum, 7 in the second
   bool addint_;  // Add plot integrals to a separate column in the legend
   size_t n_nostack_; // Do no stack first n plots
+  size_t n_nocomb_;  // Stack plots to "Other" and keep N uncombined
   bool plot_asymm_err_; // Decide automatically if histo should be plotted with asymmetric errors (Using TGraphAE)
   bool syst_;
   bool doublex_; // Double the X-size of the plot area (1000x500)
+  bool nocomb_;  // Stack plots to "Other" and keep N uncombined
   
   // axis ranges: xlow, xhigh, ylow, yhigh, zlow, zhigh
   // if low==high -> do not set
@@ -1866,20 +1871,39 @@ private:
       std::vector<TH1D*> vh_max;
       // Reorder histos based on integral (smallest drawn on bottom)
       if (!keep_order_) {
+	size_t n_comb = n_nocomb_==9999 ? 0 : vh.size()-n_nocomb_;
 	while (vh.size()) {
-	  double max_int = -1; size_t imax=-1;
-          for (size_t i=0; i<vh.size(); ++i) {
-            if (vh[i]->Integral()>max_int) {
-              max_int = vh[i]->Integral();
-              imax = i;
-            }
-          }
-          if (imax==(size_t)-1) imax = 0;
-          vh_max.push_back(vh[imax]);
-          legentries.push_back(new TLegendEntry(vh[imax], vlegtext[imax].c_str(), "F"));
-	  add_integ_(legentries, vh[imax]);
-          vh.erase(vh.begin()+imax);
-          vlegtext.erase(vlegtext.begin()+imax);
+	  if (vh.size()>n_comb) {
+	    double max_int = -1; size_t imax=-1;
+	    for (size_t i=0; i<vh.size(); ++i) {
+	      if (vh[i]->Integral()>max_int) {
+		max_int = vh[i]->Integral();
+		imax = i;
+	      }
+	    }
+	    if (imax==(size_t)-1) imax = 0;
+	    vh_max.push_back(vh[imax]);
+	    legentries.push_back(new TLegendEntry(vh[imax], vlegtext[imax].c_str(), "F"));
+	    add_integ_(legentries, vh[imax]);
+	    vh.erase(vh.begin()+imax);
+	    vlegtext.erase(vlegtext.begin()+imax);
+	  } else {
+	    // Combine all the rest into a single "Other"
+	    TH1D* all_other = (TH1D*)vh[0]->Clone((std::string(vh[0]->GetName())+"_combined").c_str());
+	    if (syst_) {
+	      TH2D* mother = (TH2D*)mother_2d_[vh[0]]->Clone((std::string(mother_2d_[vh[0]]->GetName())+"_combined").c_str());
+	      for (size_t i=1; i<vh.size(); ++i) mother->Add(mother_2d_[vh[0]]);
+	      mother_2d_[all_other] = mother;
+	    }
+	    for (size_t i=1; i<vh.size(); ++i) all_other->Add(vh[i]);
+	    all_other->SetFillColor(864);
+	    all_other->SetLineColor(864);
+	    vh_max.push_back(all_other);
+	    legentries.push_back(new TLegendEntry(all_other, "#color[864]{Other}", "F"));
+	    add_integ_(legentries, all_other);
+	    vh.clear();
+	    vlegtext.clear();
+	  }
         }
       } else {
 	// or keep original order
@@ -2001,7 +2025,9 @@ private:
         TH1D* ratio = (TH1D*)Data->Clone();
 	if (debug) std::cout<<"ok2"<<std::endl;
         TH1D* mc_sum = (TH1D*)MCstack->GetHists()->At(0)->Clone();
+	if (debug) std::cout<<"ok2"<<std::endl;
         TH2D* mc_sum_syst = 0;
+	if (debug) std::cout<<"ok2"<<std::endl;
 	if (syst_) mc_sum_syst = (TH2D*)mother_2d_[(TH1D*)MCstack->GetHists()->At(0)]->Clone();
 	if (debug) std::cout<<"ok2"<<std::endl;
         for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) {

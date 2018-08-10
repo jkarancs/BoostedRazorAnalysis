@@ -88,6 +88,12 @@ else:
     "Error: unknown signal model: "+opt.model
     sys.exit()
 
+example_signals = {
+    "T1tttt" : ["FastSim_SMS-T1tttt"],
+    "T2tt"   : ["FastSim_SMS-T2tt_mStop-150to250","FastSim_SMS-T2tt_mStop-250to350","FastSim_SMS-T2tt_mStop-350to400","FastSim_SMS-T2tt_mStop-400to1200"],
+    "T5ttcc" : ["FastSim_SMS-T5ttcc", "FastSim_SMS-T5ttcc_mGluino1750to2300"]
+}
+    
 top = [
     # single top
     "ST_s-channel_4f_InclusiveDecays",
@@ -1575,9 +1581,39 @@ if not opt.nohadd:
         for name in nondyjets: nondyjets_files.append(opt.dir+"/hadd/"+name+".root")
         logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/nondyjets.root"]+nondyjets_files,     "syst_"+opt.dir+"/hadd/log/nondyjets.log")
 
+    # also make sure example signals are hadded
+    for signal_name, dirs in example_signals.iteritems():
+        if not os.path.exists("syst_"+opt.dir+"/hadd/signal_"+signal_name+".root"):
+            signal_files = []
+            for name in dirs: signal_files.append(opt.dir+"/hadd/"+name+".root")
+            if len(signal_files)>1:
+                logged_call(["hadd", "-f", "-v", "syst_"+opt.dir+"/hadd/signal_"+signal_name+".root"]+signal_files, "syst_"+opt.dir+"/hadd/log/signal_"+signal_name+".log")
+            else:
+                logged_call(["cp", "-p"]+signal_files+["syst_"+opt.dir+"/hadd/signal_"+signal_name+".root"], "syst_"+opt.dir+"/hadd/log/signal_"+signal_name+".log")
+            input_files = []
+            for sig in dirs: input_files += glob.glob(ntuple+"/"+sig+"/*.root")
+            for i in range(len(input_files)):
+                f = ROOT.TFile.Open(input_files[i])
+                if "T2tt" in signal_name:
+                    h = f.Get("npvLowHigh_T2tt")
+                else:
+                    h = f.Get("npvLowHigh_T1tttt")
+                if i==0:
+                    npvLowHighHist_allevt = h.Clone(h.GetName()+"_allevt")
+                    npvLowHighHist_allevt.SetDirectory(0)
+                else:
+                    npvLowHighHist_allevt.Add(h)
+                f.Close()
+            f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+signal_name+".root","UPDATE")
+            npvLowHighHist_allevt.Write()
+            f.Close()
+
 #sys.exit()
 
 # ----------------- Harvest histograms -------------------
+
+tmp_dir = opt.dir # Somehow G region triggers were messed up recently, so revert back to previous good version
+#if "WAna" in opt.box: tmp_dir = "results/run_2018_06_08_syst_NoTopVeto" 
 
 # Load:
 # BG estimate
@@ -1594,11 +1630,12 @@ print "Loading histograms"
 
 # Data
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
+S_data = load(f,"MRR2_S_data"+BIN,"_data", combine_bins)
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/data.root")
 Q_data = load(f,"MRR2_Q_data"+BIN,"_data", 0)
 W_data = load(f,"MRR2_W_data"+BIN,"_data", 0)
 L_data = load(f,"MRR2_L_data"+BIN,"_data", 0)
 T_data = load(f,"MRR2_T_data"+BIN,"_data", 0)
-S_data = load(f,"MRR2_S_data"+BIN,"_data", combine_bins)
 s_data = load(f,"MRR2_s_data"+BIN,"_data", combine_bins)
 q_data = load(f,"MRR2_q_data"+BIN,"_data", combine_bins)
 npvHist = load(f,"nvtx","_data")
@@ -1634,26 +1671,35 @@ npvLowHighHist_allevt.Rebin3D(4,4,1)
 # Background
 # top + ttbar
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ttbar.root")
+S_TT = []
+S_LooseWP_TT = []
+for syst in systematics:
+    S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT", 0))
+    S_LooseWP_TT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_TT", 0))
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/top.root")
+for i in range(len(systematics)):
+    # Fix problem with nonexistent scale weights for single top
+    syst = systematics[i]
+    if "scale" in syst: syst = ""
+    S_TT[i].Add(load(f,"MRR2_S_bkg"+BIN+syst,"_T", 0))
+    S_LooseWP_TT[i].Add(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_T", 0))
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/ttbar.root")
 Q_TT = []
 W_TT = []
 L_TT = []
 T_TT = []
-S_TT = []
 s_TT = []
 q_TT = []
-S_LooseWP_TT = []
 #s_LooseWP_TT = []
 for syst in systematics:
     Q_TT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_TT", 0))
     W_TT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_TT", 0))
     L_TT.append(load(f,"MRR2_L_bkg"+BIN+syst,"_TT", 0))
     T_TT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_TT", 0))
-    S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT", 0))
     s_TT.append(load(f,"MRR2_s_bkg"+BIN+syst,"_TT", 0))
     q_TT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_TT", 0))
-    S_LooseWP_TT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_TT", 0))
     #s_LooseWP_TT.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_TT", 0))
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/top.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/top.root")
 for i in range(len(systematics)):
     # Fix problem with nonexistent scale weights for single top
     syst = systematics[i]
@@ -1662,96 +1708,112 @@ for i in range(len(systematics)):
     W_TT[i].Add(load(f,"MRR2_W_bkg"+BIN+syst,"_T", 0))
     L_TT[i].Add(load(f,"MRR2_L_bkg"+BIN+syst,"_T", 0))
     T_TT[i].Add(load(f,"MRR2_T_bkg"+BIN+syst,"_T", 0))
-    S_TT[i].Add(load(f,"MRR2_S_bkg"+BIN+syst,"_T", 0))
     s_TT[i].Add(load(f,"MRR2_s_bkg"+BIN+syst,"_T", 0))
     q_TT[i].Add(load(f,"MRR2_q_bkg"+BIN+syst,"_T", 0))
-    S_LooseWP_TT[i].Add(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_T", 0))
     #s_LooseWP_TT[i].Add(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_T", 0))
 # multijet
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/multijet.root")
+S_MJ = []
+S_LooseWP_MJ = []
+for syst in systematics:
+    S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ", 0))
+    S_LooseWP_MJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_MJ", 0))
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/multijet.root")
 Q_MJ = []
 W_MJ = []
 L_MJ = []
 T_MJ = []
-S_MJ = []
 s_MJ = []
 q_MJ = []
-S_LooseWP_MJ = []
 #s_LooseWP_MJ = []
 for syst in systematics:
     Q_MJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_MJ", 0))
     W_MJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_MJ", 0))
     L_MJ.append(load(f,"MRR2_L_bkg"+BIN+syst,"_MJ", 0))
     T_MJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_MJ", 0))
-    S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ", 0))
     s_MJ.append(load(f,"MRR2_s_bkg"+BIN+syst,"_MJ", 0))
     q_MJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_MJ", 0))
-    S_LooseWP_MJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_MJ", 0))
     #s_LooseWP_MJ.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_MJ", 0))
 # wjets
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/wjets.root")
+S_WJ = []
+S_LooseWP_WJ = []
+for syst in systematics:
+    S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ", 0))
+    S_LooseWP_WJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_WJ", 0))
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/wjets.root")
 Q_WJ = []
 W_WJ = []
 L_WJ = []
 T_WJ = []
-S_WJ = []
 L_WJ = []
 s_WJ = []
 q_WJ = []
-S_LooseWP_WJ = []
 #s_LooseWP_WJ = []
 for syst in systematics:
     Q_WJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_WJ", 0))
     W_WJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_WJ", 0))
     L_WJ.append(load(f,"MRR2_L_bkg"+BIN+syst,"_WJ", 0))
     T_WJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_WJ", 0))
-    S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ", 0))
     s_WJ.append(load(f,"MRR2_s_bkg"+BIN+syst,"_WJ", 0))
     q_WJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_WJ", 0))
-    S_LooseWP_WJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_WJ", 0))
     #s_LooseWP_WJ.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_WJ", 0))
 # ztoinv
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
+S_ZI = []
+S_LooseWP_ZI = []
+for syst in systematics:
+    S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI", 0))
+    S_LooseWP_ZI.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_ZI", 0))
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/ztoinv.root")
 Q_ZI = []
 W_ZI = []
 L_ZI = []
 T_ZI = []
-S_ZI = []
 s_ZI = []
 q_ZI = []
-S_LooseWP_ZI = []
 #s_LooseWP_ZI = []
 for syst in systematics:
     Q_ZI.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_ZI", 0))
     W_ZI.append(load(f,"MRR2_W_bkg"+BIN+syst,"_ZI", 0))
     L_ZI.append(load(f,"MRR2_L_bkg"+BIN+syst,"_ZI", 0))
     T_ZI.append(load(f,"MRR2_T_bkg"+BIN+syst,"_ZI", 0))
-    S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI", 0))
     s_ZI.append(load(f,"MRR2_s_bkg"+BIN+syst,"_ZI", 0))
     q_ZI.append(load(f,"MRR2_q_bkg"+BIN+syst,"_ZI", 0))
-    S_LooseWP_ZI.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_ZI", 0))
     #s_LooseWP_ZI.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_ZI", 0))
 # other
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/other.root")
+S_OT = []
+S_LooseWP_OT = []
+for syst in systematics:
+    S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", 0))
+    S_LooseWP_OT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_OT", 0))
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/other.root")
 Q_OT = []
 W_OT = []
 L_OT = []
 T_OT = []
-S_OT = []
 s_OT = []
 q_OT = []
-S_LooseWP_OT = []
 #s_LooseWP_OT = []
 for syst in systematics:
     Q_OT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_OT", 0))
     W_OT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_OT", 0))
     L_OT.append(load(f,"MRR2_L_bkg"+BIN+syst,"_OT", 0))
     T_OT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_OT", 0))
-    S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", 0))
     s_OT.append(load(f,"MRR2_s_bkg"+BIN+syst,"_OT", 0))
     q_OT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_OT", 0))
-    S_LooseWP_OT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_OT", 0))
     #s_LooseWP_OT.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_OT", 0))
+
+# Selected signals for Results plot
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T1tttt.root")
+S_T1tttt = load(f, "MRR2_S_signal_1400_300"+BIN, "_sig", 0)
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T2tt.root")
+S_T2tt = load(f, "MRR2_S_signal_850_100"+BIN, "_sig", 0)
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T5ttcc.root")
+S_T5ttcc = load(f, "MRR2_S_signal_1400_300"+BIN, "_sig", 0)
+
+#sys.exit()
 
 # ---------------- Z(nunu) estimate ---------------------
 
@@ -1761,10 +1823,10 @@ print "Calculate photon based Z(nunu) estimate"
 
 # Loading plots
 # Templates for purity
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/gjets.root")
 CHIsoTemplate_Prompt_EB = loadclone(f, "CHIsoTemplate_Prompt_g_EB", "_MC")
 CHIsoTemplate_Prompt_EE = loadclone(f, "CHIsoTemplate_Prompt_g_EE", "_MC")
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/data.root")
 CHIsoTemplate_Fake_EB = loadclone(f, "CHIsoTemplate_Fake_g_EB", "_data")
 CHIsoTemplate_Fake_EE = loadclone(f, "CHIsoTemplate_Fake_g_EE", "_data")
 # Distributions to fit
@@ -1780,21 +1842,21 @@ G_data_EB = loadclone(f, "MR_R2_G_EB"+BIN, "_data")
 G_data_EE = loadclone(f, "MR_R2_G_EE"+BIN, "_data")
 
 # Direct photon fraction
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/bkg.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/bkg.root")
 IsDirect_G_EB = loadclone(f, "MR_R2_IsDirect_G_EB", "_MC")
 IsDirect_G_EE = loadclone(f, "MR_R2_IsDirect_G_EE", "_MC")
 
 # Double ratio
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/data.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/data.root")
 G_data    = load(f, "MRR2_G_data"+BIN,"_data", 0)
 Z_data    = load(f, "MRR2_Z_data","_data", 0)
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/nondyjets.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/nondyjets.root")
 Z_NONDY   = load(f, "MRR2_Z_bkg", "_NONDY")
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/dyjets.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/dyjets.root")
 Z_DY      = load(f, "MRR2_Z_bkg", "_DY")
 
 # Transfer factors
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/gjets.root")
+f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/gjets.root")
 GDirectPrompt_GJ = []
 for syst in systematics:
     GDirectPrompt_GJ.append(load(f, "MRR2_G_DirectPrompt_bkg"+BIN+syst,"_MJ", 0))
@@ -1845,6 +1907,7 @@ for binx in range(1, CHIso_GNoIso_EB.GetNbinsX()+1):
     temp2_EE = get_zslice(CHIsoTemplate_Fake_EE,   "FakeTemplate_EE_"+binname,  min(3,binx1),binx2,biny1,biny2)
     mcpur_EB = mcpurity_MR_EB.GetBinContent(binx+2)
     mcpur_EE = mcpurity_MR_EE.GetBinContent(binx+2)
+
     pur_EB, pur_EB_err = fit_fraction(chiso_EB, temp1_EB, temp2_EB, plotdir, binname, mcpur_EB)
     pur_EE, pur_EE_err = fit_fraction(chiso_EE, temp1_EE, temp2_EE, plotdir, binname, mcpur_EE)
     purity_MR_EB.SetBinContent(binx, pur_EB)
@@ -2456,11 +2519,11 @@ can.SetLogy(1)
 s_data.GetYaxis().SetRangeUser(1.01e-1,1e5)
 s_data.GetYaxis().SetTitle("Events/Bins")
 s_data.Draw("PE1")
-s_TT_nom.SetLineColor(633)
+s_TT_nom.SetLineColor(418)
 s_MJ_nom.SetLineColor(619)
-s_WJ_nom.SetLineColor(418)
-s_ZI_nom.SetLineColor(401)
-s_OT_nom.SetLineColor(803)
+s_WJ_nom.SetLineColor(633)
+s_ZI_nom.SetLineColor(433)
+s_OT_nom.SetLineColor(864)
 s_TT_nom.SetLineWidth(2)
 s_MJ_nom.SetLineWidth(2)
 s_WJ_nom.SetLineWidth(2)
@@ -2472,18 +2535,18 @@ s_stack.Add(s_ZI_nom)
 s_stack.Add(s_WJ_nom)
 s_stack.Add(s_MJ_nom)
 s_stack.Add(s_TT_nom)
+s_stack.Draw("SAME HIST")
 s_syst_err.Draw("SAME E2")
 s_stat_err.Draw("SAME E2")
-s_stack.Draw("SAME HIST")
 s_data.Draw("SAMEPE1")
 draw_mr_bins(s_data, 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
 leg = ROOT.TLegend(0.65,0.53,0.95,0.88, BOX)
 leg.AddEntry(s_data,   "#color[1]{Data}",                         "pl")
-leg.AddEntry(s_TT_nom, "#color[633]{t#bar{t} + single top est.}", "l")
+leg.AddEntry(s_TT_nom, "#color[418]{t#bar{t} + single top est.}", "l")
 leg.AddEntry(s_MJ_nom, "#color[619]{Multijet est.}",              "l")
-leg.AddEntry(s_WJ_nom, "#color[418]{W(#rightarrowl#nu) est.}",    "l")
-leg.AddEntry(s_ZI_nom, "#color[401]{Z(#rightarrow#nu#nu) est.}",  "l")
-leg.AddEntry(s_OT_nom, "#color[803]{Other (MC)}",                 "l")
+leg.AddEntry(s_WJ_nom, "#color[633]{W(#rightarrowl#nu) est.}",    "l")
+leg.AddEntry(s_ZI_nom, "#color[433]{Z(#rightarrow#nu#nu) est.}",  "l")
+leg.AddEntry(s_OT_nom, "#color[864]{Other (MC)}",                 "l")
 leg.SetFillColor(0)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)
@@ -2569,11 +2632,11 @@ can.SetLogy(1)
 q_data.GetYaxis().SetRangeUser(1.01e-1,1e4)
 q_data.GetYaxis().SetTitle("Events/Bins")
 q_data.Draw("PE1")
-q_TT_nom.SetLineColor(633)
+q_TT_nom.SetLineColor(418)
 q_MJ_nom.SetLineColor(619)
-q_WJ_nom.SetLineColor(418)
-q_ZI_nom.SetLineColor(401)
-q_OT_nom.SetLineColor(803)
+q_WJ_nom.SetLineColor(633)
+q_ZI_nom.SetLineColor(433)
+q_OT_nom.SetLineColor(864)
 q_TT_nom.SetLineWidth(2)
 q_MJ_nom.SetLineWidth(2)
 q_WJ_nom.SetLineWidth(2)
@@ -2585,18 +2648,18 @@ q_stack.Add(q_ZI_nom)
 q_stack.Add(q_WJ_nom)
 q_stack.Add(q_MJ_nom)
 q_stack.Add(q_TT_nom)
+q_stack.Draw("SAME HIST")
 q_syst_err.Draw("SAME E2")
 q_stat_err.Draw("SAME E2")
-q_stack.Draw("SAME HIST")
 q_data.Draw("SAMEPE1")
 draw_mr_bins(q_data, 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
 leg = ROOT.TLegend(0.65,0.53,0.95,0.88, BOX)
 leg.AddEntry(q_data,   "#color[1]{Data}",                         "pl")
-leg.AddEntry(q_TT_nom, "#color[633]{t#bar{t} + single top est.}", "l")
+leg.AddEntry(q_TT_nom, "#color[418]{t#bar{t} + single top est.}", "l")
 leg.AddEntry(q_MJ_nom, "#color[619]{Multijet est.}",              "l")
-leg.AddEntry(q_WJ_nom, "#color[418]{W(#rightarrowl#nu) est.}",    "l")
-leg.AddEntry(q_ZI_nom, "#color[401]{Z(#rightarrow#nu#nu) est.}",  "l")
-leg.AddEntry(q_OT_nom, "#color[803]{Other (MC)}",                 "l")
+leg.AddEntry(q_WJ_nom, "#color[633]{W(#rightarrowl#nu) est.}",    "l")
+leg.AddEntry(q_ZI_nom, "#color[433]{Z(#rightarrow#nu#nu) est.}",  "l")
+leg.AddEntry(q_OT_nom, "#color[864]{Other (MC)}",                 "l")
 leg.SetFillColor(0)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)
@@ -2723,11 +2786,16 @@ can.SetLogy(1)
 S_data.GetYaxis().SetRangeUser(1.01e-1,1e4)
 S_data.GetYaxis().SetTitle("Events/Bins")
 S_data.Draw("PE1")
-S_TT_nom.SetLineColor(633)
+S_TT_nom.SetLineColor(418)
 S_MJ_nom.SetLineColor(619)
-S_WJ_nom.SetLineColor(418)
-S_ZI_nom.SetLineColor(401)
-S_OT_nom.SetLineColor(803)
+S_WJ_nom.SetLineColor(633)
+S_ZI_nom.SetLineColor(433)
+S_OT_nom.SetLineColor(864)
+S_TT_nom.SetFillColor(418)
+S_MJ_nom.SetFillColor(619)
+S_WJ_nom.SetFillColor(633)
+S_ZI_nom.SetFillColor(433)
+S_OT_nom.SetFillColor(864)
 S_TT_nom.SetLineWidth(2)
 S_MJ_nom.SetLineWidth(2)
 S_WJ_nom.SetLineWidth(2)
@@ -2739,17 +2807,34 @@ S_stack.Add(S_ZI_nom)
 S_stack.Add(S_WJ_nom)
 S_stack.Add(S_MJ_nom)
 S_stack.Add(S_TT_nom)
+S_stack.Draw("SAME HIST")
 S_syst_err.Draw("SAME E2")
 S_stat_err.Draw("SAME E2")
-S_stack.Draw("SAME HIST")
 S_data.Draw("SAMEPE1")
-leg = ROOT.TLegend(0.65,0.53,0.95,0.88, BOX)
-leg.AddEntry(S_data,   "#color[1]{Data}",                         "pl")
-leg.AddEntry(S_TT_nom, "#color[633]{t#bar{t} + single top est.}", "l")
-leg.AddEntry(S_MJ_nom, "#color[619]{Multijet est.}",              "l")
-leg.AddEntry(S_WJ_nom, "#color[418]{W(#rightarrowl#nu) est.}",    "l")
-leg.AddEntry(S_ZI_nom, "#color[401]{Z(#rightarrow#nu#nu) est.}",  "l")
-leg.AddEntry(S_OT_nom, "#color[803]{Other (MC)}",                 "l")
+S_T1tttt.SetLineColor(619)
+S_T2tt  .SetLineColor(401)
+S_T5ttcc.SetLineColor(601)
+S_T1tttt.SetLineStyle(7)
+S_T2tt  .SetLineStyle(7)
+S_T5ttcc.SetLineStyle(7)
+S_T1tttt.SetLineWidth(3)
+S_T2tt  .SetLineWidth(3)
+S_T5ttcc.SetLineWidth(3)
+S_T1tttt.Draw("SAME HIST")
+S_T2tt  .Draw("SAME HIST")
+S_T5ttcc.Draw("SAME HIST")
+leg = ROOT.TLegend(0.55,0.53,0.95,0.88, BOX)
+leg.SetNColumns(2)
+leg.AddEntry(S_data,   "#color[1]{Data}",                  "pl")
+leg.AddEntry(S_TT_nom, "#color[418]{t#bar{t}+single top}", "l")
+leg.AddEntry(S_T1tttt, "#color[619]{T1tttt}",              "l")
+leg.AddEntry(S_MJ_nom, "#color[619]{Multijet}",            "l")
+leg.AddEntry(S_T2tt,   "#color[401]{T2tt}",                "l")
+leg.AddEntry(S_WJ_nom, "#color[633]{W+Jets}",              "l")
+leg.AddEntry(S_T5ttcc, "#color[601]{T5ttcc}",              "l")
+leg.AddEntry(S_ZI_nom, "#color[433]{Z#rightarrow#nu#nu}",  "l")
+leg.AddEntry(0,        "",                                 "")
+leg.AddEntry(S_OT_nom, "#color[864]{Other}",               "l")
 leg.SetFillColor(0)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)

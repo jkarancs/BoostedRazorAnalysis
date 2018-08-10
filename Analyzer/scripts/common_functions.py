@@ -147,17 +147,23 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
         if debug: print "ok1"
         Data = c.GetListOfPrimitives().At(1)
         if debug: print "ok1"
-        syst_err = c.GetListOfPrimitives().At(2)
+        MCstack = c.GetListOfPrimitives().At(2)
         if debug: print "ok1"
-        stat_err = c.GetListOfPrimitives().At(3)
+        syst_err = c.GetListOfPrimitives().At(3)
         if debug: print "ok1"
-        MCstack = c.GetListOfPrimitives().At(4)
+        stat_err = c.GetListOfPrimitives().At(4)
         if debug: print "ok1"
         for i in range(c.GetListOfPrimitives().GetEntries()):
             prim = c.GetListOfPrimitives().At(i)
             if prim.GetTitle().startswith("Legend"):
                 leg = prim
                 break
+        # Add also signals if they are there
+        vh_signals = []
+        if "BkgEstimate" in c.GetName():
+            vh_signals.append(c.GetListOfPrimitives().At(6))
+            vh_signals.append(c.GetListOfPrimitives().At(7))
+            vh_signals.append(c.GetListOfPrimitives().At(8))
         if debug: print "ok1"
         if not MCstack.GetTitle()=="0":
             ratio = Data.Clone(Data.GetName()+"_num")
@@ -241,9 +247,10 @@ def add_stack_ratio_plot(c, xmin, xmax, keep, add_labels=True, combine_bins=True
             if debug: print "ok2"
             if (logScale): p.SetLogy(1)
             Data.Draw("PE1")
-            syst_err.Draw("SAME E2")
-            stat_err.Draw("SAME E2")
             MCstack.Draw("SAME HIST")
+            #syst_err.Draw("SAME E2")
+            stat_err.Draw("SAME E2")
+            for h_signal in vh_signals: h_signal.Draw("SAME HIST")
             leg.Draw("SAME")
             if debug: print "ok2"
             Data.Draw("SAMEPE1")
@@ -528,7 +535,7 @@ def save_plot(can, name, plotname, write=True):
     if dirname != "" and not os.path.exists(dirname):
         os.makedirs(dirname)
     with suppress_stdout_stderr():
-        can.SaveAs(plotname+".root")
+        can.SaveAs(plotname+".png")
     if write:
         if name != "":
             can.Write(name)
