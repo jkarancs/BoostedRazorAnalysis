@@ -10,10 +10,14 @@ usage = "Usage: python %prog -d <input/output dir> -m <sms model> box1 box2 box3
 parser = OptionParser(usage=usage)
 parser.add_option('-d','--dir',         dest="dir",         type="string",       default="",       help="Input/output directory (use output of Analyzer)")
 parser.add_option('-m','--model',       dest="model",       type="string",       default="T5ttcc", help='Signal model (default="T5ttcc")')
-parser.add_option('--nproc',            dest="nproc",       type="int",          default=-1,        help="Tells how many parallel combine to start (Default=6/1 - local/batch)")
+parser.add_option('--nproc',            dest="nproc",       type="int",          default=-1,       help="Tells how many parallel combine to start (Default=6/1 - local/batch)")
 parser.add_option("--batch",            dest="batch",       action="store_true", default=False,    help="Send the jobs to batch")
 parser.add_option("--queue",            dest="queue",       type="string",       default="8nm",    help="Specify which batch queue to use (Default=8nm)")
 parser.add_option('-n','--ncardperjob', dest="ncardperjob", type="int",          default=2,        help='Number of cards to process per batch job (default=2)')
+parser.add_option('-s',                 dest="signif",      action="store_true", default=False,    help="Plot significance instead of limit")
+parser.add_option('--blind',            dest="blind",       action="store_true", default=False,    help='Do not use data for limits/significance')
+parser.add_option('--ext_only',         dest="ext_only",    action="store_true", default=False,    help="Run only on the extended mgluino/mstop points")
+parser.add_option('--nonext_only',      dest="nonext_only", action="store_true", default=False,    help="Run only on the original mgluino/mstop points")
 (opt,args) = parser.parse_args()
 
 if opt.nproc == -1:
@@ -137,8 +141,29 @@ for card in glob.glob(opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_*_"+boxes[0]+
     if re.match("^"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_[0-9]+_[0-9]+_"+boxes[0]+".txt", card):
         mg   = card.replace("_"+boxes[0]+".txt","").split("_")[-2:][0]
         mchi = card.replace("_"+boxes[0]+".txt","").split("_")[-2:][1]
-        if len(boxes) > 1: card = card.replace(boxes[0],"_".join(boxes))
-        combine_cmds.append(["python", "scripts/Combine_job.py", "-M", "AsymptoticLimits", "-d", card]+boxes)
+        add_card = True
+        if opt.ext_only:
+            if "T2tt" in opt.model:
+                if int(mg) <= 1200: add_card = False
+            else:
+                if int(mg) <= 2300: add_card = False
+        elif opt.nonext_only:
+            if "T2tt" in opt.model:
+                if int(mg) > 1200: add_card = False
+            else:
+                if int(mg) > 2300: add_card = False            
+        if add_card:
+            if len(boxes) > 1: card = card.replace(boxes[0],"_".join(boxes))
+            if opt.blind:
+                if opt.signif:
+                    combine_cmds.append(["python", "scripts/Combine_job.py", "--blind", "-M", "Significance", "--signif", "-d", card]+boxes)
+                else:
+                    combine_cmds.append(["python", "scripts/Combine_job.py", "--blind", "-M", "AsymptoticLimits", "-d", card]+boxes)
+            else:
+                if opt.signif:
+                    combine_cmds.append(["python", "scripts/Combine_job.py", "-M", "Significance", "--signif", "-d", card]+boxes)
+                else:
+                    combine_cmds.append(["python", "scripts/Combine_job.py", "-M", "AsymptoticLimits", "-d", card]+boxes)
 
 # Merge n commands into a single job
 if opt.batch and opt.ncardperjob>1:

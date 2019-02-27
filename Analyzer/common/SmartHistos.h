@@ -1,3 +1,4 @@
+#define FASTDEBUG 0
 #include <cmath>
 #include <functional>
 #include <iostream>
@@ -203,12 +204,15 @@ public:
     syst_ = name.find("Counts_vs_")!=std::string::npos;
     doublex_ = opt.find("DoubleX")!=std::string::npos;
     nocomb_  = opt.find("NoComb")!=std::string::npos;
+    rebinx_ = opt.find("RebinX")!=std::string::npos;
     n_nostack_ = 0;
     n_nocomb_  = 9999;
+    n_rebinx_   = 0;
     if (stack_)    { std::stringstream ss; ss<<opt.substr(opt.find("Stack")   +5,1); ss>>n_nostack_; }
     if (twocol_)   { std::stringstream ss; ss<<opt.substr(opt.find("TwoCol")  +6,2); ss>>twocol_; }
     if (approval_) { std::stringstream ss; ss<<opt.substr(opt.find("Approval")+8,2); ss>>approval_; }
     if (nocomb_)   { std::stringstream ss; ss<<opt.substr(opt.find("NoComb")  +6,1); ss>>n_nocomb_; }
+    if (rebinx_)   { std::stringstream ss; ss<<opt.substr(opt.find("RebinX")  +6,1); ss>>n_rebinx_; }
     ranges_=ranges;
     bin_labels_=bin_labels;
     if (npf_>5) std::cout<<"!!! ERROR: SmartHisto::constructor: Fixme! - More than 5 postfixes, only use max 4, or redefine functions!\n";
@@ -272,10 +276,12 @@ private:
   bool addint_;  // Add plot integrals to a separate column in the legend
   size_t n_nostack_; // Do no stack first n plots
   size_t n_nocomb_;  // Stack plots to "Other" and keep N uncombined
+  size_t n_rebinx_;   // Rebin histograms
   bool plot_asymm_err_; // Decide automatically if histo should be plotted with asymmetric errors (Using TGraphAE)
   bool syst_;
   bool doublex_; // Double the X-size of the plot area (1000x500)
   bool nocomb_;  // Stack plots to "Other" and keep N uncombined
+  bool rebinx_; // Merge N bins for histograms (Rebin)
   
   // axis ranges: xlow, xhigh, ylow, yhigh, zlow, zhigh
   // if low==high -> do not set
@@ -858,7 +864,10 @@ private:
 	if (pair.second.size()>8) set_opt = 1;
       }
       //if (set_opt==1) axis->LabelsOption("d"); // down 
-      if (set_opt==1) axis->LabelsOption("v"); // vertical
+      if (set_opt==1) {
+	axis->LabelsOption("v"); // vertical
+	axis->SetLabelOffset(0.01);
+      }
       axis->SetLabelSize(0.05);
     }
   }
@@ -1422,7 +1431,7 @@ private:
     if (!bin_labels_[0].empty()) {
       size_t maxlength=0;
       for (const auto& label : bin_labels_[0]) if (label.second.size()>maxlength) maxlength = label.second.size();
-      if (maxlength>6) mar_bottom = maxlength*10;
+      if (maxlength>6) mar_bottom = maxlength*10+6;
       if (std::string(h->GetXaxis()->GetTitle()).size()>0) mar_bottom += labelfontsize;
       set_bin_labels = 1;
     }
@@ -1601,9 +1610,9 @@ private:
       if (era==2) text = "#sqrt{s}=8 TeV";
       if (era==3) text = "#sqrt{s}=13 TeV";
       if (era==4) text = "Run 2, #sqrt{s}=13 TeV";
-      if (era==5) text = "#scale[0.7]{35.9 fb^{-1} (13 TeV)}";
-      if (era==6) text = "#scale[0.65]{W ana, 35.9 fb^{-1} (13 TeV)}";
-      if (era==7) text = "#scale[0.65]{Top ana, 35.9 fb^{-1} (13 TeV)}";
+      if (era==5) text = "#scale[0.9]{35.9 fb^{-1} (13 TeV)}";
+      if (era==6) text = "#scale[0.9]{35.9 fb^{-1} (13 TeV)}";
+      if (era==7) text = "#scale[0.9]{35.9 fb^{-1} (13 TeV)}";
       double y = log_&&ymin>0 ? std::exp(std::log(ymax)+(std::log(ymax)-std::log(ymin))/25.0) : ymax+(ymax-ymin)/25.0;
       TLatex* era_lat = new TLatex(xmax, y, text.c_str());
       era_lat->SetTextAlign(32);
@@ -1611,14 +1620,36 @@ private:
       era_lat->SetTextFont(42);
       era_lat->SetLineWidth(2);
       era_lat->Draw();
+      // Add W/Top box to a separate label
+      //if (era==6||era==7) {
+      //  double x = xmin+(xmax-xmin)/20.0;
+      //  y = ymax-(ymax-ymin)/10.0;
+      //  if (log_&&ymin>0) y = std::exp(std::log(ymax)-(std::log(ymax)-std::log(ymin))/10.0);
+      //  TLatex* box_lat = new TLatex(x, y, era==6 ? "W category" : "Top category"); 
+      //  box_lat->SetTextSize(0.04);
+      //  box_lat->SetTextFont(42);
+      //  box_lat->SetLineWidth(2);
+      //  box_lat->Draw();
+      //}
     }
     gPad->Update();
   }
 
-  void draw_mr_bins(TH1D *h, double ymin, double ymax, bool combine_bins=true,
+  void draw_mr_bins(TCanvas *can, double ymin, double ymax, bool combine_bins=true,
 		    std::vector<double> mrbins = { 0.8, 1.0, 1.2, 1.6, 2.0, 4.0 },
 		    std::vector<double> r2bins = { 0.08, 0.12, 0.16, 0.24, 0.4, 1.5 }) {
-    for (size_t i=0; i<mrbins.size(); ++i) {
+    gPad->Update();    
+    // Find the data histogram
+    TH1D* h = 0;
+    THStack* s = 0;
+    if (!stack_) {
+      h = (TH1D*)can->GetListOfPrimitives()->At(1);
+    } else {
+      h = (TH1D*)((TVirtualPad*)can->GetListOfPrimitives()->At(0))->GetListOfPrimitives()->At(1);
+      s = (THStack*)((TVirtualPad*)can->GetListOfPrimitives()->At(0))->GetListOfPrimitives()->At(2);
+    }
+    double prevmax = 0;
+    if (!h->InheritsFrom("TGraph")) for (size_t i=0; i<mrbins.size(); ++i) {
       // Find maximum bin height
       int bin1 = i*5+1, bin2 = i*5+5;
       if (combine_bins) {
@@ -1634,7 +1665,17 @@ private:
       for (int binx=bin1; binx<=bin2; ++binx) {
 	if (h->GetBinContent(binx)>maxcont) 
 	  maxcont = h->GetBinContent(binx);
+	// Check also the maximum of the stack plot
+	if (stack_) {
+	  double sum = 0;
+	  for (int j=0; j<s->GetHists()->GetEntries(); ++j)
+	    sum += std::max(0.,((TH1D*)s->GetHists()->At(j))->GetBinContent(binx));
+	  if (sum>maxcont) 
+	    maxcont = sum;
+	}
       }
+      if (maxcont<=0) maxcont = prevmax;
+      prevmax = maxcont;
       // Set line/text height
       std::vector<double> y2 = {maxcont+(ymax-ymin)*0.05, maxcont+(ymax-ymin)*0.125};
       if (ymin!=0) y2 = {maxcont*std::pow(ymax/ymin,0.05), maxcont*std::pow(ymax/ymin,0.125)};
@@ -1643,6 +1684,7 @@ private:
       if (i!=0) {
 	TLine *line = new TLine(x,ymin,x, ymax<=1.0 ? ymax : y2[0]);
 	line->SetLineStyle(2);
+	line->SetLineWidth(2);
 	line->Draw();
       }
       x = 2.0 + i*5;
@@ -1736,6 +1778,22 @@ private:
   
   void multidraw_with_legend_(size_t skip, std::vector<TH1D*>& hvec, std::vector<std::string> pf, std::string colz,
 			      std::string legtitle="", float x1=0.15, float y2=0.9, bool debug = 0) {
+    if (approval_) {
+      if (approval_%10==6) {
+	if (legtitle.find("category")==std::string::npos) {
+	  if (legtitle.size()) legtitle += ", ";
+	  legtitle += "#font[52]{W category}";
+	}
+      } else if (approval_%10==7) {
+	if (legtitle.size()) legtitle += ", ";
+	legtitle += "#font[52]{Top category}";
+      }
+    }
+    if (n_rebinx_) for (auto& h : hvec) {
+      h->Rebin(n_rebinx_);
+      if (ranges_.size()>=2) if (ranges_[0]!=ranges_[1]) 
+	h->GetXaxis()->SetRangeUser(ranges_[0],ranges_[1]);
+    }
     if (debug) std::cout<<"Multidraw start"<<std::endl;
     // Draw multiple histograms, set their marker/line color/style
     // Then Draw legend for all histo with titles from a postfix
@@ -1743,6 +1801,7 @@ private:
     // full  : circle, square, tri-up, tri-down, star
     // hollow: circle, square, tri-up, diam, star
     std::vector<Int_t> marker = { 20, 21, 22, 23, 29, 24, 25, 26, 27, 30}; 
+    //std::vector<Int_t> marker = { 20, 21, 22, 23, 29};
     size_t nrow = 0, ncol = (1+(twocol_>0))*(1+addint_);
     // Set styles for histos
     for (size_t i=skip; i<hvec.size(); i++) if (hvec[i]->GetEntries()>0) {
@@ -1750,7 +1809,8 @@ private:
 	if (draw_.find("P")!=std::string::npos) {
 	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]); 
 	  hvec[i]->SetMarkerColor((Color_t)col[i-(keep_color_?skip:0)]); 
-	  hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%10]); 
+	  hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%marker.size()]); 
+	  if (i%marker.size()==4||i%marker.size()==9) hvec[i]->SetMarkerSize(1.2);
 	} else {
 	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  hvec[i]->SetLineWidth(2);
@@ -1772,7 +1832,12 @@ private:
     for (size_t i=skip; i<hvec.size() ; ++i) if (hvec[i]->GetEntries()>0) {
       if (debug) std::cout<<i<<" start"<<std::endl;
       std::stringstream colored_text;
-      colored_text<<"#color["<<(Color_t)col[i-(keep_color_?skip:0)]<<"]{"<<pf[i]<<"}";
+      // Switch of color legend text for paper plots
+      if ((approval_/10==3||approval_/10==6)&&approval_%10>4) {
+	colored_text<<"#color[1]{"<<pf[i]<<"}";
+      } else {
+	colored_text<<"#color["<<(Color_t)col[i-(keep_color_?skip:0)]<<"]{"<<pf[i]<<"}";
+      }
       if (stack_) {
 	if (debug) std::cout<<"stack"<<i<<" start"<<std::endl;
 	// Set special styles for Stack histos
@@ -1784,8 +1849,9 @@ private:
 	    //hvec[i]->SetLineColor(0);
 	    hvec[i]->SetMarkerColor((Color_t)col[i-(keep_color_?skip:0)]); 
 	    hvec[i]->SetMarkerStyle(marker[(i-(keep_color_?skip:0))%10]); 
-	    hvec[i]->Draw("PE1");
-	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), "P"));
+	    //hvec[i]->SetBinErrorOption(TH1::kPoisson);
+	    hvec[i]->Draw("PE0");
+	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), "PE"));
 	    n_nonstack_drawn++;
 	    if (debug) std::cout<<"stack"<<i<<" data ok"<<std::endl;
 	  } else {
@@ -1803,7 +1869,8 @@ private:
 	  if (debug) std::cout<<"stack"<<i<<" ok"<<std::endl;
 	} else {
 	  if (debug) std::cout<<"stack"<<i<<" stack"<<std::endl;
-	  hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
+	  //hvec[i]->SetLineColor((Color_t)col[i-(keep_color_?skip:0)]);
+	  hvec[i]->SetLineColor(600); // Inclusive Razor style
 	  hvec[i]->SetFillColor((Color_t)col[i-(keep_color_?skip:0)]);
 	  vh.push_back(hvec[i]);
 	  vlegtext.push_back(colored_text.str());
@@ -1815,7 +1882,7 @@ private:
 	if (norm_&&hvec[i]->Integral()>0) {
 	  if (debug) std::cout<<"nostack"<<i<<" norm"<<std::endl;
 	  hvec[i]->DrawNormalized((i==skip) ? draw_.c_str() : same.c_str());
-	  legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
+	  legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "PE" : "L"));
 	  add_integ_(legentries, hvec[i]);
 	  if (debug) std::cout<<"nostack"<<i<<" norm ok"<<std::endl;
 	} else if (plot_asymm_err_) {
@@ -1833,7 +1900,7 @@ private:
 	      //  tgae->Draw("AP");	      
 	      draw_axis=0;
 	    } else tgae->Draw("SAMEP");
-	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "P" : "L"));
+	    legentries.push_back(new TLegendEntry(hvec[i], colored_text.str().c_str(), draw_.find("P")!=std::string::npos ? "PE" : "L"));
 	    add_integ_(legentries, hvec[i]);
 	  }
 	  if (debug) std::cout<<"nostack"<<i<<" legentry ok"<<std::endl;
@@ -1896,10 +1963,14 @@ private:
 	      mother_2d_[all_other] = mother;
 	    }
 	    for (size_t i=1; i<vh.size(); ++i) all_other->Add(vh[i]);
-	    all_other->SetFillColor(864);
-	    all_other->SetLineColor(864);
+	    all_other->SetFillColor(865);
+	    all_other->SetLineColor(865);
 	    vh_max.push_back(all_other);
-	    legentries.push_back(new TLegendEntry(all_other, "#color[864]{Other}", "F"));
+	    if ((approval_/10==3||approval_/10==6)&&approval_%10>4) {
+	      legentries.push_back(new TLegendEntry(all_other, "#color[1]{Other}", "F"));
+	    } else {
+	      legentries.push_back(new TLegendEntry(all_other, "#color[865]{Other}", "F"));
+	    }
 	    add_integ_(legentries, all_other);
 	    vh.clear();
 	    vlegtext.clear();
@@ -1917,8 +1988,10 @@ private:
       for (int i=(int)vh_max.size()-1; i>=0; --i) s->Add(vh_max[i]);
       s->SetTitle(std::to_string(vh_max.size()).c_str());
       s->Draw(n_nostack_ ? "SAMEHIST" : "HIST");
-      for (int i=n_nostack_-1; i>=(int)skip; --i)
-	hvec[i]->Draw(i==0 ? "SAMEPE1" : "SAMEHIST");
+      for (int i=n_nostack_-1; i>=(int)skip; --i) {
+	//if (i==0) hvec[i]->SetBinErrorOption(TH1::kPoisson);
+	hvec[i]->Draw(i==0 ? "SAMEPE0" : "SAMEHIST");
+      }
       if (debug) std::cout<<"stackdraw done"<<std::endl;
     } else if (ratio_&&!plot_asymm_err_) {
       if (debug) std::cout<<"asymratio start"<<std::endl;
@@ -1998,7 +2071,7 @@ private:
     if (!bin_labels_[0].empty()) {
       size_t maxlength=0;
       for (const auto& label : bin_labels_[0]) if (label.second.size()>maxlength) maxlength = label.second.size();
-      if (maxlength>6) mar_bottom = maxlength*10;
+      if (maxlength>6) mar_bottom = maxlength*10+5;
       set_bin_labels = true;
     }
     float mar_left   = 90;
@@ -2010,7 +2083,7 @@ private:
     float padsize2 = std::min(mar_bottom+y2+mid2, x_can);
     float labelfontsize = 20;
     float titlefontsize = 32;
-    float leg_y2 = 0.87;
+    float leg_y2 = 0.86;
     bool ok = 0;
     if (debug) std::cout<<"Start debugging: "<<c->GetName()<<std::endl;
     if (debug) std::cout<<"ok"<<std::endl;
@@ -2032,7 +2105,13 @@ private:
 	if (debug) std::cout<<"ok2"<<std::endl;
         for (int iStack=1; iStack<MCstack->GetHists()->GetEntries(); ++iStack) {
 	  TH1D* h = (TH1D*)MCstack->GetHists()->At(iStack);
-	  mc_sum->Add((TH1D*)h->Clone());
+	  // Zero negative bin counts
+	  // Reason: THStack cannot deal with negative bin counts
+	  // Solution is to remove such negative counts
+	  // Plotting does not change, but the ratio is fixed this way
+	  TH1D* zero = (TH1D*)h->Clone((std::string(h->GetName())+"_zeroed").c_str());
+	  for (int binx=1; binx<=zero->GetNbinsX(); ++binx) if (zero->GetBinContent(binx)<0) zero->SetBinContent(binx,0);
+	  mc_sum->Add(zero);
 	  TH2D* mother = mother_2d_[h];
 	  if (mother) {
 	    /*
@@ -2091,7 +2170,7 @@ private:
             }
 	    */
 	    if (debug) std::cout<<"oktemp"<<std::endl;
-	    if (syst_) mc_sum_syst->Add(mother_2d_[h]);
+	    if (syst_) mc_sum_syst->Add(mother);
 	  }
 	}
 	if (debug) std::cout<<"ok2"<<std::endl;
@@ -2105,7 +2184,11 @@ private:
 	for (int bin=1; bin<=ratio->GetNbinsX(); ++bin) {
 	  if (mc_sum->GetBinContent(bin)!=0) {
 	    ratio  ->SetBinContent(bin, Data->GetBinContent(bin)/mc_sum->GetBinContent(bin));
-	    ratio  ->SetBinError  (bin, Data->GetBinError(bin)  /mc_sum->GetBinContent(bin));
+	    if (Data->GetBinError(bin)==0)
+	      // Draw the Garwood confidence interval for 0 counts [0,1.83]
+	      ratio  ->SetBinError  (bin, 1.83 /mc_sum->GetBinContent(bin));
+	    else 
+	      ratio  ->SetBinError  (bin, Data->GetBinError(bin)  /mc_sum->GetBinContent(bin));
 	    den_stat_err->SetBinContent(bin, 1);
 	    den_stat_err->SetBinError  (bin, mc_sum->GetBinError(bin)  /mc_sum->GetBinContent(bin));
 	    if (syst_) {
@@ -2145,15 +2228,18 @@ private:
 	  }
 	}
 	if (debug) std::cout<<"ok2"<<std::endl;
+	den_stat_err->SetLineColor(1);
 	den_stat_err->SetMarkerStyle(0);
 	den_stat_err->SetMarkerColor(0);
 	den_stat_err->SetFillColor(1);
 	den_stat_err->SetFillStyle(3004);
 	if (syst_) {
+	  den_all_up_err->SetLineColor(1);
 	  den_all_up_err->SetMarkerStyle(0);
 	  den_all_up_err->SetMarkerColor(0);
 	  den_all_up_err->SetFillColor(kGray);
 	  den_all_up_err->SetFillStyle(1001);
+	  den_all_down_err->SetLineColor(1);
 	  den_all_down_err->SetMarkerStyle(0);
 	  den_all_down_err->SetMarkerColor(0);
 	  den_all_down_err->SetFillColor(kGray);
@@ -2191,8 +2277,11 @@ private:
         ratio->SetLabelSize(labelfontsize/padsize2,"xyz");
 	if (set_bin_labels) ratio->SetLabelSize(labelfontsize*1.5/padsize2,"x");
         ratio->SetTitleSize(titlefontsize/padsize2,"xyz");
-        ratio->GetYaxis()->SetRangeUser(0,2);
-        ratio->GetYaxis()->SetNdivisions(305);
+	int max_range = std::min(double(10),std::ceil(ratio->GetBinContent(ratio->GetMaximumBin())));
+	int MAXRANGE = 5;
+	ratio->GetYaxis()->SetRangeUser(0,std::max(2,std::min(MAXRANGE, max_range)));
+	ratio->GetYaxis()->SetNdivisions(501+std::max(2,std::min(MAXRANGE,max_range)));
+        //ratio->GetYaxis()->SetRangeUser(0,2);
         ratio->GetYaxis()->SetTitle("Data/MC");
 	if (debug) std::cout<<"ok2"<<std::endl;
 	float heightratio2 = padsize2/y_can;
@@ -2220,11 +2309,26 @@ private:
 	if (debug) std::cout<<"ok2"<<std::endl;
         if (logX) p->SetLogx(1);
         if (logY) p->SetLogy(1);
-        Data->Draw("PE1");
+	//Data->SetBinErrorOption(TH1::kPoisson);
+        Data->Draw("PE0");
         MCstack->Draw("SAMEHIST");
 	if (debug) std::cout<<"ok2"<<std::endl;
         for (size_t i=0; i<rest.size(); ++i) rest[i]->Draw("SAMEHIST");
-        Data->Draw("SAMEPE1");
+        Data->Draw("SAMEPE0");
+	// Draw also Garwood intervals for 0 counts [0,1.83]
+	TH1D* zero = (TH1D*)Data->Clone((std::string(Data->GetName())+"_zeroes").c_str());
+	float ymin = zero->GetYaxis()->GetXmin();
+	if (ymin>0) zero->SetMarkerStyle(1);
+	for (int binx=1; binx<=zero->GetNbinsX(); ++binx) {
+	  if (zero->GetBinContent(binx)>0) {
+	    zero->SetBinContent(binx,0);
+	    zero->SetBinError  (binx,0);
+	  } else {
+	    if (ymin>0) zero->SetBinContent(binx, Data->GetYaxis()->GetXmin());
+	    zero->SetBinError  (binx, 1.83-ymin);
+	  }
+	}
+	zero->Draw("SAMEPE0");
 	if (debug) std::cout<<"ok3"<<std::endl;
 	// Move/Resize legend to fit divided canvas better
 	leg->SetTextSize(0.04);
@@ -2233,6 +2337,8 @@ private:
         leg->Draw("SAME");
 	if (debug) std::cout<<"ok3"<<std::endl;
 	add_labels_(Data);
+	if (debug) std::cout<<"ok3"<<std::endl;
+	gPad->RedrawAxis();
 	if (debug) std::cout<<"ok3"<<std::endl;
         gPad->Update();
 	if (debug) std::cout<<"ok3"<<std::endl;
@@ -2246,17 +2352,34 @@ private:
 	p->SetLeftMargin(left_mar);
 	p->SetRightMargin(right_mar);
 	if (debug) std::cout<<"ok3"<<std::endl;
-        ratio->Draw("PE1");
+	//ratio->SetBinErrorOption(TH1::kPoisson);
+        ratio->Draw("PE0");
 	if (syst_) {
 	  den_all_up_err->Draw("SAME E2");
 	  den_all_down_err->Draw("SAME E2");
 	}
 	den_stat_err->Draw("SAME E2");
-        ratio->Draw("SAME PE1");
+        ratio->Draw("SAME PE0");
+	// If the range would be larger than MAXRANGE, draw dummy points to show bottom error
+	if (max_range>MAXRANGE) {
+	  TH1D* outofrange = (TH1D*)ratio->Clone((std::string(ratio->GetName())+"_outofrange").c_str());
+	  outofrange->SetMarkerStyle(1);
+	  for (int binx=1; binx<=outofrange->GetNbinsX(); ++binx) {
+	    float newerr = ratio->GetBinError(binx)-(ratio->GetBinContent(binx)-MAXRANGE);
+	    if (outofrange->GetBinContent(binx)>MAXRANGE&&newerr>0) {
+	      outofrange->SetBinContent(binx, MAXRANGE);
+	      outofrange->SetBinError  (binx, newerr);
+	    } else {
+	      outofrange->SetBinContent(binx,0);
+	      outofrange->SetBinError  (binx,0);
+	    }
+	  }
+	  outofrange->Draw("SAMEPE0");
+	}
 	if (debug) std::cout<<"ok3"<<std::endl;
 	if (xmin==xmax) {
-	  xmin = ratio->GetYaxis()->GetXmin();
-	  xmax = ratio->GetYaxis()->GetXmax();
+	  xmin = ratio->GetXaxis()->GetXmin();
+	  xmax = ratio->GetXaxis()->GetXmax();
 	}
 	if (debug) std::cout<<"ok3"<<std::endl;
 	TLine* l = new TLine(xmin, 1, xmax, 1);
@@ -2266,17 +2389,34 @@ private:
 	l->Draw();
 	if (debug) std::cout<<"ok3"<<std::endl;
 	ok = 1;
+	// Add legend to indicate stat/total error
+	float legx1 = ranges_.size()>6 ? ranges_[6] : 0.16;
+	float legx2 = legx1 + 0.3;
+	float legy2 = 1.0   - (12.5 / (mid2+y2+mar_bottom));
+	float legy1 = legy2 - (25.0 / (mid2+y2+mar_bottom));
+	TLegend *leg2 = new TLegend(legx1, legy1, legx2, legy2, "");
+	leg2->SetFillColor(0);
+	leg2->SetFillStyle(0);
+	leg2->SetBorderSize(0);
+	leg2->SetTextSize(12.5/(mid2+y2+mar_bottom));
+	leg2->SetNColumns(2);
+	leg2->AddEntry(den_stat_err,   "Stat. unc.",         "f");
+	leg2->AddEntry(den_all_up_err, "Stat. + syst. unc.", "f");
+	leg2->Draw("SAME");
+	if (debug) std::cout<<"ok3"<<std::endl;
 	gPad->Update();
+	if (debug) std::cout<<"ok3"<<std::endl;
+	gPad->RedrawAxis();
       }
     }
     if (ok) {
       if (debug) std::cout<<"ok4"<<std::endl;
       TPad* pad = (TPad*)c->GetListOfPrimitives()->At(0);
-      // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), data, legend, cms, era
+      // Primitives order in Divided TPad: TFrame, data, stack, signals (n_nostack_-1), data, zero, legend, cms, era
       if (debug) std::cout<<"ok5"<<std::endl;
       if (pad->GetListOfPrimitives()->GetEntries()>(int)n_nostack_+4) {
         // Resize CMS label and era text
-        int index = n_nostack_+4;
+        int index = n_nostack_+5;
         if (debug) std::cout<<"ok5"<<std::endl;
         if (approval_/10>0) {
           TLatex* cms_lat = (TLatex*)pad->GetListOfPrimitives()->At(index++);
@@ -2494,7 +2634,7 @@ private:
     if ((draw_.find("P")!=std::string::npos)) { 
       h->SetMarkerColor(1); 
       h->SetMarkerStyle(20); 
-    } else { 
+    } else {
       h->SetLineColor(1);
       h->SetLineWidth(2);
     }
@@ -2609,7 +2749,7 @@ public:
       size_t skip = 0;
       while (dps1d[i].hvec[skip]->GetEntries()==0) { 
 	++skip;
-	if (skip==dps1d[i].hvec.size()) break; 
+	if (skip==dps1d[i].hvec.size()) break;
       }
       // Do not draw data also if the plot is blinded
       //if (std::string(dps1d[i].hvec[skip]->GetName()).find("Blind")!=std::string::npos&&
@@ -2624,19 +2764,19 @@ public:
 	  y_range_set = 1;
 	}
 	if (npf_)  {
-	  if (ranges_.size()==6)
+	  if (ranges_.size()>=6)
 	    multidraw_with_legend_(skip, dps1d[i].hvec, pfs_[0].leg, pfs_[0].colz, dps1d[i].legtitle, ranges_[4], ranges_[5]);
 	  else multidraw_with_legend_(skip, dps1d[i].hvec, pfs_[0].leg, pfs_[0].colz, dps1d[i].legtitle);
 	  if (TString(name_).Contains("HTJet1AK8PtLow"))  draw_ak8pt_bins(dps1d[i].hvec[skip], 0);
 	  if (TString(name_).Contains("HTJet1AK8PtHigh")) draw_ak8pt_bins(dps1d[i].hvec[skip], 1);
 	} else draw_one_(dps1d[i].hvec[0]);
 	if (!norm_ && y_range_set) add_labels_(dps1d[i].hvec[skip]);
-	if (!stack_&&TString(name_).Contains("Razor")) { c->cd(1); draw_mr_bins(dps1d[i].hvec[skip], ranges_[2], ranges_[3]); }
+	if (!stack_&&TString(name_).Contains("Razor")) { c->cd(1); draw_mr_bins(c, ranges_[2], ranges_[3]); }
 	write_(c);
 	if (stack_&&ratio_&&skip==0) {
 	  gPad->Update();
 	  add_stack_ratio_plot_(c,ranges_[0],ranges_[1]);
-	  if (TString(name_).Contains("Razor")) { c->cd(1); draw_mr_bins(dps1d[i].hvec[skip], ranges_[2], ranges_[3]); }
+	  if (TString(name_).Contains("Razor")) { c->cd(1); draw_mr_bins(c, ranges_[2], ranges_[3]); }
 	  write_(c);
 	}
       }
@@ -2824,7 +2964,13 @@ public:
   typedef struct HistoParams    { std::string fill; std::vector<std::string> pfs; std::vector<std::string> cuts; std::string draw; std::string opt; std::vector<double> ranges; } HistoParams;
   typedef struct HistoParamsNew { std::string fill; std::vector<std::string> pfs; std::vector<std::string> cuts; std::string draw; std::string opt; std::vector<double> ranges={}; } HistoParamsNew;
   
-  void AddHistos(std::string name, HistoParams hp, bool AddCutsToTitle = true, const bool debug = 0) {
+#if FASTDEBUG
+  // Only compile and excecute AddHistos, with number as first argument
+  inline void AddHistos(std::string name, HistoParams hp, bool AddCutsToTitle = true, const int debug = 0) {}
+  void AddHistos(int dummy, std::string name, HistoParams hp, bool AddCutsToTitle = true, const int debug = 0) {
+#else
+  void AddHistos(std::string name, HistoParams hp, bool AddCutsToTitle = true, const int debug = 0) {
+#endif
     if (debug) std::cout<<"Start adding: "<<name<<" "<<hp.fill<<std::endl;
     if (sh_.count(name)) {
       std::pair<std::vector<std::string>, std::vector<FillParams> > hp_vec = get_hp_vec_(hp.fill);
@@ -2832,147 +2978,147 @@ public:
       for (size_t i=0; i<hp_vec.second.size(); ++i) valid = (valid&&(hp_vec.second[i].nbin!=0));
       if (valid) {
         std::vector<Postfixes::Postfix> pfs;
-	if (debug) std::cout<<"ok"<<std::endl;
+        if (debug) std::cout<<"ok"<<std::endl;
         for (size_t i=0; i<hp.pfs.size(); ++i) pfs.push_back(pf_->GetPostfix(hp.pfs[i]));
-	if (debug) std::cout<<"ok"<<std::endl;
-	// Determine special histo name and axes
-	std::string spec_histo_name = hp.fill, histo_name = hp.fill;
+        if (debug) std::cout<<"ok"<<std::endl;
+        // Determine special histo name and axes
+        std::string spec_histo_name = hp.fill, histo_name = hp.fill;
         std::string spec_axis_titles = "", axis_titles = "";
         std::vector<std::function<double()> > fillfuncs;
-	std::vector<std::map<int, std::string> > bin_labels;
+        std::vector<std::map<int, std::string> > bin_labels;
         std::vector<double> ranges;
-	if (debug) std::cout<<"ok"<<std::endl;
-	if (AddCutsToTitle) for (size_t icut=0; icut<hp.cuts.size(); ++icut) {
-	  if (icut>0) {
-	    axis_titles += ", ";
-	    spec_axis_titles += ", ";
-	  }
-	  axis_titles += hp.cuts[icut];
-	  spec_axis_titles += hp.cuts[icut];
-	}
-	if (debug) std::cout<<axis_titles<<std::endl;
-	if (debug) std::cout<<spec_axis_titles<<std::endl;
-	bool isSpecial = 0;
-        for (size_t i=hp_vec.second.size(), i_hp=0; i>0; --i, ++i_hp) {
-	  std::string hp_name = hp_vec.first[i-1];
-	  if (debug) std::cout<<i<<" "<<hp_name<<std::endl;
-	  FillParams fill_params = hp_vec.second[i-1];
-	  std::string spec_axis_title = fill_params.axis_title;
-	  std::string axis_title = fill_params.axis_title;
-	  if (debug) std::cout<<axis_title<<std::endl;
-	  if (debug) std::cout<<spec_axis_title<<std::endl;
-	  // First find special axes and treat them differently
-	  size_t s = -1, s2 = -1;
-	  for (size_t j=0; j<spec_.size(); ++j) if (hp_name.find(spec_[j][0])!=std::string::npos) s = j;
-	  if (debug) std::cout<<"s = "<<s<<std::endl;
-	  if (s!=(size_t)-1) {
-	    isSpecial = 1;
-	    if (debug) std::cout<<"spec found"<<std::endl;
-	    histo_name = std::string(histo_name).replace(histo_name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]);
-	    if (debug) std::cout<<histo_name<<std::endl;
-	    // Replace secondary histo (+1 dimensional) axis title
-	    if (debug) std::cout<<"axis_title: "<<axis_title<<" spec: "<<spec_[s][2]<<" find: "<<axis_title.find(spec_[s][2])<<std::endl;
-	    axis_title.replace(axis_title.find(spec_[s][2]), spec_[s][2].size(), spec_[s][3]);
-	    if (debug) std::cout<<axis_title<<std::endl;
-	  }
-	  if (debug) std::cout<<"ok "<<i<<std::endl;
-	  for (size_t j=0; j<spec2_.size(); ++j) {
-	    if (j==0&&hp_name.find(spec2_[j][0])==0) s2 = j;
-	    else if (j!=0&&hp_name.find(spec2_[j][0])!=std::string::npos) s2 = j;
-	  }
-	  if (debug) std::cout<<"s2 = "<<s2<<std::endl;
-	  if (s2!=(size_t)-1) {
-	    isSpecial = 1;
-	    if (debug) std::cout<<"spec2 found"<<std::endl;
-	    histo_name = std::string(histo_name).insert(histo_name.find(spec2_[s2][0]),"For");
-	    if (debug) std::cout<<histo_name<<std::endl;
-	    if (s2==0) /* Add "Avg. " */  spec_axis_title = std::string(spec_axis_title).insert(0,spec2_[s2][1]);
-	    else if (s2==1) {
-	      /* Add " MPV" before axis unit (if exist) */
-	      size_t find1 = spec_axis_title.find(" (");
-	      size_t find2 = spec_axis_title.find(" [");
-	      if (debug) std::cout<<find1<<std::endl;
-	      if (debug) std::cout<<find2<<std::endl;
-	      if (find1 != std::string::npos) spec_axis_title.insert(find1, spec2_[s2][1]);
-	      else if (find2 != std::string::npos) spec_axis_title.insert(find2, spec2_[s2][1]);
-	      else spec_axis_title.insert(spec_axis_title.size(), spec2_[s2][1]);
-	    }
-	    if (debug) std::cout<<spec_axis_title<<std::endl;
-	  }
-	  if (debug) std::cout<<"ok "<<i<<std::endl;
-          spec_axis_titles += ";" + spec_axis_title;
-	  if (debug) std::cout<<spec_axis_titles<<std::endl;
-          axis_titles += ";" + axis_title;
-	  if (debug) std::cout<<axis_titles<<std::endl;
-          fillfuncs.push_back(fill_params.fill);
-	  if (debug) std::cout<<"ok "<<i<<std::endl;
-	  // Set ranges, first the default from FillParams, then from AddHistos
-	  double min = 0, max = 0;
-	  if (fill_params.def_range.size()==2) {
-	    double def_min = fill_params.def_range[0], def_max = fill_params.def_range[1];
-	    if (def_min!=def_max) { min=def_min; max=def_max; }
-	  } else if (fill_params.def_range.size()!=0) {
-	    std::cout<<"!!! ERROR: SmartHistos::AddNewFillParam: name = "<<hp_name<<", .def_range has too many elements: "<<fill_params.def_range.size()<<std::endl;
-	  }
-	  if (hp.ranges.size()>=(i_hp+1)*2) {
-	    double ran_min = hp.ranges[i_hp*2], ran_max = hp.ranges[i_hp*2+1];
-	    if (ran_min!=ran_max) { min=ran_min; max=ran_max; }
-	  }
-	  ranges.push_back(min);
-	  ranges.push_back(max);
-	  if (debug) std::cout<<"ok "<<i<<std::endl;
-	  bin_labels.push_back(fill_params.bin_labels);
-	  if (debug) std::cout<<"ok "<<i<<std::endl;
+        if (debug) std::cout<<"ok"<<std::endl;
+        if (AddCutsToTitle) for (size_t icut=0; icut<hp.cuts.size(); ++icut) {
+          if (icut>0) {
+            axis_titles += ", ";
+            spec_axis_titles += ", ";
+          }
+          axis_titles += hp.cuts[icut];
+          spec_axis_titles += hp.cuts[icut];
         }
-	if (hp.ranges.size()>ranges.size()) for (size_t i=ranges.size(); i<hp.ranges.size(); ++i) ranges.push_back(hp.ranges[i]);
-	if (debug) std::cout<<"ok"<<std::endl;
-	// Add object name in y/z axis (only for non-special histos)
-	if (!isSpecial) {
-	  axis_titles      += ";" + objects_[name];
-	  spec_axis_titles += ";" + objects_[name];
-	  if (hp_vec.second.size()==1&&hp_vec.second[0].bins.size()==2) {
-	    // Add also bin size for 1D plots
-	    double binsize = (hp_vec.second[0].bins[1]-hp_vec.second[0].bins[0])/hp_vec.second[0].nbin;
-	    // And unit if available
-	    //std::string unit = " units";
-	    std::string unit = "";
-	    size_t beg = hp_vec.second[0].axis_title.find("(");
-	    size_t end = hp_vec.second[0].axis_title.find(")");
-	    if (beg!=std::string::npos&&end!=std::string::npos) {
-	      unit = " "+hp_vec.second[0].axis_title.substr(beg+1,end-beg-1);
-	    }
-	    std::stringstream ss;
-	    ss<<" / "<<binsize<<unit;
-	    axis_titles      += ss.str();
-	    spec_axis_titles += ss.str();
-	  } else if (hp_vec.second.size()==2&&hp_vec.second[0].bins.size()==2) {
-	    // or " / bin" for 2D ones
-	    axis_titles      += " / bin";
-	    spec_axis_titles += " / bin";	  
-	  }
-	}
-	if (debug) std::cout<<"Add object names ok"<<std::endl;
-	std::vector<Cut*> cuts;
+        if (debug) std::cout<<axis_titles<<std::endl;
+        if (debug) std::cout<<spec_axis_titles<<std::endl;
+        bool isSpecial = 0;
+        for (size_t i=hp_vec.second.size(), i_hp=0; i>0; --i, ++i_hp) {
+          std::string hp_name = hp_vec.first[i-1];
+          if (debug) std::cout<<i<<" "<<hp_name<<std::endl;
+          FillParams fill_params = hp_vec.second[i-1];
+          std::string spec_axis_title = fill_params.axis_title;
+          std::string axis_title = fill_params.axis_title;
+          if (debug) std::cout<<axis_title<<std::endl;
+          if (debug) std::cout<<spec_axis_title<<std::endl;
+          // First find special axes and treat them differently
+          size_t s = -1, s2 = -1;
+          for (size_t j=0; j<spec_.size(); ++j) if (hp_name.find(spec_[j][0])!=std::string::npos) s = j;
+          if (debug) std::cout<<"s = "<<s<<std::endl;
+          if (s!=(size_t)-1) {
+            isSpecial = 1;
+            if (debug) std::cout<<"spec found"<<std::endl;
+            histo_name = std::string(histo_name).replace(histo_name.find(spec_[s][0]),spec_[s][0].size(),spec_[s][1]);
+            if (debug) std::cout<<histo_name<<std::endl;
+            // Replace secondary histo (+1 dimensional) axis title
+            if (debug) std::cout<<"axis_title: "<<axis_title<<" spec: "<<spec_[s][2]<<" find: "<<axis_title.find(spec_[s][2])<<std::endl;
+            axis_title.replace(axis_title.find(spec_[s][2]), spec_[s][2].size(), spec_[s][3]);
+            if (debug) std::cout<<axis_title<<std::endl;
+          }
+          if (debug) std::cout<<"ok "<<i<<std::endl;
+          for (size_t j=0; j<spec2_.size(); ++j) {
+            if (j==0&&hp_name.find(spec2_[j][0])==0) s2 = j;
+            else if (j!=0&&hp_name.find(spec2_[j][0])!=std::string::npos) s2 = j;
+          }
+          if (debug) std::cout<<"s2 = "<<s2<<std::endl;
+          if (s2!=(size_t)-1) {
+            isSpecial = 1;
+            if (debug) std::cout<<"spec2 found"<<std::endl;
+            histo_name = std::string(histo_name).insert(histo_name.find(spec2_[s2][0]),"For");
+            if (debug) std::cout<<histo_name<<std::endl;
+            if (s2==0) /* Add "Avg. " */  spec_axis_title = std::string(spec_axis_title).insert(0,spec2_[s2][1]);
+            else if (s2==1) {
+              /* Add " MPV" before axis unit (if exist) */
+              size_t find1 = spec_axis_title.find(" (");
+              size_t find2 = spec_axis_title.find(" [");
+              if (debug) std::cout<<find1<<std::endl;
+              if (debug) std::cout<<find2<<std::endl;
+              if (find1 != std::string::npos) spec_axis_title.insert(find1, spec2_[s2][1]);
+              else if (find2 != std::string::npos) spec_axis_title.insert(find2, spec2_[s2][1]);
+              else spec_axis_title.insert(spec_axis_title.size(), spec2_[s2][1]);
+            }
+            if (debug) std::cout<<spec_axis_title<<std::endl;
+          }
+          if (debug) std::cout<<"ok "<<i<<std::endl;
+          spec_axis_titles += ";" + spec_axis_title;
+          if (debug) std::cout<<spec_axis_titles<<std::endl;
+          axis_titles += ";" + axis_title;
+          if (debug) std::cout<<axis_titles<<std::endl;
+          fillfuncs.push_back(fill_params.fill);
+          if (debug) std::cout<<"ok "<<i<<std::endl;
+          // Set ranges, first the default from FillParams, then from AddHistos
+          double min = 0, max = 0;
+          if (fill_params.def_range.size()==2) {
+            double def_min = fill_params.def_range[0], def_max = fill_params.def_range[1];
+            if (def_min!=def_max) { min=def_min; max=def_max; }
+          } else if (fill_params.def_range.size()!=0) {
+            std::cout<<"!!! ERROR: SmartHistos::AddNewFillParam: name = "<<hp_name<<", .def_range has too many elements: "<<fill_params.def_range.size()<<std::endl;
+          }
+          if (hp.ranges.size()>=(i_hp+1)*2) {
+            double ran_min = hp.ranges[i_hp*2], ran_max = hp.ranges[i_hp*2+1];
+            if (ran_min!=ran_max) { min=ran_min; max=ran_max; }
+          }
+          ranges.push_back(min);
+          ranges.push_back(max);
+          if (debug) std::cout<<"ok "<<i<<std::endl;
+          bin_labels.push_back(fill_params.bin_labels);
+          if (debug) std::cout<<"ok "<<i<<std::endl;
+        }
+        if (hp.ranges.size()>ranges.size()) for (size_t i=ranges.size(); i<hp.ranges.size(); ++i) ranges.push_back(hp.ranges[i]);
+        if (debug) std::cout<<"ok"<<std::endl;
+        // Add object name in y/z axis (only for non-special histos)
+        if (!isSpecial) {
+          axis_titles      += ";" + objects_[name];
+          spec_axis_titles += ";" + objects_[name];
+          if (hp_vec.second.size()==1&&hp_vec.second[0].bins.size()==2) {
+            // Add also bin size for 1D plots
+            double binsize = (hp_vec.second[0].bins[1]-hp_vec.second[0].bins[0])/hp_vec.second[0].nbin;
+            // And unit if available
+            //std::string unit = " units";
+            std::string unit = "";
+            size_t beg = hp_vec.second[0].axis_title.find("(");
+            size_t end = hp_vec.second[0].axis_title.find(")");
+            if (beg!=std::string::npos&&end!=std::string::npos) {
+              unit = " "+hp_vec.second[0].axis_title.substr(beg+1,end-beg-1);
+            }
+            std::stringstream ss;
+            ss<<" / "<<binsize<<unit;
+            axis_titles      += ss.str();
+            spec_axis_titles += ss.str();
+          } else if (hp_vec.second.size()==2&&hp_vec.second[0].bins.size()==2) {
+            // or " / bin" for 2D ones
+            axis_titles      += " / bin";
+            spec_axis_titles += " / bin";	  
+          }
+        }
+        if (debug) std::cout<<"Add object names ok"<<std::endl;
+        std::vector<Cut*> cuts;
         for (size_t i=0; i<hp.cuts.size(); ++i) cuts.push_back(cuts_->GetCut(hp.cuts[i]));
-	if (debug) std::cout<<"ok"<<std::endl;
+        if (debug) std::cout<<"ok"<<std::endl;
         sh_[name].push_back(new SmartHisto(hp.fill.c_str(), hp.pfs, pfs, fillfuncs, weights_, cuts, hp.draw, hp.opt, ranges, bin_labels, spec_, spec2_));
         if (hp_vec.second.size()==1) sh_[name][sh_[name].size()-1]->AddNew(spec_histo_name, spec_axis_titles, hp_vec.second[0].nbin, hp_vec.second[0].bins);
         else if (hp_vec.second.size()==2) sh_[name][sh_[name].size()-1]->AddNew(spec_histo_name, spec_axis_titles,
-									 histo_name, axis_titles,
-									 hp_vec.second[1].nbin, hp_vec.second[1].bins,
-									 hp_vec.second[0].nbin, hp_vec.second[0].bins);
+        								 histo_name, axis_titles,
+        								 hp_vec.second[1].nbin, hp_vec.second[1].bins,
+        								 hp_vec.second[0].nbin, hp_vec.second[0].bins);
         else if (hp_vec.second.size()==3) sh_[name][sh_[name].size()-1]->AddNew(spec_histo_name, spec_axis_titles,
-									 histo_name, axis_titles,
-									 hp_vec.second[2].nbin, hp_vec.second[2].bins,
-									 hp_vec.second[1].nbin, hp_vec.second[1].bins,
-									 hp_vec.second[0].nbin, hp_vec.second[0].bins);
-	if (debug) std::cout<<"ok"<<std::endl;
+        								 histo_name, axis_titles,
+        								 hp_vec.second[2].nbin, hp_vec.second[2].bins,
+        								 hp_vec.second[1].nbin, hp_vec.second[1].bins,
+        								 hp_vec.second[0].nbin, hp_vec.second[0].bins);
+        if (debug) std::cout<<"ok"<<std::endl;
       }
     }
   }
   
-  void AddHistos(std::string name, HistoParamsNew hp_new, bool AddCutsToTitle = true, const bool debug = 0) {
-    AddHistos(name, HistoParams({.fill=hp_new.fill, .pfs=hp_new.pfs, .cuts=hp_new.cuts, .draw=hp_new.draw, .opt=hp_new.opt, .ranges=hp_new.ranges }));
+  void AddHistos(std::string name, HistoParamsNew hp_new, bool AddCutsToTitle = true, const int debug = 0) {
+    AddHistos(name, HistoParams({.fill=hp_new.fill, .pfs=hp_new.pfs, .cuts=hp_new.cuts, .draw=hp_new.draw, .opt=hp_new.opt, .ranges=hp_new.ranges }), AddCutsToTitle, debug);
   }
   
   void PrintNames() { 

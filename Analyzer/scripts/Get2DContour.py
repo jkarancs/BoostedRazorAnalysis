@@ -80,7 +80,7 @@ sms_models = {
                 ]),
         'T2qq':SMS(100, 1500, 0, 800,
             isGluino=False),
-        'T5ttcc':SMS(600, 2300, 0, 1450),#, diagonalOffset=225),
+        'T5ttcc':SMS(600, 2300, 0, 1650, diagonalOffset=110),
         'T5tttt':SMS(600, 2300, 0, 1650, diagonalOffset=225),
         'T5qqqqVV':SMS(600, 2300, 0, 1650),
 }
@@ -341,10 +341,16 @@ if __name__ == '__main__':
                   help="Input/Output directory to store output")
     parser.add_option('--toys',dest="doHybridNew",default=False,action='store_true',
                   help="for toys instead of asymptotic")
+    parser.add_option('-e','--energy',dest="energy",type="int",default=13,
+                  help="Energy (in TeV) to consider (Run 2: 13, HL: 14 or HE: 27 TeV)")
     parser.add_option('--xsec-file',dest="refXsecFile",default="./data/gluino13TeV.txt",type="string",
                   help="Input directory")
     parser.add_option('--no-smooth', dest='noSmooth', action='store_true', 
                   help='Draw grid without interpolation')
+    parser.add_option('-s',dest="signif", action="store_true",
+                      default=False,    help="Plot significance instead of limit")
+    parser.add_option('--blind', dest="blind", action="store_true",
+                      default=False, help='Do not calculate the observed limit')
     
     (options,args) = parser.parse_args()
     
@@ -352,8 +358,9 @@ if __name__ == '__main__':
     model = options.model
     directory = options.outDir
     
-    refXsecFile = options.refXsecFile
-    if "T2tt" in options.model: refXsecFile = "./data/stop13TeV.txt"
+    refXsecFile ="data/gluino13TeV.txt"
+    if "T2" in options.model: refXsecFile = refXsecFile.replace("gluino","stop")
+    if options.energy != 13: refXsecFile = refXsecFile.replace("13",str(options.energy))
     doHybridNew = options.doHybridNew
                 
     set_palette("rainbow",255)
@@ -368,15 +375,37 @@ if __name__ == '__main__':
     mgMin = sms.mgMin
     mgMax = sms.mgMax
     mchiMin = sms.mchiMin
-    mchiMax = sms.mchiMax 
+    mchiMax = sms.mchiMax
+    diagonalOffset = sms.diagonalOffset
+    if options.energy>13:
+        if model == "T2tt":
+            mgMax   = 2025 + DISP_OFFSET
+            mchiMax =  850 + DISP_OFFSET
+            if options.signif:
+                mchiMax = 675 + DISP_OFFSET
+        elif   model == "T1tttt":
+            if options.energy == 14:
+                mgMax   = 3025 + DISP_OFFSET
+            elif options.energy == 27:
+                mgMax   = 3525 + DISP_OFFSET
+            mchiMax = 1725 + DISP_OFFSET
+        elif model == "T5ttcc":
+            if options.energy == 14:
+                mgMax   = 3025 + DISP_OFFSET
+            elif options.energy == 27:
+                mgMax   = 3525 + DISP_OFFSET
+            mchiMax = 1525 + DISP_OFFSET
     binWidth = sms.binWidth
     nRebins = sms.nRebins
-    xsecMin = sms.xsecMin
-    xsecMax = sms.xsecMax
-    diagonalOffset = sms.diagonalOffset
+    if options.signif:
+        xsecMin = sms.xsecMin
+        xsecMax = sms.xsecMax
+    else:
+        xsecMin = 0
+        xsecMax = 10
     smoothing = sms.smoothing
     fixLSP0 = sms.fixLSP0
-
+    
     # Make a xsec tree first578
     
     haddOutputs = []
@@ -386,108 +415,109 @@ if __name__ == '__main__':
     #    mchi = float(result.replace(".log","").split("_")[-2:][1])
     #    gchipairs.append((mg,mchi))
     #    haddOutputs.append("%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box))
-    for result in glob.glob(directory+"/"+model+"_xsecUL_mg_*_mchi_*.?_"+box+".root"):
+    infiles = directory+"/"+model+"_xsecUL_mg_*_mchi_*.?_"+box+".root"
+    if options.signif: infiles = directory+"/"+model+"_signif_mg_*_mchi_*.?_"+box+".root"
+    for result in glob.glob(infiles):
         haddOutputs.append(result)
         mg   = float(result.replace("_"+box+".root","").split("_")[-3])
         mchi = float(result.replace("_"+box+".root","").split("_")[-1])
         gchipairs.append((mg,mchi))
 
-    print directory+"/"+model+"_xsecUL_*_"+box+".root"
+    if options.signif:
+        print directory+"/"+model+"_signif_*_"+box+".root"
+        haddout = "%s/%s_signif_%s.root %s"%(directory+"/results",model,box," ".join(haddOutputs))
+    else:
+        print directory+"/"+model+"_xsecUL_*_"+box+".root"
+        haddout = "%s/%s_xsecUL_Asymptotic_%s.root %s"%(directory+"/results",model,box," ".join(haddOutputs))
     if not os.path.exists(directory+"/results"): subprocess.call(["mkdir", "-p", directory+"/results"])
-    os.system("hadd -f %s/%s_xsecUL_Asymptotic_%s.root %s"%(directory+"/results",model,box," ".join(haddOutputs)))
+    os.system("hadd -f "+haddout)
     #os.system("rm %s"%(" ".join(haddOutputs)))
 
-    if model=="T1bri":
-        xsecFile = rt.TFile.Open("%s/smoothXsecUL_%s.root"%(directory+"/results",box))
-        xsecTree = xsecFile.Get("smoothXsecTree")
-    else: 
-        if doHybridNew:
-            xsecFile = rt.TFile.Open("%s/%s_xsecUL_HybridNew_%s.root"%(directory+"/results",model,box))
-        else: 
-            xsecFile = rt.TFile.Open("%s/%s_xsecUL_Asymptotic_%s.root"%(directory+"/results",model,box))
+    if options.signif:
+        xsecFile = rt.TFile.Open("%s/%s_signif_%s.root"%(directory+"/results",model,box))
+        print "%s/%s_signif_%s.root"%(directory+"/results",model,box)
+        xsecTree = xsecFile.Get("signifTree")
+    else:
+        xsecFile = rt.TFile.Open("%s/%s_xsecUL_Asymptotic_%s.root"%(directory+"/results",model,box))
         xsecTree = xsecFile.Get("xsecTree")
-    xsecGluino =  rt.TH2D("xsecGluino","xsecGluino",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
-    xsecGluinoPlus =  rt.TH2D("xsecGluinoPlus","xsecGluinoPlus",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
-    xsecGluinoMinus =  rt.TH2D("xsecGluinoMinus","xsecGluinoMinus",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
-    
-    clsTypes = ["Exp","ExpMinus","ExpMinus2","ExpPlus","ExpPlus2","Obs","ObsMinus","ObsPlus"]
+        xsecGluino =  rt.TH2D("xsecGluino","xsecGluino",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
+        xsecGluinoPlus =  rt.TH2D("xsecGluinoPlus","xsecGluinoPlus",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
+        xsecGluinoMinus =  rt.TH2D("xsecGluinoMinus","xsecGluinoMinus",int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
 
+    if options.signif:
+        clsTypes = ["Signif"]
+        titleMap = {"Signif":"Significance"}
+        whichCLsVar = {"Signif":"signif_%s"%(box)}
+    else:
+        if options.blind:
+            clsTypes = ["Exp","ExpMinus","ExpMinus2","ExpPlus","ExpPlus2"]
+            titleMap = {"Exp":"Expected","ExpMinus":"Expected-1#sigma","ExpPlus":"Expected+1#sigma",
+                        "ExpMinus2":"Expected-2#sigma","ExpPlus2":"Expected+2#sigma"}
+            whichCLsVar = {"Exp":"xsecULExp_%s"%(box),"ExpPlus":"xsecULExpMinus_%s"%(box),"ExpMinus":"xsecULExpPlus_%s"%(box),
+                           "ExpPlus2":"xsecULExpMinus2_%s"%(box),"ExpMinus2":"xsecULExpPlus2_%s"%(box)}            
+        else:
+            clsTypes = ["Exp","ExpMinus","ExpMinus2","ExpPlus","ExpPlus2","Obs","ObsMinus","ObsPlus"]
+            titleMap = {"Exp":"Expected","ExpMinus":"Expected-1#sigma","ExpPlus":"Expected+1#sigma",
+                        "ExpMinus2":"Expected-2#sigma","ExpPlus2":"Expected+2#sigma",
+                        "ObsMinus":"Observed-1#sigma", "ObsPlus":"Observed+1#sigma","Obs":"Observed"}
+            whichCLsVar = {"Obs":"xsecULObs_%s"%(box),"ObsPlus":"xsecULObs_%s"%(box),"ObsMinus":"xsecULObs_%s"%(box),
+                           "Exp":"xsecULExp_%s"%(box),"ExpPlus":"xsecULExpMinus_%s"%(box),"ExpMinus":"xsecULExpPlus_%s"%(box),
+                           "ExpPlus2":"xsecULExpMinus2_%s"%(box),"ExpMinus2":"xsecULExpPlus2_%s"%(box)}
+    
     smooth = {}
     for clsType in clsTypes:
         smooth[clsType] = smoothing
-    
-    titleMap = {"Exp":"Expected","ExpMinus":"Expected-1#sigma","ExpPlus":"Expected+1#sigma",
-                "ExpMinus2":"Expected-2#sigma","ExpPlus2":"Expected+2#sigma",
-                "ObsMinus":"Observed-1#sigma", "ObsPlus":"Observed+1#sigma","Obs":"Observed"}
-    whichCLsVar = {"Obs":"xsecULObs_%s"%(box),"ObsPlus":"xsecULObs_%s"%(box),"ObsMinus":"xsecULObs_%s"%(box),
-                "Exp":"xsecULExp_%s"%(box),"ExpPlus":"xsecULExpMinus_%s"%(box),"ExpMinus":"xsecULExpPlus_%s"%(box),
-                "ExpPlus2":"xsecULExpMinus2_%s"%(box),"ExpMinus2":"xsecULExpPlus2_%s"%(box)}
-                   
+                       
     xsecUL = {}
     logXsecUL = {}
     rebinXsecUL = {}
     subXsecUL = {}
     contourFinal = {}
 
-    
     subboxes = box.split("_")
-    
-    thyXsec = {}
-    thyXsecErr = {}
-    if refXsecFile is not None:
-        print "INFO: Input ref xsec file!"
-        for mg in range(int(mgMin+12.5),int(mgMax-12.5)+25,25):            
-            for mchi in range(int(mchiMin+12.5),mg,25):
-                for line in open(refXsecFile,'r'):
-                    line = line.replace('\n','')
-                    if str(mg)==line.split(',')[0]:
-                        thyXsec[mg,mchi] = float(line.split(',')[1]) #pb
-                        thyXsecErr[mg,mchi] = 0.01*float(line.split(',')[2])               
-    else: 
-        print "ERROR: no xsec file; exiting"
-        sys.exit()  
-    
-    for i in xrange(1,xsecGluino.GetNbinsX()+1):
-        xLow = xsecGluino.GetXaxis().GetBinCenter(i)
-        for j in xrange(1,xsecGluino.GetNbinsY()+1):
-            yLow = xsecGluino.GetYaxis().GetBinCenter(j)
-            if xLow >= yLow+diagonalOffset and xLow <= mgMax-binWidth/2:
-                xsecVal = thyXsec[int(xLow),int(yLow)]
-                xsecErr =  thyXsecErr[int(xLow),int(yLow)]
-                xsecGluino.SetBinContent(i,j,xsecVal)
-                xsecGluinoPlus.SetBinContent(i,j,xsecVal*(1+xsecErr))
-                xsecGluinoMinus.SetBinContent(i,j,xsecVal*(1-xsecErr))
-    
-    # now rebin xsecGluino the correct number of times
-    for i in xrange(0,nRebins):
-        xsecGluino = rt.swissCrossRebin(xsecGluino,"NE")
-        xsecGluinoPlus = rt.swissCrossRebin(xsecGluinoPlus,"NE")
-        xsecGluinoMinus = rt.swissCrossRebin(xsecGluinoMinus,"NE")
+
+    if not options.signif:
+        thyXsec = {}
+        thyXsecErr = {}
+        if refXsecFile is not None:
+            print "INFO: Input ref xsec file!"
+            for mg in range(int(mgMin+12.5),int(mgMax-12.5)+25,25):
+                for mchi in range(int(mchiMin+12.5),mg,25):
+                    for line in open(refXsecFile,'r'):
+                        line = line.replace('\n','')
+                        if str(mg)==line.split(',')[0]:
+                            thyXsec[mg,mchi] = float(line.split(',')[1]) #pb
+                            thyXsecErr[mg,mchi] = 0.01*float(line.split(',')[2])               
+        else: 
+            print "ERROR: no xsec file; exiting"
+            sys.exit()  
+
+        for i in xrange(1,xsecGluino.GetNbinsX()+1):
+            xLow = xsecGluino.GetXaxis().GetBinCenter(i)
+            for j in xrange(1,xsecGluino.GetNbinsY()+1):
+                yLow = xsecGluino.GetYaxis().GetBinCenter(j)
+                if xLow >= yLow+diagonalOffset and xLow <= (mgMax-25)-binWidth/2:
+                    #print str(int(xLow))+" "+str(int(yLow))
+                    xsecVal = thyXsec[int(xLow),int(yLow)]
+                    xsecErr =  thyXsecErr[int(xLow),int(yLow)]
+                    xsecGluino.SetBinContent(i,j,xsecVal)
+                    xsecGluinoPlus.SetBinContent(i,j,xsecVal*(1+xsecErr))
+                    xsecGluinoMinus.SetBinContent(i,j,xsecVal*(1-xsecErr))
+        
+        # now rebin xsecGluino the correct number of times
+        for i in xrange(0,nRebins):
+            xsecGluino = rt.swissCrossRebin(xsecGluino,"NE")
+            xsecGluinoPlus = rt.swissCrossRebin(xsecGluinoPlus,"NE")
+            xsecGluinoMinus = rt.swissCrossRebin(xsecGluinoMinus,"NE")
     
     xyPairExp = {}
     for clsType in clsTypes:
         xsecUL[clsType] = rt.TH2D("xsecUL_%s_%s"%(model,clsType),"xsecUL_%s_%s"%(model,clsType),int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
         xsecTree.Project("xsecUL_%s_%s"%(model,clsType),"mchi:mg",whichCLsVar[clsType])
-        if model=="T1bri":
-            brValues = [(0.00, 1.00), (0.25, 0.25), (0.50, 0.00), (0.00, 0.50), (0.00, 0.00), (0.25, 0.50), (0.50, 0.50), (0.50, 0.25)]
-            tempXsecUL = {}
-            for (x, y) in brValues:
-                brString = ('x%.2fy%.2f'%(x,y)).replace('.','p')
-                tempXsecUL[(x,y)] = rt.TH2D("xsecUL_%s_%s_%s"%(model,clsType,brString),"xsecUL_%s_%s_%s"%(model,clsType,brString),int((mgMax-mgMin)/binWidth),mgMin, mgMax,int((mchiMax-mchiMin)/binWidth), mchiMin, mchiMax)
-                xsecTree.Project("xsecUL_%s_%s_%s"%(model,clsType,brString),"mchi:mg","%s*(x==%.2f && y==%.2f)"%(whichCLsVar[clsType],x,y))
-            for iBin in range(1,xsecUL[clsType].GetNbinsX()+1):
-                for jBin in range(1,xsecUL[clsType].GetNbinsY()+1):
-                    allValues = {}
-                    for (x, y) in brValues:
-                        allValues[(x,y)] = tempXsecUL[(x,y)].GetBinContent(iBin,jBin)
-                    if clsType=="Exp":
-                        xyPairExp[(iBin,jBin)] = max(allValues.iteritems(), key=operator.itemgetter(1))[0]
-                    xsecUL[clsType].SetBinContent(iBin,jBin,allValues[xyPairExp[(iBin,jBin)]])
 
-
-        fix_hist_byhand(xsecUL[clsType],model,box,clsType, gchipairs)
+        if not options.signif:
+            fix_hist_byhand(xsecUL[clsType],model,box,clsType, gchipairs)
         
-            
         print "INFO: doing interpolation for %s"%(clsType)
         
         # do swiss cross average in real domain
@@ -520,24 +550,57 @@ if __name__ == '__main__':
         xsecUL[clsType].SetYTitle("LSP Mass [GeV]")
         xsecUL[clsType].GetYaxis().SetTitleOffset(1.25)
 
-        # subtract the predicted xsec
         subXsecUL[clsType] = rebinXsecUL[clsType].Clone()
-        if clsType=="ObsMinus":
-            subXsecUL[clsType].Add(xsecGluinoMinus,-1)
-        elif clsType=="ObsPlus":
-            subXsecUL[clsType].Add(xsecGluinoPlus,-1)
-        else:
-            subXsecUL[clsType].Add(xsecGluino,-1)
+        # Fix diagonal area
+        for i in xrange(1,subXsecUL[clsType].GetNbinsX()+1):
+            xLow = subXsecUL[clsType].GetXaxis().GetBinCenter(i)
+            for j in xrange(1,subXsecUL[clsType].GetNbinsY()+1):
+                yLow = subXsecUL[clsType].GetYaxis().GetBinCenter(j)
+                if xLow < yLow+diagonalOffset or xLow > mgMax-binWidth/2:
+                    subXsecUL[clsType].SetBinContent(i,j,0)
+        
+        fileOut = rt.TFile.Open("test.root", "update")
+        subXsecUL[clsType].Write(subXsecUL[clsType].GetName()+"_beforesub")
+        #xsecGluino.Write(xsecGluino.GetName()+"_sub")
+        # subtract the predicted xsec
+        if not options.signif:
+            if clsType=="ObsMinus":
+                subXsecUL[clsType].Add(xsecGluinoMinus,-1)
+            elif clsType=="ObsPlus":
+                subXsecUL[clsType].Add(xsecGluinoPlus,-1)
+            else:
+                subXsecUL[clsType].Add(xsecGluino,-1)
+        subXsecUL[clsType].Write(subXsecUL[clsType].GetName()+"_aftersub")
+        fileOut.Close()
 
-        contours = array('d',[0.0])
+        if options.signif:
+            contours = array('d',[5.0])
+            # Force connect points above the plot range
+            biny = subXsecUL[clsType].GetYaxis().FindBin(mchiMax-DISP_OFFSET-binWidth)
+            for binx in range(1, subXsecUL[clsType].GetNbinsX()+1):
+                if subXsecUL[clsType].GetBinContent(binx,biny)>5.0:
+                    subXsecUL[clsType].SetBinContent(binx,biny+1,4.999)
+            binx = subXsecUL[clsType].GetXaxis().FindBin(mgMax-DISP_OFFSET-binWidth)
+            for biny in range(1, subXsecUL[clsType].GetNbinsY()+1):
+                if subXsecUL[clsType].GetBinContent(binx,biny)>5.0:
+                    subXsecUL[clsType].SetBinContent(binx+1,biny,4.999)
+        else:
+            contours = array('d',[0.0])
+            # Force zero values outside the plot range, so curves don't end up splitted
+            for binx in range(1, subXsecUL[clsType].GetNbinsX()+1):
+                subXsecUL[clsType].SetBinContent(binx,subXsecUL[clsType].GetNbinsY(),0)
         subXsecUL[clsType].SetContour(1,contours)
         
         xsecUL[clsType].SetMinimum(xsecMin)
         xsecUL[clsType].SetMaximum(xsecMax)
         rebinXsecUL[clsType].SetMinimum(xsecMin)
         rebinXsecUL[clsType].SetMaximum(xsecMax)
-        subXsecUL[clsType].SetMaximum(1.)
-        subXsecUL[clsType].SetMinimum(-1.)
+        if options.signif:
+            subXsecUL[clsType].SetMaximum(6.)
+            subXsecUL[clsType].SetMinimum(4.)
+        else:
+            subXsecUL[clsType].SetMaximum(1.)
+            subXsecUL[clsType].SetMinimum(-1.)
         
         c.SetLogz(0)
         subXsecUL[clsType].Draw("CONT Z LIST")
@@ -571,83 +634,110 @@ if __name__ == '__main__':
         contourFinal[clsType] = finalcurv
 
         contourFinal[clsType].SetName("%s_%s_%s"%(clsType,model,box))
-        
-        c.SetLogz(1)
+
+        if not options.signif: c.SetLogz(1)
         c.Print("%s/%s_INTERP_%s_%s.png"%(directory+"/results",model,box,clsType))
-    
-    outFile = rt.TFile.Open("%s/%s_%s_results.root"%(directory+"/results",model,box),"recreate")
+
+    if options.signif:
+        outFile = rt.TFile.Open("%s/%s_%s_signif.root"%(directory+"/results",model,box),"recreate")
+    else:
+        outFile = rt.TFile.Open("%s/%s_%s_results.root"%(directory+"/results",model,box),"recreate")
     for clsType in clsTypes:
         contourFinal[clsType].Write()
         xsecUL[clsType].Write()
-    
-    smoothOutFile = rt.TFile.Open("%s/%s_smoothXsecUL_%s.root"%(directory+"/results",model,box), "recreate")
-    
-    smoothXsecTree = rt.TTree("smoothXsecTree", "smoothXsecTree")
-    myStructCmd = "struct MyStruct2{Double_t mg;Double_t mchi;Double_t x;Double_t y;"
-    ixsecUL = 0
-    myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+0)
-    myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+1)
-    myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+2)
-    myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+3)
-    myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+4)
-    myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+5)
-    ixsecUL+=6
-    myStructCmd += "}"
-    rt.gROOT.ProcessLine(myStructCmd)
-    from ROOT import MyStruct2
 
-    s = MyStruct2()
-    smoothXsecTree.Branch("mg", rt.AddressOf(s,"mg"),'mg/D')
-    smoothXsecTree.Branch("mchi", rt.AddressOf(s,"mchi"),'mchi/D')
-    smoothXsecTree.Branch("x", rt.AddressOf(s,"x"),'x/D')
-    smoothXsecTree.Branch("y", rt.AddressOf(s,"y"),'y/D')
-    if 'T1x' in model:
-        s.x = float(model[model.find('x')+1:model.find('y')].replace('p','.'))
-        s.y = float(model[model.find('y')+1:].replace('p','.'))
-    elif model == 'T1bbbb':
-        s.x = 1
-        s.y = 0
-    elif model == 'T1tttt':
-        s.x = 0
-        s.y = 1
-    else:
-        s.x = -1
-        s.y = -1
-    
+    if not options.signif:
+        smoothOutFile = rt.TFile.Open("%s/%s_smoothXsecUL_%s.root"%(directory+"/results",model,box), "recreate")
+        
+        smoothXsecTree = rt.TTree("smoothXsecTree", "smoothXsecTree")
+        myStructCmd = "struct MyStruct2{Double_t mg;Double_t mchi;Double_t x;Double_t y;"
+        ixsecUL = 0
+        if options.blind:
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+0)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+1)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+2)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+3)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+4)
+            ixsecUL+=5
+        else:
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+0)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+1)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+2)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+3)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+4)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+5)            
+            ixsecUL+=6
+        myStructCmd += "}"
+        rt.gROOT.ProcessLine(myStructCmd)
+        from ROOT import MyStruct2
+        
+        s = MyStruct2()
+        smoothXsecTree.Branch("mg", rt.AddressOf(s,"mg"),'mg/D')
+        smoothXsecTree.Branch("mchi", rt.AddressOf(s,"mchi"),'mchi/D')
+        smoothXsecTree.Branch("x", rt.AddressOf(s,"x"),'x/D')
+        smoothXsecTree.Branch("y", rt.AddressOf(s,"y"),'y/D')
+        if 'T1x' in model:
+            s.x = float(model[model.find('x')+1:model.find('y')].replace('p','.'))
+            s.y = float(model[model.find('y')+1:].replace('p','.'))
+        elif model == 'T1bbbb':
+            s.x = 1
+            s.y = 0
+        elif model == 'T1tttt':
+            s.x = 0
+            s.y = 1
+        else:
+            s.x = -1
+            s.y = -1
+        
+        
+        ixsecUL = 0
+        if options.blind:
+            smoothXsecTree.Branch("xsecULExpPlus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL)),'xsecUL%i/D'%(ixsecUL))
+            smoothXsecTree.Branch("xsecULExpPlus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+1)),'xsecUL%i/D'%(ixsecUL+1))
+            smoothXsecTree.Branch("xsecULExp_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+2)),'xsecUL%i/D'%(ixsecUL+2))
+            smoothXsecTree.Branch("xsecULExpMinus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+3)),'xsecUL%i/D'%(ixsecUL+3))
+            smoothXsecTree.Branch("xsecULExpMinus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+4)),'xsecUL%i/D'%(ixsecUL+4))
+        else:
+            smoothXsecTree.Branch("xsecULObs_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+0)),'xsecUL%i/D'%(ixsecUL+0))
+            smoothXsecTree.Branch("xsecULExpPlus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+1)),'xsecUL%i/D'%(ixsecUL+1))
+            smoothXsecTree.Branch("xsecULExpPlus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+2)),'xsecUL%i/D'%(ixsecUL+2))
+            smoothXsecTree.Branch("xsecULExp_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+3)),'xsecUL%i/D'%(ixsecUL+3))
+            smoothXsecTree.Branch("xsecULExpMinus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+4)),'xsecUL%i/D'%(ixsecUL+4))
+            smoothXsecTree.Branch("xsecULExpMinus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+5)),'xsecUL%i/D'%(ixsecUL+5))
+        
+        for mg in range(int(mgMin-12.5),int(mgMax+binWidth-12.5),int(binWidth)):
+            for mchi in range(int(mchiMin-12.5),int(mchiMax+binWidth-12.5),int(binWidth)):
+                s.mg = mg
+                s.mchi = mchi
 
-    ixsecUL = 0
-    smoothXsecTree.Branch("xsecULObs_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+0)),'xsecUL%i/D'%(ixsecUL+0))
-    smoothXsecTree.Branch("xsecULExpPlus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+1)),'xsecUL%i/D'%(ixsecUL+1))
-    smoothXsecTree.Branch("xsecULExpPlus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+2)),'xsecUL%i/D'%(ixsecUL+2))
-    smoothXsecTree.Branch("xsecULExp_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+3)),'xsecUL%i/D'%(ixsecUL+3))
-    smoothXsecTree.Branch("xsecULExpMinus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+4)),'xsecUL%i/D'%(ixsecUL+4))
-    smoothXsecTree.Branch("xsecULExpMinus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+5)),'xsecUL%i/D'%(ixsecUL+5))
+                if not options.blind:
+                    xsecULObs = xsecUL["Obs"].GetBinContent(xsecUL["Obs"].FindBin(mg,mchi))
+                xsecULExp = xsecUL["Exp"].GetBinContent(xsecUL["Exp"].FindBin(mg,mchi))
+                xsecULExpPlus = xsecUL["ExpMinus"].GetBinContent(xsecUL["ExpMinus"].FindBin(mg,mchi))
+                xsecULExpMinus = xsecUL["ExpPlus"].GetBinContent(xsecUL["ExpPlus"].FindBin(mg,mchi))
+                xsecULExpPlus2 = xsecUL["ExpMinus2"].GetBinContent(xsecUL["ExpMinus2"].FindBin(mg,mchi))
+                xsecULExpMinus2 = xsecUL["ExpPlus2"].GetBinContent(xsecUL["ExpPlus2"].FindBin(mg,mchi))
 
-    for mg in range(int(mgMin-12.5),int(mgMax+binWidth-12.5),int(binWidth)):
-        for mchi in range(int(mchiMin-12.5),int(mchiMax+binWidth-12.5),int(binWidth)):
-            s.mg = mg
-            s.mchi = mchi
-            
-            xsecULObs = xsecUL["Obs"].GetBinContent(xsecUL["Obs"].FindBin(mg,mchi))
-            xsecULExp = xsecUL["Exp"].GetBinContent(xsecUL["Exp"].FindBin(mg,mchi))
-            xsecULExpPlus = xsecUL["ExpMinus"].GetBinContent(xsecUL["ExpMinus"].FindBin(mg,mchi))
-            xsecULExpMinus = xsecUL["ExpPlus"].GetBinContent(xsecUL["ExpPlus"].FindBin(mg,mchi))
-            xsecULExpPlus2 = xsecUL["ExpMinus2"].GetBinContent(xsecUL["ExpMinus2"].FindBin(mg,mchi))
-            xsecULExpMinus2 = xsecUL["ExpPlus2"].GetBinContent(xsecUL["ExpPlus2"].FindBin(mg,mchi))
-            
-            exec 's.xsecUL%i = xsecULObs'%(ixsecUL+0)
-            exec 's.xsecUL%i = xsecULExpPlus2'%(ixsecUL+1)
-            exec 's.xsecUL%i = xsecULExpPlus'%(ixsecUL+2)
-            exec 's.xsecUL%i = xsecULExp'%(ixsecUL+3)
-            exec 's.xsecUL%i = xsecULExpMinus'%(ixsecUL+4)
-            exec 's.xsecUL%i = xsecULExpMinus2'%(ixsecUL+5)
-
-            if xsecULObs > 0.:
-                smoothXsecTree.Fill()
-
-    smoothOutFile.cd()
-    smoothXsecTree.Write()
-    smoothOutFile.Close()
+                if options.blind:
+                    exec 's.xsecUL%i = xsecULExpPlus2'%(ixsecUL+0)
+                    exec 's.xsecUL%i = xsecULExpPlus'%(ixsecUL+1)
+                    exec 's.xsecUL%i = xsecULExp'%(ixsecUL+2)
+                    exec 's.xsecUL%i = xsecULExpMinus'%(ixsecUL+3)
+                    exec 's.xsecUL%i = xsecULExpMinus2'%(ixsecUL+4)
+                else:
+                    exec 's.xsecUL%i = xsecULObs'%(ixsecUL+0)
+                    exec 's.xsecUL%i = xsecULExpPlus2'%(ixsecUL+1)
+                    exec 's.xsecUL%i = xsecULExpPlus'%(ixsecUL+2)
+                    exec 's.xsecUL%i = xsecULExp'%(ixsecUL+3)
+                    exec 's.xsecUL%i = xsecULExpMinus'%(ixsecUL+4)
+                    exec 's.xsecUL%i = xsecULExpMinus2'%(ixsecUL+5)
+        
+                if xsecULExp > 0.:
+                    smoothXsecTree.Fill()
+        
+        smoothOutFile.cd()
+        smoothXsecTree.Write()
+        smoothOutFile.Close()
 
     print len(gchipairs), "total points"
     print len(toFix), "points to fix"

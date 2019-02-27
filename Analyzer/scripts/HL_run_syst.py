@@ -1,7 +1,7 @@
 import re, os, sys, glob, time, logging, multiprocessing, socket, subprocess, shlex, getpass, ROOT, io
 from array import array
 from optparse import OptionParser
-from common_functions import *
+from HL_common_functions import *
 import tdrstyle
 
 keep = [] # Keep ROOT objects in memory
@@ -11,15 +11,17 @@ keep = [] # Keep ROOT objects in memory
 # Read options from command line
 usage = "Usage: python %prog filelists [options]"
 parser = OptionParser(usage=usage)
-parser.add_option('-d','--dir',    dest="dir",         type="string",       default="",         help="Input/output directory (use output of Analyzer)")
-parser.add_option('-b','--box',    dest="box",         type="string",       default="WAna_nj6", help='Analysis box, eg. TopAna (default="WAna_nj6")')
-parser.add_option('-m','--model',  dest="model",       type="string",       default="T5ttcc",   help='Signal model (default="T5ttcc")')
-parser.add_option('--nohadd',      dest="nohadd",      action="store_true", default=False,      help='Do not merge input files (default=merge them)')
-parser.add_option('--nocards',     dest="nocards",     action="store_true", default=False,      help='Do not create data cards, i.e. run on existing ones (default=create them)')
-#parser.add_option('--nocombine',   dest="nocombine",   action="store_true", default=False,      help='Do not rerun combine, i.e. run on existing results (default=run combine)')
-parser.add_option('--test',        dest="TEST",        type="int",          default=0,          help="Run only on a N signal points (default=0 - all)")
-parser.add_option('--nproc',       dest="NPROC",       type="int",          default=6,          help="Tells how many parallel combine to start (Default=6)")
-parser.add_option('-i',            dest="incl_style",  action="store_true", default=False,      help='Set if you want inclusive results plot style')
+parser.add_option('-d','--dir',       dest="dir",         type="string",       default="",         help="Input/output directory (use output of Analyzer)")
+parser.add_option('-b','--box',       dest="box",         type="string",       default="WAna_nj6", help='Analysis box, eg. TopAna (default="WAna_nj6")')
+parser.add_option('-m','--model',     dest="model",       type="string",       default="T5ttcc",   help='Signal model (default="T5ttcc")')
+parser.add_option('--nohadd',         dest="nohadd",      action="store_true", default=False,      help='Do not merge input files (default=merge them)')
+parser.add_option('--nocards',        dest="nocards",     action="store_true", default=False,      help='Do not create data cards, i.e. run on existing ones (default=create them)')
+#parser.add_option('--nocombine',      dest="nocombine",   action="store_true", default=False,      help='Do not rerun combine, i.e. run on existing results (default=run combine)')
+parser.add_option('--test',           dest="TEST",        type="int",          default=0,          help="Run only on a N signal points (default=0 - all)")
+parser.add_option('--nproc',          dest="NPROC",       type="int",          default=6,          help="Tells how many parallel combine to start (Default=6)")
+parser.add_option('-s', '--scenario', dest="scenario",    type="int",          default=0,          help="0: Stat only, 1: YR2018, 2: Run2 systematics")
+parser.add_option('-l', '--lumi',     dest="lumi",        type="float",        default=3000,       help="Total integrated luminosity (in fb^-1) to project")
+parser.add_option('-e', '--energy',   dest="energy",      type="int",          default=14,         help="Energy (in TeV) to consider (HL: 14 or HE: 27 TeV)")
 (opt,args) = parser.parse_args()
 
 BIN = ""
@@ -29,7 +31,8 @@ DATE = "_".join(opt.dir.split("/")[-1].split("_")[1:4])
 
 # ---------------------- Settings ------------------------
 
-lumi = 35867 # /pb
+lumi = opt.lumi # /fb
+lumi_Run2 = 35.867
 ntuple = "ntuple/Latest"
 combine_bins = True
 binned_k = True
@@ -40,15 +43,31 @@ use_G = True
 # run script to get above numbers: python scripts/calc_systematics.py
 qcd_syst = 0.24
 dy_syst  = 0.29
+purity_err  = 0.1
+dirfrac_err = 0.1
 if "TopAna" in opt.box:
     qcd_syst = 0.13
     dy_syst  = 0.19
+prefix = ""
+if opt.scenario == 0:
+    prefix = "Stat. only, "
+elif opt.scenario == 1:
+    #prefix = "YR18 syst., "
+    prefix = ""
+    qcd_syst = qcd_syst / 2.0
+    dy_syst  = dy_syst  / 2.0
+    purity_err  = purity_err  / 10.0
+    dirfrac_err = dirfrac_err / 10.0
+elif opt.scenario == 2:
+    prefix = "Run2 syst., "
 
 mrbins = [ 800, 1000, 1200, 1600, 2000, 4000 ]
 mrbins_TeV = [ 0.8, 1.0, 1.2, 1.6, 2.0, 4.0 ]
 r2bins = [ 0.08, 0.12, 0.16, 0.24, 0.4, 1.5 ]
 nrazorbin = (len(mrbins)-1)*(len(r2bins)-1)
-ERA = 35
+ERA = 65
+if opt.energy==27:
+    ERA = 75
 
 category = { "WAna_nj45": "#font[52]{W 4-5 jet category}", "WAna_nj6": "#font[52]{W 6 jet category}", "TopAna": "#font[52]{Top category}" }
 BOX = category[opt.box]
@@ -208,10 +227,10 @@ systematics = [
     "_pileupDown",
     "_alphasUp",
     "_alphasDown",
-    "_facscaleUp",
-    "_facscaleDown",
-    "_renscaleUp",
-    "_renscaleDown",
+    #"_facscaleUp",
+    #"_facscaleDown",
+    #"_renscaleUp",
+    #"_renscaleDown",
     "_facrenscaleUp", 
     "_facrenscaleDown", 
     "_lostlepUp",
@@ -337,6 +356,87 @@ def load(f, name, pf="", combine = False):
         h_new.SetEntries(h.GetEntries())
         h_new.SetDirectory(0)
     return h_new
+
+def load_and_scale(vin, rel_scales, keep, name, pf="", combine = False):
+    Run2_dir = "results/run_2018_06_08_syst_TopAna"
+    if not "TopAna" in opt.box: Run2_dir = "results/run_2018_08_08_syst"
+    h_new = 0
+    for iFile in range(len(vin)):
+        f = ROOT.TFile.Open(Run2_dir+"/hadd/"+vin[iFile]+".root")
+        h = f.Get(name)
+        if h:
+            if h_new == 0:
+                if combine:
+                    h_new = h.Clone(name+pf+"_tmp")
+                    h_new.Scale(rel_scales[vin[iFile]])
+                else:
+                    h_new = h.Clone(name+pf)                    
+                    h_new.Scale(rel_scales[vin[iFile]])
+                    h_new.SetDirectory(0)
+                    keep.append(h_new)
+            else:
+                h_new.Add(h, rel_scales[vin[iFile]])
+        f.Close()
+    if combine:
+        h_new = combinebins(h_new, name+pf)
+        h_new.SetDirectory(0)
+        keep.append(h_new)
+    return h_new
+
+def load_and_scale_signal_1d(f, scale, keep, name, pf="", combine = False):
+    # signal contains one single xsec for all histos
+    # so it is fine to open a single file to speed things up
+    h_new = 0
+    h = f.Get(name)
+    if h:
+        if combine:
+            h_new = combinebins(h, name+pf)
+        else:
+            h_new = h.Clone(name+pf)                    
+        h_new.Scale(scale)
+        h_new.SetDirectory(0)
+        keep.append(h_new)
+    return h_new
+
+def load_and_scale_signal_3d(vin, rel_scales_signal, keep, name, pf=""):
+    Run2_dir = "results/run_2018_06_08_syst_TopAna"
+    if not "TopAna" in opt.box: Run2_dir = "results/run_2018_08_08_syst"
+    h_new = 0
+    for iFile in range(len(vin)):
+        fin = ROOT.TFile.Open(Run2_dir+"/hadd/"+vin[iFile]+".root")
+        h = fin.Get(name)
+        if h:
+            h_tmp = h.Clone(name+pf)
+            # scaling the counts by the relative xsec and luminosity
+            for binx in range(1,h_tmp.GetNbinsX()+1):
+                mass = int(h_tmp.GetXaxis().GetBinCenter(binx))
+                if mass in rel_scales_signal.keys():
+                    scale = rel_scales_signal[mass]
+                    for biny in range(1,h_tmp.GetNbinsY()+1):
+                        for binz in range(1,h_tmp.GetNbinsZ()+1):
+                            c = h_tmp.GetBinContent(binx, biny, binz)
+                            e = h_tmp.GetBinError  (binx, biny, binz)
+                            h_tmp.SetBinContent(binx, biny, binz, c*scale)
+                            h_tmp.SetBinError  (binx, biny, binz, e*scale)
+            if h_new == 0:
+                h_new = h_tmp
+                h_new.SetDirectory(0)
+                keep.append(h_tmp)
+            else:
+                h_new.Add(h_tmp)
+        fin.Close()
+    return h_new
+
+def scale_down_syst(vh, scale_down_factors, scale_stat = False):
+    for i in range(1, len(vh)):
+        for syst in scale_down_factors.keys():
+            if ("_"+syst+"Up") in vh[i].GetName() or ("_"+syst+"Down") in vh[i].GetName():
+                for binx in range(1, vh[i].GetNbinsX()+1):
+                    vh[i].SetBinContent(binx, vh[0].GetBinContent(binx)+(vh[i].GetBinContent(binx)-vh[0].GetBinContent(binx))*scale_down_factors[syst])
+    if scale_stat:
+        for i in range(len(vh)):
+            for binx in range(1, vh[i].GetNbinsX()+1):
+                vh[i].SetBinError(binx, vh[i].GetBinError(binx) * ((lumi_Run2/lumi) ** 0.5) )
 
 def combinebins(h, name=""):
     h_new = ROOT.TH1D(name,h.GetTitle(), 22,0,22)
@@ -471,7 +571,7 @@ def find_interval(func, symmetric = False, integ_range=16.0):
 saved_intervals = {}
 saved_nominals  = {}
 def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
-    legnames = { "TT":"t#bar{t} or single t", "MJ": "Multijet", "WJ": "W(#rightarrowl#nu)+jets", "ZI":"Z(#rightarrow#nu#nu)+jets", "OT":"Other" }
+    legnames = { "TT":"t#bar{t} or single t", "MJ": "Multijet", "WJ": "W(l#nu)+jets", "ZI":"Z(#nu#nu)+jets", "OT":"Other" }
     names = { "TT":"Top", "MJ": "MultiJet", "WJ": "WJets", "ZI":"ZToNunu", "OT":"Other" }
     sample = names[h_S_LWP.GetName().replace("_combined","").split("_")[-1]]
     legname = legnames[h_S_LWP.GetName().replace("_combined","").split("_")[-1]]
@@ -545,7 +645,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             h_added_LWP.Draw("SAME PE0")
         leg = ROOT.TLegend(0.35,0.65,0.75,0.87, legname+", "+BOX)
         if "WAna" in opt.box:
-            leg.AddEntry(h_S_LWP, "#color[1]{Signal region w/o #tau_{21} req.}"+(" #color[2]{+Added}" if nmissing2>0 else ""), "l")
+            leg.AddEntry(h_S_LWP, "#color[1]{Signal region w/o tau_{21} req.}"+(" #color[2]{+Added}" if nmissing2>0 else ""), "l")
         else:
             leg.AddEntry(h_S_LWP, "#color[1]{Signal region w/ loosest top WP}"+(" #color[2]{+Added}" if nmissing2>0 else ""), "l")
         leg.AddEntry(h_S, "#color[1]{Signal region} #color[3]{+Extrapolated}", "pe")
@@ -557,7 +657,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
         keep.append(leg)
         draw_mr_bins([h_S], 1.01e-3,1e4, combine_bins, keep, mrbins_TeV, r2bins)
         can = add_ratio_plot(can, 0,h_S.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, ratio)
-        add_cms_era(can, ERA+1 if "WAna" in opt.box else ERA+2, keep)
+        add_cms_era(can, ERA+1 if "WAna" in opt.box else ERA+2, keep, opt.energy, lumi, prefix)
         ROOT.gPad.Update()
         can.Write()
     pad2 = can.GetListOfPrimitives().At(1)
@@ -693,7 +793,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             #lat3.Draw()
             leg = ROOT.TLegend(0.15,0.4,0.45,0.55)
             leg.AddEntry(conv,          "Conv - Total",     "l")
-            leg.AddEntry(all_conv[2],   "Conv - M_{R} bins", "l")
+            leg.AddEntry(all_conv[2],   "Conv - M_{R} bins","l")
             leg.AddEntry(functions[10], "Gaus - All bins", "l")
             leg.SetTextSize(0.035)
             leg.SetFillColor(0)
@@ -714,7 +814,7 @@ def fix_low_stat_bins(fout, h_S, h_S_LWP, extrap=0):
             leg2.SetBorderSize(0)
             leg2.Draw("SAME")
             h_ratio_unc.Write()
-            add_cms_era(can_unc, ERA, keep)
+            add_cms_era(can_unc, ERA, keep, opt.energy, lumi, prefix)
             if nmissing1>0:
                 save_plot(can_unc, "", "Plots/lowstat_bins/Extrap_unc_"+sample+"_"+opt.box, 1)
     
@@ -901,8 +1001,8 @@ def bg_est(name, data, sub, sr, fout, cr, combine_bins, binned_k = True, scale=1
         for binx in range(1, h_cr.GetNbinsX()+1):
             c_data = h_cr_data. GetBinContent(binx)
             c_mc   = h_cr.GetBinContent(binx)
-            #if (c_data<=threshold_cr or c_mc<=threshold_cr):
-            if c_mc<=threshold_cr:
+            if (c_data<=threshold_cr or c_mc<=threshold_cr):
+            #if c_mc<=threshold_cr:
                 empty_bins.append(binx)
         found_combos = []
         selected_combos = {}
@@ -1085,9 +1185,14 @@ def bg_est(name, data, sub, sr, fout, cr, combine_bins, binned_k = True, scale=1
     # It is the same as for the inclsuive analysis
     # This formulation allows the merging of bins in the control region
     if merge_CR_bins:
+        prev_corr = 0
+        prev_corr_err = 0
         for binx in range(1, h_est.GetNbinsX()+1):
             c_sr_mc   = h_sr.GetBinContent(binx)
-            e_sr_mc   = h_sr.GetBinError  (binx)
+            if opt.scenario>0:
+                e_sr_mc   = 0
+            else:
+                e_sr_mc   = h_sr.GetBinError  (binx) * ((lumi_Run2/lumi) ** 0.5)
             # Use the previously found best combination for the merged CR bins
             c_cr_data = 0
             c_cr_mc   = 0
@@ -1096,15 +1201,26 @@ def bg_est(name, data, sub, sr, fout, cr, combine_bins, binned_k = True, scale=1
             for unmerged_bin in final_combos[binx]:
                 c_cr_data += h_cr_data .GetBinContent(unmerged_bin)
                 c_cr_mc   += h_cr.GetBinContent(unmerged_bin)
-                e_cr_data  = (h_cr_data .GetBinError(unmerged_bin) ** 2 + e_cr_data ** 2 ) ** 0.5
-                e_cr_mc    = (h_cr.GetBinError(unmerged_bin) ** 2 + e_cr_mc ** 2   ) ** 0.5
+                e_cr_data  = (h_cr_data .GetBinError(unmerged_bin) ** 2 * lumi_Run2/lumi + e_cr_data ** 2 ) ** 0.5
+                if opt.scenario>0:
+                    e_cr_mc    = (h_cr.GetBinError(unmerged_bin) ** 2 * lumi_Run2/lumi + e_cr_mc ** 2   ) ** 0.5
             #print ("binx=%2d SR(MC)=%4.2f CR(Data)=%4.2f CR(MC)=%4.2f" % (binx, c_sr_mc, c_cr_data, c_cr_mc) )
-            estimate = c_sr_mc * c_cr_data / c_cr_mc
-            error    = mult_err(c_sr_mc, e_sr_mc, c_cr_data/c_cr_mc, div_err(c_cr_data, e_cr_data, c_cr_mc, e_cr_mc))
-            #if name == "Top" or name == "Top_elerecoUp" or name == "Top_elerecoDown":
-            #    print ("bin=%2d  SR(MC)=%4.2f+-%4.2f  CR(Data)=%4.2f+-%4.2f  CR(MC)=%4.2f+-%4.2f --> EST=%4.2f+-%4.2f - %s" % (unmerged_bin, c_sr_mc, e_sr_mc, c_cr_data, e_cr_data, c_cr_mc, e_cr_mc, estimate, error, name) )
+            corr     = c_cr_data / c_cr_mc
+            corr_err = div_err(c_cr_data, e_cr_data, c_cr_mc, e_cr_mc)
+            # The bin merging did not merge sufficient bins (we can simply take the value of the previous correction)
+            # This procedure gives the same results as that used for Run2 (where bin merging involved the previous bin)
+            if corr>2.0:
+                corr = 2.0
+                #corr = prev_corr
+                corr_err = prev_corr_err
+            prev_corr = corr
+            prev_corr_err = corr_err
+            estimate = c_sr_mc * corr
+            error    = mult_err(c_sr_mc, e_sr_mc, corr, corr_err)
+            #if name == "MultiJet":
+            #    print ("bin=%2d  SR(MC)=%4.2f+-%4.2f  CR(Data)=%4.2f+-%4.2f  CR(MC)=%4.2f+-%4.2f --> EST=%4.2f+-%4.2f - %s" % (binx, c_sr_mc, e_sr_mc, c_cr_data, e_cr_data, c_cr_mc, e_cr_mc, estimate, error, name) )
             #if name == "Top_s_T":
-            #    print ("bin=%2d  SR(MC)=%4.2f+-%4.2f  CR(Data)=%4.2f+-%4.2f  CR(MC)=%4.2f+-%4.2f --> EST=%4.2f+-%4.2f - %s" % (unmerged_bin, c_sr_mc, e_sr_mc, c_cr_data, e_cr_data, c_cr_mc, e_cr_mc, estimate, error, name) )
+            #    print ("bin=%2d  SR(MC)=%4.2f+-%4.2f  CR(Data)=%4.2f+-%4.2f  CR(MC)=%4.2f+-%4.2f --> EST=%4.2f+-%4.2f - %s" % (binx, c_sr_mc, e_sr_mc, c_cr_data, e_cr_data, c_cr_mc, e_cr_mc, estimate, error, name) )
             h_est.SetBinContent(binx,estimate)
             h_est.SetBinError  (binx,error)
             #if not ("Up" in name or "Down" in name):
@@ -1216,11 +1332,11 @@ def zinv_est(name, vvh_sr, fout, vh_g_data_promptdirect, vh_g_cr, l_data, l_subt
     ztonunu_lepton_est.SetLineColor(418)
     ztonunu_lepton_est.Draw("SAME LE0")
     if "WAna_nj45" in opt.box:
-        draw_mr_bins([ztonunu_photon_est, ztonunu_lepton_est, ztonunu_mc], 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins, 0, 0.25, 0.06)
+        draw_mr_bins([ztonunu_photon_est, ztonunu_lepton_est, ztonunu_mc], 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins, {}, 0, 0.25, 0.06)
     elif "WAna_nj6" in opt.box:
-        draw_mr_bins([ztonunu_lepton_est], 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins, 0, 1.0, 0.06)
+        draw_mr_bins([ztonunu_lepton_est], 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins, {}, 0, 1.0, 0.06)
     else:
-        draw_mr_bins([ztonunu_photon_est], 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins, 0, 1.0, 0.06)
+        draw_mr_bins([ztonunu_photon_est], 0, ymax[opt.box], combine_bins, keep, mrbins_TeV, r2bins, {}, 0, 1.0, 0.06)
     legtitle = "Signal region"
     if "s_" in name:
         legtitle = "Signal-like validation region"
@@ -1266,7 +1382,7 @@ def zinv_est(name, vvh_sr, fout, vh_g_data_promptdirect, vh_g_cr, l_data, l_subt
     ztonunu_lepton_ratio.SetMarkerColor(418)
     ztonunu_lepton_ratio.SetLineColor(418)
     ztonunu_lepton_ratio.Draw("SAME PE0")
-    add_cms_era(can, ERA, keep)
+    add_cms_era(can, ERA, keep, opt.energy, lumi, prefix)
     save_plot(can, "", plotdir+"/"+name+"_Estimate_"+opt.box)
     return ZInv_est
 
@@ -1358,7 +1474,7 @@ def fit_fraction(chiso, temp1, temp2, plotdir, bin, mcpurity=0.0):
         lat1.Draw("SAME")
         lat2 = ROOT.TLatex(4, 0.4*data.GetMaximum(), ("MC Purity: %.2f" % (mcpurity)))
         lat2.Draw("SAME")
-        add_cms_era(can, ERA+1 if "WAna" in opt.box else ERA+2, keep)
+        add_cms_era(can, ERA+1 if "WAna" in opt.box else ERA+2, keep, opt.energy, lumi, prefix)
         save_plot(can, "", plotdir+"/Fit_"+bin+"_"+EBEE+"_"+opt.box)
     return prompt_val, prompt_err
 
@@ -1373,6 +1489,9 @@ def get_zslice(input, name, binx1, binx2, biny1, biny2):
     return out
 
 def calc_syst_err(vh, name, additional_syst=0.0, add_stat=True):
+    scen_1_drop = ["extrap", "trigger", "ak8scale", "doubleratio",
+                   "elefastsim", "muonfastsim","btagfastsim", "wtagfastsim",
+                   "wmistagfastsim", "toptagfastsim", "topmistagfastsim", "leptonest"]
     nominal = vh[0].Clone(name)
     # Add the statistical error
     syst_up = vh[0].Clone(name+"_up")
@@ -1383,11 +1502,19 @@ def calc_syst_err(vh, name, additional_syst=0.0, add_stat=True):
         err_up += (additional_syst*nominal.GetBinContent(binx)) ** 2
         err_dn += (additional_syst*nominal.GetBinContent(binx)) ** 2
         for i in range(1, len(vh)):
-            syst_err = vh[i].GetBinContent(binx)-nominal.GetBinContent(binx)
-            if syst_err>0:
-                err_up += syst_err ** 2
-            else:
-                err_dn += syst_err ** 2
+            consider_syst = True
+            if opt.scenario==0:
+                consider_syst = False
+            if opt.scenario==1:
+                for syst_to_drop in scen_1_drop:
+                    if syst_to_drop in vh[i].GetName():
+                        consider_syst = False
+            if consider_syst:
+                syst_err = vh[i].GetBinContent(binx)-nominal.GetBinContent(binx)
+                if syst_err>0:
+                    err_up += syst_err ** 2
+                else:
+                    err_dn += syst_err ** 2
         err_up = err_up ** 0.5
         err_dn = err_dn ** 0.5
         syst_up.SetBinError(binx, err_up)
@@ -1496,7 +1623,7 @@ def make_kappa_plot(process, sr, cr, combine_bins, additional_syst):
     leg.Draw("SAME")
     ROOT.gPad.Update()
     draw_mr_bins([h_kappa], 0, h_kappa.GetMaximum(), combine_bins, keep, mrbins_TeV, r2bins)
-    add_cms_era(can_tf, ERA, keep)
+    add_cms_era(can_tf, ERA, keep, opt.energy, lumi, prefix)
     save_plot(can_tf, "", "Plots/kappa/"+DATE+"/"+can_tf.GetName())
 
 # ----------------- Merge histograms --------------------
@@ -1618,12 +1745,340 @@ if not opt.nohadd:
             npvLowHighHist_allevt.Write()
             f.Close()
 
+# acceptance extrapolation
+if "T2tt" in opt.model:
+    highest_mass = 1200
+    if opt.energy == 14:
+        extension_points = range(1250, 2550, 50)
+    elif opt.energy == 27:
+        extension_points = range(1250, 2050, 50)
+else:
+    highest_mass = 2300
+    extension_points = range(2350, 3550, 50)
+
+if opt.box=="WAna_nj45":
+    postfix = "_NJet4to5"
+    facc = "results/Plotter_out_2018_08_08_syst_replot.root"
+elif opt.box=="WAna_nj6":
+    postfix = "_NJet6"
+    facc = "results/Plotter_out_2018_08_08_syst_replot.root"
+elif opt.box=="TopAna":
+    postfix = ""
+    facc = "results/Plotter_out_2018_06_08_syst_TopAna_replot.root"
+if opt.model == "T2tt":
+    subdir = "SignalSelectionEfficiency_vs_MLSP_vs_MStop"
+else:
+    subdir = "SignalSelectionEfficiency_vs_MLSP_vs_MGluino"
+
+fin = ROOT.TFile.Open(facc)
+h_acc = fin.Get(subdir+"/"+opt.model+postfix)
+h_acc.SetDirectory(0)
+keep.append(h_acc)
+fin.Close()
+
+def fit_turnon_improved_(h):
+    if (h.GetEntries()>0):
+        # Estimate Parameters
+        p0 = 0.
+        first_point = 0.
+        for i in range(h.GetNbinsX(),0,-1):
+            c = h.GetBinContent(i)
+            if c>0:
+                if first_point == 0:
+                    first_point = h.GetBinCenter(i)
+                    p0 = c
+        p1 = h.GetBinContent(h.GetMaximumBin()) - p0
+        bin1 = 0
+        bin2=9999
+        mid = (p0 + p1) / 2.0
+        for i in range(h.GetNbinsX(),0,-1):
+            cont = h.GetBinContent(i)
+            if cont<mid and cont>0 and bin1==0: bin1 =i
+            if cont>mid: bin2 = i
+        x1 = h.GetBinCenter(bin1)
+        x2 = h.GetBinCenter(bin2)
+        y1 = h.GetBinContent(bin1)
+        y2 = h.GetBinContent(bin2)
+        p2 = x1 + (x2-x1)*(mid-y1)/(y2-y1)
+        # Fit
+        f_fit = ROOT.TF1(h.GetName()+"_turnon", "[0]+[1]/(1+exp(([2]-x)/[3]))")
+        f_fit.SetParameter(0,p0)
+        f_fit.SetParameter(1,p1)
+        f_fit.SetParameter(2,p2)
+        f_fit.SetParameter(3,400)
+        f_fit.SetParLimits(0,0,0.2)
+        f_fit.SetParLimits(1,0.9*p1,1.1*p1)
+        #f_fit.SetParLimits(2,0,1)
+        #f_fit.SetParLimits(3,0.25,15)
+        f_fit.SetLineColor(h.GetMarkerColor())
+        #std::cout<<h.GetName()<<" "<<p0<<" "<<p1<<" "<<p2<<std::endl
+        h.Fit(h.GetName()+"_turnon", "MQ")
+        #double Chi2NDoF = f_fit.GetChisquare()/f_fit.GetNDF()
+        #double Const = f_fit.GetParameter(0)
+        #double Rise = f_fit.GetParameter(1)
+        #double Mid = f_fit.GetParameter(2)
+        #double Width = f_fit.GetParameter(3)
+        #std::cout<<printf( "Chi2/NDoF: %10.1f  Const: %1.3f  Rise: %1.3f  Mid: %3.1f  Width: %2.2lf", Chi2NDoF, Const, Rise, Mid, Width)<<std::endl
+        # gPad.Update()
+        # if (fabs(Mid-p2)>4) sleep(5)
+        return h.GetFunction(h.GetName()+"_turnon")
+    else: return 0
+
+def turnon1_with_slope_(h, keep, xmin = 0, xmax = 3000, ymin=0, ymax=0.2):
+    # Estimate Parameters
+    p0 = 0.
+    first_point = 0.
+    for i in range(h.GetNbinsX(),0,-1):
+        c = h.GetBinContent(i)
+        if c>0:
+            if first_point == 0:
+                first_point = h.GetBinCenter(i)
+                p0 = c
+    p1 = h.GetBinContent(h.GetMaximumBin()) - p0
+    bin1 = 0
+    bin2=9999
+    mid = 0.05
+    for i in range(h.GetNbinsX(),0,-1):
+        cont = h.GetBinContent(i)
+        if cont<mid and cont>0 and bin1==0: bin1 =i
+        if cont>mid: bin2 = i
+    x1 = h.GetBinCenter(bin1)
+    x2 = h.GetBinCenter(bin2)
+    y1 = h.GetBinContent(bin1)
+    y2 = h.GetBinContent(bin2)
+    p2 = x1 + (x2-x1)*(mid-y1)/(y2-y1)
+    maximum = h.GetMaximum()
+    f_fit = ROOT.TF1(h.GetName()+"_turnon", "([0]+[1]*x)/(1+exp(([2]-x)/[3]))")
+    f_fit.SetParameter(0,0.1)
+    f_fit.SetParameter(1,1e-5)
+    f_fit.SetParameter(2,p2)
+    f_fit.SetParameter(3,100)
+    f_fit.SetParLimits(0,0.9*maximum,1.1*maximum)
+    #f_fit.SetParLimits(1,0,1e-4)
+    f_fit.SetParLimits(1,5e-6,1e-5)
+    #f_fit.SetParLimits(2,0,100)
+    f_fit.SetParLimits(2,1.0*p2,1.3*p2)
+    f_fit.SetParLimits(3,0,200)
+    f_fit.SetLineWidth(2)
+    h.Fit(h.GetName()+"_turnon","MQ")
+    keep.append(f_fit)
+    return f_fit
+
+def turnon2_with_slope_(h, keep, mslp):
+    # Estimate Parameters
+    p0 = 0.
+    first_point = 0.
+    for i in range(h.GetNbinsX(),0,-1):
+        c = h.GetBinContent(i)
+        if c>0:
+            if first_point == 0:
+                first_point = h.GetBinCenter(i)
+                p0 = c
+    p1 = h.GetBinContent(h.GetMaximumBin()) - p0
+    bin1 = 0
+    bin2=9999
+    mid = 0.05
+    for i in range(h.GetNbinsX(),0,-1):
+        cont = h.GetBinContent(i)
+        if cont<mid and cont>0 and bin1==0: bin1 =i
+        if cont>mid: bin2 = i
+    x1 = h.GetBinCenter(bin1)
+    x2 = h.GetBinCenter(bin2)
+    y1 = h.GetBinContent(bin1)
+    y2 = h.GetBinContent(bin2)
+    p2 = x1 + (x2-x1)*(mid-y1)/(y2-y1)
+    maximum = h.GetMaximum()
+    f_fit = ROOT.TF1(h.GetName()+"_turnon", "([0]+[1]*x)/(1+exp(([2]-x)/[3]))")
+    if mslp==0:
+        f_fit.SetParameter(0,0.03)
+        f_fit.SetParLimits(0,0.02,0.04)
+        f_fit.SetParameter(1,2e-6)
+        f_fit.SetParLimits(1,2e-6,2e-5)
+        f_fit.SetParameter(2,700)
+        f_fit.SetParLimits(2,600,800)
+        f_fit.SetParameter(3,300)
+        f_fit.SetParLimits(3,200,400)
+    else:
+        f_fit.SetParameter(0,0.1)
+        if mlsp==400:
+            f_fit.FixParameter(0,0.093)
+        elif mlsp==500:
+            f_fit.FixParameter(0,0.095)
+        #f_fit.SetParLimits(0,0.85*maximum,1.1*maximum)
+        if mlsp<300:
+            f_fit.FixParameter(1,3e-6)
+        else:
+            f_fit.FixParameter(1,6e-6)
+        f_fit.SetParameter(2,p2)
+        f_fit.SetParLimits(2,0.9*p2,1.3*p2)
+        if mlsp>=400 and mlsp<=500:
+            f_fit.FixParameter(3,150)
+        if mlsp>=600 and mlsp<=700:
+            f_fit.FixParameter(3,125)
+        else:
+            f_fit.SetParameter(3,150)
+            f_fit.SetParLimits(3,100,300)
+    f_fit.SetLineWidth(2)
+    h.Fit(h.GetName()+"_turnon","MQ")
+    keep.append(f_fit)
+    return f_fit
+
+# Acceptance fits
+# T2tt - Wn45 --> flat (use no fit)
+# T2tt - Wn6  --> decreasing
+# T2tt - Top  --> increasing, use turnon fit
+# T1tttt - Wn45 --> flat (use no fit)
+# T1tttt - Wn6  --> deacreasing (below lsp 1300), flat (above)
+# T1tttt - Top  --> increasing
+# T5ttcc - Wn45 --> decreasing
+# T5ttcc - Wn6  --> decreasing
+# T5ttcc - Top  --> increasing, use turnon fit
+f_acc_fits = ROOT.TFile.Open("acceptance_"+opt.model+"_"+opt.box+".root","RECREATE")
+binx_high = h_acc.GetXaxis().FindBin(highest_mass)
+vf_acc = {}
+for biny in range(1, h_acc.GetNbinsY()+1):
+    if h_acc.GetBinContent(binx_high, biny)>0:
+        mlsp = int(h_acc.GetYaxis().GetBinCenter(biny))
+        h_slice = h_acc.ProjectionX("_"+str(mlsp),biny,biny)
+        h_ext = ROOT.TH1D("acc_"+opt.model+"_lsp"+str(mlsp),";"+h_acc.GetXaxis().GetTitle()+";Acceptance",401,-12.5,10012.5);
+        for binx in range(1, h_slice.GetNbinsX()+1):
+            h_ext.SetBinContent(binx,h_slice.GetBinContent(binx))
+            h_ext.SetBinError  (binx,h_slice.GetBinError  (binx))
+        h_ext.GetXaxis().SetRangeUser(0,extension_points[-1])
+        h_ext.SetMarkerStyle(20)
+        can = custom_can(h_ext, "acc_"+str(mlsp))
+        h_ext.Draw("PE1")
+        turnon1 = False
+        turnon2 = False
+        func = "pol1"
+        if opt.model == "T5ttcc":
+            if "WAna_nj45" in opt.box:
+                rangemin = min(2000,max(1200,mlsp+800))
+            elif "WAna_nj6" in opt.box:
+                rangemin = max(1000,mlsp+600)
+            elif "TopAna" in opt.box:
+                #func = "pol0"
+                #if mlsp>1200:
+                #    rangemin = highest_mass-100
+                #elif mlsp>1000:
+                #    rangemin = highest_mass-200
+                #else:
+                #    rangemin = highest_mass-300
+                turnon2 = True
+        elif opt.model == "T1tttt":
+            if "WAna_nj45" in opt.box:
+                func = "pol0"
+                if mlsp>1500:
+                    rangemin = highest_mass-150
+                else:
+                    rangemin = highest_mass-200
+            elif "WAna_nj6" in opt.box:
+                rangemin = min(2300,max(1300,mlsp+900))
+            elif "TopAna" in opt.box:
+                rangemin = min(1800, max(1300,mlsp+900))
+        elif opt.model == "T2tt":
+            if "WAna_nj45" in opt.box:
+                func = "pol0"
+                if mlsp>300:
+                    rangemin = highest_mass-100
+                else:
+                    rangemin = highest_mass-200
+            elif "WAna_nj6" in opt.box:
+                rangemin = max(800,800+(mlsp-300)/2)
+            elif "TopAna" in opt.box:
+                turnon1 = True
+                #func = "[0]+[1]/(1+exp(([2]-x)/[3]))"
+                #rangemin = 0
+                #func = "log(x*[0]+[1])+[2]"
+                #rangemin = max(800,800+(mlsp-300)/2)
+                #func = "pol0"
+                #rangemin = highest_mass
+        if turnon1:            
+            #f_fit = fit_turnon_improved_(h_ext)
+            f_fit = turnon1_with_slope_(h_ext, keep)
+        elif turnon2:
+            f_fit = turnon2_with_slope_(h_ext, keep, mlsp)
+        else:
+            f_fit = ROOT.TF1("fit_"+str(mlsp), func, rangemin,extension_points[-1])
+            if opt.model == "T2tt" and "WAna_nj6" in opt.box and mlsp>400:
+                f_fit.FixParameter(1,-4e-5)
+            if opt.model == "T1tttt" and "WAna_nj6" in opt.box:
+                f_fit.SetParLimits(1,-7e-5,-5e-6)
+                if mlsp>=1000:
+                    f_fit.FixParameter(1,-6.1e-6)
+            h_ext.Fit("fit_"+str(mlsp), "RMQ")
+            f_fit.SetLineWidth(2)
+            f_fit.Draw("SAME")
+            keep.append(f_fit)
+        vf_acc[mlsp] = f_fit
+        can.Write()
+        keep.append(can)
+        keep.append(h_ext)
+
+f_acc_fits.Close()
+
 #sys.exit()
 
 # ----------------- Harvest histograms -------------------
 
+# HL-LHC study
+Run2_dir = "results/run_2018_06_08_syst_TopAna"
+if not "TopAna" in opt.box: Run2_dir = "results/run_2018_08_08_syst"
+
 tmp_dir = opt.dir # Somehow G region triggers were messed up recently, so revert back to previous good version
 #if "WAna" in opt.box: tmp_dir = "results/run_2018_06_08_syst_NoTopVeto" 
+
+# Get relative xsec and luminsoity ratios
+rel_scales = {}
+# Get the 13 TeV Cross sections first
+for line in open('common/BackGroundXSec.txt','r'):
+    line = line.replace('\n','')
+    shortname = line.split()[0]
+    xsec = float(line.split()[2])
+    rel_scales[shortname] = xsec
+# Then take the ratio with the 14/27 TeV one and multiply by relative lumi
+if opt.energy != 14 and opt.energy != 27:
+    print ("ERROR: Invalid energy, there are no cross-sections available for specified energy. Use -e 14 or -e 27")
+    sys.exit()
+for line in open('common/BackGroundXSec_'+str(opt.energy)+'TeV.txt','r'):
+    line = line.replace('\n','')
+    shortname = line.split()[0]
+    xsec = float(line.split()[2])
+    xsec_Run2 = rel_scales[shortname]
+    rel_scales[shortname] = xsec / xsec_Run2 * lumi / lumi_Run2
+
+# Do the same for signal
+rel_scales_gluino = {}
+rel_scales_stop   = {}
+# Get the 13 TeV Cross sections first
+for line in open('data/gluino13TeV.txt', 'r'):
+    line = line.replace('\n','')
+    mass = int(line.split(',')[0])
+    xsec = float(line.split(',')[1])
+    rel_scales_gluino[mass] = xsec
+for line in open('data/stop13TeV.txt', 'r'):
+    line = line.replace('\n','')
+    mass = int(line.split(',')[0])
+    xsec = float(line.split(',')[1])
+    rel_scales_stop[mass] = xsec
+# Then take the ratio with the 14/27 TeV one and multiply by relative lumi
+for line in open('data/gluino'+str(opt.energy)+'TeV.txt', 'r'):
+    line = line.replace('\n','')
+    mass = int(line.split(',')[0])
+    if mass<=3000:
+        xsec = float(line.split(',')[1])
+        xsec_Run2 = rel_scales_gluino[mass]
+        rel_scales_gluino[mass] = xsec / xsec_Run2 * lumi / lumi_Run2
+for line in open('data/stop'+str(opt.energy)+'TeV.txt', 'r'):
+    line = line.replace('\n','')
+    mass = int(line.split(',')[0])
+    if mass<=2000:
+        xsec = float(line.split(',')[1])
+        xsec_Run2 = rel_scales_stop[mass]
+        rel_scales_stop[mass] = xsec / xsec_Run2 * lumi / lumi_Run2
+
+rel_scales_signal = rel_scales_gluino
+if "T2" in opt.model: rel_scales_signal = rel_scales_stop
 
 # Load:
 # BG estimate
@@ -1651,6 +2106,181 @@ q_data = load(f,"MRR2_q_data"+BIN,"_data", combine_bins)
 npvHist = load(f,"nvtx","_data")
 npvHist.Scale(1/npvHist.Integral())
 
+##PREV    # Signal
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root")
+##PREV    S_signal = []
+##PREV    counter = 0
+##PREV    for ikey in range(0, f.GetListOfKeys().GetEntries()):
+##PREV        name = f.GetListOfKeys().At(ikey).GetName()
+##PREV        if name.startswith("MRR2_S_signal") and not "Up" in name and not "Down" in name:
+##PREV            if not "_nj" in name:
+##PREV                counter+=1
+##PREV                S_syst = []
+##PREV                for syst in systematics:
+##PREV                    S_syst.append(load(f, name+BIN+syst, "_sig", combine_bins))
+##PREV                S_signal.append(S_syst)
+##PREV        if opt.TEST>0:
+##PREV            if counter==opt.TEST:
+##PREV                break
+##PREV    # Histos for pileup acceptance systematic
+##PREV    if "T2tt" in opt.model:
+##PREV        npvLowHighHist        = loadclone(f,"npvLowHigh_T2tt","_sig")
+##PREV        npvLowHighHist_allevt = loadclone(f,"npvLowHigh_T2tt_allevt","_sig")
+##PREV    else:
+##PREV        npvLowHighHist        = loadclone(f,"npvLowHigh_T1tttt","_sig")
+##PREV        npvLowHighHist_allevt = loadclone(f,"npvLowHigh_T1tttt_allevt","_sig")
+##PREV    # Merge statistics in Mglu/Mstop vs Mlsp
+##PREV    npvLowHighHist       .Rebin3D(4,4,1)
+##PREV    npvLowHighHist_allevt.Rebin3D(4,4,1)
+##PREV    
+##PREV    # Background
+##PREV    # top + ttbar
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ttbar.root")
+##PREV    S_TT = []
+##PREV    S_LooseWP_TT = []
+##PREV    for syst in systematics:
+##PREV        S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT", 0))
+##PREV        S_LooseWP_TT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_TT", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/top.root")
+##PREV    for i in range(len(systematics)):
+##PREV        # Fix problem with nonexistent scale weights for single top
+##PREV        syst = systematics[i]
+##PREV        if "scale" in syst: syst = ""
+##PREV        S_TT[i].Add(load(f,"MRR2_S_bkg"+BIN+syst,"_T", 0))
+##PREV        S_LooseWP_TT[i].Add(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_T", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/ttbar.root")
+##PREV    Q_TT = []
+##PREV    W_TT = []
+##PREV    L_TT = []
+##PREV    T_TT = []
+##PREV    s_TT = []
+##PREV    q_TT = []
+##PREV    #s_LooseWP_TT = []
+##PREV    for syst in systematics:
+##PREV        Q_TT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_TT", 0))
+##PREV        W_TT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_TT", 0))
+##PREV        L_TT.append(load(f,"MRR2_L_bkg"+BIN+syst,"_TT", 0))
+##PREV        T_TT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_TT", 0))
+##PREV        s_TT.append(load(f,"MRR2_s_bkg"+BIN+syst,"_TT", 0))
+##PREV        q_TT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_TT", 0))
+##PREV        #s_LooseWP_TT.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_TT", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/top.root")
+##PREV    for i in range(len(systematics)):
+##PREV        # Fix problem with nonexistent scale weights for single top
+##PREV        syst = systematics[i]
+##PREV        if "scale" in syst: syst = ""
+##PREV        Q_TT[i].Add(load(f,"MRR2_Q_bkg"+BIN+syst,"_T", 0))
+##PREV        W_TT[i].Add(load(f,"MRR2_W_bkg"+BIN+syst,"_T", 0))
+##PREV        L_TT[i].Add(load(f,"MRR2_L_bkg"+BIN+syst,"_T", 0))
+##PREV        T_TT[i].Add(load(f,"MRR2_T_bkg"+BIN+syst,"_T", 0))
+##PREV        s_TT[i].Add(load(f,"MRR2_s_bkg"+BIN+syst,"_T", 0))
+##PREV        q_TT[i].Add(load(f,"MRR2_q_bkg"+BIN+syst,"_T", 0))
+##PREV        #s_LooseWP_TT[i].Add(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_T", 0))
+##PREV    # multijet
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/multijet.root")
+##PREV    S_MJ = []
+##PREV    S_LooseWP_MJ = []
+##PREV    for syst in systematics:
+##PREV        S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ", 0))
+##PREV        S_LooseWP_MJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_MJ", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/multijet.root")
+##PREV    Q_MJ = []
+##PREV    W_MJ = []
+##PREV    L_MJ = []
+##PREV    T_MJ = []
+##PREV    s_MJ = []
+##PREV    q_MJ = []
+##PREV    #s_LooseWP_MJ = []
+##PREV    for syst in systematics:
+##PREV        Q_MJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_MJ", 0))
+##PREV        W_MJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_MJ", 0))
+##PREV        L_MJ.append(load(f,"MRR2_L_bkg"+BIN+syst,"_MJ", 0))
+##PREV        T_MJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_MJ", 0))
+##PREV        s_MJ.append(load(f,"MRR2_s_bkg"+BIN+syst,"_MJ", 0))
+##PREV        q_MJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_MJ", 0))
+##PREV        #s_LooseWP_MJ.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_MJ", 0))
+##PREV    # wjets
+##PREV    f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/wjets.root")
+##PREV    S_WJ = []
+##PREV    S_LooseWP_WJ = []
+##PREV    for syst in systematics:
+##PREV        S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ", 0))
+##PREV        S_LooseWP_WJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_WJ", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/wjets.root")
+##PREV    Q_WJ = []
+##PREV    W_WJ = []
+##PREV    L_WJ = []
+##PREV    T_WJ = []
+##PREV    L_WJ = []
+##PREV    s_WJ = []
+##PREV    q_WJ = []
+##PREV    #s_LooseWP_WJ = []
+##PREV    for syst in systematics:
+##PREV        Q_WJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_WJ", 0))
+##PREV        W_WJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_WJ", 0))
+##PREV        L_WJ.append(load(f,"MRR2_L_bkg"+BIN+syst,"_WJ", 0))
+##PREV        T_WJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_WJ", 0))
+##PREV        s_WJ.append(load(f,"MRR2_s_bkg"+BIN+syst,"_WJ", 0))
+##PREV        q_WJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_WJ", 0))
+##PREV        #s_LooseWP_WJ.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_WJ", 0))
+##PREV    # ztoinv
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
+##PREV    S_ZI = []
+##PREV    S_LooseWP_ZI = []
+##PREV    for syst in systematics:
+##PREV        S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI", 0))
+##PREV        S_LooseWP_ZI.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_ZI", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/ztoinv.root")
+##PREV    Q_ZI = []
+##PREV    W_ZI = []
+##PREV    L_ZI = []
+##PREV    T_ZI = []
+##PREV    s_ZI = []
+##PREV    q_ZI = []
+##PREV    #s_LooseWP_ZI = []
+##PREV    for syst in systematics:
+##PREV        Q_ZI.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_ZI", 0))
+##PREV        W_ZI.append(load(f,"MRR2_W_bkg"+BIN+syst,"_ZI", 0))
+##PREV        L_ZI.append(load(f,"MRR2_L_bkg"+BIN+syst,"_ZI", 0))
+##PREV        T_ZI.append(load(f,"MRR2_T_bkg"+BIN+syst,"_ZI", 0))
+##PREV        s_ZI.append(load(f,"MRR2_s_bkg"+BIN+syst,"_ZI", 0))
+##PREV        q_ZI.append(load(f,"MRR2_q_bkg"+BIN+syst,"_ZI", 0))
+##PREV        #s_LooseWP_ZI.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_ZI", 0))
+##PREV    # other
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/other.root")
+##PREV    S_OT = []
+##PREV    S_LooseWP_OT = []
+##PREV    for syst in systematics:
+##PREV        S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", 0))
+##PREV        S_LooseWP_OT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_OT", 0))
+##PREV    f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/other.root")
+##PREV    Q_OT = []
+##PREV    W_OT = []
+##PREV    L_OT = []
+##PREV    T_OT = []
+##PREV    s_OT = []
+##PREV    q_OT = []
+##PREV    #s_LooseWP_OT = []
+##PREV    for syst in systematics:
+##PREV        Q_OT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_OT", 0))
+##PREV        W_OT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_OT", 0))
+##PREV        L_OT.append(load(f,"MRR2_L_bkg"+BIN+syst,"_OT", 0))
+##PREV        T_OT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_OT", 0))
+##PREV        s_OT.append(load(f,"MRR2_s_bkg"+BIN+syst,"_OT", 0))
+##PREV        q_OT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_OT", 0))
+##PREV        #s_LooseWP_OT.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_OT", 0))
+##PREV    
+##PREV    # Selected signals for Results plot
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T1tttt.root")
+##PREV    S_T1tttt = load(f, "MRR2_S_signal_2000_300"+BIN, "_sig", 0)
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T2tt.root")
+##PREV    S_T2tt = load(f, "MRR2_S_signal_1200_100"+BIN, "_sig", 0)
+##PREV    f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T5ttcc.root")
+##PREV    S_T5ttcc = load(f, "MRR2_S_signal_2000_300"+BIN, "_sig", 0)
+
+
+
+
 # Signal
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root")
 S_signal = []
@@ -1660,13 +2290,16 @@ for ikey in range(0, f.GetListOfKeys().GetEntries()):
     if name.startswith("MRR2_S_signal") and not "Up" in name and not "Down" in name:
         if not "_nj" in name:
             counter+=1
+            mass = int(name.split("_")[-2])
             S_syst = []
             for syst in systematics:
-                S_syst.append(load(f, name+BIN+syst, "_sig", combine_bins))
+                S_syst.append(load_and_scale_signal_1d(f, rel_scales_signal[mass], keep, name+BIN+syst, "_sig", combine_bins))
             S_signal.append(S_syst)
     if opt.TEST>0:
         if counter==opt.TEST:
             break
+# Histos for pileup acceptance systematic
+f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_"+opt.model+".root")
 # Histos for pileup acceptance systematic
 if "T2tt" in opt.model:
     npvLowHighHist        = loadclone(f,"npvLowHigh_T2tt","_sig")
@@ -1680,20 +2313,17 @@ npvLowHighHist_allevt.Rebin3D(4,4,1)
 
 # Background
 # top + ttbar
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ttbar.root")
 S_TT = []
 S_LooseWP_TT = []
 for syst in systematics:
-    S_TT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_TT", 0))
-    S_LooseWP_TT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_TT", 0))
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/top.root")
+    S_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_S_bkg"+BIN+syst,"_TT", 0))
+    S_LooseWP_TT.append(load_and_scale(ttbar, rel_scales, keep, "MRR2_S_LooseWP_bkg"+BIN+syst,"_TT", 0))
 for i in range(len(systematics)):
     # Fix problem with nonexistent scale weights for single top
     syst = systematics[i]
     if "scale" in syst: syst = ""
-    S_TT[i].Add(load(f,"MRR2_S_bkg"+BIN+syst,"_T", 0))
-    S_LooseWP_TT[i].Add(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_T", 0))
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/ttbar.root")
+    S_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_S_bkg"+BIN+syst,"_T", 0))
+    S_LooseWP_TT[i].Add(load_and_scale(top, rel_scales, keep, "MRR2_S_LooseWP_bkg"+BIN+syst,"_T", 0))
 Q_TT = []
 W_TT = []
 L_TT = []
@@ -1702,33 +2332,30 @@ s_TT = []
 q_TT = []
 #s_LooseWP_TT = []
 for syst in systematics:
-    Q_TT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_TT", 0))
-    W_TT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_TT", 0))
-    L_TT.append(load(f,"MRR2_L_bkg"+BIN+syst,"_TT", 0))
-    T_TT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_TT", 0))
-    s_TT.append(load(f,"MRR2_s_bkg"+BIN+syst,"_TT", 0))
-    q_TT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_TT", 0))
-    #s_LooseWP_TT.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_TT", 0))
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/top.root")
+    Q_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_Q_bkg"+BIN+syst,"_TT", 0))
+    W_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_W_bkg"+BIN+syst,"_TT", 0))
+    L_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_L_bkg"+BIN+syst,"_TT", 0))
+    T_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_T_bkg"+BIN+syst,"_TT", 0))
+    s_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_s_bkg"+BIN+syst,"_TT", 0))
+    q_TT.append(load_and_scale(ttbar, rel_scales, keep,"MRR2_q_bkg"+BIN+syst,"_TT", 0))
+    #s_LooseWP_TT.append(load_and_scale(ttbar, rel_scales, keep, "MRR2_s_LooseWP_bkg"+BIN+syst,"_TT", 0))
 for i in range(len(systematics)):
     # Fix problem with nonexistent scale weights for single top
     syst = systematics[i]
     if "scale" in syst: syst = ""
-    Q_TT[i].Add(load(f,"MRR2_Q_bkg"+BIN+syst,"_T", 0))
-    W_TT[i].Add(load(f,"MRR2_W_bkg"+BIN+syst,"_T", 0))
-    L_TT[i].Add(load(f,"MRR2_L_bkg"+BIN+syst,"_T", 0))
-    T_TT[i].Add(load(f,"MRR2_T_bkg"+BIN+syst,"_T", 0))
-    s_TT[i].Add(load(f,"MRR2_s_bkg"+BIN+syst,"_T", 0))
-    q_TT[i].Add(load(f,"MRR2_q_bkg"+BIN+syst,"_T", 0))
-    #s_LooseWP_TT[i].Add(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_T", 0))
+    Q_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_Q_bkg"+BIN+syst,"_T", 0))
+    W_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_W_bkg"+BIN+syst,"_T", 0))
+    L_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_L_bkg"+BIN+syst,"_T", 0))
+    T_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_T_bkg"+BIN+syst,"_T", 0))
+    s_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_s_bkg"+BIN+syst,"_T", 0))
+    q_TT[i].Add(load_and_scale(top, rel_scales, keep,"MRR2_q_bkg"+BIN+syst,"_T", 0))
+    #s_LooseWP_TT[i].Add(load_and_scale(top, rel_scales, keep, "MRR2_s_LooseWP_bkg"+BIN+syst,"_T", 0))
 # multijet
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/multijet.root")
 S_MJ = []
 S_LooseWP_MJ = []
 for syst in systematics:
-    S_MJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_MJ", 0))
-    S_LooseWP_MJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_MJ", 0))
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/multijet.root")
+    S_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_S_bkg"+BIN+syst,"_MJ", 0))
+    S_LooseWP_MJ.append(load_and_scale(multijet, rel_scales, keep, "MRR2_S_LooseWP_bkg"+BIN+syst,"_MJ", 0))
 Q_MJ = []
 W_MJ = []
 L_MJ = []
@@ -1737,21 +2364,19 @@ s_MJ = []
 q_MJ = []
 #s_LooseWP_MJ = []
 for syst in systematics:
-    Q_MJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_MJ", 0))
-    W_MJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_MJ", 0))
-    L_MJ.append(load(f,"MRR2_L_bkg"+BIN+syst,"_MJ", 0))
-    T_MJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_MJ", 0))
-    s_MJ.append(load(f,"MRR2_s_bkg"+BIN+syst,"_MJ", 0))
-    q_MJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_MJ", 0))
-    #s_LooseWP_MJ.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_MJ", 0))
+    Q_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_Q_bkg"+BIN+syst,"_MJ", 0))
+    W_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_W_bkg"+BIN+syst,"_MJ", 0))
+    L_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_L_bkg"+BIN+syst,"_MJ", 0))
+    T_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_T_bkg"+BIN+syst,"_MJ", 0))
+    s_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_s_bkg"+BIN+syst,"_MJ", 0))
+    q_MJ.append(load_and_scale(multijet, rel_scales, keep,"MRR2_q_bkg"+BIN+syst,"_MJ", 0))
+    #s_LooseWP_MJ.append(load_and_scale(multijet, rel_scales, keep, "MRR2_s_LooseWP_bkg"+BIN+syst,"_MJ", 0))
 # wjets
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/wjets.root")
 S_WJ = []
 S_LooseWP_WJ = []
 for syst in systematics:
-    S_WJ.append(load(f,"MRR2_S_bkg"+BIN+syst,"_WJ", 0))
-    S_LooseWP_WJ.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_WJ", 0))
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/wjets.root")
+    S_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_S_bkg"+BIN+syst,"_WJ", 0))
+    S_LooseWP_WJ.append(load_and_scale(wjets, rel_scales, keep, "MRR2_S_LooseWP_bkg"+BIN+syst,"_WJ", 0))
 Q_WJ = []
 W_WJ = []
 L_WJ = []
@@ -1761,21 +2386,19 @@ s_WJ = []
 q_WJ = []
 #s_LooseWP_WJ = []
 for syst in systematics:
-    Q_WJ.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_WJ", 0))
-    W_WJ.append(load(f,"MRR2_W_bkg"+BIN+syst,"_WJ", 0))
-    L_WJ.append(load(f,"MRR2_L_bkg"+BIN+syst,"_WJ", 0))
-    T_WJ.append(load(f,"MRR2_T_bkg"+BIN+syst,"_WJ", 0))
-    s_WJ.append(load(f,"MRR2_s_bkg"+BIN+syst,"_WJ", 0))
-    q_WJ.append(load(f,"MRR2_q_bkg"+BIN+syst,"_WJ", 0))
-    #s_LooseWP_WJ.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_WJ", 0))
+    Q_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_Q_bkg"+BIN+syst,"_WJ", 0))
+    W_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_W_bkg"+BIN+syst,"_WJ", 0))
+    L_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_L_bkg"+BIN+syst,"_WJ", 0))
+    T_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_T_bkg"+BIN+syst,"_WJ", 0))
+    s_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_s_bkg"+BIN+syst,"_WJ", 0))
+    q_WJ.append(load_and_scale(wjets, rel_scales, keep,"MRR2_q_bkg"+BIN+syst,"_WJ", 0))
+    #s_LooseWP_WJ.append(load_and_scale(wjets, rel_scales, keep, "MRR2_s_LooseWP_bkg"+BIN+syst,"_WJ", 0))
 # ztoinv
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/ztoinv.root")
 S_ZI = []
 S_LooseWP_ZI = []
 for syst in systematics:
-    S_ZI.append(load(f,"MRR2_S_bkg"+BIN+syst,"_ZI", 0))
-    S_LooseWP_ZI.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_ZI", 0))
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/ztoinv.root")
+    S_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_S_bkg"+BIN+syst,"_ZI", 0))
+    S_LooseWP_ZI.append(load_and_scale(ztoinv, rel_scales, keep, "MRR2_S_LooseWP_bkg"+BIN+syst,"_ZI", 0))
 Q_ZI = []
 W_ZI = []
 L_ZI = []
@@ -1784,21 +2407,19 @@ s_ZI = []
 q_ZI = []
 #s_LooseWP_ZI = []
 for syst in systematics:
-    Q_ZI.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_ZI", 0))
-    W_ZI.append(load(f,"MRR2_W_bkg"+BIN+syst,"_ZI", 0))
-    L_ZI.append(load(f,"MRR2_L_bkg"+BIN+syst,"_ZI", 0))
-    T_ZI.append(load(f,"MRR2_T_bkg"+BIN+syst,"_ZI", 0))
-    s_ZI.append(load(f,"MRR2_s_bkg"+BIN+syst,"_ZI", 0))
-    q_ZI.append(load(f,"MRR2_q_bkg"+BIN+syst,"_ZI", 0))
-    #s_LooseWP_ZI.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_ZI", 0))
+    Q_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_Q_bkg"+BIN+syst,"_ZI", 0))
+    W_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_W_bkg"+BIN+syst,"_ZI", 0))
+    L_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_L_bkg"+BIN+syst,"_ZI", 0))
+    T_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_T_bkg"+BIN+syst,"_ZI", 0))
+    s_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_s_bkg"+BIN+syst,"_ZI", 0))
+    q_ZI.append(load_and_scale(ztoinv, rel_scales, keep,"MRR2_q_bkg"+BIN+syst,"_ZI", 0))
+    #s_LooseWP_ZI.append(load_and_scale(ztoinv, rel_scales, keep, "MRR2_s_LooseWP_bkg"+BIN+syst,"_ZI", 0))
 # other
-f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/other.root")
 S_OT = []
 S_LooseWP_OT = []
 for syst in systematics:
-    S_OT.append(load(f,"MRR2_S_bkg"+BIN+syst,"_OT", 0))
-    S_LooseWP_OT.append(load(f, "MRR2_S_LooseWP_bkg"+BIN+syst,"_OT", 0))
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/other.root")
+    S_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_S_bkg"+BIN+syst,"_OT", 0))
+    S_LooseWP_OT.append(load_and_scale(other, rel_scales, keep, "MRR2_S_LooseWP_bkg"+BIN+syst,"_OT", 0))
 Q_OT = []
 W_OT = []
 L_OT = []
@@ -1807,23 +2428,21 @@ s_OT = []
 q_OT = []
 #s_LooseWP_OT = []
 for syst in systematics:
-    Q_OT.append(load(f,"MRR2_Q_bkg"+BIN+syst,"_OT", 0))
-    W_OT.append(load(f,"MRR2_W_bkg"+BIN+syst,"_OT", 0))
-    L_OT.append(load(f,"MRR2_L_bkg"+BIN+syst,"_OT", 0))
-    T_OT.append(load(f,"MRR2_T_bkg"+BIN+syst,"_OT", 0))
-    s_OT.append(load(f,"MRR2_s_bkg"+BIN+syst,"_OT", 0))
-    q_OT.append(load(f,"MRR2_q_bkg"+BIN+syst,"_OT", 0))
-    #s_LooseWP_OT.append(load(f, "MRR2_s_LooseWP_bkg"+BIN+syst,"_OT", 0))
+    Q_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_Q_bkg"+BIN+syst,"_OT", 0))
+    W_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_W_bkg"+BIN+syst,"_OT", 0))
+    L_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_L_bkg"+BIN+syst,"_OT", 0))
+    T_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_T_bkg"+BIN+syst,"_OT", 0))
+    s_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_s_bkg"+BIN+syst,"_OT", 0))
+    q_OT.append(load_and_scale(other, rel_scales, keep,"MRR2_q_bkg"+BIN+syst,"_OT", 0))
+    #s_LooseWP_OT.append(load_and_scale(other, rel_scales, keep, "MRR2_s_LooseWP_bkg"+BIN+syst,"_OT", 0))
 
 # Selected signals for Results plot
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T1tttt.root")
-S_T1tttt = load(f, "MRR2_S_signal_1400_300"+BIN, "_sig", 0)
+S_T1tttt = load_and_scale_signal_1d(f, rel_scales_gluino[2000], keep, "MRR2_S_signal_2000_300"+BIN, "_sig", 0)
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T2tt.root")
-S_T2tt = load(f, "MRR2_S_signal_850_100"+BIN, "_sig", 0)
+S_T2tt   = load_and_scale_signal_1d(f, rel_scales_stop  [1200], keep, "MRR2_S_signal_1200_100"+BIN, "_sig", 0)
 f = ROOT.TFile.Open("syst_"+opt.dir+"/hadd/signal_T5ttcc.root")
-S_T5ttcc = load(f, "MRR2_S_signal_1400_300"+BIN, "_sig", 0)
-
-#sys.exit()
+S_T5ttcc = load_and_scale_signal_1d(f, rel_scales_gluino[2000], keep, "MRR2_S_signal_2000_300"+BIN, "_sig", 0)
 
 # ---------------- Z(nunu) estimate ---------------------
 
@@ -1833,10 +2452,10 @@ print "Calculate photon based Z(nunu) estimate"
 
 # Loading plots
 # Templates for purity
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/gjets.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/gjets.root")
 CHIsoTemplate_Prompt_EB = loadclone(f, "CHIsoTemplate_Prompt_g_EB", "_MC")
 CHIsoTemplate_Prompt_EE = loadclone(f, "CHIsoTemplate_Prompt_g_EE", "_MC")
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/data.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/data.root")
 CHIsoTemplate_Fake_EB = loadclone(f, "CHIsoTemplate_Fake_g_EB", "_data")
 CHIsoTemplate_Fake_EE = loadclone(f, "CHIsoTemplate_Fake_g_EE", "_data")
 # Distributions to fit
@@ -1852,21 +2471,21 @@ G_data_EB = loadclone(f, "MR_R2_G_EB"+BIN, "_data")
 G_data_EE = loadclone(f, "MR_R2_G_EE"+BIN, "_data")
 
 # Direct photon fraction
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/bkg.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/bkg.root")
 IsDirect_G_EB = loadclone(f, "MR_R2_IsDirect_G_EB", "_MC")
 IsDirect_G_EE = loadclone(f, "MR_R2_IsDirect_G_EE", "_MC")
 
 # Double ratio
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/data.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/data.root")
 G_data    = load(f, "MRR2_G_data"+BIN,"_data", 0)
 Z_data    = load(f, "MRR2_Z_data","_data", 0)
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/nondyjets.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/nondyjets.root")
 Z_NONDY   = load(f, "MRR2_Z_bkg", "_NONDY")
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/dyjets.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/dyjets.root")
 Z_DY      = load(f, "MRR2_Z_bkg", "_DY")
 
 # Transfer factors
-f = ROOT.TFile.Open("syst_"+tmp_dir+"/hadd/gjets.root")
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/gjets.root")
 GDirectPrompt_GJ = []
 for syst in systematics:
     GDirectPrompt_GJ.append(load(f, "MRR2_G_DirectPrompt_bkg"+BIN+syst,"_MJ", 0))
@@ -1875,6 +2494,136 @@ for syst in systematics:
 f = ROOT.TFile.Open("results/Plotter_out_2018_05_29.root" if "WAna" in opt.box else "results/Plotter_out_2018_05_29_TopAna.root")
 MCPurity_EB = loadclone(f, "PhotonPurity_vs_R2NoPho_vs_MRNoPho/IsPormpt_vs_R2NoPho_vs_MRNoPho/Background_G_Barrel", "")
 MCPurity_EE = loadclone(f, "PhotonPurity_vs_R2NoPho_vs_MRNoPho/IsPormpt_vs_R2NoPho_vs_MRNoPho/Background_G_Endcap", "")
+
+# --------------------------------
+#       HL-LHC Data scaling
+
+#load for scaling data(Run2 background)
+f = ROOT.TFile.Open("syst_"+Run2_dir+"/hadd/bkg.root")
+T_MC_Run2 = load(f,"MRR2_T_bkg"+BIN,"_Run2", 0)
+Q_MC_Run2 = load(f,"MRR2_Q_bkg"+BIN,"_Run2", 0)
+W_MC_Run2 = load(f,"MRR2_W_bkg"+BIN,"_Run2", 0)
+G_MC_Run2 = load(f,"MRR2_G_bkg"+BIN,"_Run2", 0)
+Z_MC_Run2 = load(f,"MRR2_Z_bkg",    "_Run2", 0)
+L_MC_Run2 = load(f,"MRR2_L_bkg"+BIN,"_Run2", 0)
+S_MC_Run2 = load(f,"MRR2_S_bkg"+BIN,"_Run2", 0)
+q_MC_Run2 = load(f,"MRR2_q_bkg"+BIN,"_Run2", 0)
+s_MC_Run2 = load(f,"MRR2_s_bkg"+BIN,"_Run2", 0)
+
+T_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_T_bkg"+BIN,"_HL", 0)
+Q_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_Q_bkg"+BIN,"_HL", 0)
+W_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_W_bkg"+BIN,"_HL", 0)
+G_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_G_bkg"+BIN,"_HL", 0)
+Z_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_Z_bkg",    "_HL", 0)
+L_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_L_bkg"+BIN,"_HL", 0)
+S_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_S_bkg"+BIN,"_HL", 0)
+q_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_q_bkg"+BIN,"_HL", 0)
+s_MC = load_and_scale(bkg, rel_scales, keep,"MRR2_s_bkg"+BIN,"_HL", 0)
+
+print "- Scaling Run2 data"
+
+#data_HL = data_2016 * (MC_HL/MC_2016)
+def scale_data(h_data, h_HL, h_Run2):
+    #print h_data.GetName()
+    h_tmp = h_data.Clone(h_data.GetName()+"_template")
+    avgw_HL   = 0
+    avgw_Run2 = 0
+    for binx in range(1,h_tmp.GetNbinsX()+1):
+        n_data = h_data.GetBinContent(binx)
+        e_data = h_data.GetBinError  (binx)
+        n_HL   = h_HL  .GetBinContent(binx)
+        e_HL   = h_HL  .GetBinError  (binx)
+        n_Run2 = h_Run2.GetBinContent(binx)
+        e_Run2 = h_Run2.GetBinError  (binx)
+        #if n_data == 0: n_data = 1.83 / 2.0
+        if n_HL   == 0: n_HL   = 1.83 / 2.0 * avgw_HL
+        if n_Run2 == 0: n_Run2 = 1.83 / 2.0 * avgw_Run2
+        avgw_HL   = e_HL   ** 2 / n_HL
+        avgw_Run2 = e_Run2 ** 2 / n_Run2
+        h_tmp.SetBinContent(binx, n_data*(n_HL/n_Run2))
+        #print("%2d  -  %.2f * (%.2f / %.2f) = %.2f" % (binx, n_data, n_HL, n_Run2, n_data*(n_HL/n_Run2)))
+    #print ("Integral (HL-LHC) = %f" % (h_tmp .Integral()))
+    #print ("Integral (Run2)   = %f" % (h_data.Integral()))
+    #print ("Ratio             = %f" % (h_tmp.Integral()/h_data.Integral()))
+    #print ("Lumi Ratio        = %f" % (lumi/lumi_Run2))
+    h_data.Reset("ICESM")
+    h_data.FillRandom(h_tmp,int(h_tmp.Integral()))
+
+scale_data(T_data, T_MC, T_MC_Run2)
+scale_data(Q_data, Q_MC, Q_MC_Run2)
+scale_data(W_data, W_MC, W_MC_Run2)
+scale_data(G_data, G_MC, G_MC_Run2)
+#scale_data(Z_data, Z_MC, Z_MC_Run2)
+scale_data(L_data, L_MC, L_MC_Run2)
+scale_data(S_data, S_MC, S_MC_Run2)
+scale_data(q_data, q_MC, q_MC_Run2)
+scale_data(s_data, s_MC, s_MC_Run2)
+
+print "- Scaling the Data to HL-LHC values done."
+
+#sys.exit()
+
+scale_down_factors = {
+    "toppt"       : 0.3333,
+    "isr"         : 0.5, 
+    "alphas"      : 0.5,
+    "facrenscale" : 0.5,
+    "lostlep"     : 0.1,
+    "jes"         : 0.5,
+    "jer"         : 0.5,
+    "met"         : 0.5,
+    "btag"        : 0.5
+}
+
+# Scale down systematics by the specified factors
+if opt.scenario == 1:
+    for iSignal in range(len(S_signal)):
+        scale_down_syst(S_signal[iSignal], scale_down_factors, True)
+    
+    scale_down_syst(S_TT, scale_down_factors)
+    scale_down_syst(Q_TT, scale_down_factors)
+    scale_down_syst(W_TT, scale_down_factors)
+    scale_down_syst(L_TT, scale_down_factors)
+    scale_down_syst(T_TT, scale_down_factors)
+    scale_down_syst(s_TT, scale_down_factors)
+    scale_down_syst(q_TT, scale_down_factors)
+    scale_down_syst(S_MJ, scale_down_factors)
+    scale_down_syst(Q_MJ, scale_down_factors)
+    scale_down_syst(W_MJ, scale_down_factors)
+    scale_down_syst(L_MJ, scale_down_factors)
+    scale_down_syst(T_MJ, scale_down_factors)
+    scale_down_syst(s_MJ, scale_down_factors)
+    scale_down_syst(q_MJ, scale_down_factors)
+    scale_down_syst(S_WJ, scale_down_factors)
+    scale_down_syst(Q_WJ, scale_down_factors)
+    scale_down_syst(W_WJ, scale_down_factors)
+    scale_down_syst(L_WJ, scale_down_factors)
+    scale_down_syst(T_WJ, scale_down_factors)
+    scale_down_syst(L_WJ, scale_down_factors)
+    scale_down_syst(s_WJ, scale_down_factors)
+    scale_down_syst(q_WJ, scale_down_factors)
+    scale_down_syst(S_ZI, scale_down_factors)
+    scale_down_syst(Q_ZI, scale_down_factors)
+    scale_down_syst(W_ZI, scale_down_factors)
+    scale_down_syst(L_ZI, scale_down_factors)
+    scale_down_syst(T_ZI, scale_down_factors)
+    scale_down_syst(s_ZI, scale_down_factors)
+    scale_down_syst(q_ZI, scale_down_factors)
+    scale_down_syst(S_OT, scale_down_factors)
+    scale_down_syst(Q_OT, scale_down_factors)
+    scale_down_syst(W_OT, scale_down_factors)
+    scale_down_syst(L_OT, scale_down_factors)
+    scale_down_syst(T_OT, scale_down_factors)
+    scale_down_syst(s_OT, scale_down_factors)
+    scale_down_syst(q_OT, scale_down_factors)
+    
+    scale_down_syst(S_LooseWP_TT, scale_down_factors)
+    scale_down_syst(S_LooseWP_MJ, scale_down_factors)
+    scale_down_syst(S_LooseWP_WJ, scale_down_factors)
+    scale_down_syst(S_LooseWP_ZI, scale_down_factors)
+    scale_down_syst(S_LooseWP_OT, scale_down_factors)
+    
+    scale_down_syst(GDirectPrompt_GJ, scale_down_factors)
 
 # --------------------------------
 #             Purity
@@ -1958,7 +2707,7 @@ leg.SetFillColor(0)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)
 leg.Draw("SAME")
-add_cms_era(pur_MR, ERA, keep)
+add_cms_era(pur_MR, ERA, keep, opt.energy, lumi, prefix)
 save_plot(pur_MR, "", plotdir+"/"+pur_MR.GetName())
 
 # In bins of R2
@@ -2030,7 +2779,7 @@ leg.SetFillColor(0)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)
 leg.Draw("SAME")
-add_cms_era(pur_R2, ERA, keep)
+add_cms_era(pur_R2, ERA, keep, opt.energy, lumi, prefix)
 save_plot(pur_R2, "", plotdir+"/"+pur_R2.GetName())
 
 # Measure average for EB/EE
@@ -2146,26 +2895,26 @@ for binx in range(1, G_data_EB.GetNbinsX()+1):
         npromptdirect += G_data_EE.GetBinContent(binx,biny) * purity_EE * direct_frac_EE
         sum_EB += G_data_EB.GetBinContent(binx,biny) * purity_EB * direct_frac_EB
         sum_EE += G_data_EE.GetBinContent(binx,biny) * purity_EE * direct_frac_EE
-        npromptdirect_purityUp     = G_data_EB.GetBinContent(binx,biny) * (purity_EB + 0.1) * direct_frac_EB
-        npromptdirect_purityUp    += G_data_EE.GetBinContent(binx,biny) * (purity_EE + 0.1) * direct_frac_EE
-        npromptdirect_purityDown   = G_data_EB.GetBinContent(binx,biny) * (purity_EB - 0.1) * direct_frac_EB
-        npromptdirect_purityDown  += G_data_EE.GetBinContent(binx,biny) * (purity_EE - 0.1) * direct_frac_EE
-        npromptdirect_dirfracUp    = G_data_EB.GetBinContent(binx,biny) * purity_EB * (direct_frac_EB + 0.1)
-        npromptdirect_dirfracUp   += G_data_EE.GetBinContent(binx,biny) * purity_EE * (direct_frac_EE + 0.1)
-        npromptdirect_dirfracDown  = G_data_EB.GetBinContent(binx,biny) * purity_EB * (direct_frac_EB - 0.1)
-        npromptdirect_dirfracDown += G_data_EE.GetBinContent(binx,biny) * purity_EE * (direct_frac_EE - 0.1)
+        npromptdirect_purityUp     = G_data_EB.GetBinContent(binx,biny) * (purity_EB + purity_err) * direct_frac_EB
+        npromptdirect_purityUp    += G_data_EE.GetBinContent(binx,biny) * (purity_EE + purity_err) * direct_frac_EE
+        npromptdirect_purityDown   = G_data_EB.GetBinContent(binx,biny) * (purity_EB - purity_err) * direct_frac_EB
+        npromptdirect_purityDown  += G_data_EE.GetBinContent(binx,biny) * (purity_EE - purity_err) * direct_frac_EE
+        npromptdirect_dirfracUp    = G_data_EB.GetBinContent(binx,biny) * purity_EB * (direct_frac_EB + dirfrac_err)
+        npromptdirect_dirfracUp   += G_data_EE.GetBinContent(binx,biny) * purity_EE * (direct_frac_EE + dirfrac_err)
+        npromptdirect_dirfracDown  = G_data_EB.GetBinContent(binx,biny) * purity_EB * (direct_frac_EB - dirfrac_err)
+        npromptdirect_dirfracDown += G_data_EE.GetBinContent(binx,biny) * purity_EE * (direct_frac_EE - dirfrac_err)
         # Calculate errors
         # add statistical error
         npromptdirect_err              = (G_data_EB.GetBinError(binx,biny) * purity_EB * direct_frac_EB) ** 2
         npromptdirect_err             += (G_data_EE.GetBinError(binx,biny) * purity_EE * direct_frac_EE) ** 2
-        npromptdirect_err_purityUp     = (G_data_EB.GetBinError(binx,biny) * (purity_EB + 0.1) * direct_frac_EB) ** 2
-        npromptdirect_err_purityUp    += (G_data_EE.GetBinError(binx,biny) * (purity_EE + 0.1) * direct_frac_EE) ** 2
-        npromptdirect_err_purityDown   = (G_data_EB.GetBinError(binx,biny) * (purity_EB - 0.1) * direct_frac_EB) ** 2
-        npromptdirect_err_purityDown  += (G_data_EE.GetBinError(binx,biny) * (purity_EE - 0.1) * direct_frac_EE) ** 2
-        npromptdirect_err_dirfracUp    = (G_data_EB.GetBinError(binx,biny) * purity_EB * (direct_frac_EB + 0.1)) ** 2
-        npromptdirect_err_dirfracUp   += (G_data_EE.GetBinError(binx,biny) * purity_EE * (direct_frac_EE + 0.1)) ** 2
-        npromptdirect_err_dirfracDown  = (G_data_EB.GetBinError(binx,biny) * purity_EB * (direct_frac_EB - 0.1)) ** 2
-        npromptdirect_err_dirfracDown += (G_data_EE.GetBinError(binx,biny) * purity_EE * (direct_frac_EE - 0.1)) ** 2
+        npromptdirect_err_purityUp     = (G_data_EB.GetBinError(binx,biny) * (purity_EB + purity_err) * direct_frac_EB) ** 2
+        npromptdirect_err_purityUp    += (G_data_EE.GetBinError(binx,biny) * (purity_EE + purity_err) * direct_frac_EE) ** 2
+        npromptdirect_err_purityDown   = (G_data_EB.GetBinError(binx,biny) * (purity_EB - purity_err) * direct_frac_EB) ** 2
+        npromptdirect_err_purityDown  += (G_data_EE.GetBinError(binx,biny) * (purity_EE - purity_err) * direct_frac_EE) ** 2
+        npromptdirect_err_dirfracUp    = (G_data_EB.GetBinError(binx,biny) * purity_EB * (direct_frac_EB + dirfrac_err)) ** 2
+        npromptdirect_err_dirfracUp   += (G_data_EE.GetBinError(binx,biny) * purity_EE * (direct_frac_EE + dirfrac_err)) ** 2
+        npromptdirect_err_dirfracDown  = (G_data_EB.GetBinError(binx,biny) * purity_EB * (direct_frac_EB - dirfrac_err)) ** 2
+        npromptdirect_err_dirfracDown += (G_data_EE.GetBinError(binx,biny) * purity_EE * (direct_frac_EE - dirfrac_err)) ** 2
         npromptdirect_err              = npromptdirect_err             ** 0.5
         npromptdirect_err_purityUp     = npromptdirect_err_purityUp    ** 0.5
         npromptdirect_err_purityDown   = npromptdirect_err_purityDown  ** 0.5
@@ -2325,7 +3074,7 @@ for i in range(len(S_signal)):
     NL = npvLowHighHist_allevt.GetBinContent(mg_bin,mch_bin,1)
     NH = npvLowHighHist_allevt.GetBinContent(mg_bin,mch_bin,2)
     N = NL+NH
-    evt_weight = (lumi * xsecs[float(scan_point.split("_")[0])] / N)
+    evt_weight = (lumi * 1000 * xsecs[float(scan_point.split("_")[0])] / N)
     if not epL: epL = 1.83 * evt_weight
     if not epH: epH = 1.83 * evt_weight
     #print "p (L,H): "+str(pL)+", "+str(pH)+"   N (L,H): "+str(NL)+", "+str(NH)
@@ -2385,6 +3134,30 @@ w_pileup_nom.Write()
 w_pileup_err.Write()
 f_pu.Close()
 #sys.exit()
+
+# --------------- Signal extrapolation ------------------
+#                  to higher masses
+
+
+xsecs_upgrade = {}
+for line in open('./data/stop'+str(opt.energy)+'TeV.txt' if ('T2' in opt.model) else 'data/gluino'+str(opt.energy)+'TeV.txt','r'):
+    line = line.replace('\n','')
+    xsecs_upgrade[float(line.split(',')[0])]=float(line.split(',')[1]) #pb
+
+S_signal_extension = []
+for i in range(len(S_signal)):
+    if "MRR2_S_signal_"+str(highest_mass) in S_signal[i][0].GetName():
+        mlsp = int(S_signal[i][0].GetName().split("_")[4])
+        extend = []
+        for j in range(len(S_signal[i])):
+            for k in range(len(extension_points)):
+                h_ext = S_signal[i][j].Clone(S_signal[i][j].GetName().replace("MRR2_S_signal_"+str(highest_mass), "MRR2_S_signal_"+str(extension_points[k])))
+                xsec_ratio = xsecs_upgrade[extension_points[k]]/xsecs_upgrade[highest_mass]
+                acceptance_ratio = vf_acc[mlsp].Eval(extension_points[k])/vf_acc[mlsp].Eval(highest_mass)
+                h_ext.Scale(xsec_ratio*acceptance_ratio)
+                if len(extend)<len(extension_points): extend.append([])
+                extend[k].append(h_ext)
+        S_signal_extension = S_signal_extension + extend
 
 # --------------- kappa uncertainty ---------------------
 
@@ -2554,7 +3327,7 @@ s_WJ_nom.SetLineColor(600)
 s_ZI_nom.SetLineColor(600)
 s_OT_nom.SetLineColor(600)
 s_TT_nom.SetFillColor(418)
-s_MJ_nom.SetFillColor(607)
+s_MJ_nom.SetFillColor(618)
 s_WJ_nom.SetFillColor(633)
 s_ZI_nom.SetFillColor(433)
 s_OT_nom.SetFillColor(865)
@@ -2577,12 +3350,12 @@ leg = ROOT.TLegend(0.68,0.51,0.98,0.86, BOX)
 leg.AddEntry(s_data,   "#color[1]{Data}",                       "pe")
 if "TopAna" in opt.box:
     leg.AddEntry(s_TT_nom, "#color[418]{t#bar{t} or single t}", "f")
-    leg.AddEntry(s_MJ_nom, "#color[607]{Multijet}",             "f")
+    leg.AddEntry(s_MJ_nom, "#color[618]{Multijet}",             "f")
 else:
-    leg.AddEntry(s_MJ_nom, "#color[607]{Multijet}",             "f")
+    leg.AddEntry(s_MJ_nom, "#color[618]{Multijet}",             "f")
     leg.AddEntry(s_TT_nom, "#color[418]{t#bar{t} or single t}", "f")
-leg.AddEntry(s_WJ_nom, "#color[633]{W(#rightarrowl#nu)+jets}",  "f")
-leg.AddEntry(s_ZI_nom, "#color[433]{Z(#rightarrow#nu#nu)+jets}","f")
+leg.AddEntry(s_WJ_nom, "#color[633]{W(l#nu)+jets}}", "f")
+leg.AddEntry(s_ZI_nom, "#color[433]{Z(#nu#nu)+jets}","f")
 leg.AddEntry(s_OT_nom, "#color[865]{Other}",                    "f")
 leg.SetFillColor(0)
 leg.SetFillStyle(0)
@@ -2591,7 +3364,7 @@ leg.Draw("SAME")
 ROOT.gPad.Update()
 #can.Write()
 can = add_stack_ratio_plot(can, 0,s_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins)
-add_cms_era(can, ERA, keep)
+add_cms_era(can, ERA, keep, opt.energy, lumi, prefix)
 lat_s = ROOT.TLatex(0.75,2.8e5, "Signal-like validation region")
 lat_s.Draw("SAME")
 zinv_region = "G_region" if use_G else "L_region"
@@ -2679,7 +3452,7 @@ q_WJ_nom.SetLineColor(600)
 q_ZI_nom.SetLineColor(600)
 q_OT_nom.SetLineColor(600)
 q_TT_nom.SetFillColor(418)
-q_MJ_nom.SetFillColor(607)
+q_MJ_nom.SetFillColor(618)
 q_WJ_nom.SetFillColor(633)
 q_ZI_nom.SetFillColor(433)
 q_OT_nom.SetFillColor(865)
@@ -2687,7 +3460,7 @@ q_stack = ROOT.THStack("q_TotBkgEst","")
 q_stack.Add(q_OT_nom)
 q_stack.Add(q_TT_nom)
 q_stack.Add(q_WJ_nom)
-if opt.box=="TopAna":
+if opt.box=="WAna_nj45":
     q_stack.Add(q_MJ_nom)
     q_stack.Add(q_ZI_nom)
 else:
@@ -2700,13 +3473,13 @@ q_data.Draw("SAMEPE0")
 draw_mr_bins([q_data, q_stack], 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
 leg = ROOT.TLegend(0.68,0.51,0.98,0.86, BOX)
 leg.AddEntry(q_data,   "#color[1]{Data}",                            "pe")
-if opt.box=="TopAna":
-    leg.AddEntry(q_ZI_nom, "#color[433]{Z(#rightarrow#nu#nu)+jets}", "f")
-    leg.AddEntry(q_MJ_nom, "#color[607]{Multijet}",                  "f")
+if opt.box=="WAna_nj45":
+    leg.AddEntry(q_MJ_nom, "#color[618]{Multijet}",                  "f")
+    leg.AddEntry(q_ZI_nom, "#color[433]{Z(#nu#nu)+jets}", "f")
 else:
-    leg.AddEntry(q_MJ_nom, "#color[607]{Multijet}",                  "f")
-    leg.AddEntry(q_ZI_nom, "#color[433]{Z(#rightarrow#nu#nu)+jets}", "f")
-leg.AddEntry(q_WJ_nom, "#color[633]{W(#rightarrowl#nu)+jets}",       "f")
+    leg.AddEntry(q_ZI_nom, "#color[433]{Z(#nu#nu)+jets}", "f")
+    leg.AddEntry(q_MJ_nom, "#color[618]{Multijet}",                  "f")
+leg.AddEntry(q_WJ_nom, "#color[633]{W(l#nu)+jets}",       "f")
 leg.AddEntry(q_TT_nom, "#color[418]{t#bar{t} or single t}",          "f")
 leg.AddEntry(q_OT_nom, "#color[865]{Other}",                         "f")
 leg.SetFillColor(0)
@@ -2715,8 +3488,8 @@ leg.SetBorderSize(0)
 leg.Draw("SAME")
 ROOT.gPad.Update()
 #can.Write()
-can = add_stack_ratio_plot(can, 0,q_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, 0.26 if opt.box=="WAna_nj45" else 0.16)
-add_cms_era(can, ERA, keep)
+can = add_stack_ratio_plot(can, 0,q_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, {}, False, 0.26 if opt.box=="WAna_nj45" else 0.16)
+add_cms_era(can, ERA, keep, opt.energy, lumi, prefix)
 lat_q = ROOT.TLatex(0.75,3.5e4, "Multijet validation region")
 lat_q.Draw("SAME")
 if binned_k:
@@ -2776,6 +3549,8 @@ for i in range(0, len(systematics)):
         if S_OT_est.GetBinContent(binx)<0:
             S_OT_est.SetBinContent(binx,0)
             S_OT_est.SetBinError  (binx,0)
+        # remove MC stat error for the YR18 and stat only scenarios
+        if opt.scenario>0: S_OT_est.SetBinError(binx,0)            
     Top_est     .append(S_TT_est)
     MultiJet_est.append(S_MJ_est)
     WJets_est   .append(S_WJ_est)
@@ -2783,17 +3558,11 @@ for i in range(0, len(systematics)):
     Other_est   .append(S_OT_est)
 
 # Transfer factor plots
-if "WAna" in opt.box:
-    qcd_syst = 0.24
-    dytoll_syst = 0.29
-else:
-    qcd_syst = 0.13
-    dytoll_syst = 0.19
 make_kappa_plot("Top, "     +BOX, S_TT, T_TT,             combine_bins, 0)
 make_kappa_plot("Multijet, "+BOX, S_MJ, Q_MJ,             combine_bins, qcd_syst)
 make_kappa_plot("WJets, "   +BOX, S_WJ, W_WJ,             combine_bins, 0)
-make_kappa_plot("ZInv (G), "+BOX, S_ZI, GDirectPrompt_GJ, combine_bins, dytoll_syst)
-make_kappa_plot("ZInv (L), "+BOX, S_ZI, L_WJ,             combine_bins, dytoll_syst)
+make_kappa_plot("ZInv (G), "+BOX, S_ZI, GDirectPrompt_GJ, combine_bins, dy_syst)
+make_kappa_plot("ZInv (L), "+BOX, S_ZI, L_WJ,             combine_bins, dy_syst)
 
 #sys.exit()
 
@@ -2804,18 +3573,28 @@ S_WJ_nom, S_WJ_up, S_WJ_dn = calc_syst_err(WJets_est,   "S_WJets_syst", 0)
 S_ZI_nom, S_ZI_up, S_ZI_dn = calc_syst_err(ZInv_est,    "S_ZInv_syst", dy_syst)
 S_OT_nom, S_OT_up, S_OT_dn = calc_syst_err(Other_est,   "S_Other_syst", 0)
 S_syst_err = S_TT_nom.Clone("S_TotalErr")
-##S_syst_err.SetFillColor(1)
-##S_syst_err.SetFillStyle(3002)
-#S_syst_err.SetFillColor(ROOT.kGray) # 920
-#S_syst_err.SetFillStyle(1001)
-S_syst_err.SetFillColor(13)
-S_syst_err.SetFillStyle(3001)
-S_syst_err.SetMarkerStyle(0)
 S_stat_err = S_TT_nom.Clone("S_StatErr")
-S_stat_err.SetFillColor(1)
-S_stat_err.SetFillStyle(3004)
+S_stat_err.SetLineColor(1)
 S_stat_err.SetMarkerStyle(0)
 S_stat_err.SetMarkerColor(0)
+S_stat_err.SetFillColor(1)
+S_stat_err.SetFillStyle(3004)
+S_syst_err.SetLineColor(1)
+S_syst_err.SetMarkerStyle(0)
+S_syst_err.SetMarkerColor(0)
+S_syst_err.SetFillColor(ROOT.kGray)
+S_syst_err.SetFillStyle(1001)
+##  ##S_syst_err.SetFillColor(1)
+##  ##S_syst_err.SetFillStyle(3002)
+##  #S_syst_err.SetFillColor(ROOT.kGray) # 920
+##  #S_syst_err.SetFillStyle(1001)
+##  S_syst_err.SetFillColor(13)
+##  S_syst_err.SetFillStyle(3001)
+##  S_syst_err.SetMarkerStyle(0)
+##  S_stat_err.SetFillColor(1)
+##  S_stat_err.SetFillStyle(3004)
+##  S_stat_err.SetMarkerStyle(0)
+##  S_stat_err.SetMarkerColor(0)
 for binx in range(1, S_syst_err.GetNbinsX()+1):
     # Sum total stat+syst error for all bkg components
     err_up = (S_TT_up.GetBinError(binx)**2 + S_MJ_up.GetBinError(binx)**2 + S_WJ_up.GetBinError(binx)**2 + S_ZI_up.GetBinError(binx)**2 + S_OT_up.GetBinError(binx)**2) ** 0.5
@@ -2832,20 +3611,32 @@ for binx in range(1, S_syst_err.GetNbinsX()+1):
     totstat += S_ZI_nom.GetBinError(binx) ** 2
     totstat += S_OT_nom.GetBinError(binx) ** 2
     S_stat_err.SetBinContent(binx, nom)
-    S_stat_err.SetBinError  (binx, totstat ** 0.5)  
+    S_stat_err.SetBinError  (binx, totstat ** 0.5)
 
-can = custom_can(S_data, "BkgEstimate_"+opt.box)
+ymin = 1.01e0
+if lumi<100:
+    ymax = 1e6
+elif lumi<=3000:
+    ymax = 1e6
+else:
+    ymin = 1.01e1
+    ymax = 1e8
+
+S_data.SetTitle(" ")
+can = custom_can(S_data, "BkgEstimate_"+opt.box, 0, 0)
 can.SetLogy(1)
-S_data.GetYaxis().SetRangeUser(1.01e-1,1e5)
+S_data.GetXaxis().SetLabelSize(0.04)
+S_data.GetYaxis().SetRangeUser(ymin,ymax)
 S_data.GetYaxis().SetTitle("Events / bin")
-S_data.Draw("PE0")
+S_data.SetMarkerColor(0)
+S_data.Draw("AXIS")
 S_TT_nom.SetLineColor(600)
 S_MJ_nom.SetLineColor(600)
 S_WJ_nom.SetLineColor(600)
 S_ZI_nom.SetLineColor(600)
 S_OT_nom.SetLineColor(600)
 S_TT_nom.SetFillColor(418)
-S_MJ_nom.SetFillColor(607)
+S_MJ_nom.SetFillColor(618)
 S_WJ_nom.SetFillColor(633)
 S_ZI_nom.SetFillColor(433)
 S_OT_nom.SetFillColor(865)
@@ -2858,10 +3649,10 @@ S_stack.Add(S_TT_nom)
 S_stack.Draw("SAME HIST")
 S_syst_err.Draw("SAME E2")
 S_stat_err.Draw("SAME E2")
-S_data.Draw("SAMEPE0")
-S_T1tttt.SetLineColor(874)
+#S_data.Draw("SAMEPE0")
+S_T1tttt.SetLineColor(619)
 S_T2tt  .SetLineColor(401)
-S_T5ttcc.SetLineColor(601) # was 601
+S_T5ttcc.SetLineColor(601)
 S_T1tttt.SetLineStyle(7)
 S_T2tt  .SetLineStyle(7)
 S_T5ttcc.SetLineStyle(7)
@@ -2871,88 +3662,161 @@ S_T5ttcc.SetLineWidth(3)
 S_T1tttt.Draw("SAME HIST")
 S_T2tt  .Draw("SAME HIST")
 S_T5ttcc.Draw("SAME HIST")
-leg = ROOT.TLegend(0.55,0.52,0.95,0.87, BOX)
+#leg = ROOT.TLegend(0.55,0.67,0.95,0.92, BOX) # in case no ratio
+leg = ROOT.TLegend(0.55,0.56,0.95,0.86, BOX)
 leg.SetNColumns(2)
-leg.AddEntry(S_data,   "#color[1]{Data}",                        "pe")
-leg.AddEntry(S_TT_nom, "#color[418]{t#bar{t} or single t}",      "f")
-leg.AddEntry(S_T1tttt, "#color[874]{T1tttt}",                    "l")
-leg.AddEntry(S_MJ_nom, "#color[607]{Multijet}",                  "f")
-leg.AddEntry(S_T2tt,   "#color[401]{T2tt}",                      "l")
-leg.AddEntry(S_WJ_nom, "#color[633]{W(#rightarrowl#nu)+jets}",   "f")
-leg.AddEntry(S_T5ttcc, "#color[601]{T5ttcc}",                      "l")
-leg.AddEntry(S_ZI_nom, "#color[433]{Z(#rightarrow#nu#nu)+jets}", "f")
-leg.AddEntry(0,        "",                                       "")
-leg.AddEntry(S_OT_nom, "#color[865]{Other}",                     "f")
+#leg.AddEntry(S_data,     "#color[1]{Data}",                      "pe")
+leg.AddEntry(S_T1tttt,   "#color[619]{T1tttt}",                   "l")
+leg.AddEntry(S_TT_nom,   "#color[418]{t#bar{t} or single t}",     "f")
+leg.AddEntry(S_T2tt,     "#color[401]{T2tt}",                     "l")
+leg.AddEntry(S_MJ_nom,   "#color[618]{Multijet}",                 "f")
+leg.AddEntry(S_T5ttcc,   "#color[601]{T5ttcc}",                   "l")
+leg.AddEntry(S_WJ_nom,   "#color[633]{W(l#nu)+jets}",  "f")
+leg.AddEntry(0,          "",                                      "")
+leg.AddEntry(S_ZI_nom,   "#color[433]{Z(#nu#nu)+jets}","f")
+leg.AddEntry(0,          "",                                      "")
+leg.AddEntry(S_OT_nom,   "#color[865]{Other}",                    "f")
+#leg.AddEntry(0,          "",                                      "")
+#leg.AddEntry(S_syst_err, "Stat. + syst. unc.",                    "f");
 leg.SetFillColor(0)
 leg.SetFillStyle(0)
 leg.SetBorderSize(0)
+#leg.SetTextSize(0.03)
 leg.Draw("SAME")
-draw_mr_bins([S_data, S_stack], 1.01e-1,1e4, combine_bins, keep, mrbins_TeV, r2bins)
+draw_mr_bins([S_data, S_stack], ymin,ymax, combine_bins, keep, mrbins_TeV, r2bins)
 ROOT.gPad.Update()
-can = add_stack_ratio_plot(can, 0,S_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, 0.16, opt.incl_style)
-add_cms_era(can, ERA, keep)
-if opt.incl_style:
-    keep[-2].SetTextSize(0.8*keep[-2].GetTextSize())
-    keep[-1].SetTextSize(0.8*keep[-1].GetTextSize())
+ROOT.gPad.RedrawAxis()
+if opt.energy==14 and "WAna_nj45" in opt.box:
+    can = add_stack_ratio_plot(can, 0,S_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, { 3 : 4e3})
+elif opt.energy==14 and "WAna_nj6" in opt.box:
+    can = add_stack_ratio_plot(can, 0,S_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, { 2 : 1.5e4, 3: 3e3 })
+elif opt.energy==27 and "TopAna" in opt.box:
+    can = add_stack_ratio_plot(can, 0,S_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins, { 4 : 4e4 })
+else:
+    can = add_stack_ratio_plot(can, 0,S_data.GetNbinsX(), keep, 1, combine_bins, mrbins_TeV, r2bins)
+add_cms_era(can, ERA, keep, opt.energy, lumi, prefix)
 save_plot(can, "", "Plots/result/"+DATE+"/"+can.GetName().replace("_Ratio",""), 1)
 f.Close()
 #sys.exit()
 
 # Now save a different root file for each signal point
-if not opt.nocards and opt.TEST==0:
-    print "Looping on Signal points and creating data cards"
-    if not os.path.exists("syst_"+opt.dir+"/cards"):
-        special_call(["mkdir", "-p", "syst_"+opt.dir+"/cards"], 0)
+if opt.nocards or opt.TEST!=0: sys.exit()
 
-    cards = []
-    for signal_syst in S_signal:
-        scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
-        #root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
-        root_filename = "syst_"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_"+scan_point+"_"+opt.box+".root"
-        if not opt.nocards:
-            fout = ROOT.TFile.Open(root_filename,"RECREATE")
-            #print "  Creating root file: "+root_filename
-            # Add signal systematics
-            for i in range(0, len(systematics)-2):
-                signal_syst[i].Write("Signal"+systematics[i])
-            # Add background estimates
-            for bkg in [Top_est, MultiJet_est, WJets_est, ZInv_est, Other_est]:
-                for syst_var in bkg:
-                    syst_var.Write()
-            # Add data counts
-            S_data.Write("data_obs")
-        card_filename = root_filename.replace(".root",".txt")
-        cards.append(card_filename)
-        if not opt.nocards:
-            #print "  Creating data card: "+card_filename
-            card=open(card_filename, 'w+')
-            card.write(
+print "Looping on Signal points and creating data cards"
+if not os.path.exists("syst_"+opt.dir+"/cards"):
+    special_call(["mkdir", "-p", "syst_"+opt.dir+"/cards"], 0)
+
+cards = []
+for signal_syst in S_signal_extension:
+    scan_point = signal_syst[0].GetName()[:-4].replace("MRR2_S_signal_","").replace(BIN,"")
+    #root_filename = "syst_"+opt.dir+"/cards/RazorBoost_"+opt.box+"_"+opt.model+"_"+scan_point+".root"
+    root_filename = "syst_"+opt.dir+"/cards/RazorBoost_SMS-"+opt.model+"_"+scan_point+"_"+opt.box+".root"
+    if not opt.nocards:
+        fout = ROOT.TFile.Open(root_filename,"RECREATE")
+        #print "  Creating root file: "+root_filename
+        # Add signal systematics
+        for i in range(0, len(systematics)-2):
+            signal_syst[i].Write("Signal"+systematics[i])
+        # Add background estimates
+        for bkg in [Top_est, MultiJet_est, WJets_est, ZInv_est, Other_est]:
+            for syst_var in bkg:
+                syst_var.Write()
+        # Add data counts
+        S_data.Write("data_obs")
+    card_filename = root_filename.replace(".root",".txt")
+    cards.append(card_filename)
+    if not opt.nocards:
+        #print "  Creating data card: "+card_filename
+        card=open(card_filename, 'w+')
+        card.write(
 '''imax 1 number of channels
 jmax 5 number of backgrounds
 kmax * number of nuisance parameters
 ------------------------------------------------------------
 observation	'''
-            )
-            card.write(str(S_data.Integral()))
-            card.write(
+        )
+        card.write(str(S_data.Integral()))
+        card.write(
 '''
 ------------------------------------------------------------
 shapes * * '''
-            )
-            card.write(root_filename)
-            card.write(
+        )
+        card.write(root_filename)
+        card.write(
 ''' $PROCESS $PROCESS_$SYSTEMATIC
 ------------------------------------------------------------
 bin		'''
-            )
-            card.write("%s\t%s\t%s\t%s\t%s\t%s" % (opt.box, opt.box, opt.box, opt.box, opt.box, opt.box))
-            card.write(
+        )
+        card.write("%s\t%s\t%s\t%s\t%s\t%s" % (opt.box, opt.box, opt.box, opt.box, opt.box, opt.box))
+        card.write(
 '''
 process		Signal	Top	MultiJet	WJets	ZInv	Other
 process		0	1	2	3	4	5
 rate		'''
+        )
+        card.write("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f" % (signal_syst[0].Integral(), Top_est[0].Integral(), MultiJet_est[0].Integral(), WJets_est[0].Integral(), ZInv_est[0].Integral(), Other_est[0].Integral()) )
+        if opt.scenario==0:
+            card.write(
+'''
+------------------------------------------------------------
+'''
             )
-            card.write("%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f" % (signal_syst[0].Integral(), Top_est[0].Integral(), MultiJet_est[0].Integral(), WJets_est[0].Integral(), ZInv_est[0].Integral(), Other_est[0].Integral()) )
+        elif opt.scenario==1:
+            card.write(
+'''
+------------------------------------------------------------
+lumi			lnN	1.01	1.01	1.01	1.01	1.01	1.01
+toppt			shape	-	1.0	1.0	1.0	1.0	1.0
+isr			shape	1.0	-	-	-	-	-
+jes			shape	1.0	1.0	1.0	1.0	1.0	1.0
+jer 			shape	1.0	1.0	1.0	1.0	1.0	1.0
+met			shape	1.0	1.0	1.0	1.0	1.0	1.0
+facrenscale		shape	1.0	1.0	1.0	1.0	1.0	1.0
+alphas			shape	1.0	1.0	1.0	1.0	1.0	1.0
+elereco			shape	1.0	1.0	1.0	1.0	1.0	1.0
+eleid			shape	1.0	1.0	1.0	1.0	1.0	1.0
+eleiso			shape	1.0	1.0	1.0	1.0	1.0	1.0
+muontrk			shape	1.0	1.0	1.0	1.0	1.0	1.0
+muonidiso		shape	1.0	1.0	1.0	1.0	1.0	1.0
+lostlep			shape	1.0	1.0	1.0	1.0	1.0	1.0
+btag			shape	1.0	1.0	1.0	1.0	1.0	1.0
+wtag			shape	1.0	1.0	1.0	1.0	1.0	1.0
+wmistag			shape	1.0	1.0	1.0	1.0	1.0	1.0
+wmasstag		shape	-	-	-	1.0	1.0	-
+wantitag		shape	-	-	1.0	-	-	-
+toptag			shape	1.0	1.0	1.0	1.0	1.0	1.0
+topmistag		shape	1.0	1.0	1.0	1.0	1.0	1.0
+top0bmasstag		shape	-	-	-	1.0	-	-
+topmasstag		shape	-	-	-	-	1.0	-
+topantitag		shape	-	-	1.0	-	-	-
+purity			shape	-	-	-	-	1.0	-
+dirfrac			shape	-	-	-	-	1.0	-
+'''
+#'''
+#extrap			shape	-	1.0	1.0	1.0	1.0	1.0
+#trigger			shape	1.0	1.0	1.0	1.0	1.0	1.0
+#ak8scale		shape	-	1.0	1.0	1.0	1.0	1.0
+#doubleratio		shape	-	-	-	-	1.0	-
+#elefastsim		shape	1.0	-	-	-	-	-
+#muonfastsim		shape	1.0	-	-	-	-	-
+#btagfastsim		shape	1.0	-	-	-	-	-
+#wtagfastsim		shape	1.0	-	-	-	-	-
+#wmistagfastsim		shape	1.0	-	-	-	-	-
+#toptagfastsim		shape	1.0	-	-	-	-	-
+#topmistagfastsim	shape	1.0	-	-	-	-	-
+#leptonest		shape	-	-	-	-	1.0	-
+#            card.write("dytoll\t\t\tlnN\t-\t-\t-\t-\t%2.2f\t-\n" % (1.0+dy_syst))
+#'''
+            )
+            if "T1tttt" in opt.model:
+                card.write("pileup\t\t\tlnN\t0.995/1.005\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\n")
+            elif "T5ttcc" in opt.model:
+                card.write("pileup\t\t\tlnN\t\t0.987/1.013\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\n")
+            elif "T2tt" in opt.model:
+                card.write("pileup\t\t\tlnN\t0.99/1.01\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\t0.978/1.026\n")
+            card.write("qcd\t\t\tlnN\t-\t-\t%2.3f\t-\t-\t-\n" % (1.0+qcd_syst))
+            card.write("dytoll\t\t\tlnN\t-\t-\t-\t-\t%2.3f\t-\n" % (1.0+dy_syst))
+        elif opt.scenario==2:
             card.write(
 '''
 ------------------------------------------------------------
@@ -2999,7 +3863,8 @@ leptonest		shape	-	-	-	-	1.0	-
             )
             card.write("qcd\t\t\tlnN\t-\t-\t%2.2f\t-\t-\t-\n" % (1.0+qcd_syst))
             card.write("dytoll\t\t\tlnN\t-\t-\t-\t-\t%2.2f\t-\n" % (1.0+dy_syst))
-            card.close()
-    
-    print "All data cards ready"
-    print "Done."
+        
+        card.close()
+
+print "All data cards ready"
+print "Done."

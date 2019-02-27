@@ -6,8 +6,10 @@ from optparse import OptionParser
 # Read options from command line
 usage = "Usage: python %prog filelists [options]"
 parser = OptionParser(usage=usage)
-parser.add_option('-M','--method',      dest="method",      type="string",    default="AsymptoticLimits",    help="Model (default=AsymptoticLimits)")
-parser.add_option('-d','--datacard',    dest="datacard",    type="string",    default="",                    help='Location of the data card")')
+parser.add_option('-M','--method',      dest="method",      type="string",       default="AsymptoticLimits",    help="Model (default=AsymptoticLimits)")
+parser.add_option('-d','--datacard',    dest="datacard",    type="string",       default="",                    help='Location of the data card')
+parser.add_option('--signif',           dest="signif",      action="store_true", default=False,                 help='Calculate significance')
+parser.add_option('--blind',            dest="blind",       action="store_true", default=False,                 help='Do not use data for limits/significance')
 (opt,args) = parser.parse_args()
 
 # Additional arguments are the boxes
@@ -20,6 +22,12 @@ model     = str(opt.datacard).split("/cards/")[1].split("_")[1].replace("SMS-","
 mg        = str(opt.datacard).split("/cards/")[1].split("_")[2]
 mchi      = str(opt.datacard).split("/cards/")[1].split("_")[3]
 box       ="_".join(opt.datacard.split("/cards/")[1][:-4].split("_")[4:])
+
+energy = 13
+if "HL" in directory:
+    energy = 14
+elif "HE" in directory:
+    energy = 27
 
 # -------------------- Functions ------------------------
 icommand=0
@@ -74,34 +82,48 @@ def logged_call(cmd, logfile, append=False):
             continue
         break
 
-def writeXsecTree(box, model, directory, mg, mchi, xsecULObs, xsecULExpPlus2, xsecULExpPlus, xsecULExp, xsecULExpMinus, xsecULExpMinus2):
+def writeTree(box, model, directory, mg, mchi, xsecULObs, xsecULExpPlus2, xsecULExpPlus, xsecULExp, xsecULExpMinus, xsecULExpMinus2, signif):
     tmpFileName = "%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %("/tmp", model, mg, mchi, box)
-    print "INFO: xsec UL values being written to %s"%tmpFileName
     fileOut = rt.TFile.Open(tmpFileName, "recreate")
-    
-    xsecTree = rt.TTree("xsecTree", "xsecTree")
-    try:
-        from ROOT import MyStruct
-    except ImportError:
-        myStructCmd = "struct MyStruct{Double_t mg;Double_t mchi; Double_t x; Double_t y;"
-        ixsecUL = 0
-        myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+0)
-        myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+1)
-        myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+2)
-        myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+3)
-        myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+4)
-        myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+5)
-        ixsecUL+=6
-        myStructCmd += "}"
-        rt.gROOT.ProcessLine(myStructCmd)
-        from ROOT import MyStruct
 
-    s = MyStruct()
-    xsecTree.Branch("mg", rt.AddressOf(s,"mg"),'mg/D')
-    xsecTree.Branch("mchi", rt.AddressOf(s,"mchi"),'mchi/D')
-    xsecTree.Branch("x", rt.AddressOf(s,"x"),'x/D')
-    xsecTree.Branch("y", rt.AddressOf(s,"y"),'y/D')
-    
+    if opt.signif:
+        signifTree = rt.TTree("signifTree", "signifTree")
+        try:
+            from ROOT import MyStruct
+        except ImportError:
+            myStructCmd = "struct MyStruct{Double_t mg;Double_t mchi; Double_t x; Double_t y; Double_t signif; }"
+            rt.gROOT.ProcessLine(myStructCmd)
+            from ROOT import MyStruct
+        
+        s = MyStruct()
+        signifTree.Branch("mg", rt.AddressOf(s,"mg"),'mg/D')
+        signifTree.Branch("mchi", rt.AddressOf(s,"mchi"),'mchi/D')
+        signifTree.Branch("x", rt.AddressOf(s,"x"),'x/D')
+        signifTree.Branch("y", rt.AddressOf(s,"y"),'y/D')
+        signifTree.Branch("signif_%s"%box, rt.AddressOf(s,"signif"),'signif/D')
+    else:
+        xsecTree = rt.TTree("xsecTree", "xsecTree")
+        try:
+            from ROOT import MyStruct
+        except ImportError:
+            myStructCmd = "struct MyStruct{Double_t mg;Double_t mchi; Double_t x; Double_t y;"
+            ixsecUL = 0
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+0)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+1)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+2)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+3)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+4)
+            myStructCmd+= "Double_t xsecUL%i;"%(ixsecUL+5)
+            ixsecUL+=6
+            myStructCmd += "}"
+            rt.gROOT.ProcessLine(myStructCmd)
+            from ROOT import MyStruct
+        
+        s = MyStruct()
+        xsecTree.Branch("mg", rt.AddressOf(s,"mg"),'mg/D')
+        xsecTree.Branch("mchi", rt.AddressOf(s,"mchi"),'mchi/D')
+        xsecTree.Branch("x", rt.AddressOf(s,"x"),'x/D')
+        xsecTree.Branch("y", rt.AddressOf(s,"y"),'y/D')    
     
     s.mg = mg
     s.mchi = mchi
@@ -117,33 +139,49 @@ def writeXsecTree(box, model, directory, mg, mchi, xsecULObs, xsecULExpPlus2, xs
     else:
         s.x = -1
         s.y = -1
-    
-    ixsecUL = 0
-    xsecTree.Branch("xsecULObs_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+0)),'xsecUL%i/D'%(ixsecUL+0))
-    xsecTree.Branch("xsecULExpPlus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+1)),'xsecUL%i/D'%(ixsecUL+1))
-    xsecTree.Branch("xsecULExpPlus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+2)),'xsecUL%i/D'%(ixsecUL+2))
-    xsecTree.Branch("xsecULExp_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+3)),'xsecUL%i/D'%(ixsecUL+3))
-    xsecTree.Branch("xsecULExpMinus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+4)),'xsecUL%i/D'%(ixsecUL+4))
-    xsecTree.Branch("xsecULExpMinus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+5)),'xsecUL%i/D'%(ixsecUL+5))
-    exec 's.xsecUL%i = xsecULObs[ixsecUL]'%(ixsecUL+0)
-    exec 's.xsecUL%i = xsecULExpPlus2[ixsecUL]'%(ixsecUL+1)
-    exec 's.xsecUL%i = xsecULExpPlus[ixsecUL]'%(ixsecUL+2)
-    exec 's.xsecUL%i = xsecULExp[ixsecUL]'%(ixsecUL+3)
-    exec 's.xsecUL%i = xsecULExpMinus[ixsecUL]'%(ixsecUL+4)
-    exec 's.xsecUL%i = xsecULExpMinus2[ixsecUL]'%(ixsecUL+5)
-    ixsecUL += 4
 
-    xsecTree.Fill()
-
-    fileOut.cd()
-    xsecTree.Write()
-    
-    fileOut.Close()
-    
-    outputFileName = "%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box)
-    
-    special_call(["mv",tmpFileName,outputFileName],0)
-    
+    if opt.signif:
+        s.signif = signif
+        
+        signifTree.Fill()
+        
+        fileOut.cd()
+        signifTree.Write()
+        
+        fileOut.Close()
+        
+        outputFileName = "%s/%s_signif_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box)
+        print "INFO: significance values being written to %s"%outputFileName
+        
+        special_call(["mv",tmpFileName,outputFileName],0)
+    else:
+        ixsecUL = 0
+        xsecTree.Branch("xsecULObs_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+0)),'xsecUL%i/D'%(ixsecUL+0))
+        xsecTree.Branch("xsecULExpPlus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+1)),'xsecUL%i/D'%(ixsecUL+1))
+        xsecTree.Branch("xsecULExpPlus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+2)),'xsecUL%i/D'%(ixsecUL+2))
+        xsecTree.Branch("xsecULExp_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+3)),'xsecUL%i/D'%(ixsecUL+3))
+        xsecTree.Branch("xsecULExpMinus_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+4)),'xsecUL%i/D'%(ixsecUL+4))
+        xsecTree.Branch("xsecULExpMinus2_%s"%box, rt.AddressOf(s,"xsecUL%i"%(ixsecUL+5)),'xsecUL%i/D'%(ixsecUL+5))
+        exec 's.xsecUL%i = xsecULObs[ixsecUL]'%(ixsecUL+0)
+        exec 's.xsecUL%i = xsecULExpPlus2[ixsecUL]'%(ixsecUL+1)
+        exec 's.xsecUL%i = xsecULExpPlus[ixsecUL]'%(ixsecUL+2)
+        exec 's.xsecUL%i = xsecULExp[ixsecUL]'%(ixsecUL+3)
+        exec 's.xsecUL%i = xsecULExpMinus[ixsecUL]'%(ixsecUL+4)
+        exec 's.xsecUL%i = xsecULExpMinus2[ixsecUL]'%(ixsecUL+5)
+        ixsecUL += 4
+        
+        xsecTree.Fill()
+        
+        fileOut.cd()
+        xsecTree.Write()
+        
+        fileOut.Close()
+        
+        outputFileName = "%s/%s_xsecUL_mg_%s_mchi_%s_%s.root" %(directory, model, mg, mchi, box)
+        print "INFO: xsec UL values being written to %s"%outputFileName
+        
+        special_call(["mv",tmpFileName,outputFileName],0)
+        
     return outputFileName
 # -------------------------------------------------------
 
@@ -175,15 +213,29 @@ with open(opt.datacard) as card:
         print ""
 
 print "INFO: combine output being written to "+logfile
-logged_call(["combine", "-M", opt.method, "-d", opt.datacard], logfile)
+#if opt.blind:
+#    if opt.method == "Significance":
+#        logged_call(["combine", "-M", opt.method, "-t", "-1", "--expectSignal=1", "-d", opt.datacard], logfile)
+#    elif opt.method == "AsymptoticLimits":
+#        logged_call(["combine", "-M", opt.method, "--run", "blind", "-d", opt.datacard], logfile)
+#else:
+#    logged_call(["combine", "-M", opt.method, "-d", opt.datacard], logfile)
 
 #get theory cross sections and errors
 refXsec = 0
-for line in open('./data/stop13TeV.txt' if ('T2' in model) else './data/gluino13TeV.txt','r'):
+for line in open('./data/stop'+str(energy)+'TeV.txt' if ('T2' in model) else './data/gluino'+str(energy)+'TeV.txt','r'):
     line = line.replace('\n','')
     if mg==line.split(',')[0]:
         refXsec = float(line.split(',')[1]) #pb
+
 # write results to a tree
+xsecULObs       = 0.
+xsecULExpMinus2 = 0.
+xsecULExpMinus  = 0.
+xsecULExp       = 0.
+xsecULExpPlus   = 0.
+xsecULExpPlus2  = 0.
+signif          = 0.
 with open(logfile) as log:
     for line in log:
         if "Observed Limit:" in line:
@@ -198,4 +250,14 @@ with open(logfile) as log:
             xsecULExpPlus = refXsec*float(line.split()[4])
         elif "Expected 97.5%:" in line:
             xsecULExpPlus2 = refXsec*float(line.split()[4])
-writeXsecTree(box, model, directory, float(mg), float(mchi), [xsecULObs], [xsecULExpPlus2], [xsecULExpPlus], [xsecULExp], [xsecULExpMinus], [xsecULExpMinus2])
+        elif "Significance:" in line:
+            signif = float(line.split()[1])
+
+print ('./data/stop'+str(energy)+'TeV.txt' if ('T2' in model) else './data/gluino'+str(energy)+'TeV.txt')
+print xsecULExp
+print refXsec
+
+if opt.signif:
+    writeTree(box, model, directory, float(mg), float(mchi), [0], [0], [0], [0], [0], [0], signif)
+else:
+    writeTree(box, model, directory, float(mg), float(mchi), [xsecULObs], [xsecULExpPlus2], [xsecULExpPlus], [xsecULExp], [xsecULExpMinus], [xsecULExpMinus2], 0)
